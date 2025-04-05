@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import DSheetEditor from '../../package/dsheet-editor';
 import {
   Button,
@@ -9,10 +9,11 @@ import {
   ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
-import {sheetMockData} from './sheet-mock';
+import { sheetMockData } from './sheet-mock';
 
 
 function App() {
+  const sheetEditorRef = useRef(null);
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
   const [isPresentationMode, setIsPresentationMode] = useState(false);
@@ -173,6 +174,7 @@ function App() {
       <DSheetEditor
         renderNavbar={renderNavbar}
         initialSheetData={sheetMockData}
+        ref={sheetEditorRef}
       />
     </div>
   );
