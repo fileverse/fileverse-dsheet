@@ -9,15 +9,14 @@ import {
   ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
-import { sheetMockData } from './sheet-mock';
+// import { sheetMockData } from './sheet-mock';
 
 
 function App() {
   const sheetEditorRef = useRef(null);
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
-  const [isPresentationMode, setIsPresentationMode] = useState(false);
-  const [showTOC, setShowTOC] = useState<boolean>(false);
+  // const [isPresentationMode, setIsPresentationMode] = useState(false);
 
 
 
@@ -130,7 +129,7 @@ function App() {
                 size="md"
                 onClick={() => {
                   commentDrawerOpen && setCommentDrawerOpen(false);
-                  setIsPresentationMode(true);
+                  //setIsPresentationMode(true);
                 }}
               />
               <IconButton
@@ -173,7 +172,7 @@ function App() {
     <div>
       <DSheetEditor
         renderNavbar={renderNavbar}
-        initialSheetData={sheetMockData}
+        // initialSheetData={sheetMockData}
         ref={sheetEditorRef}
       />
     </div>
