@@ -48,7 +48,9 @@ const SpreadsheetEditor = forwardRef(
                     {renderNavbar()}
                 </nav>
                 <div style={{ height: '96.4%', marginTop: '56px' }}>
+                    {/* {er()} */}
                     <Workbook
+                        key={Date.now()}
                         ref={sheetEditorRef}
                         data={currentDataRef.current || DEFAULT_SHEET_DATA}
                         onChange={handleChange}

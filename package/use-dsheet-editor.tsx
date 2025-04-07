@@ -6,6 +6,7 @@ import { WebsocketProvider } from 'y-websocket'
 import { Awareness } from 'y-protocols/awareness';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { handleFileUploadUtil } from './utils/handleFileImport';
+import { isSpreadsheetChanged } from './utils/diffSheet';
 import { DEFAULT_SHEET_DATA } from './constant/shared-constant';
 
 import { Sheet } from '@fortune-sheet/core';
@@ -17,7 +18,7 @@ export const useDsheetEditor = ({
     initialSheetData,
     //For now will remove later on, testing sync
     enableIndexeddbSync = true,
-    dsheetId = 'tesdasvas3499oadaq',
+    dsheetId = 'randomweerererasDFArefEFQ',
     // onChange,
     username,
     enableWebrtc = true,
@@ -42,6 +43,7 @@ export const useDsheetEditor = ({
         const ydoc = new Y.Doc({
             gc: true,
         });
+        console.log('Yjs document createdoinnn:', ydoc);
         ydocRef.current = ydoc;
 
         if (enableIndexeddbSync && dsheetId) {
@@ -56,8 +58,20 @@ export const useDsheetEditor = ({
         }
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
-            // const sheetArray = ydoc.getArray('SheetData');
-            // const data = Array.from(sheetArray) as Sheet[];
+            const sheetArray = ydoc.getArray('SheetData');
+            const data = Array.from(sheetArray) as Sheet[];
+            if (origin !== null) {
+                data.map((singleSheet) => {
+                    singleSheet.celldata?.map((singleCellData, index) => {
+                        const row = Math.floor(index / (singleSheet.column ?? 1));
+                        const col = index % (singleSheet.column ?? 1);
+
+                        if (singleCellData !== null && singleCellData.v !== null) {
+                            sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
+                        }
+                    })
+                })
+            }
             // const user = awarenessRef.current?.getStates().get(origin?.awareness?.clientID)?.user;
             // onChange?.(update,)
         });
@@ -168,12 +182,13 @@ export const useDsheetEditor = ({
                 delete newSheetdata.data;
                 return newSheetdata;
             });
-            ydoc.transact(() => {
-                sheetArray.delete(0, sheetArray.length);
-                sheetArray.insert(0, sheetFormatCellData);
-            })
-            currentDataRef.current = sheetFormatCellData;
-            //}
+            if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], sheetFormatCellData)) {
+                ydoc.transact(() => {
+                    sheetArray.delete(0, sheetArray.length);
+                    sheetArray.insert(0, sheetFormatCellData);
+                });
+                currentDataRef.current = sheetFormatCellData;
+            }
         }
     };
 
