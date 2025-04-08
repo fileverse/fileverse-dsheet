@@ -13,55 +13,60 @@ import './styles/editor.scss';
 import './styles/index.css';
 
 const SpreadsheetEditor = forwardRef(
-  (
-    {
-      renderNavbar,
-      initialSheetData,
-      enableIndexeddbSync,
-      dsheetId,
-    }: DsheetProp,
-    // @ts-ignore
-    ref: parentSheetEditorRef,
-  ) => {
-    const { sheetEditorRef, handleChange, loading, currentDataRef } =
-      useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId });
+    (
+        {
+            renderNavbar,
+            initialSheetData,
+            enableIndexeddbSync,
+            dsheetId,
+            // @ts-ignore
+            onChange,
+            username,
+        }: DsheetProp,
+        // @ts-ignore
+        ref: parentSheetEditorRef,
+    ) => {
+        const { sheetEditorRef, handleChange, loading, currentDataRef } =
+            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username });
 
-    if (loading) {
-      return <div></div>;
-    }
+        if (loading) {
+            return <div></div>;
+        }
 
-    return (
-      <div style={{ height: 'calc(100vh)' }}>
-        <nav
-          id="Navbar"
-          className={cn(
-            'h-14 color-bg-default py-2 px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-50 transition-transform duration-300',
-            {
-              'translate-y-0': true,
-              'translate-y-[-100%]': false,
-            },
-          )}
-        >
-          {renderNavbar()}
-        </nav>
-        <div style={{ height: '96.4%', marginTop: '56px' }}>
-          <Workbook
-            ref={sheetEditorRef}
-            data={currentDataRef.current || DEFAULT_SHEET_DATA}
-            onChange={handleChange}
-            // options={{
-            //     showtoolbar: true,
-            //     showsheetbar: true,
-            //     showstatisticbar: true,
-            // }}
-          />
-        </div>
+        return (
+            <div style={{ height: 'calc(100vh)' }}>
+                <nav
+                    id="Navbar"
+                    className={cn(
+                        'h-14 color-bg-default py-2 px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-50 transition-transform duration-300',
+                        {
+                            'translate-y-0': true,
+                            'translate-y-[-100%]': false,
+                        },
+                    )}
+                >
+                    {renderNavbar()}
+                </nav>
+                <div style={{ height: '96.4%', marginTop: '56px' }}>
+                    {/* {er()} */}
+                    <Workbook
+                        key={Date.now()}
+                        ref={sheetEditorRef}
+                        data={currentDataRef.current || DEFAULT_SHEET_DATA}
+                        onChange={handleChange}
+                    // options={{
+                    //     showtoolbar: true,
+                    //     showsheetbar: true,
+                    //     showstatisticbar: true,
+                    // }}
+                    />
+                </div>
 
-        {/* <button >Export</button> */}
-        {/* <input type="file" onChange={handleFileUpload} /> */}
-      </div>
-    );
-  },
+                {/* <button >Export</button> */}
+                {/* <input type="file" onChange={handleFileUpload} /> */}
+            </div>
+        );
+    },
 );
 
 export default SpreadsheetEditor;

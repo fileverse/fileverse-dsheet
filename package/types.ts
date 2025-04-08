@@ -5,6 +5,12 @@ export interface DsheetProp {
   initialSheetData?: Sheet[];
   enableIndexeddbSync?: boolean;
   dsheetId?: string;
+  onChange?: (
+    updatedDocContent: string,
+    updateChunk: string,
+  ) => void;
+  username?: string;
+  enableWebrtc?: boolean;
 }
 
 export interface sheetEditorRef { }
