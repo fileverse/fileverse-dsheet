@@ -18,7 +18,7 @@ export const useDsheetEditor = ({
     initialSheetData,
     //For now will remove later on, testing sync
     enableIndexeddbSync = true,
-    dsheetId = 'randomweerererasDFArefEFQ',
+    dsheetId = 'randomweeopopppFQrt',
     // onChange,
     username,
     enableWebrtc = true,
@@ -58,16 +58,18 @@ export const useDsheetEditor = ({
         }
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
-            const sheetArray = ydoc.getArray('SheetData');
-            const data = Array.from(sheetArray) as Sheet[];
             if (origin !== null) {
+                const sheetArray = ydoc.getArray('SheetData');
+                const data = Array.from(sheetArray) as Sheet[];
                 data.map((singleSheet) => {
                     singleSheet.celldata?.map((singleCellData, index) => {
                         const row = Math.floor(index / (singleSheet.column ?? 1));
                         const col = index % (singleSheet.column ?? 1);
 
-                        if (singleCellData !== null && singleCellData.v !== null) {
+                        if (singleCellData !== null && singleCellData.v !== null && singleCellData.v.v) {
                             sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
+                        } else if (singleCellData !== null && singleCellData.v !== null) {
+                            sheetEditorRef.current?.setCellValue(row, col, null)
                         }
                     })
                 })
