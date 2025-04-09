@@ -89,10 +89,9 @@ export const useDsheetEditor = ({
                         const col = index % (singleSheet.column ?? 1);
 
                         if (singleCellData !== null && singleCellData.v !== null && singleCellData.v.v) {
-                            sheetEditorRef.current?.
-                            //sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
+                            sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
                         } else if (singleCellData !== null && singleCellData.v !== null) {
-                            //sheetEditorRef.current?.setCellValue(row, col, null)
+                            sheetEditorRef.current?.setCellValue(row, col, null)
                         }
                     })
                 })
