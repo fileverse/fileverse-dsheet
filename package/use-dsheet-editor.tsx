@@ -77,7 +77,7 @@ export const useDsheetEditor = ({
                 const data = Array.from(sheetArray) as Sheet[];
                 console.log('Yjs document updated: impoortttant', data, newData);
                 remoteUpdateRef.current = true;
-                if (!isSpreadsheetChanged(currentDataRef.current, newData as Sheet[])) return
+                if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return
 
                 // ydocRef.current?.transact(() => {
                 //     sheetArray.delete(0, sheetArray.length);

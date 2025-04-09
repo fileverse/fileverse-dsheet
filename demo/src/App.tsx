@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DSheetEditor from '../../package/dsheet-editor';
 import {
   Button,
@@ -9,31 +10,19 @@ import {
   ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
-// import { sheetMockData } from './sheet-mock';
-
 
 function App() {
   const sheetEditorRef = useRef(null);
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
-  // const [isPresentationMode, setIsPresentationMode] = useState(false);
-
-
-
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-
-  //To handle comments from consumer side
   const [commentDrawerOpen, setCommentDrawerOpen] = useState(false);
-
-
-
 
   const renderNavbar = (): JSX.Element => {
     return (
       <>
         <div className="flex items-center gap-[12px]">
           <IconButton variant={'ghost'} icon="Menu" size="md" />
-
           <div className="relative truncate inline-block xl:!max-w-[300px] !max-w-[108px] color-bg-default text-[14px] font-medium leading-[20px]">
             <span className="invisible whitespace-pre">
               {title || 'Untitled'}
@@ -62,7 +51,6 @@ function App() {
         </div>
         <div className="flex gap-2">
           <ThemeToggle />
-
           {isMediaMax1280px ? (
             <DynamicDropdown
               key="navbar-more-actions"
@@ -79,7 +67,6 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    // onClick={() => setIsPresentationMode(true)}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Presentation" size="sm" />
@@ -87,7 +74,6 @@ function App() {
                   </Button>
                   <Button
                     variant={'ghost'}
-                    // onClick={() => setShowTOC(true)}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="List" size="sm" />
@@ -129,7 +115,6 @@ function App() {
                 size="md"
                 onClick={() => {
                   commentDrawerOpen && setCommentDrawerOpen(false);
-                  //setIsPresentationMode(true);
                 }}
               />
               <IconButton
@@ -146,9 +131,7 @@ function App() {
             size="md"
             onClick={() => setCommentDrawerOpen((prev) => !prev)}
           />
-
           <Button
-            // onClick={publishDoc}
             toggleLeftIcon={true}
             leftIcon="Share2"
             variant={'ghost'}
@@ -168,14 +151,22 @@ function App() {
     );
   };
 
-  return (
+  const EditorPage = () => (
     <div>
       <DSheetEditor
         renderNavbar={renderNavbar}
-        // initialSheetData={sheetMockData}
         ref={sheetEditorRef}
       />
     </div>
+  );
+
+  return (
+    <Router>
+      <Routes>
+        {/* Catch-all route */}
+        <Route path="*" element={<EditorPage />} />
+      </Routes>
+    </Router>
   );
 }
 
