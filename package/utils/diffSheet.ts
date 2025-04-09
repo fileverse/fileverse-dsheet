@@ -7,10 +7,10 @@ import { Sheet } from '@fortune-sheet/core';
  */
 export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
     // Early escape if sheets count differs
-    // if (!oldSheets || !newSheets || oldSheets.length !== newSheets.length) {
-    //     console.log('whyyyyyyy')
-    //     return true;
-    // }
+    if (!oldSheets || !newSheets || oldSheets.length !== newSheets.length) {
+        console.log('whyyyyyyy')
+        return true;
+    }
 
     // Compare just the first sheet as requested
     if (oldSheets.length > 0 && newSheets.length > 0) {
