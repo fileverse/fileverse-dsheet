@@ -46,7 +46,6 @@ export const useDsheetEditor = ({
         const ydoc = new Y.Doc({
             gc: true,
         });
-        console.log('Yjs document createdoinnn:', ydoc);
         ydocRef.current = ydoc;
 
         if (enableIndexeddbSync && dsheetId) {
@@ -64,7 +63,6 @@ export const useDsheetEditor = ({
             console.log(origin, 'Yjs document updated:');
             const decodedUpdates = Y.decodeUpdate(update);
             let newData;
-            // console.log('Raw decoded update:', Object.keys(decodedUpdates.structs[1].content));
             for (const struct of decodedUpdates.structs) {
                 if ('content' in struct && Object.keys(struct.content).includes('arr')) {
                     if ('arr' in struct.content) {
@@ -115,10 +113,6 @@ export const useDsheetEditor = ({
 
 
     function initializeWithDefaultData(ydoc: Y.Doc) {
-        // if (collaborative) {
-        //     setLoading(false);
-        //     return;
-        // }
         const sheetArray = ydoc.getArray(dsheetId);
         let localIndexeddbData;
         if (sheetArray && sheetArray.length > 0) {
@@ -184,10 +178,6 @@ export const useDsheetEditor = ({
                     })
                 })
             });
-
-            // webrtcProvider.on('error', (error) => {
-            //     console.error('WebRTC error:', error);
-            // });
         }
 
         return () => {
