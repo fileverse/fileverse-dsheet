@@ -27,6 +27,7 @@ export const useDsheetEditor = ({
     const collaborative = true;
     const [loading, setLoading] = useState(true);
     const firstRender = useRef(true);
+    const remoteUpdateRef = useRef(false);
     const ydocRef = useRef<Y.Doc | null>(null);
     const awarenessRef = useRef<Awareness | null>(null);
     const persistenceRef = useRef<IndexeddbPersistence | null>(null);
@@ -47,7 +48,6 @@ export const useDsheetEditor = ({
             gc: true,
         });
         ydocRef.current = ydoc;
-
         if (enableIndexeddbSync && dsheetId) {
             const persistence = new IndexeddbPersistence(dsheetId, ydoc);
             persistenceRef.current = persistence;
@@ -75,7 +75,9 @@ export const useDsheetEditor = ({
             if (origin !== null) {
                 const sheetArray = ydoc.getArray(dsheetId);
                 const data = Array.from(sheetArray) as Sheet[];
-                if (!isSpreadsheetChanged(data, newData as Sheet[])) return
+                console.log('Yjs document updated: impoortttant', data, newData);
+                remoteUpdateRef.current = true;
+                if (!isSpreadsheetChanged(currentDataRef.current, newData as Sheet[])) return
 
                 // ydocRef.current?.transact(() => {
                 //     sheetArray.delete(0, sheetArray.length);
@@ -93,6 +95,8 @@ export const useDsheetEditor = ({
                         }
                     })
                 })
+                currentDataRef.current = newData as Sheet[];
+
             }
             // const user = awarenessRef.current?.getStates().get(origin?.awareness?.clientID)?.user;
             // onChange?.(update,)
@@ -123,10 +127,9 @@ export const useDsheetEditor = ({
             ydoc.transact(() => {
                 sheetArray.delete(0, sheetArray.length);
                 sheetArray.insert(0, newSheetData);
+                currentDataRef.current = newSheetData;
             });
         }
-
-        currentDataRef.current = newSheetData;
         setLoading(false);
     }
 
@@ -190,10 +193,14 @@ export const useDsheetEditor = ({
     }, [enableWebrtc, ydocRef.current]);
 
     const handleChange = useCallback((data: Sheet[]) => {
-        console.log('handleChange:', data, firstRender.current);
+        console.log('handleChange:', data, firstRender.current, remoteUpdateRef.current);
         if (firstRender.current) {
             firstRender.current = false;
             return;
+        }
+        if (remoteUpdateRef.current) {
+            remoteUpdateRef.current = false;
+            return
         }
         if (ydocRef.current) {
             const ydoc = ydocRef.current;
@@ -222,12 +229,12 @@ export const useDsheetEditor = ({
                 return newSheetdata;
             });
             console.log('sheetFormatCellData:', sheetFormatCellData, Array.from(sheetArray) as Sheet[]);
+            currentDataRef.current = sheetFormatCellData
             if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], sheetFormatCellData)) {
                 ydoc.transact(() => {
                     sheetArray.delete(0, sheetArray.length);
                     sheetArray.insert(0, sheetFormatCellData);
                 });
-                currentDataRef.current = sheetFormatCellData;
             }
         }
     }, [])
