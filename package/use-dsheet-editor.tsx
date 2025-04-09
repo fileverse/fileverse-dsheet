@@ -83,6 +83,7 @@ export const useDsheetEditor = ({
                 //     sheetArray.delete(0, sheetArray.length);
                 //     sheetArray.insert(0, newData);
                 // })
+                console.log('sheet ref', sheetEditorRef.current);
                 (newData as Sheet[]).map((singleSheet) => {
                     singleSheet.celldata?.map((singleCellData, index) => {
                         const row = Math.floor(index / (singleSheet.column ?? 1));
