@@ -23,7 +23,7 @@ export const useDsheetEditor = ({
     username,
     enableWebrtc = true,
 }: Partial<DsheetProp>) => {
-    const dsheetId = window?.location?.pathname?.split('/').pop() || 'random-jinsinsinssgewrgwe'
+    const dsheetId = window?.location?.pathname?.split('/').pop() || 'random-jinsinsinssgewrgwewew'
     const collaborative = true;
     const [loading, setLoading] = useState(true);
     const firstRender = useRef(true);
@@ -77,7 +77,7 @@ export const useDsheetEditor = ({
             if (origin !== null) {
                 const sheetArray = ydoc.getArray(dsheetId);
                 const data = Array.from(sheetArray) as Sheet[];
-                if (!isSpreadsheetChanged(data, newData)) return
+                if (!isSpreadsheetChanged(data, newData as Sheet[])) return
 
                 // ydocRef.current?.transact(() => {
                 //     sheetArray.delete(0, sheetArray.length);
