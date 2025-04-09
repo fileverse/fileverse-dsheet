@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import * as Y from 'yjs';
 // @ts-ignore
 import { WebrtcProvider } from 'y-webrtc';
@@ -18,12 +18,15 @@ export const useDsheetEditor = ({
     initialSheetData,
     //For now will remove later on, testing sync
     enableIndexeddbSync = true,
-    dsheetId = 'randomweeopopppFQrt',
+    //dsheetId = 'randomweeopopppFQrt',
     // onChange,
     username,
     enableWebrtc = true,
 }: Partial<DsheetProp>) => {
+    const dsheetId = window?.location?.pathname?.split('/').pop() || 'random-jinsinsinssgewrgwe'
+    const collaborative = true;
     const [loading, setLoading] = useState(true);
+    const firstRender = useRef(true);
     const ydocRef = useRef<Y.Doc | null>(null);
     const awarenessRef = useRef<Awareness | null>(null);
     const persistenceRef = useRef<IndexeddbPersistence | null>(null);
@@ -58,18 +61,38 @@ export const useDsheetEditor = ({
         }
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
+            console.log(origin, 'Yjs document updated:');
+            const decodedUpdates = Y.decodeUpdate(update);
+            let newData;
+            // console.log('Raw decoded update:', Object.keys(decodedUpdates.structs[1].content));
+            for (const struct of decodedUpdates.structs) {
+                if ('content' in struct && Object.keys(struct.content).includes('arr')) {
+                    if ('arr' in struct.content) {
+                        console.log('Array content:', struct.content.arr);
+                        newData = struct.content.arr;
+                    }
+                }
+            }
+
             if (origin !== null) {
-                const sheetArray = ydoc.getArray('SheetData');
+                const sheetArray = ydoc.getArray(dsheetId);
                 const data = Array.from(sheetArray) as Sheet[];
-                data.map((singleSheet) => {
+                if (!isSpreadsheetChanged(data, newData)) return
+
+                // ydocRef.current?.transact(() => {
+                //     sheetArray.delete(0, sheetArray.length);
+                //     sheetArray.insert(0, newData);
+                // })
+                (newData as Sheet[]).map((singleSheet) => {
                     singleSheet.celldata?.map((singleCellData, index) => {
                         const row = Math.floor(index / (singleSheet.column ?? 1));
                         const col = index % (singleSheet.column ?? 1);
 
                         if (singleCellData !== null && singleCellData.v !== null && singleCellData.v.v) {
-                            sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
+                            sheetEditorRef.current?.
+                            //sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
                         } else if (singleCellData !== null && singleCellData.v !== null) {
-                            sheetEditorRef.current?.setCellValue(row, col, null)
+                            //sheetEditorRef.current?.setCellValue(row, col, null)
                         }
                     })
                 })
@@ -93,16 +116,23 @@ export const useDsheetEditor = ({
 
 
     function initializeWithDefaultData(ydoc: Y.Doc) {
-        const sheetArray = ydoc.getArray('SheetData');
+        // if (collaborative) {
+        //     setLoading(false);
+        //     return;
+        // }
+        const sheetArray = ydoc.getArray(dsheetId);
         let localIndexeddbData;
         if (sheetArray && sheetArray.length > 0) {
             localIndexeddbData = Array.from(sheetArray) as Sheet[];
         }
         const newSheetData = localIndexeddbData || initialSheetData || DEFAULT_SHEET_DATA;
-        ydoc.transact(() => {
-            sheetArray.delete(0, sheetArray.length);
-            sheetArray.insert(0, newSheetData);
-        });
+        if (!collaborative) {
+            ydoc.transact(() => {
+                sheetArray.delete(0, sheetArray.length);
+                sheetArray.insert(0, newSheetData);
+            });
+        }
+
         currentDataRef.current = newSheetData;
         setLoading(false);
     }
@@ -128,7 +158,7 @@ export const useDsheetEditor = ({
             )
             webrtcProviderRef.current = webrtcProvider;
             webrtcProviderRef.current.on('status', event => {
-                const sheetArray = ydoc.getArray('SheetData');
+                const sheetArray = ydoc.getArray(dsheetId);
                 const data = Array.from(sheetArray) as Sheet[];
                 console.log('WebRTC connection status:', event, "value", data);
             });
@@ -138,9 +168,22 @@ export const useDsheetEditor = ({
             // });
 
             webrtcProviderRef.current.on('sync', (synced) => {
-                const sheetArray = ydoc.getArray('SheetData');
+                const sheetArray = ydoc.getArray(dsheetId);
                 const data = Array.from(sheetArray) as Sheet[];
                 console.log('WebRTC connection Synced status changed:', synced, "value", data);
+
+                (data as Sheet[]).map((singleSheet) => {
+                    singleSheet.celldata?.map((singleCellData, index) => {
+                        const row = Math.floor(index / (singleSheet.column ?? 1));
+                        const col = index % (singleSheet.column ?? 1);
+
+                        if (singleCellData !== null && singleCellData.v !== null && singleCellData.v.v) {
+                            sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
+                        } else if (singleCellData !== null && singleCellData.v !== null) {
+                            sheetEditorRef.current?.setCellValue(row, col, null)
+                        }
+                    })
+                })
             });
 
             // webrtcProvider.on('error', (error) => {
@@ -157,10 +200,15 @@ export const useDsheetEditor = ({
         };
     }, [enableWebrtc, ydocRef.current]);
 
-    const handleChange = (data: Sheet[]) => {
+    const handleChange = useCallback((data: Sheet[]) => {
+        console.log('handleChange:', data, firstRender.current);
+        if (firstRender.current) {
+            firstRender.current = false;
+            return;
+        }
         if (ydocRef.current) {
             const ydoc = ydocRef.current;
-            const sheetArray = ydoc.getArray('SheetData');
+            const sheetArray = ydoc.getArray(dsheetId);
             // Compare data with current array content
             // const currentArray = Array.from(sheetArray);
             //if (JSON.stringify(currentArray) !== JSON.stringify(data)) {
@@ -184,6 +232,7 @@ export const useDsheetEditor = ({
                 delete newSheetdata.data;
                 return newSheetdata;
             });
+            console.log('sheetFormatCellData:', sheetFormatCellData, Array.from(sheetArray) as Sheet[]);
             if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], sheetFormatCellData)) {
                 ydoc.transact(() => {
                     sheetArray.delete(0, sheetArray.length);
@@ -192,7 +241,7 @@ export const useDsheetEditor = ({
                 currentDataRef.current = sheetFormatCellData;
             }
         }
-    };
+    }, [])
 
     return {
         sheetEditorRef,
