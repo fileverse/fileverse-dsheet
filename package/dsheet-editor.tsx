@@ -19,7 +19,8 @@ const SpreadsheetEditor = forwardRef(
             initialSheetData,
             enableIndexeddbSync,
             dsheetId,
-            // @ts-ignore
+            portalContent,
+            portalContentYjs,
             onChange,
             username,
         }: DsheetProp,
@@ -27,7 +28,7 @@ const SpreadsheetEditor = forwardRef(
         ref: parentSheetEditorRef,
     ) => {
         const { sheetEditorRef, handleChange, loading, currentDataRef } =
-            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username });
+            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, portalContentYjs });
 
         if (loading) {
             return <div></div>;
