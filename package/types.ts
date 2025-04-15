@@ -11,6 +11,8 @@ export interface DsheetProp {
   ) => void;
   username?: string;
   enableWebrtc?: boolean;
+  portalContent?: any;
+  portalContentYjs?: any;
 }
 
 export interface sheetEditorRef { }

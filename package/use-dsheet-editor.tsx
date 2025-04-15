@@ -7,7 +7,9 @@ import { Awareness } from 'y-protocols/awareness';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { handleFileUploadUtil } from './utils/handleFileImport';
 import { isSpreadsheetChanged } from './utils/diffSheet';
+import { updateSheetUIToYjs } from './utils/updateSheetUI';
 import { DEFAULT_SHEET_DATA } from './constant/shared-constant';
+import { fromUint8Array, toUint8Array } from 'js-base64';
 
 import { Sheet } from '@fortune-sheet/core';
 import { WorkbookInstance } from '@fortune-sheet/react';
@@ -16,14 +18,34 @@ import { DsheetProp } from './types';
 
 export const useDsheetEditor = ({
     initialSheetData,
-    //For now will remove later on, testing sync
     enableIndexeddbSync = true,
-    //dsheetId = 'randomweeopopppFQrt',
-    // onChange,
+    dsheetId = 'randomweeopopppsdf',
+    onChange,
     username,
     enableWebrtc = true,
+    portalContent,
+    portalContentYjs,
 }: Partial<DsheetProp>) => {
-    const dsheetId = window?.location?.pathname?.split('/').pop() || 'random-jinsinsinssgewrgwewew'
+    useEffect(() => {
+        if (portalContent === null) {
+            return
+        }
+        console.log('package side:', portalContentYjs, 'portalContent', portalContent, 'dsheetId', dsheetId);
+        if (portalContent !== null && portalContentYjs !== null) {
+            const newDoc = ydocRef.current as Y.Doc;
+            const uint8Array = toUint8Array(portalContent);
+            Y.applyUpdate(newDoc, uint8Array);
+            const map = newDoc.getArray(dsheetId);
+            console.log(Array.from(map), 'merged arrayaaab')
+            const newSheetData = Array.from(map) as Sheet[];
+            updateSheetUIToYjs({
+                sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
+                sheetData: newSheetData as Sheet[],
+            });
+            currentDataRef.current = newSheetData as Sheet[];
+        }
+
+    }, [portalContent, portalContentYjs, dsheetId]);
     const collaborative = true;
     const [loading, setLoading] = useState(true);
     const firstRender = useRef(true);
@@ -60,7 +82,13 @@ export const useDsheetEditor = ({
         }
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
-            console.log(origin, 'Yjs document updated:');
+            console.log('Yjs document updated:');
+            if (origin === 'self') return;
+            onChange?.(
+                fromUint8Array(Y.encodeStateAsUpdate(ydocRef.current!)),
+                fromUint8Array(update),
+            );
+
             const decodedUpdates = Y.decodeUpdate(update);
             let newData;
             for (const struct of decodedUpdates.structs) {
@@ -73,31 +101,10 @@ export const useDsheetEditor = ({
             }
 
             if (origin !== null) {
-                const sheetArray = ydoc.getArray(dsheetId);
-                const data = Array.from(sheetArray) as Sheet[];
-                console.log('Yjs document updated: impoortttant', data, newData);
                 remoteUpdateRef.current = true;
-                if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return
-
-                // ydocRef.current?.transact(() => {
-                //     sheetArray.delete(0, sheetArray.length);
-                //     sheetArray.insert(0, newData);
-                // })
-                console.log('sheet ref', sheetEditorRef.current);
-                (newData as Sheet[]).map((singleSheet) => {
-                    singleSheet.celldata?.map((singleCellData, index) => {
-                        const row = Math.floor(index / (singleSheet.column ?? 1));
-                        const col = index % (singleSheet.column ?? 1);
-
-                        if (singleCellData !== null && singleCellData.v !== null && singleCellData.v.v) {
-                            sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
-                        } else if (singleCellData !== null && singleCellData.v !== null) {
-                            sheetEditorRef.current?.setCellValue(row, col, null)
-                        }
-                    })
-                })
+                if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return;
+                updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: newData as Sheet[] });
                 currentDataRef.current = newData as Sheet[];
-
             }
             // const user = awarenessRef.current?.getStates().get(origin?.awareness?.clientID)?.user;
             // onChange?.(update,)
@@ -168,19 +175,7 @@ export const useDsheetEditor = ({
                 const sheetArray = ydoc.getArray(dsheetId);
                 const data = Array.from(sheetArray) as Sheet[];
                 console.log('WebRTC connection Synced status changed:', synced, "value", data);
-
-                (data as Sheet[]).map((singleSheet) => {
-                    singleSheet.celldata?.map((singleCellData, index) => {
-                        const row = Math.floor(index / (singleSheet.column ?? 1));
-                        const col = index % (singleSheet.column ?? 1);
-
-                        if (singleCellData !== null && singleCellData.v !== null && singleCellData.v.v) {
-                            sheetEditorRef.current?.setCellValue(row, col, singleCellData.v)
-                        } else if (singleCellData !== null && singleCellData.v !== null) {
-                            sheetEditorRef.current?.setCellValue(row, col, null)
-                        }
-                    })
-                })
+                updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: data as Sheet[] });
             });
         }
 

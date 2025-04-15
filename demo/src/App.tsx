@@ -156,6 +156,10 @@ function App() {
       <DSheetEditor
         renderNavbar={renderNavbar}
         ref={sheetEditorRef}
+        onChange={(update, chunk) => {
+          console.log('onChange', update, chunk);
+        }
+        }
       />
     </div>
   );
