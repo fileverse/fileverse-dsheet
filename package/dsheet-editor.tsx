@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useMemo } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
 import { Workbook } from '@fortune-sheet/react';
 import cn from 'classnames';
@@ -30,9 +30,21 @@ const SpreadsheetEditor = forwardRef(
         const { sheetEditorRef, handleChange, loading, currentDataRef } =
             useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, portalContentYjs });
 
+        const MemoizedSheetEditor = useMemo(() => {
+            return (
+                <Workbook
+                    key={Date.now()}
+                    ref={sheetEditorRef}
+                    data={currentDataRef.current || DEFAULT_SHEET_DATA}
+                    onChange={handleChange}
+                />
+            );
+        }, [loading]);
+
         if (loading) {
             return <div></div>;
         }
+
 
         return (
             <div style={{ height: 'calc(100vh)' }}>
@@ -49,12 +61,7 @@ const SpreadsheetEditor = forwardRef(
                     {renderNavbar()}
                 </nav>
                 <div style={{ height: '96.4%', marginTop: '56px' }}>
-                    <Workbook
-                        key={Date.now()}
-                        ref={sheetEditorRef}
-                        data={currentDataRef.current || DEFAULT_SHEET_DATA}
-                        onChange={handleChange}
-                    />
+                    {MemoizedSheetEditor}
                 </div>
             </div>
         );

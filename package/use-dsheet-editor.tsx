@@ -27,7 +27,7 @@ export const useDsheetEditor = ({
     portalContentYjs,
 }: Partial<DsheetProp>) => {
     useEffect(() => {
-        if (portalContent === null) {
+        if (!portalContent || !portalContentYjs) {
             return
         }
         console.log('package side:', portalContentYjs, 'portalContent', portalContent, 'dsheetId', dsheetId);
