@@ -15,6 +15,8 @@ import './styles/index.css';
 const SpreadsheetEditor = forwardRef(
     (
         {
+            isCollaborative = false,
+            isReadOnly = false,
             renderNavbar,
             initialSheetData,
             enableIndexeddbSync,
@@ -28,7 +30,7 @@ const SpreadsheetEditor = forwardRef(
         ref: parentSheetEditorRef,
     ) => {
         const { sheetEditorRef, handleChange, loading, currentDataRef } =
-            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, portalContentYjs });
+            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, portalContentYjs, isCollaborative });
 
         const MemoizedSheetEditor = useMemo(() => {
             return (
@@ -37,6 +39,9 @@ const SpreadsheetEditor = forwardRef(
                     ref={sheetEditorRef}
                     data={currentDataRef.current || DEFAULT_SHEET_DATA}
                     onChange={handleChange}
+                    showFormulaBar={!isReadOnly}
+                    showToolbar={!isReadOnly}
+                    allowEdit={!isReadOnly}
                 />
             );
         }, [loading]);
