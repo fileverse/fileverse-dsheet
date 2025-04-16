@@ -13,6 +13,8 @@ export interface DsheetProp {
   enableWebrtc?: boolean;
   portalContent?: any;
   portalContentYjs?: any;
+  isReadOnly?: boolean;
+  isCollaborative?: boolean;
 }
 
 export interface sheetEditorRef { }
