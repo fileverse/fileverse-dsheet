@@ -22,7 +22,6 @@ const SpreadsheetEditor = forwardRef(
             enableIndexeddbSync,
             dsheetId,
             portalContent,
-            portalContentYjs,
             onChange,
             username,
         }: DsheetProp,
@@ -30,7 +29,7 @@ const SpreadsheetEditor = forwardRef(
         ref: parentSheetEditorRef,
     ) => {
         const { sheetEditorRef, handleChange, loading, currentDataRef } =
-            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, portalContentYjs, isCollaborative });
+            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative });
 
         const MemoizedSheetEditor = useMemo(() => {
             return (

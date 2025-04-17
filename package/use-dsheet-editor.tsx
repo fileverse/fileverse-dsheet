@@ -19,33 +19,29 @@ import { DsheetProp } from './types';
 export const useDsheetEditor = ({
     initialSheetData,
     enableIndexeddbSync = true,
-    dsheetId = 'randomweeopopppsdf',
+    dsheetId = 'randomweeopopppsdfi',
     onChange,
     username,
     enableWebrtc = true,
     portalContent,
-    portalContentYjs,
 }: Partial<DsheetProp>) => {
     useEffect(() => {
-        if (!portalContent || !portalContentYjs) {
+        if (!portalContent) {
             return
         }
-        console.log('package side:', portalContentYjs, 'portalContent', portalContent, 'dsheetId', dsheetId);
-        if (portalContent !== null && portalContentYjs !== null) {
-            const newDoc = ydocRef.current as Y.Doc;
-            const uint8Array = toUint8Array(portalContent);
-            Y.applyUpdate(newDoc, uint8Array);
-            const map = newDoc.getArray(dsheetId);
-            console.log(Array.from(map), 'merged arrayaaab')
-            const newSheetData = Array.from(map) as Sheet[];
-            updateSheetUIToYjs({
-                sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
-                sheetData: newSheetData as Sheet[],
-            });
-            currentDataRef.current = newSheetData as Sheet[];
-        }
+        console.log('package side:', 'portalContent', portalContent, 'dsheetId', dsheetId);
+        const newDoc = ydocRef.current as Y.Doc;
+        const uint8Array = toUint8Array(portalContent);
+        Y.applyUpdate(newDoc, uint8Array);
+        const map = newDoc.getArray(dsheetId);
+        const newSheetData = Array.from(map) as Sheet[];
+        updateSheetUIToYjs({
+            sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
+            sheetData: newSheetData as Sheet[],
+        });
+        currentDataRef.current = newSheetData as Sheet[];
 
-    }, [portalContent, portalContentYjs, dsheetId]);
+    }, [portalContent, dsheetId]);
     const collaborative = true;
     const [loading, setLoading] = useState(true);
     const firstRender = useRef(true);
@@ -80,6 +76,8 @@ export const useDsheetEditor = ({
         } else {
             initializeWithDefaultData(ydoc);
         }
+
+        // Here we are update sheet UI according to the Yjs document update from remote changes.
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
             console.log('Yjs document updated:');

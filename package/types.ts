@@ -6,13 +6,12 @@ export interface DsheetProp {
   enableIndexeddbSync?: boolean;
   dsheetId?: string;
   onChange?: (
-    updatedDocContent: string,
+    updatedSheetContent: string,
     updateChunk: string,
   ) => void;
   username?: string;
   enableWebrtc?: boolean;
   portalContent?: any;
-  portalContentYjs?: any;
   isReadOnly?: boolean;
   isCollaborative?: boolean;
 }
