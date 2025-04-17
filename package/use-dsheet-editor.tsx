@@ -26,9 +26,7 @@ export const useDsheetEditor = ({
     portalContent,
 }: Partial<DsheetProp>) => {
     useEffect(() => {
-        if (!portalContent) {
-            return
-        }
+        if (!portalContent || portalContent?.length === 0) return;
         console.log('package side:', 'portalContent', portalContent, 'dsheetId', dsheetId);
         const newDoc = ydocRef.current as Y.Doc;
         const uint8Array = toUint8Array(portalContent);
