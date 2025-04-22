@@ -28,7 +28,7 @@ const SpreadsheetEditor = forwardRef(
         // @ts-ignore
         ref: parentSheetEditorRef,
     ) => {
-        const { sheetEditorRef, handleChange, loading, currentDataRef } =
+        const { sheetEditorRef, handleChange, currentDataRef } =
             useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative });
 
         const MemoizedSheetEditor = useMemo(() => {
@@ -43,16 +43,17 @@ const SpreadsheetEditor = forwardRef(
                     allowEdit={!isReadOnly}
                 />
             );
-        }, [loading]);
+        }, []);
 
-        if (loading) {
-            return <div></div>;
-        }
-
+        // if (loading) {
+        //     return <div style={{ height: 'calc(100vh)', marginTop: `${renderNavbar ? '56px' : '0'}` }}>
+        //         {MemoizedSheetEditor}
+        //     </div>;
+        // }
 
         return (
             <div style={{ height: 'calc(100vh)' }}>
-                <nav
+                {renderNavbar && <nav
                     id="Navbar"
                     className={cn(
                         'h-14 color-bg-default py-2 px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-50 transition-transform duration-300',
@@ -63,7 +64,7 @@ const SpreadsheetEditor = forwardRef(
                     )}
                 >
                     {renderNavbar()}
-                </nav>
+                </nav>}
                 <div style={{ height: '96.4%', marginTop: '56px' }}>
                     {MemoizedSheetEditor}
                 </div>
