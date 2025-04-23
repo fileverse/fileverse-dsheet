@@ -1,0 +1,19 @@
+.export-text {
+    color: #77818A;
+
+    /* fv/text/helper/sm */
+    font-family: "Helvetica Neue";
+    font-size: var(--font-size-2xsm, 12px);
+    font-style: normal;
+    font-weight: 400;
+    line-height: 16px;
+    /* 133.333% */
+}
+
+.btn {
+    :hover {
+        background-color: #F5F8FA;
+    }
+
+    cursor: pointer;
+}
