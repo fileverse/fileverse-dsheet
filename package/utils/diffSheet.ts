@@ -64,21 +64,35 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
                 if (typeof value === 'object' && value !== null &&
                     typeof newValue === 'object' && newValue !== null) {
 
-                    // Compare the most relevant fields from the cell value object
-                    if (value.m !== newValue.m || value.v !== newValue.v) {
-                        console.log('Cell value changed:', key, value, newValue);
-                        return true;
-                    }
+                    // // Compare the most relevant fields from the cell value object
+                    // if (value.m !== newValue.m || value.v !== newValue.v) {
+                    //     console.log('Cell value changed:', key, value, newValue);
+                    //     return true;
+                    // }
 
-                    // If ct exists and is different
-                    if (value.ct && newValue.ct) {
-                        if (value.ct.fa !== newValue.ct.fa || value.ct.t !== newValue.ct.t) {
-                            console.log('Cell formatting changed:', key);
+                    // // If ct exists and is different
+                    // if (value.ct && newValue.ct) {
+                    //     if (value.ct.fa !== newValue.ct.fa || value.ct.t !== newValue.ct.t) {
+                    //         console.log('Cell formatting changed:', key);
+                    //         return true;
+                    //     }
+                    // } else if ((value.ct && !newValue.ct) || (!value.ct && newValue.ct)) {
+                    //     console.log('Cell formatting presence changed:', key);
+                    //     return true;
+                    // }
+
+                    for (const prop in value) {
+                        if (value[prop] !== newValue[prop]) {
+                            console.log(`Property '${prop}' changed:`, key, value[prop], newValue[prop]);
                             return true;
                         }
-                    } else if ((value.ct && !newValue.ct) || (!value.ct && newValue.ct)) {
-                        console.log('Cell formatting presence changed:', key);
-                        return true;
+                    }
+
+                    for (const prop in newValue) {
+                        if (value[prop] !== newValue[prop]) {
+                            console.log(`Property '${prop}' changed:`, key, value[prop], newValue[prop]);
+                            return true;
+                        }
                     }
                 }
                 // Simple value comparison for non-objects

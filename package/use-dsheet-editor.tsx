@@ -224,6 +224,7 @@ export const useDsheetEditor = ({
                 );
                 const newSheetdata = { ...sheet, celldata: transformedData, row: preSheetArray[index]?.row, column: preSheetArray[index]?.column, status: preSheetArray[index]?.status, order: preSheetArray[index]?.order, config: preSheetArray[index]?.config };
                 delete newSheetdata.data;
+                newSheetdata.config = sheet.config;
                 return newSheetdata;
             });
             console.log('sheetFormatCellData:', sheetFormatCellData, Array.from(sheetArray) as Sheet[]);
