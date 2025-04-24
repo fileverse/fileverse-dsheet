@@ -8,26 +8,8 @@ import { ChangeEventHandler } from 'react';
 import icon from '../assets/icon.svg';
 import './importButton.scss'
 
-export const CustomButton = ({ handleCSVUpload }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement> }) => {
+export const CustomButton = ({ handleCSVUpload, handleXLSXUpload }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, handleXLSXUpload: ChangeEventHandler<HTMLInputElement> }) => {
     return (
-        // <LucideIcon name="export-file" className="w-6 h-6" />
-
-        // <button
-        //     onClick={onClick}
-        //     className="fortune-toolbar-custom-btn"
-        //     style={{
-        //         // margin: '0 8px',
-        //         padding: '4px 8px',
-        //         // backgroundColor: '#4a5568',
-        //         color: 'white',
-        //         border: 'none',
-        //         borderRadius: '4px',
-        //         cursor: 'pointer'
-        //     }}
-        // >
-        //     {/* {label} */}
-        //     <img src={icon} alt="Icon" style={{ width: '20px', height: '20px' }} />
-        // </button>
         <Popover>
             <PopoverTrigger>
                 <div
@@ -78,7 +60,10 @@ export const CustomButton = ({ handleCSVUpload }: { handleCSVUpload: ChangeEvent
                             type="file"
                             accept=".xlsx"
                             id="xlsx-upload"
-                            onChange={handleCSVUpload}
+                            onChange={(e) => {
+                                console.log("handleXLSXUpload")
+                                handleXLSXUpload(e);
+                            }}
                             style={{ display: "none" }}
                         />
                     </div>

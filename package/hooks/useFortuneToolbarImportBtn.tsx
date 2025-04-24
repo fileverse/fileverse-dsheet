@@ -2,7 +2,8 @@ import { useEffect, ChangeEventHandler } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CustomButton } from '../components/ImportButton';
 
-export const useFortuneToolbarImportBtn = ({ handleCSVUpload, ydocRef }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, ydocRef: any }) => {
+export const useFortuneToolbarImportBtn = ({ handleCSVUpload, handleXLSXUpload }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, handleXLSXUpload: ChangeEventHandler<HTMLInputElement> }) => {
+    console.log('useFortuneToolbarImportBtn', handleCSVUpload, handleXLSXUpload);
     useEffect(() => {
         let root: any = null;
 
@@ -16,7 +17,7 @@ export const useFortuneToolbarImportBtn = ({ handleCSVUpload, ydocRef }: { handl
 
                 // Create root and render component
                 root = createRoot(buttonContainer);
-                root.render(<CustomButton handleCSVUpload={handleCSVUpload} />);
+                root.render(<CustomButton handleCSVUpload={handleCSVUpload} handleXLSXUpload={handleXLSXUpload} />);
 
                 return true;
             }
@@ -57,5 +58,5 @@ export const useFortuneToolbarImportBtn = ({ handleCSVUpload, ydocRef }: { handl
                 }
             }
         };
-    }, [handleCSVUpload, ydocRef]);
+    }, [handleCSVUpload]);
 };
