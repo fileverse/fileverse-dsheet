@@ -9,6 +9,7 @@ import { DsheetProp } from './types';
 import { handleCSVUpload } from './hooks/useCSVImport'
 import { useXLSXImport } from './hooks/useXLSXImport'
 import { handleExportToXLSX } from './hooks/useXLSXExport'
+import { handleExportToCSV } from './hooks/useCSVExport'
 import '@fortune-sheet/react/dist/index.css';
 // @ts-ignore
 import LuckyExcel from 'luckyexcel';
@@ -24,7 +25,7 @@ const SpreadsheetEditor = forwardRef(
             renderNavbar,
             initialSheetData,
             enableIndexeddbSync,
-            dsheetId = 'randomwvtestmkfrrkl',
+            dsheetId = 'randomwvtestmkfrrklprod--',
             portalContent,
             onChange,
             username,
@@ -44,6 +45,7 @@ const SpreadsheetEditor = forwardRef(
             handleCSVUpload: (event) => handleCSVUpload(event, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef),
             handleXLSXUpload: handleXLSXUpload,
             handleExportToXLSX: () => handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId),
+            handleExportToCSV: () => handleExportToCSV(sheetEditorRef, ydocRef, dsheetId),
 
         });
 
