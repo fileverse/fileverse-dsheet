@@ -8,6 +8,7 @@ import { DEFAULT_SHEET_DATA } from './constant/shared-constant';
 import { DsheetProp } from './types';
 import { handleCSVUpload } from './hooks/useCSVImport'
 import { useXLSXImport } from './hooks/useXLSXImport'
+import { handleExportToXLSX } from './hooks/useXLSXExport'
 import '@fortune-sheet/react/dist/index.css';
 // @ts-ignore
 import LuckyExcel from 'luckyexcel';
@@ -23,7 +24,7 @@ const SpreadsheetEditor = forwardRef(
             renderNavbar,
             initialSheetData,
             enableIndexeddbSync,
-            dsheetId = 'randomwvghgeklwe',
+            dsheetId = 'randomwvtestmkfrrkl',
             portalContent,
             onChange,
             username,
@@ -42,6 +43,8 @@ const SpreadsheetEditor = forwardRef(
         useFortuneToolbarImportBtn({
             handleCSVUpload: (event) => handleCSVUpload(event, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef),
             handleXLSXUpload: handleXLSXUpload,
+            handleExportToXLSX: () => handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId),
+
         });
 
         const MemoizedSheetEditor = useMemo(() => {
