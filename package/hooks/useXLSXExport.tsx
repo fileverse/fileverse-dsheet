@@ -45,7 +45,7 @@ export const handleExportToXLSX = (
         });
 
         // Generate the XLSX file and trigger download
-        XLSX.writeFile(workbook, 'luckysheet_export.xlsx');
+        XLSX.writeFile(workbook, 'flvSheet.xlsx');
 
         console.log('Export successful!');
     } catch (error) {
