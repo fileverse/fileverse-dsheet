@@ -30,7 +30,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "patch-package"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": [
@@ -50,6 +51,7 @@
     "js-base64": "^3.7.7",
     "katex": "^0.16.11",
     "luckyexcel": "^1.0.1",
+    "papaparse": "^5.5.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "tailwindcss-animate": "^1.0.7",
@@ -63,6 +65,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/papaparse": "^5.3.15",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
@@ -76,7 +79,9 @@
     "eslint-plugin-react-refresh": "^0.4.4",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
+    "patch-package": "^8.0.0",
     "postcss": "^8.4.38",
+    "postinstall-postinstall": "^2.1.0",
     "prettier": "^3.4.2",
     "sass": "^1.77.2",
     "tailwindcss": "^3.4.3",

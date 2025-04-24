@@ -19,7 +19,7 @@ import { DsheetProp } from './types';
 export const useDsheetEditor = ({
     initialSheetData,
     enableIndexeddbSync = true,
-    dsheetId = 'randomweeopopppsdfi',
+    dsheetId = 'randomwvbdssdvassdvasdfdbasdnwssftttt',
     onChange,
     username,
     enableWebrtc = true,
@@ -40,7 +40,7 @@ export const useDsheetEditor = ({
         currentDataRef.current = newSheetData as Sheet[];
 
     }, [portalContent, dsheetId]);
-    const collaborative = true;
+    // const collaborative = true;
     const [loading, setLoading] = useState(true);
     const firstRender = useRef(true);
     const remoteUpdateRef = useRef(false);
@@ -78,6 +78,7 @@ export const useDsheetEditor = ({
         // Here we are update sheet UI according to the Yjs document update from remote changes.
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
+            //return
             console.log('Yjs document updated:');
             if (origin === 'self') return;
             onChange?.(
@@ -96,12 +97,12 @@ export const useDsheetEditor = ({
                 }
             }
 
-            if (origin !== null) {
-                remoteUpdateRef.current = true;
-                if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return;
-                updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: newData as Sheet[] });
-                currentDataRef.current = newData as Sheet[];
-            }
+            //if (origin !== null) {
+            remoteUpdateRef.current = true;
+            if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return;
+            updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: newData as Sheet[] });
+            currentDataRef.current = newData as Sheet[];
+            //}
             // const user = awarenessRef.current?.getStates().get(origin?.awareness?.clientID)?.user;
             // onChange?.(update,)
         });
@@ -127,13 +128,15 @@ export const useDsheetEditor = ({
             localIndexeddbData = Array.from(sheetArray) as Sheet[];
         }
         const newSheetData = localIndexeddbData || initialSheetData || DEFAULT_SHEET_DATA;
-        if (!collaborative) {
-            ydoc.transact(() => {
-                sheetArray.delete(0, sheetArray.length);
-                sheetArray.insert(0, newSheetData);
-                currentDataRef.current = newSheetData;
-            });
-        }
+        console.log('newSheetData:', newSheetData);
+        // do this only when no aaray data, initialie with default data, and setloading false
+        //if (!collaborative) {
+        // ydoc.transact(() => {
+        //     sheetArray.delete(0, sheetArray.length);
+        //     sheetArray.insert(0, newSheetData);
+        //     currentDataRef.current = newSheetData;
+        // });
+        //}
         setLoading(false);
     }
 
@@ -158,20 +161,22 @@ export const useDsheetEditor = ({
             )
             webrtcProviderRef.current = webrtcProvider;
             webrtcProviderRef.current.on('status', event => {
-                const sheetArray = ydoc.getArray(dsheetId);
-                const data = Array.from(sheetArray) as Sheet[];
-                console.log('WebRTC connection status:', event, "value", data);
+                // const sheetArray = ydoc.getArray(dsheetId);
+                // const data = Array.from(sheetArray) as Sheet[];
+                console.log('WebRTC connection status:', event,);
             });
 
             // webrtcProviderRef.current.on('peers', error => {
             //     console.error('WebRTC connection peers:', error);
             // });
 
-            webrtcProviderRef.current.on('sync', (synced) => {
-                const sheetArray = ydoc.getArray(dsheetId);
-                const data = Array.from(sheetArray) as Sheet[];
-                console.log('WebRTC connection Synced status changed:', synced, "value", data);
-                updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: data as Sheet[] });
+            webrtcProviderRef.current.on('sync', (
+                // @ts-ignore
+                synced) => {
+                // const sheetArray = ydoc.getArray(dsheetId);
+                // const data = Array.from(sheetArray) as Sheet[];
+                // console.log('WebRTC connection Synced status changed:', synced, "value", data);
+                // updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: data as Sheet[] });
             });
         }
 
@@ -197,6 +202,7 @@ export const useDsheetEditor = ({
         if (ydocRef.current) {
             const ydoc = ydocRef.current;
             const sheetArray = ydoc.getArray(dsheetId);
+            const preSheetArray = Array.from(sheetArray) as Sheet[];
             // Compare data with current array content
             // const currentArray = Array.from(sheetArray);
             //if (JSON.stringify(currentArray) !== JSON.stringify(data)) {
@@ -204,7 +210,7 @@ export const useDsheetEditor = ({
             // This need better diffing algorithm for better performance with large datasets
             // For this simplified version, we'll still replace the array
             // but we only do it when there's an actual change
-            const sheetFormatCellData = data.map((sheet: Sheet) => {
+            const sheetFormatCellData = data.map((sheet: Sheet, index) => {
                 const sheetCellData = sheet['data'];
                 if (!sheetCellData) {
                     return sheet;
@@ -216,15 +222,17 @@ export const useDsheetEditor = ({
                         v: cellValue,
                     })),
                 );
-                const newSheetdata = { ...sheet, celldata: transformedData };
+                const newSheetdata = { ...sheet, celldata: transformedData, row: preSheetArray[index]?.row, column: preSheetArray[index]?.column, status: preSheetArray[index]?.status, order: preSheetArray[index]?.order, config: preSheetArray[index]?.config };
                 delete newSheetdata.data;
+                newSheetdata.config = sheet.config;
                 return newSheetdata;
             });
             console.log('sheetFormatCellData:', sheetFormatCellData, Array.from(sheetArray) as Sheet[]);
+            //sheetFormatCellData.row = Array.from(sheetArray)
             currentDataRef.current = sheetFormatCellData
             if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], sheetFormatCellData)) {
                 ydoc.transact(() => {
-                    sheetArray.delete(0, sheetArray.length);
+                    sheetArray.delete(0, preSheetArray.length);
                     sheetArray.insert(0, sheetFormatCellData);
                 });
             }
@@ -237,6 +245,7 @@ export const useDsheetEditor = ({
         currentDataRef,
         sheetData,
         loading,
+        ydocRef,
         setSheetData,
         handleFileUpload,
     };

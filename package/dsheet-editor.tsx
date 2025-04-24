@@ -1,10 +1,13 @@
-import { forwardRef, useMemo } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
 import { Workbook } from '@fortune-sheet/react';
 import cn from 'classnames';
+import { useFortuneToolbarImportBtn } from './hooks/useFortuneToolbarImportBtn'
 
 import { DEFAULT_SHEET_DATA } from './constant/shared-constant';
 import { DsheetProp } from './types';
+import { handleCSVUpload } from './hooks/useCSVImport'
+import { useXLSXImport } from './hooks/useXLSXImport'
 import '@fortune-sheet/react/dist/index.css';
 // @ts-ignore
 import LuckyExcel from 'luckyexcel';
@@ -20,7 +23,7 @@ const SpreadsheetEditor = forwardRef(
             renderNavbar,
             initialSheetData,
             enableIndexeddbSync,
-            dsheetId,
+            dsheetId = 'randomwvghgeklwe',
             portalContent,
             onChange,
             username,
@@ -28,10 +31,21 @@ const SpreadsheetEditor = forwardRef(
         // @ts-ignore
         ref: parentSheetEditorRef,
     ) => {
-        const { sheetEditorRef, handleChange, currentDataRef } =
+        const [forceSheetRender, setForceSheetRender] = useState(1);
+        const { sheetEditorRef, handleChange, currentDataRef, ydocRef, loading } =
             useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative });
 
+        const { handleXLSXUpload } = useXLSXImport({ sheetEditorRef, ydocRef, setForceSheetRender, dsheetId, currentDataRef });
+
+        console.log('kyaaaaaaaa    SpreadsheetEditor', handleXLSXUpload);
+
+        useFortuneToolbarImportBtn({
+            handleCSVUpload: (event) => handleCSVUpload(event, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef),
+            handleXLSXUpload: handleXLSXUpload,
+        });
+
         const MemoizedSheetEditor = useMemo(() => {
+            console.log('MemoizedSheetEditor', forceSheetRender, currentDataRef.current);
             return (
                 <Workbook
                     key={Date.now()}
@@ -43,13 +57,8 @@ const SpreadsheetEditor = forwardRef(
                     allowEdit={!isReadOnly}
                 />
             );
-        }, []);
+        }, [forceSheetRender, loading]);
 
-        // if (loading) {
-        //     return <div style={{ height: 'calc(100vh)', marginTop: `${renderNavbar ? '56px' : '0'}` }}>
-        //         {MemoizedSheetEditor}
-        //     </div>;
-        // }
 
         return (
             <div style={{ height: 'calc(100vh)' }}>
