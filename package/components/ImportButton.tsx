@@ -8,7 +8,7 @@ import { ChangeEventHandler } from 'react';
 import icon from '../assets/icon.svg';
 import './importButton.scss'
 
-export const CustomButton = ({ handleCSVUpload, handleXLSXUpload }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, handleXLSXUpload: ChangeEventHandler<HTMLInputElement> }) => {
+export const CustomButton = ({ handleCSVUpload, handleXLSXUpload, handleExportToXLSX }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, handleXLSXUpload: ChangeEventHandler<HTMLInputElement>, handleExportToXLSX: ChangeEventHandler<HTMLInputElement> }) => {
     return (
         <Popover>
             <PopoverTrigger>
@@ -41,9 +41,11 @@ export const CustomButton = ({ handleCSVUpload, handleXLSXUpload }: { handleCSVU
                     <h1 className="export-text">
                         Export
                     </h1>
-                    <p className="text-body-sm mt-2 btn">
-                        Export as .xlsx
-                    </p>
+                    <div onClick={handleExportToXLSX}>
+                        <p className="text-body-sm mt-2 btn">
+                            Export as .xlsx
+                        </p>
+                    </div>
                     <p className="text-body-sm mt-2 btn">
                         Export as .csv
                     </p>
