@@ -5,10 +5,10 @@ import { WebrtcProvider } from 'y-webrtc';
 import { WebsocketProvider } from 'y-websocket'
 import { Awareness } from 'y-protocols/awareness';
 import { IndexeddbPersistence } from 'y-indexeddb';
-import { handleFileUploadUtil } from './utils/handleFileImport';
 import { isSpreadsheetChanged } from './utils/diffSheet';
 import { updateSheetUIToYjs } from './utils/updateSheetUI';
 import { DEFAULT_SHEET_DATA } from './constant/shared-constant';
+import { TEMPLATES_DATA } from './templates/templates-data'
 import { fromUint8Array, toUint8Array } from 'js-base64';
 
 import { Sheet } from '@fortune-sheet/core';
@@ -19,7 +19,7 @@ import { DsheetProp } from './types';
 export const useDsheetEditor = ({
     initialSheetData,
     enableIndexeddbSync = true,
-    dsheetId = 'randomwvbdssdvassdvasdfdbasdnwssftttt',
+    dsheetId = 'randomwvbdssdvmmmergwlkmkltt',
     onChange,
     username,
     enableWebrtc = true,
@@ -52,13 +52,6 @@ export const useDsheetEditor = ({
     const sheetEditorRef = useRef<WorkbookInstance>(null);
     const [sheetData, setSheetData] = useState<Sheet[] | null>(null);
 
-    const handleFileUpload = async (
-        event: React.ChangeEvent<HTMLInputElement>,
-    ) => {
-        const fileSheetdata = await handleFileUploadUtil(event);
-        setSheetData(fileSheetdata);
-    };
-
     useEffect(() => {
         const ydoc = new Y.Doc({
             gc: true,
@@ -78,9 +71,8 @@ export const useDsheetEditor = ({
         // Here we are update sheet UI according to the Yjs document update from remote changes.
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
-            //return
-            console.log('Yjs document updated:');
-            if (origin === 'self') return;
+            console.log('Yjs document updated:', origin);
+            if (origin === null) return;
             onChange?.(
                 fromUint8Array(Y.encodeStateAsUpdate(ydocRef.current!)),
                 fromUint8Array(update),
@@ -137,6 +129,24 @@ export const useDsheetEditor = ({
         //     currentDataRef.current = newSheetData;
         // });
         //}
+
+        const templateQuery = new URLSearchParams(window.location.search).get('template');
+        if (templateQuery) {
+            // @ts-ignore
+            const templateData: Sheet[] = TEMPLATES_DATA[templateQuery as keyof typeof TEMPLATES_DATA];
+            console.log('templateData: inside', templateData);
+            if (templateData) {
+                console.log('Inserting template data into Yjs document.', templateData);
+                ydoc.transact(() => {
+                    sheetArray.delete(0, sheetArray.length);
+                    sheetArray.insert(0, templateData);
+                    currentDataRef.current = templateData;
+                });
+            }
+            const url = new URL(window.location.href);
+            url.search = ''; // Remove the query string
+            window.history.replaceState({}, '', url);
+        }
         setLoading(false);
     }
 
@@ -247,6 +257,5 @@ export const useDsheetEditor = ({
         loading,
         ydocRef,
         setSheetData,
-        handleFileUpload,
     };
 };

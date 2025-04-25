@@ -2,19 +2,14 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "0.0.3-patch-2",
+  "version": "0.0.4",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
-  "type": "module",
   "exports": {
     ".": {
       "import": "./dist/index.es.js",
       "require": "./dist/index.cjs.js",
       "default": "./dist/index.es.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./dist": {
-      "import": "./dist/index.es.js",
       "types": "./dist/index.d.ts"
     },
     "./styles": "./dist/style.css",
