@@ -2,7 +2,6 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-
 } from '@fileverse/ui';
 import { ChangeEventHandler } from 'react';
 import icon from '../assets/icon.svg';

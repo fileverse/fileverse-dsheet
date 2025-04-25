@@ -12,7 +12,7 @@ export default defineConfig({
       //to src/index.ts,indicating that the library starts from this file.
       name: 'dsheet',
       entry: path.resolve(__dirname, './index.ts'),
-      formats: ['es', 'cjs'],
+      formats: ['es'],
       //A function that generates the output file
       //name for different formats during the build
       fileName: (format) => `index.${format}.js`,

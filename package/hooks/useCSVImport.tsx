@@ -29,14 +29,21 @@ export const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>, ydoc
                     }
 
                     // Convert CSV data to fortune-sheet format
-                    const cellData: { r: number; c: number; v: string | number | null }[] = [];
+                    const cellData: { r: number; c: number; v: { m: string | number | null; ct: { fa: string; t: string }; v: string | number | null } }[] = [];
                     const headers = results.meta.fields || [];
 
                     // Add header row
                     const headerRow = headers.map((header, index) => ({
                         r: 0,
                         c: index,
-                        v: header
+                        v: {
+                            "m": header !== null ? header : null,
+                            "ct": {
+                                "fa": "General",
+                                "t": "g"
+                            },
+                            "v": header !== null ? header : null
+                        }
                     }));
 
                     headerRow.forEach(cell => {
@@ -48,11 +55,18 @@ export const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>, ydoc
                     let maxCol = 0;
                     results.data.forEach((row, rowIndex) => {
                         headers.forEach((header, colIndex) => {
-                            //console.log(rowIndex, colIndex);
+                            console.log("row:", row, "header:", header, "colIndex:", colIndex);
                             cellData.push({
                                 r: rowIndex + 1, // +1 because header is row 0
                                 c: colIndex,
-                                v: (row as Record<string, any>)[header] !== undefined ? (row as Record<string, any>)[header] : ""
+                                v: {
+                                    "m": (row as Record<string, any>)[header] !== null ? (row as Record<string, any>)[header] : null,
+                                    "ct": {
+                                        "fa": "General",
+                                        "t": "g"
+                                    },
+                                    "v": (row as Record<string, any>)[header] !== null ? (row as Record<string, any>)[header] : null
+                                }//(row as Record<string, any>)[header] !== undefined ? (row as Record<string, any>)[header] : ""
                             });
                             maxRow = Math.max(maxRow, rowIndex + 1);
                             maxCol = Math.max(maxCol, colIndex + 1);

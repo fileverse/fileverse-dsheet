@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import { utils as XLSXUtil, writeFile as XLSXWriteFile } from 'xlsx';
 import { Sheet } from '@fortune-sheet/core';
 
 import { MutableRefObject } from 'react';
@@ -21,7 +21,7 @@ export const handleExportToXLSX = (
         const sheetwithData = workbookRef.current.getAllSheets();
 
         // Create a new workbook
-        const workbook = XLSX.utils.book_new();
+        const workbook = XLSXUtil.book_new();
 
         // Process each sheet
         sheetData.forEach((sheet, index) => {
@@ -38,14 +38,14 @@ export const handleExportToXLSX = (
                 maxRow = Math.max(maxRow, cell.r);
                 maxCol = Math.max(maxCol, cell.c);
             });
-            const worksheet = XLSX.utils.aoa_to_sheet(rows);
+            const worksheet = XLSXUtil.aoa_to_sheet(rows);
 
             // Add the worksheet to the workbook
-            XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name);
+            XLSXUtil.book_append_sheet(workbook, worksheet, sheet.name);
         });
 
         // Generate the XLSX file and trigger download
-        XLSX.writeFile(workbook, 'flvSheet.xlsx');
+        XLSXWriteFile(workbook, 'flvSheet.xlsx');
 
         console.log('Export successful!');
     } catch (error) {

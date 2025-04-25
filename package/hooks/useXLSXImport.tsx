@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-// import { Workbook } from "@fortune-sheet/react";
-import ExcelJS from "exceljs";
-// import "@fortune-sheet/react/dist/index.css"
+import { Workbook } from "exceljs";
 // @ts-ignore
-import LuckyExcel from "luckyexcel";
+import { transformExcelToLucky } from "luckyexcel";
 
 export const useXLSXImport = ({
     sheetEditorRef,
@@ -64,7 +62,7 @@ export const useXLSXImport = ({
                 return;
             }
             const arrayBuffer = e.target.result;
-            const workbook = new ExcelJS.Workbook();
+            const workbook = new Workbook();
             try {
                 // @ts-ignore
                 await workbook.xlsx.load(arrayBuffer);
@@ -80,7 +78,7 @@ export const useXLSXImport = ({
                     }
                     return acc;
                 }, {});
-                LuckyExcel.transformExcelToLucky(
+                transformExcelToLucky(
                     file,
                     // @ts-ignore
                     function (exportJson: { sheets: any[] }, luckysheetfile: any) {

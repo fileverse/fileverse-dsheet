@@ -1,3 +1,2 @@
 export { default as DsheetEditor } from './package/dsheet-editor';
-import DsheetEditor from './package/dsheet-editor';
-export default DsheetEditor;
+export { TEMPLATES } from './package/templates/templates-list';
