@@ -34,12 +34,10 @@ const SpreadsheetEditor = forwardRef(
         ref: parentSheetEditorRef,
     ) => {
         const [forceSheetRender, setForceSheetRender] = useState(1);
-        const { sheetEditorRef, handleChange, currentDataRef, ydocRef, loading } =
+        const { sheetEditorRef, handleChange, currentDataRef, ydocRef } =
             useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative });
 
         const { handleXLSXUpload } = useXLSXImport({ sheetEditorRef, ydocRef, setForceSheetRender, dsheetId, currentDataRef });
-
-        console.log('kyaaaaaaaa    SpreadsheetEditor', handleXLSXUpload);
 
         useFortuneToolbarImportBtn({
             handleCSVUpload: (event) => handleCSVUpload(event, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef),
@@ -60,9 +58,20 @@ const SpreadsheetEditor = forwardRef(
                     showFormulaBar={!isReadOnly}
                     showToolbar={!isReadOnly}
                     allowEdit={!isReadOnly}
+                    hooks={{
+                        afterActivateSheet: (sheet: any) => {
+                            console.log('activate sheet', sheet);
+                        },
+                        afterUpdateCell: (sheet: any, cell: any) => {
+                            console.log('llllllllllooo', sheet, cell);
+                        },
+                        afterAddSheet: (sheet: any) => {
+                            console.log('add sheet', sheet);
+                        },
+                    }}
                 />
             );
-        }, [forceSheetRender, loading]);
+        }, [forceSheetRender]);
 
 
         return (

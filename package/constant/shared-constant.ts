@@ -4,5 +4,7 @@ export const DEFAULT_SHEET_DATA = [
     celldata: [],
     config: {},
     order: 0,
+    row: 150,
+    column: 36,
   },
 ];
