@@ -35,7 +35,7 @@ const SpreadsheetEditor = forwardRef(
     ) => {
         const [forceSheetRender, setForceSheetRender] = useState(1);
         const { sheetEditorRef, handleChange, currentDataRef, ydocRef } =
-            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative });
+            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative, setForceSheetRender });
 
         const { handleXLSXUpload } = useXLSXImport({ sheetEditorRef, ydocRef, setForceSheetRender, dsheetId, currentDataRef });
 
@@ -48,7 +48,7 @@ const SpreadsheetEditor = forwardRef(
         });
 
         const MemoizedSheetEditor = useMemo(() => {
-            console.log('MemoizedSheetEditor', forceSheetRender, currentDataRef.current);
+            console.log('MemoizedSheetEditor hh', forceSheetRender, currentDataRef.current);
             return (
                 <Workbook
                     key={Date.now()}

@@ -14,6 +14,7 @@ export interface DsheetProp {
   portalContent?: any;
   isReadOnly?: boolean;
   isCollaborative?: boolean;
+  setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>
 }
 
 export interface sheetEditorRef { }

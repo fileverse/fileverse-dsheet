@@ -24,22 +24,8 @@ export const useDsheetEditor = ({
     username,
     enableWebrtc = true,
     portalContent,
+    setForceSheetRender,
 }: Partial<DsheetProp>) => {
-    useEffect(() => {
-        if (!portalContent || portalContent?.length === 0) return;
-        console.log('package side:', 'portalContent', portalContent, 'dsheetId', dsheetId);
-        const newDoc = ydocRef.current as Y.Doc;
-        const uint8Array = toUint8Array(portalContent);
-        Y.applyUpdate(newDoc, uint8Array);
-        const map = newDoc.getArray(dsheetId);
-        const newSheetData = Array.from(map) as Sheet[];
-        updateSheetUIToYjs({
-            sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
-            sheetData: newSheetData as Sheet[],
-        });
-        currentDataRef.current = newSheetData as Sheet[];
-
-    }, [portalContent, dsheetId]);
     // const collaborative = true;
     const [loading, setLoading] = useState(true);
     const firstRender = useRef(true);
@@ -51,6 +37,23 @@ export const useDsheetEditor = ({
     const currentDataRef = useRef<Sheet[] | null>(null);
     const sheetEditorRef = useRef<WorkbookInstance>(null);
     const [sheetData, setSheetData] = useState<Sheet[] | null>(null);
+
+    useEffect(() => {
+        if (!portalContent || portalContent?.length === 0) return;
+        console.log('package side:', 'portalContent', portalContent, 'dsheetId', dsheetId);
+        const newDoc = ydocRef.current as Y.Doc;
+        const uint8Array = toUint8Array(portalContent);
+        Y.applyUpdate(newDoc, uint8Array);
+        const map = newDoc.getArray(dsheetId);
+        const newSheetData = Array.from(map) as Sheet[];
+        console.log('newSheetData: portal', newSheetData);
+        updateSheetUIToYjs({
+            sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
+            sheetData: newSheetData as Sheet[],
+        });
+        currentDataRef.current = newSheetData as Sheet[];
+
+    }, [portalContent, dsheetId]);
 
     useEffect(() => {
         const ydoc = new Y.Doc({
@@ -71,13 +74,12 @@ export const useDsheetEditor = ({
         // Here we are update sheet UI according to the Yjs document update from remote changes.
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
-            console.log('Yjs document updated:', origin);
-            if (origin === null) return;
+            console.log('Yjs document updated', origin);
             onChange?.(
                 fromUint8Array(Y.encodeStateAsUpdate(ydocRef.current!)),
                 fromUint8Array(update),
             );
-
+            if (origin === null) return;
             const decodedUpdates = Y.decodeUpdate(update);
             let newData;
             for (const struct of decodedUpdates.structs) {
@@ -91,7 +93,7 @@ export const useDsheetEditor = ({
 
             //if (origin !== null) {
             remoteUpdateRef.current = true;
-            if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return;
+            //if (!isSpreadsheetChanged(currentDataRef.current as Sheet[], newData as Sheet[])) return;
             updateSheetUIToYjs({ sheetEditorRef: sheetEditorRef.current as WorkbookInstance, sheetData: newData as Sheet[] });
             currentDataRef.current = newData as Sheet[];
             //}
@@ -142,6 +144,7 @@ export const useDsheetEditor = ({
                     sheetArray.insert(0, templateData);
                     currentDataRef.current = templateData;
                 });
+                setForceSheetRender?.((prev) => (prev ?? 0) + 1);
             }
             const url = new URL(window.location.href);
             url.search = ''; // Remove the query string
