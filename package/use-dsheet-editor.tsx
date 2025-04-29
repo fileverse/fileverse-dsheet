@@ -74,6 +74,8 @@ export const useDsheetEditor = ({
         // Here we are update sheet UI according to the Yjs document update from remote changes.
         // @ts-ignore
         ydoc.on('update', (update, origin) => {
+            // if not logged in not need to sync it on idoc or websocket, just intialize it with insitale or portal content or just show warning if no content.
+
             console.log('Yjs document updated', origin);
             onChange?.(
                 fromUint8Array(Y.encodeStateAsUpdate(ydocRef.current!)),
@@ -166,7 +168,8 @@ export const useDsheetEditor = ({
         });
         awarenessRef.current = awareness;
 
-        if (!webrtcProviderRef.current) {
+        // removed isCollaborative check for some experiments.
+        if (!webrtcProviderRef.current && portalContent?.length !== 0) {
             const webrtcProvider = new WebsocketProvider(
                 'wss://demos.yjs.dev/ws',
                 dsheetId,
@@ -200,7 +203,7 @@ export const useDsheetEditor = ({
                 webrtcProviderRef.current = null;
             }
         };
-    }, [enableWebrtc, ydocRef.current]);
+    }, [enableWebrtc, ydocRef.current, portalContent]);
 
     const handleChange = useCallback((data: Sheet[]) => {
         console.log('handleChange:', data, firstRender.current, remoteUpdateRef.current);
