@@ -169,6 +169,7 @@ export const useDsheetEditor = ({
         awarenessRef.current = awareness;
 
         // removed isCollaborative check for some experiments.
+        if (!portalContent || portalContent?.length === 0) return;
         if (!webrtcProviderRef.current && portalContent?.length !== 0) {
             const webrtcProvider = new WebsocketProvider(
                 'wss://demos.yjs.dev/ws',
