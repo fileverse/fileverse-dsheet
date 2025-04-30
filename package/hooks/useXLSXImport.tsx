@@ -21,7 +21,6 @@ export const useXLSXImport = ({
 
     useEffect(() => {
         if (sheetEditorRef && sheetEditorRef.current) {
-            console.log(sheetEditorRef.current.getAllSheets());
             if (sheetData.length > 0) {
                 setMergeInfo(sheetData[0].config.merge);
             }
@@ -37,7 +36,6 @@ export const useXLSXImport = ({
                 const endCellAddressR = merge.r + merge.rs - 1
                 const endCellAddressC = merge.c + merge.cs - 1
                 if (sheetEditorRef && sheetEditorRef.current) {
-                    console.log("MERGING CELL")
                     sheetEditorRef.current.mergeCells([
                         { row: [startCellAddressR, endCellAddressR], column: [startCellAddressC, endCellAddressC] }
                     ], 'merge-horizontal')
@@ -47,7 +45,6 @@ export const useXLSXImport = ({
     }, [mergeInfo])
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        console.log("handleFileUpload")
         const input = event.target;
         if (!input.files?.length) {
             return;

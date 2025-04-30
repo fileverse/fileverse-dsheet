@@ -10,6 +10,7 @@ import { handleCSVUpload } from './hooks/useCSVImport'
 import { useXLSXImport } from './hooks/useXLSXImport'
 import { handleExportToXLSX } from './hooks/useXLSXExport'
 import { handleExportToCSV } from './hooks/useCSVExport'
+import { handleExportToJSON } from './hooks/useJSONExport'
 import '@fortune-sheet/react/dist/index.css';
 // @ts-ignore
 import LuckyExcel from 'luckyexcel';
@@ -34,8 +35,19 @@ const SpreadsheetEditor = forwardRef(
         ref: parentSheetEditorRef,
     ) => {
         const [forceSheetRender, setForceSheetRender] = useState(1);
-        const { sheetEditorRef, handleChange, currentDataRef, ydocRef } =
-            useDsheetEditor({ initialSheetData, enableIndexeddbSync, dsheetId, username, onChange, portalContent, isCollaborative, setForceSheetRender });
+        const { sheetEditorRef,
+            handleChange,
+            currentDataRef,
+            ydocRef } = useDsheetEditor({
+                initialSheetData,
+                enableIndexeddbSync,
+                dsheetId,
+                username,
+                onChange,
+                portalContent,
+                isCollaborative,
+                setForceSheetRender
+            });
 
         const { handleXLSXUpload } = useXLSXImport({ sheetEditorRef, ydocRef, setForceSheetRender, dsheetId, currentDataRef });
 
@@ -44,7 +56,7 @@ const SpreadsheetEditor = forwardRef(
             handleXLSXUpload: handleXLSXUpload,
             handleExportToXLSX: () => handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId),
             handleExportToCSV: () => handleExportToCSV(sheetEditorRef, ydocRef, dsheetId),
-
+            handleExportToJSON: () => handleExportToJSON(sheetEditorRef),
         });
 
         const MemoizedSheetEditor = useMemo(() => {
@@ -63,7 +75,7 @@ const SpreadsheetEditor = forwardRef(
                             console.log('activate sheet', sheet);
                         },
                         afterUpdateCell: (sheet: any, cell: any) => {
-                            console.log('llllllllllooo', sheet, cell);
+                            console.log('cell updated', sheet, cell);
                         },
                         afterAddSheet: (sheet: any) => {
                             console.log('add sheet', sheet);
@@ -79,7 +91,9 @@ const SpreadsheetEditor = forwardRef(
                 {renderNavbar && <nav
                     id="Navbar"
                     className={cn(
-                        'h-14 color-bg-default py-2 px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-50 transition-transform duration-300',
+                        `h-14 color-bg-default py-2 px-4 flex gap-2 items-center
+                        justify-between w-screen fixed left-0 top-0 border-b
+                        color-border-default z-50 transition-transform duration-300`,
                         {
                             'translate-y-0': true,
                             'translate-y-[-100%]': false,

@@ -2,8 +2,19 @@ import { useEffect, ChangeEventHandler } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CustomButton } from '../components/ImportButton';
 
-export const useFortuneToolbarImportBtn = ({ handleCSVUpload, handleXLSXUpload, handleExportToXLSX, handleExportToCSV }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, handleXLSXUpload: ChangeEventHandler<HTMLInputElement>, handleExportToXLSX: Function, handleExportToCSV: Function }) => {
-    //console.log('useFortuneToolbarImportBtn', handleCSVUpload, handleXLSXUpload);
+export const useFortuneToolbarImportBtn = (
+    { handleCSVUpload,
+        handleXLSXUpload,
+        handleExportToXLSX,
+        handleExportToCSV,
+        handleExportToJSON }
+        : {
+            handleCSVUpload: ChangeEventHandler<HTMLInputElement>,
+            handleXLSXUpload: ChangeEventHandler<HTMLInputElement>,
+            handleExportToXLSX: Function,
+            handleExportToCSV: Function,
+            handleExportToJSON: Function
+        }) => {
     useEffect(() => {
         let root: any = null;
 
@@ -18,7 +29,7 @@ export const useFortuneToolbarImportBtn = ({ handleCSVUpload, handleXLSXUpload, 
                 // Create root and render component
                 root = createRoot(buttonContainer);
                 root.render(<CustomButton handleCSVUpload={handleCSVUpload} handleXLSXUpload={handleXLSXUpload} handleExportToXLSX={handleExportToXLSX}
-                    handleExportToCSV={handleExportToCSV} />);
+                    handleExportToCSV={handleExportToCSV} handleExportToJSON={handleExportToJSON} />);
 
                 return true;
             }

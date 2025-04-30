@@ -6,24 +6,19 @@ import { Sheet } from '@fortune-sheet/core';
  * @returns {boolean} - true if any cell data changed, false if identical
  */
 export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
-    // Early escape if sheets count differs
     if (!oldSheets || !newSheets || oldSheets.length !== newSheets.length) {
-        console.log('whyyyyyyy')
         return true;
     }
 
-    // Compare just the first sheet as requested
     if (oldSheets.length > 0) {
         for (let i = 0; i < oldSheets.length; i++) {
             const oldSheet = oldSheets[i];
             const newSheet = newSheets[i];
             console.log('sheet number:', i, 'oldSheet:', oldSheet, 'newSheet:', newSheet);
 
-            // Handle missing celldata case
             const oldCellData = oldSheet?.celldata || [];
             const newCellData = newSheet?.celldata || [];
 
-            // Create maps for comparison (only care about non-null values)
             const oldCellMap = new Map();
             const newCellMap = new Map();
 
@@ -64,23 +59,6 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
                 if (typeof value === 'object' && value !== null &&
                     typeof newValue === 'object' && newValue !== null) {
 
-                    // // Compare the most relevant fields from the cell value object
-                    // if (value.m !== newValue.m || value.v !== newValue.v) {
-                    //     console.log('Cell value changed:', key, value, newValue);
-                    //     return true;
-                    // }
-
-                    // // If ct exists and is different
-                    // if (value.ct && newValue.ct) {
-                    //     if (value.ct.fa !== newValue.ct.fa || value.ct.t !== newValue.ct.t) {
-                    //         console.log('Cell formatting changed:', key);
-                    //         return true;
-                    //     }
-                    // } else if ((value.ct && !newValue.ct) || (!value.ct && newValue.ct)) {
-                    //     console.log('Cell formatting presence changed:', key);
-                    //     return true;
-                    // }
-
                     for (const prop in value) {
                         if (value[prop] !== newValue[prop]) {
                             console.log(`Property '${prop}' changed:`, key, value[prop], newValue[prop]);
@@ -104,7 +82,6 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         }
     }
 
-    // No differences found
     console.log('No differences found');
     return false;
 }
