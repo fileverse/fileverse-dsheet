@@ -12,9 +12,9 @@ export const CustomButton = ({
 }: {
   handleCSVUpload: ChangeEventHandler<HTMLInputElement>;
   handleXLSXUpload: ChangeEventHandler<HTMLInputElement>;
-  handleExportToXLSX: Function;
-  handleExportToCSV: Function;
-  handleExportToJSON: Function;
+  handleExportToXLSX: () => void;
+  handleExportToCSV: () => void;
+  handleExportToJSON: () => void;
 }) => {
   return (
     <Popover>

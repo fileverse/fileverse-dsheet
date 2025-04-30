@@ -1,14 +1,15 @@
 import { utils as XLSXUtil, writeFile as XLSXWriteFile } from 'xlsx';
 import { Sheet } from '@fortune-sheet/core';
-
+import * as Y from 'yjs';
+import { WorkbookInstance } from '@fortune-sheet/react';
 import { MutableRefObject } from 'react';
 
 export const handleExportToXLSX = (
-  workbookRef: MutableRefObject<{ getAllSheets: () => any[] } | null>,
-  ydocRef: MutableRefObject<any>,
+  workbookRef: MutableRefObject<WorkbookInstance | null>,
+  ydocRef: MutableRefObject<Y.Doc | null>,
   dsheetId: string,
 ) => {
-  if (!workbookRef.current) return;
+  if (!workbookRef.current || !ydocRef.current) return;
 
   try {
     const ydoc = ydocRef.current;

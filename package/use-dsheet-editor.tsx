@@ -17,7 +17,7 @@ import { DsheetProp } from './types';
 export const useDsheetEditor = ({
   initialSheetData,
   enableIndexeddbSync = true,
-  dsheetId = 'randomwvbdssdvmmmergwlkmkltt',
+  dsheetId,
   onChange,
   username,
   enableWebrtc = true,
@@ -67,7 +67,6 @@ export const useDsheetEditor = ({
     }
 
     // Here we are update sheet UI according to the Yjs document update from remote changes.
-    // @ts-ignore
     ydoc.on('update', (update, origin) => {
       onChange?.(
         fromUint8Array(Y.encodeStateAsUpdate(ydocRef.current!)),
@@ -129,7 +128,7 @@ export const useDsheetEditor = ({
       'template',
     );
     if (templateQuery) {
-      // @ts-ignore
+      // @ts-expect-error, later
       const templateData: Sheet[] =
         TEMPLATES_DATA[templateQuery as keyof typeof TEMPLATES_DATA];
       if (templateData) {
@@ -179,15 +178,9 @@ export const useDsheetEditor = ({
         console.log('WebRTC connection status:', event);
       });
 
-      webrtcProviderRef.current.on(
-        'sync',
-        (
-          // @ts-ignore
-          synced,
-        ) => {
-          console.log('WebRTC connection Synced status changed:', synced);
-        },
-      );
+      webrtcProviderRef.current.on('sync', (synced) => {
+        console.log('WebRTC connection Synced status changed:', synced);
+      });
     }
 
     return () => {

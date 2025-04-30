@@ -1,12 +1,14 @@
 import Papa from 'papaparse';
 import { Sheet } from '@fortune-sheet/core';
+import React from 'react';
+import * as Y from 'yjs';
 
 export const handleCSVUpload = (
   event: React.ChangeEvent<HTMLInputElement>,
-  ydoc: any,
-  setForceSheetRender: any,
+  ydoc: Y.Doc | null,
+  setForceSheetRender: React.Dispatch<React.SetStateAction<number>>,
   dsheetId: string,
-  currentDataRef: any,
+  currentDataRef: React.MutableRefObject<object | null>,
 ) => {
   const input = event.target;
   if (!input.files?.length) {
@@ -74,16 +76,18 @@ export const handleCSVUpload = (
                 c: colIndex,
                 v: {
                   m:
-                    (row as Record<string, any>)[header] !== null
-                      ? (row as Record<string, any>)[header]
+                    (row as Record<string, string | number | null>)[header] !==
+                    null
+                      ? (row as Record<string, string | number | null>)[header]
                       : null,
                   ct: {
                     fa: 'General',
                     t: 'g',
                   },
                   v:
-                    (row as Record<string, any>)[header] !== null
-                      ? (row as Record<string, any>)[header]
+                    (row as Record<string, string | number | null>)[header] !==
+                    null
+                      ? (row as Record<string, string | number | null>)[header]
                       : null,
                 }, //(row as Record<string, any>)[header] !== undefined ? (row as Record<string, any>)[header] : ""
               });

@@ -1,6 +1,7 @@
 import { forwardRef, useMemo, useState } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
 import { Workbook } from '@fortune-sheet/react';
+import { Sheet } from '@fortune-sheet/core';
 import cn from 'classnames';
 import { useFortuneToolbarImportBtn } from './hooks/use-fortune-toolbar-import';
 
@@ -24,13 +25,12 @@ const SpreadsheetEditor = forwardRef(
       renderNavbar,
       initialSheetData,
       enableIndexeddbSync,
-      dsheetId = 'randomwvtestmkfrhniirklprod--',
+      dsheetId,
       portalContent,
       onChange,
       username,
     }: DsheetProp,
-    // @ts-ignore
-    ref: parentSheetEditorRef,
+    //ref: parentSheetEditorRef,
   ) => {
     const [forceSheetRender, setForceSheetRender] = useState(1);
     const { sheetEditorRef, handleChange, currentDataRef, ydocRef } =
@@ -86,13 +86,18 @@ const SpreadsheetEditor = forwardRef(
           showToolbar={!isReadOnly}
           allowEdit={!isReadOnly}
           hooks={{
-            afterActivateSheet: (sheet: any) => {
-              console.log('activate sheet', sheet);
+            afterActivateSheet: (sheetId: string) => {
+              console.log('activate sheet', sheetId);
             },
-            afterUpdateCell: (sheet: any, cell: any) => {
-              console.log('cell updated', sheet, cell);
+            afterUpdateCell: (
+              row: number,
+              column: number,
+              oldValue: object,
+              newValue: object,
+            ) => {
+              console.log('cell updated', row, column, oldValue, newValue);
             },
-            afterAddSheet: (sheet: any) => {
+            afterAddSheet: (sheet: Sheet) => {
               console.log('add sheet', sheet);
             },
           }}

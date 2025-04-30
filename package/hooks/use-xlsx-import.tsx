@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Workbook } from 'exceljs';
-// @ts-ignore
+import * as Y from 'yjs';
+import { Sheet } from '@fortune-sheet/core';
+import { WorkbookInstance } from '@fortune-sheet/react';
+// @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 
 export const useXLSXImport = ({
@@ -10,13 +13,13 @@ export const useXLSXImport = ({
   dsheetId,
   currentDataRef,
 }: {
-  sheetEditorRef: React.RefObject<any>;
-  ydocRef: React.RefObject<any>;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  ydocRef: React.RefObject<Y.Doc | null>;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   dsheetId: string;
-  currentDataRef: React.MutableRefObject<any>;
+  currentDataRef: React.MutableRefObject<object | null>;
 }) => {
-  const [sheetData, setSheetData] = useState<{ config: { merge: any } }[]>([]);
+  const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<
     string,
     { r: number; c: number; rs: number; cs: number }
@@ -25,7 +28,7 @@ export const useXLSXImport = ({
   useEffect(() => {
     if (sheetEditorRef && sheetEditorRef.current) {
       if (sheetData.length > 0) {
-        setMergeInfo(sheetData[0].config.merge);
+        setMergeInfo(sheetData[0].config?.merge ?? null);
       }
     }
   }, [sheetData]);
@@ -66,7 +69,13 @@ export const useXLSXImport = ({
       return;
     }
     const file = input.files[0];
-    let dropdownInfo: any = null;
+    let dropdownInfo: Record<
+      string,
+      {
+        type?: string;
+        formulae?: { replace: (a: RegExp, b: string) => string }[];
+      }
+    > | null = null;
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -77,35 +86,38 @@ export const useXLSXImport = ({
       const arrayBuffer = e.target.result;
       const workbook = new Workbook();
       try {
-        // @ts-ignore
+        //@ts-expect-error, later
         await workbook.xlsx.load(arrayBuffer);
         const worksheet = workbook.getWorksheet(1);
-        dropdownInfo = worksheet
-          ?.getSheetValues()
-          ?.reduce<Record<string, any>>((acc = {}, row, rowIndex) => {
-            if (row) {
-              Array.isArray(row) &&
-                row.forEach((cell, colIndex) => {
-                  if (
-                    cell &&
-                    typeof cell === 'object' &&
-                    'dataValidation' in cell
-                  ) {
-                    const cellAddress = `${String.fromCharCode(65 + colIndex)}${rowIndex}`;
-                    acc[cellAddress] = (cell as any).dataValidation;
-                  }
-                });
-            }
-            return acc;
-          }, {});
+        dropdownInfo =
+          worksheet
+            ?.getSheetValues()
+            ?.reduce<Record<string, object>>((acc = {}, row, rowIndex) => {
+              if (row) {
+                Array.isArray(row) &&
+                  row.forEach((cell, colIndex) => {
+                    if (
+                      cell &&
+                      typeof cell === 'object' &&
+                      'dataValidation' in cell
+                    ) {
+                      const cellAddress = `${String.fromCharCode(65 + colIndex)}${rowIndex}`;
+                      acc[cellAddress] =
+                        (cell as { dataValidation?: object | undefined })
+                          .dataValidation ?? {};
+                    }
+                  });
+              }
+              return acc;
+            }, {}) || null;
         transformExcelToLucky(
           file,
-          // @ts-ignore
-          function (exportJson: { sheets: any[] }, luckysheetfile: any) {
+          // luckysheetfile: object
+          function (exportJson: { sheets: Sheet[] }) {
             const sheets = exportJson.sheets;
             for (const sheet of sheets) {
               if (dropdownInfo && Object.keys(dropdownInfo).length > 0) {
-                const dataVerification: Record<string, any> = {};
+                const dataVerification: Record<string, object> = {};
                 for (const key of Object.keys(dropdownInfo)) {
                   const value = dropdownInfo[key];
                   if (value.type === 'list') {
@@ -117,7 +129,7 @@ export const useXLSXImport = ({
                       type: 'dropdown',
                       type2: '',
                       rangeTxt: key,
-                      value1: value.formulae[0].replace(/["']/g, ''),
+                      value1: value.formulae?.[0]?.replace(/["']/g, '') || '',
                       value2: '',
                       validity: '',
                       remote: false,

@@ -1,5 +1,5 @@
 import { useEffect, ChangeEventHandler } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, Root } from 'react-dom/client';
 import { CustomButton } from '../components/import-button-ui';
 
 export const useFortuneToolbarImportBtn = ({
@@ -11,12 +11,12 @@ export const useFortuneToolbarImportBtn = ({
 }: {
   handleCSVUpload: ChangeEventHandler<HTMLInputElement>;
   handleXLSXUpload: ChangeEventHandler<HTMLInputElement>;
-  handleExportToXLSX: Function;
-  handleExportToCSV: Function;
-  handleExportToJSON: Function;
+  handleExportToXLSX: () => void;
+  handleExportToCSV: () => void;
+  handleExportToJSON: () => void;
 }) => {
   useEffect(() => {
-    let root: any = null;
+    let root: Root | null = null;
 
     const injectReactButton = () => {
       const toolbar = document.querySelector('.fortune-toolbar');

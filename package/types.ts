@@ -8,10 +8,8 @@ export interface DsheetProp {
   onChange?: (updatedSheetContent: string, updateChunk: string) => void;
   username?: string;
   enableWebrtc?: boolean;
-  portalContent?: any;
+  portalContent?: string;
   isReadOnly?: boolean;
   isCollaborative?: boolean;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
 }
-
-export interface sheetEditorRef {}
