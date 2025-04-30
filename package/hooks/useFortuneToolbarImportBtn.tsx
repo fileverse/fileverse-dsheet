@@ -28,8 +28,13 @@ export const useFortuneToolbarImportBtn = (
 
                 // Create root and render component
                 root = createRoot(buttonContainer);
-                root.render(<CustomButton handleCSVUpload={handleCSVUpload} handleXLSXUpload={handleXLSXUpload} handleExportToXLSX={handleExportToXLSX}
-                    handleExportToCSV={handleExportToCSV} handleExportToJSON={handleExportToJSON} />);
+                root.render(<CustomButton
+                    handleCSVUpload={handleCSVUpload}
+                    handleXLSXUpload={handleXLSXUpload}
+                    handleExportToXLSX={handleExportToXLSX}
+                    handleExportToCSV={handleExportToCSV}
+                    handleExportToJSON={handleExportToJSON} />
+                );
 
                 return true;
             }
