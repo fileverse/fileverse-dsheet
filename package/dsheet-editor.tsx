@@ -12,8 +12,6 @@ import { handleExportToXLSX } from './utils/xlsx-export';
 import { handleExportToCSV } from './utils/csv-export';
 import { handleExportToJSON } from './utils/json-export';
 import '@fortune-sheet/react/dist/index.css';
-// @ts-ignore
-import LuckyExcel from 'luckyexcel';
 
 import './styles/editor.scss';
 import './styles/index.css';
