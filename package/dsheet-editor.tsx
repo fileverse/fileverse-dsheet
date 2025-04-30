@@ -6,11 +6,11 @@ import { useFortuneToolbarImportBtn } from './hooks/use-fortune-toolbar-import';
 
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { DsheetProp } from './types';
-import { handleCSVUpload } from './hooks/use-csv-import';
+import { handleCSVUpload } from './utils/csv-import';
 import { useXLSXImport } from './hooks/use-xlsx-import';
-import { handleExportToXLSX } from './hooks/use-xlsx-export';
-import { handleExportToCSV } from './hooks/use-csv-export';
-import { handleExportToJSON } from './hooks/use-json-export';
+import { handleExportToXLSX } from './utils/xlsx-export';
+import { handleExportToCSV } from './utils/csv-export';
+import { handleExportToJSON } from './utils/json-export';
 import '@fortune-sheet/react/dist/index.css';
 // @ts-ignore
 import LuckyExcel from 'luckyexcel';

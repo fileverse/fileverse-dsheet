@@ -1,6 +1,6 @@
 import { useEffect, ChangeEventHandler } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CustomButton } from '../components/ImportButton';
+import { CustomButton } from '../components/import-button-ui';
 
 export const useFortuneToolbarImportBtn = ({
   handleCSVUpload,
