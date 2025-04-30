@@ -15,8 +15,6 @@ function App() {
   const sheetEditorRef = useRef(null);
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [commentDrawerOpen, setCommentDrawerOpen] = useState(false);
 
   const renderNavbar = (): JSX.Element => {
     return (
@@ -67,31 +65,6 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    className="flex justify-start gap-2"
-                  >
-                    <LucideIcon name="Presentation" size="sm" />
-                    Slides
-                  </Button>
-                  <Button
-                    variant={'ghost'}
-                    className="flex justify-start gap-2"
-                  >
-                    <LucideIcon name="List" size="sm" />
-                    Document Outline
-                  </Button>
-                  <Button
-                    variant={'ghost'}
-                    onClick={() => setIsPreviewMode(!isPreviewMode)}
-                    className="flex justify-start gap-2"
-                  >
-                    <LucideIcon
-                      name={isPreviewMode ? 'Pencil' : 'PencilOff'}
-                      size="sm"
-                    />
-                    {isPreviewMode ? 'Edit' : 'Preview'}
-                  </Button>
-                  <Button
-                    variant={'ghost'}
                     onClick={() => { }}
                     className="flex justify-start gap-2"
                   >
@@ -105,32 +78,12 @@ function App() {
             <>
               <IconButton
                 variant={'ghost'}
-                icon={isPreviewMode ? 'PencilOff' : 'Pencil'}
-                size="md"
-                onClick={() => setIsPreviewMode(!isPreviewMode)}
-              />
-              <IconButton
-                variant={'ghost'}
-                icon="Presentation"
-                size="md"
-                onClick={() => {
-                  commentDrawerOpen && setCommentDrawerOpen(false);
-                }}
-              />
-              <IconButton
-                variant={'ghost'}
                 icon="Share2"
                 className="flex xl:hidden"
                 size="md"
               />
             </>
           )}
-          <IconButton
-            variant={'ghost'}
-            icon="MessageSquareText"
-            size="md"
-            onClick={() => setCommentDrawerOpen((prev) => !prev)}
-          />
           <Button
             toggleLeftIcon={true}
             leftIcon="Share2"
