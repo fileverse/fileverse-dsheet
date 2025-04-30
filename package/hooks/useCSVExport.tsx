@@ -6,21 +6,15 @@ export const handleExportToCSV = (workbookRef: MutableRefObject<{ getAllSheets: 
     ydocRef: MutableRefObject<any>,
     dsheetId: string
 ) => {
-    console.log('handleExportToCSV');
     if (!workbookRef.current) return;
 
     try {
-        // Get the current Luckysheet data
         const ydoc = ydocRef.current;
         const sheetArray = ydoc.getArray(dsheetId);
         const preSheetArray = Array.from(sheetArray) as Sheet[];
         const sheetData = preSheetArray;
-        //const sheetData = workbookRef.current.getData();
 
-        // Get the active sheet - typically we export only the active sheet to CSV
-        // If you want to export all sheets, you'd need to generate multiple CSV files
         const activeSheet = sheetData.find(sheet => sheet.status === 1) || sheetData[0];
-        console.log('activeSheet:', activeSheet);
 
         if (!activeSheet || !activeSheet.celldata || activeSheet.celldata.length === 0) {
             console.error('No data to export');
@@ -36,13 +30,11 @@ export const handleExportToCSV = (workbookRef: MutableRefObject<{ getAllSheets: 
             maxCol = Math.max(maxCol, cell.c);
         });
 
-        // Initialize the 2D array with the correct dimensions
         const rows: string[][] = [];
         for (let i = 0; i <= maxRow; i++) {
             rows[i] = Array(maxCol + 1).fill('');
         }
 
-        // Fill in the data
         activeSheet.celldata.forEach(cell => {
             const value = cell.v && cell.v.v !== undefined && cell.v.v !== null ? cell.v.v : '';
             rows[cell.r][cell.c] = String(value);
@@ -65,7 +57,6 @@ export const handleExportToCSV = (workbookRef: MutableRefObject<{ getAllSheets: 
             }).join(',');
         }).join('\n');
 
-        // Create and download the CSV file
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -75,7 +66,6 @@ export const handleExportToCSV = (workbookRef: MutableRefObject<{ getAllSheets: 
         link.click();
         document.body.removeChild(link);
 
-        console.log('CSV export successful!');
     } catch (error) {
         console.error('CSV export failed:', error);
     }

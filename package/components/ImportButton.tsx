@@ -7,24 +7,26 @@ import { ChangeEventHandler } from 'react';
 import icon from '../assets/icon.svg';
 import './importButton.scss'
 
-export const CustomButton = ({ handleCSVUpload, handleXLSXUpload, handleExportToXLSX, handleExportToCSV }: { handleCSVUpload: ChangeEventHandler<HTMLInputElement>, handleXLSXUpload: ChangeEventHandler<HTMLInputElement>, handleExportToXLSX: Function, handleExportToCSV: Function }) => {
+export const CustomButton = (
+    {
+        handleCSVUpload,
+        handleXLSXUpload,
+        handleExportToXLSX,
+        handleExportToCSV,
+        handleExportToJSON
+    }:
+        {
+            handleCSVUpload: ChangeEventHandler<HTMLInputElement>,
+            handleXLSXUpload: ChangeEventHandler<HTMLInputElement>,
+            handleExportToXLSX: Function,
+            handleExportToCSV: Function,
+            handleExportToJSON: Function
+        }) => {
     return (
         <Popover>
             <PopoverTrigger>
                 <div
-                    // onClick={onClick}
-                    className="fortune-toolbar-custom-btn"
-                    style={{
-                        // margin: '0 8px',
-                        padding: '4px 8px',
-                        // backgroundColor: '#4a5568',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    {/* {label} */}
+                    className="fortune-toolbar-custom-btn file-icon">
                     <img src={icon} alt="Icon" style={{ width: '20px', height: '20px' }} />
                 </div>
             </PopoverTrigger>
@@ -40,12 +42,17 @@ export const CustomButton = ({ handleCSVUpload, handleXLSXUpload, handleExportTo
                     <h1 className="export-text">
                         Export
                     </h1>
-                    <div onClick={() => handleExportToXLSX()}>
+                    <div onClick={() => handleExportToJSON()} className='btn'>
+                        <p className="text-body-sm mt-2 btn">
+                            Export as .json
+                        </p>
+                    </div>
+                    <div onClick={() => handleExportToXLSX()} className='btn'>
                         <p className="text-body-sm mt-2 btn">
                             Export as .xlsx
                         </p>
                     </div>
-                    <div onClick={() => handleExportToCSV()}>
+                    <div onClick={() => handleExportToCSV()} className='btn'>
                         <p className="text-body-sm mt-2 btn">
                             Export as .csv
                         </p>
@@ -55,7 +62,7 @@ export const CustomButton = ({ handleCSVUpload, handleXLSXUpload, handleExportTo
                     <h1 className="export-text">
                         Import
                     </h1>
-                    <div>
+                    <div className='btn'>
                         <label htmlFor="xlsx-upload" className="text-body-sm mt-2 btn">
                             Import .xlsx
                         </label>

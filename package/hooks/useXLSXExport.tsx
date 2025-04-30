@@ -11,26 +11,18 @@ export const handleExportToXLSX = (
     if (!workbookRef.current) return;
 
     try {
-        // Get the current Luckysheet data
         const ydoc = ydocRef.current;
         const sheetArray = ydoc.getArray(dsheetId);
         const preSheetArray = Array.from(sheetArray) as Sheet[];
         const sheetData = preSheetArray;
-        console.log('sheetData:', sheetData);
 
         const sheetwithData = workbookRef.current.getAllSheets();
 
-        // Create a new workbook
         const workbook = XLSXUtil.book_new();
 
-        // Process each sheet
         sheetData.forEach((sheet, index) => {
-            // Convert the celldata to a 2D array format expected by SheetJS
-            console.log('sheet:', sheet);
             const rows = sheetwithData[index]?.data || [];
-            console.log('rows:', rows, 'sheetwithData:', sheetwithData[index]);
 
-            // Find the maximum row and column indices
             let maxRow = 0;
             let maxCol = 0;
 
@@ -40,14 +32,11 @@ export const handleExportToXLSX = (
             });
             const worksheet = XLSXUtil.aoa_to_sheet(rows);
 
-            // Add the worksheet to the workbook
             XLSXUtil.book_append_sheet(workbook, worksheet, sheet.name);
         });
 
-        // Generate the XLSX file and trigger download
         XLSXWriteFile(workbook, 'flvSheet.xlsx');
 
-        console.log('Export successful!');
     } catch (error) {
         console.error('Export failed:', error);
     }

@@ -1,7 +1,12 @@
 import Papa from "papaparse";
 import { Sheet } from '@fortune-sheet/core';
 
-export const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>, ydoc: any, setForceSheetRender: any, dsheetId: string, currentDataRef: any) => {
+export const handleCSVUpload = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    ydoc: any,
+    setForceSheetRender: any,
+    dsheetId: string,
+    currentDataRef: any) => {
     const input = event.target;
     if (!input.files?.length) {
         return;
@@ -55,7 +60,6 @@ export const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>, ydoc
                     let maxCol = 0;
                     results.data.forEach((row, rowIndex) => {
                         headers.forEach((header, colIndex) => {
-                            console.log("row:", row, "header:", header, "colIndex:", colIndex);
                             cellData.push({
                                 r: rowIndex + 1, // +1 because header is row 0
                                 c: colIndex,
@@ -85,8 +89,6 @@ export const handleCSVUpload = (event: React.ChangeEvent<HTMLInputElement>, ydoc
                             merge: {}, // No merge cells for CSV by default
                         }
                     };
-
-                    console.log("Parsed sheetObject:", cellData, [sheetObject]);
 
                     if (!ydoc) {
                         console.error("ydocRef.current is null");
