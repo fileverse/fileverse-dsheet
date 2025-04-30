@@ -8,7 +8,6 @@
   "exports": {
     ".": {
       "import": "./dist/index.es.js",
-      "require": "./dist/index.cjs.js",
       "default": "./dist/index.es.js",
       "types": "./dist/index.d.ts"
     },
@@ -37,7 +36,7 @@
     ]
   },
   "dependencies": {
-    "@fileverse-dev/dsheets-templates": "^0.0.2",
+    "@fileverse-dev/dsheets-templates": "^0.0.3",
     "@fileverse/ui": "^4.1.6-patch-2",
     "@fortune-sheet/core": "^0.19.10",
     "@fortune-sheet/react": "^0.19.10",
