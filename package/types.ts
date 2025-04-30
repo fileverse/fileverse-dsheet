@@ -5,16 +5,13 @@ export interface DsheetProp {
   initialSheetData?: Sheet[];
   enableIndexeddbSync?: boolean;
   dsheetId?: string;
-  onChange?: (
-    updatedSheetContent: string,
-    updateChunk: string,
-  ) => void;
+  onChange?: (updatedSheetContent: string, updateChunk: string) => void;
   username?: string;
   enableWebrtc?: boolean;
   portalContent?: any;
   isReadOnly?: boolean;
   isCollaborative?: boolean;
-  setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>
+  setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
 }
 
-export interface sheetEditorRef { }
+export interface sheetEditorRef {}

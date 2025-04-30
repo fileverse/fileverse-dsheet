@@ -38,13 +38,6 @@ export const useDsheetEditor = ({
 
   useEffect(() => {
     if (!portalContent || portalContent?.length === 0) return;
-    console.log(
-      'package side:',
-      'portalContent',
-      portalContent,
-      'dsheetId',
-      dsheetId,
-    );
     const newDoc = ydocRef.current as Y.Doc;
     const uint8Array = toUint8Array(portalContent);
     Y.applyUpdate(newDoc, uint8Array);
@@ -89,7 +82,6 @@ export const useDsheetEditor = ({
           Object.keys(struct.content).includes('arr')
         ) {
           if ('arr' in struct.content) {
-            console.log('Array content:', struct.content.arr);
             newData = struct.content.arr;
           }
         }
@@ -123,7 +115,7 @@ export const useDsheetEditor = ({
     }
     const newSheetData =
       localIndexeddbData || initialSheetData || DEFAULT_SHEET_DATA;
-    console.log('newSheetData:', newSheetData);
+    console.log('newSheetData', newSheetData);
     // do this only when no aaray data, initialie with default data, and setloading false
     //if (!collaborative) {
     // ydoc.transact(() => {
