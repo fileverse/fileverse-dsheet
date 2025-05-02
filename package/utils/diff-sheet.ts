@@ -15,6 +15,11 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       const oldSheet = oldSheets[i];
       const newSheet = newSheets[i];
 
+      if (JSON.stringify(oldSheet.config) !== JSON.stringify(newSheet.config)) {
+        console.log('Sheet config changed:', oldSheet.config, newSheet.config);
+        return true;
+      }
+
       const oldCellData = oldSheet?.celldata || [];
       const newCellData = newSheet?.celldata || [];
 

@@ -214,13 +214,8 @@ export const useDsheetEditor = ({
         if (!sheetCellData) {
           return sheet;
         }
-        const transformedData = sheetCellData.flatMap((row, rowIndex) =>
-          row.map((cellValue, colIndex) => ({
-            r: rowIndex,
-            c: colIndex,
-            v: cellValue,
-          })),
-        );
+        const transformedData =
+          sheetEditorRef?.current?.dataToCelldata(sheetCellData);
         const newSheetdata = {
           ...sheet,
           celldata: transformedData,
