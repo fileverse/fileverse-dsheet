@@ -96,6 +96,10 @@ const SpreadsheetEditor = forwardRef(
               newValue: object,
             ) => {
               console.log('cell updated', row, column, oldValue, newValue);
+              sheetEditorRef.current?.setCellValue(row, column, {
+                ...newValue,
+                tb: '1',
+              });
             },
             afterAddSheet: (sheet: Sheet) => {
               console.log('add sheet', sheet);
