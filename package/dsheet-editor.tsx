@@ -92,6 +92,7 @@ const SpreadsheetEditor = forwardRef(
             afterUpdateCell: (
               row: number,
               column: number,
+              //@ts-expect-error sequence
               oldValue: object,
               newValue: object,
             ) => {
