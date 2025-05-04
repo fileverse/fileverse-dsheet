@@ -4,6 +4,8 @@ import { Workbook } from '@fortune-sheet/react';
 import { Sheet } from '@fortune-sheet/core';
 import cn from 'classnames';
 import { useFortuneToolbarImportBtn } from './hooks/use-fortune-toolbar-import';
+import { useToggleTemplateBtn } from './hooks/use-toggle-template';
+import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { DsheetProp } from './types';
@@ -29,11 +31,13 @@ const SpreadsheetEditor = forwardRef(
       portalContent,
       onChange,
       username,
+      selectedTemplate,
+      toggleTemplateSidebar,
     }: DsheetProp,
     //ref: parentSheetEditorRef,
   ) => {
     const [forceSheetRender, setForceSheetRender] = useState(1);
-    const { sheetEditorRef, handleChange, currentDataRef, ydocRef } =
+    const { sheetEditorRef, handleChange, currentDataRef, ydocRef, loading } =
       useDsheetEditor({
         initialSheetData,
         enableIndexeddbSync,
@@ -44,6 +48,15 @@ const SpreadsheetEditor = forwardRef(
         isCollaborative,
         setForceSheetRender,
       });
+
+    useApplyTemplatesBtn({
+      selectedTemplate,
+      ydocRef,
+      dsheetId,
+      currentDataRef,
+      setForceSheetRender,
+      sheetEditorRef,
+    });
 
     const { handleXLSXUpload } = useXLSXImport({
       sheetEditorRef,
@@ -68,6 +81,10 @@ const SpreadsheetEditor = forwardRef(
       handleExportToCSV: () =>
         handleExportToCSV(sheetEditorRef, ydocRef, dsheetId),
       handleExportToJSON: () => handleExportToJSON(sheetEditorRef),
+    });
+
+    useToggleTemplateBtn({
+      toggleTemplateSidebar,
     });
 
     const MemoizedSheetEditor = useMemo(() => {
@@ -107,7 +124,7 @@ const SpreadsheetEditor = forwardRef(
           }}
         />
       );
-    }, [forceSheetRender]);
+    }, [forceSheetRender, loading]);
 
     return (
       <div style={{ height: 'calc(100vh)' }}>

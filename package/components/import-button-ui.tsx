@@ -1,7 +1,6 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
 import { ChangeEventHandler } from 'react';
-import icon from '../assets/icon.svg';
-import './import-button.scss';
+import icon from '../assets/import-icon.svg';
 
 export const CustomButton = ({
   handleCSVUpload,
@@ -19,12 +18,13 @@ export const CustomButton = ({
   return (
     <Popover>
       <PopoverTrigger>
-        <div className="fortune-toolbar-custom-btn file-icon">
+        <div className="fortune-toolbar-custom-btn file-icon fortune-toolbar-button fortune-toolbar-item">
           <img
             src={icon}
             alt="Icon"
             style={{ width: '20px', height: '20px' }}
           />
+          <div className="fortune-tooltip">Import/Export</div>
         </div>
       </PopoverTrigger>
       <PopoverContent

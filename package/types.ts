@@ -11,5 +11,7 @@ export interface DsheetProp {
   portalContent?: string;
   isReadOnly?: boolean;
   isCollaborative?: boolean;
+  selectedTemplate?: string;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
+  toggleTemplateSidebar?: () => void;
 }
