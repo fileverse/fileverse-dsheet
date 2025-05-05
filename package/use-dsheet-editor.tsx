@@ -6,11 +6,10 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { isSpreadsheetChanged } from './utils/diff-sheet';
 import { updateSheetUIToYjs } from './utils/update-sheet-ui';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
-import { TEMPLATES_DATA } from '@fileverse-dev/dsheets-templates';
 import { fromUint8Array, toUint8Array } from 'js-base64';
 
-import { Sheet } from '@fortune-sheet/core';
-import { WorkbookInstance } from '@fortune-sheet/react';
+import { Sheet } from '@mritunjaygoutam12/core-mod';
+import { WorkbookInstance } from '@mritunjaygoutam12/react';
 
 import { DsheetProp } from './types';
 
@@ -22,7 +21,6 @@ export const useDsheetEditor = ({
   username,
   enableWebrtc = true,
   portalContent,
-  setForceSheetRender,
 }: Partial<DsheetProp>) => {
   // const collaborative = true;
   const [loading, setLoading] = useState(true);
@@ -117,31 +115,12 @@ export const useDsheetEditor = ({
     console.log('newSheetData', newSheetData);
     // do this only when no aaray data, initialie with default data, and setloading false
     //if (!collaborative) {
-    // ydoc.transact(() => {
-    //     sheetArray.delete(0, sheetArray.length);
-    //     sheetArray.insert(0, newSheetData);
-    //     currentDataRef.current = newSheetData;
-    // });
-    //}
-
-    const templateQuery = new URLSearchParams(window.location.search).get(
-      'template',
-    );
-    if (templateQuery) {
-      // @ts-expect-error, later
-      const templateData: Sheet[] =
-        TEMPLATES_DATA[templateQuery as keyof typeof TEMPLATES_DATA];
-      if (templateData) {
-        ydoc.transact(() => {
-          sheetArray.delete(0, sheetArray.length);
-          sheetArray.insert(0, templateData);
-          currentDataRef.current = templateData;
-        });
-        setForceSheetRender?.((prev) => (prev ?? 0) + 1);
-      }
-      const url = new URL(window.location.href);
-      url.search = '';
-      window.history.replaceState({}, '', url);
+    if (Array.from(sheetArray).length === 0) {
+      ydoc.transact(() => {
+        sheetArray.delete(0, sheetArray.length);
+        sheetArray.insert(0, DEFAULT_SHEET_DATA);
+        currentDataRef.current = DEFAULT_SHEET_DATA;
+      });
     }
     setLoading(false);
   }

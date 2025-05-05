@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import { Sheet } from '@fortune-sheet/core';
+import { Sheet } from '@mritunjaygoutam12/core-mod';
 import React from 'react';
 import * as Y from 'yjs';
 

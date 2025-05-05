@@ -1,4 +1,4 @@
-import { Sheet } from '@fortune-sheet/core';
+import { Sheet } from '@mritunjaygoutam12/core-mod';
 
 export interface DsheetProp {
   renderNavbar?: () => JSX.Element;
@@ -11,5 +11,7 @@ export interface DsheetProp {
   portalContent?: string;
   isReadOnly?: boolean;
   isCollaborative?: boolean;
+  selectedTemplate?: string;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
+  toggleTemplateSidebar?: () => void;
 }

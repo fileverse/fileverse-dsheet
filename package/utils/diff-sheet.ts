@@ -1,4 +1,4 @@
-import { Sheet } from '@fortune-sheet/core';
+import { Sheet } from '@mritunjaygoutam12/core-mod';
 /**
  * Compare two spreadsheets' cell data and check if anything changed
  * @param {Array} oldSheets - Original sheets data
