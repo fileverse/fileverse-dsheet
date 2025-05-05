@@ -1,5 +1,5 @@
-import { WorkbookInstance } from '@fortune-sheet/react';
-import { Sheet } from '@fortune-sheet/core';
+import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { Sheet } from '@mritunjaygoutam12/core-mod';
 
 export const updateSheetUIToYjs = ({
   sheetEditorRef,

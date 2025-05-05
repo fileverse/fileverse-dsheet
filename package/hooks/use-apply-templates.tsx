@@ -1,6 +1,6 @@
 import { useEffect, Dispatch, SetStateAction } from 'react';
-import { Sheet } from '@fortune-sheet/core';
-import { WorkbookInstance } from '@fortune-sheet/react';
+import { Sheet } from '@mritunjaygoutam12/core-mod';
+import { WorkbookInstance } from '@mritunjaygoutam12/react';
 import * as Y from 'yjs';
 import { TEMPLATES_DATA } from '@fileverse-dev/dsheets-templates';
 
@@ -28,7 +28,9 @@ export const useApplyTemplatesBtn = ({
     ] as Sheet[];
     if (templateData) {
       const data = Array.from(sheetArray) as Sheet[];
+      templateData[0].order = data.length;
       const finalData = [...data, ...templateData];
+      console.log('finalData', finalData);
       ydocRef.current.transact(() => {
         sheetArray.delete(0, sheetArray.length);
         sheetArray.insert(0, finalData);
