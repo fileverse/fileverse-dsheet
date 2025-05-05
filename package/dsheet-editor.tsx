@@ -102,6 +102,11 @@ const SpreadsheetEditor = forwardRef(
           showFormulaBar={!isReadOnly}
           showToolbar={!isReadOnly}
           allowEdit={!isReadOnly}
+          lang={'en'}
+          rowHeaderWidth={60}
+          columnHeaderHeight={24}
+          defaultColWidth={100}
+          defaultRowHeight={21}
           hooks={{
             afterActivateSheet: (sheetId: string) => {
               console.log('activate sheet', sheetId);
