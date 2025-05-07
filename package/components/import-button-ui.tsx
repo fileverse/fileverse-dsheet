@@ -18,14 +18,7 @@ export const CustomButton = ({
   return (
     <Popover>
       <PopoverTrigger>
-        <div className="fortune-toolbar-custom-btn file-icon fortune-toolbar-button fortune-toolbar-item">
-          <img
-            src={icon}
-            alt="Icon"
-            style={{ width: '20px', height: '20px' }}
-          />
-          <div className="fortune-tooltip">Import/Export</div>
-        </div>
+        <img src={icon} alt="Icon" style={{ width: '22px', height: '22px' }} />
       </PopoverTrigger>
       <PopoverContent
         align="start"
