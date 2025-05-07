@@ -1,10 +1,8 @@
 import { forwardRef, useMemo, useState } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
 import { Workbook } from '@mritunjaygoutam12/react';
-import { Sheet } from '@mritunjaygoutam12/core-mod';
+import { Sheet, Cell } from '@mritunjaygoutam12/core-mod';
 import cn from 'classnames';
-import { useFortuneToolbarImportBtn } from './hooks/use-fortune-toolbar-import';
-import { useToggleTemplateBtn } from './hooks/use-toggle-template';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
@@ -14,8 +12,11 @@ import { useXLSXImport } from './hooks/use-xlsx-import';
 import { handleExportToXLSX } from './utils/xlsx-export';
 import { handleExportToCSV } from './utils/csv-export';
 import { handleExportToJSON } from './utils/json-export';
-import '@mritunjaygoutam12/react/dist/index.css';
+import { afterUpdateCell } from './utils/after-update-cell';
+import { CustomButton } from './components/import-button-ui';
 
+import icon from './assets/template-icon.svg';
+import '@mritunjaygoutam12/react/dist/index.css';
 import './styles/editor.scss';
 import './styles/index.css';
 
@@ -66,27 +67,6 @@ const SpreadsheetEditor = forwardRef(
       currentDataRef,
     });
 
-    useFortuneToolbarImportBtn({
-      handleCSVUpload: (event) =>
-        handleCSVUpload(
-          event,
-          ydocRef.current,
-          setForceSheetRender,
-          dsheetId,
-          currentDataRef,
-        ),
-      handleXLSXUpload: handleXLSXUpload,
-      handleExportToXLSX: () =>
-        handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId),
-      handleExportToCSV: () =>
-        handleExportToCSV(sheetEditorRef, ydocRef, dsheetId),
-      handleExportToJSON: () => handleExportToJSON(sheetEditorRef),
-    });
-
-    useToggleTemplateBtn({
-      toggleTemplateSidebar,
-    });
-
     const MemoizedSheetEditor = useMemo(() => {
       console.log(
         'MemoizedSheetEditor hh',
@@ -107,6 +87,45 @@ const SpreadsheetEditor = forwardRef(
           columnHeaderHeight={24}
           defaultColWidth={100}
           defaultRowHeight={21}
+          customToolbarItems={[
+            {
+              key: 'import-export',
+              tooltip: 'Import/Export',
+              icon: (
+                <CustomButton
+                  handleCSVUpload={(event) =>
+                    handleCSVUpload(
+                      event,
+                      ydocRef.current,
+                      setForceSheetRender,
+                      dsheetId,
+                      currentDataRef,
+                    )
+                  }
+                  handleXLSXUpload={handleXLSXUpload}
+                  handleExportToXLSX={() =>
+                    handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+                  }
+                  handleExportToCSV={() =>
+                    handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+                  }
+                  handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
+                />
+              ),
+            },
+            {
+              key: 'templates',
+              tooltip: 'Templates',
+              icon: (
+                <img
+                  src={icon}
+                  alt="Icon"
+                  style={{ width: '20px', height: '20px' }}
+                />
+              ),
+              onClick: toggleTemplateSidebar,
+            },
+          ]}
           hooks={{
             afterActivateSheet: (sheetId: string) => {
               console.log('activate sheet', sheetId);
@@ -114,14 +133,10 @@ const SpreadsheetEditor = forwardRef(
             afterUpdateCell: (
               row: number,
               column: number,
-              oldValue: object,
-              newValue: object,
+              oldValue: Cell,
+              newValue: Cell,
             ) => {
-              sheetEditorRef.current?.setCellValue(row, column, {
-                ...newValue,
-                tb: '1',
-              });
-              console.log('update cell', oldValue);
+              afterUpdateCell(row, column, oldValue, newValue, sheetEditorRef);
             },
             afterAddSheet: (sheet: Sheet) => {
               console.log('add sheet', sheet);
