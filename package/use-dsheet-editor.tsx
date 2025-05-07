@@ -8,8 +8,8 @@ import { updateSheetUIToYjs } from './utils/update-sheet-ui';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { fromUint8Array, toUint8Array } from 'js-base64';
 
-import { Sheet } from '@mritunjaygoutam12/core-mod';
-import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { Sheet } from '@fileverse-dev/fortune-core';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 import { DsheetProp } from './types';
 
