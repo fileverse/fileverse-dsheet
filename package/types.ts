@@ -1,4 +1,4 @@
-import { Sheet } from '@mritunjaygoutam12/core-mod';
+import { Sheet } from '@fileverse-dev/fortune-core';
 
 export interface DsheetProp {
   renderNavbar?: () => JSX.Element;

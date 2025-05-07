@@ -1,5 +1,5 @@
-import { Cell } from '@mritunjaygoutam12/core-mod';
-import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { Cell } from '@fileverse-dev/fortune-core';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 const formulaResponseUiSync = (
   r: number,

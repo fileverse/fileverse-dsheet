@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
-import { Sheet } from '@mritunjaygoutam12/core-mod';
-import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { Sheet } from '@fileverse-dev/fortune-core';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 

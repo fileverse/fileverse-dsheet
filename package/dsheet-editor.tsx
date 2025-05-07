@@ -1,7 +1,7 @@
 import { forwardRef, useMemo, useState } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
-import { Workbook } from '@mritunjaygoutam12/react';
-import { Sheet, Cell } from '@mritunjaygoutam12/core-mod';
+import { Workbook } from '@fileverse-dev/fortune-react';
+import { Sheet, Cell } from '@fileverse-dev/fortune-core';
 import cn from 'classnames';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 
@@ -16,7 +16,7 @@ import { afterUpdateCell } from './utils/after-update-cell';
 import { CustomButton } from './components/import-button-ui';
 
 import icon from './assets/template-icon.svg';
-import '@mritunjaygoutam12/react/dist/index.css';
+import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/editor.scss';
 import './styles/index.css';
 

@@ -1,6 +1,6 @@
-import { Sheet } from '@mritunjaygoutam12/core-mod';
+import { Sheet } from '@fileverse-dev/fortune-core';
 import * as Y from 'yjs';
-import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
 
 export const handleExportToCSV = (

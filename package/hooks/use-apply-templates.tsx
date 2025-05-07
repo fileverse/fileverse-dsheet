@@ -1,6 +1,6 @@
 import { useEffect, Dispatch, SetStateAction } from 'react';
-import { Sheet } from '@mritunjaygoutam12/core-mod';
-import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { Sheet } from '@fileverse-dev/fortune-core';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { TEMPLATES_DATA } from '@fileverse-dev/dsheets-templates';
 

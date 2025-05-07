@@ -1,4 +1,4 @@
-import { WorkbookInstance } from '@mritunjaygoutam12/react';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 export const handleExportToJSON = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
 ) => {
