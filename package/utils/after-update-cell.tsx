@@ -9,6 +9,19 @@ const formulaResponseUiSync = (
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
 ) => {
   const headers: string[] = Object.keys(apiData[0]);
+  // handle row and col ofbound and add new row and col
+  const sheet = sheetEditorRef.current?.getSheet();
+  const row = sheet?.data?.length || 0;
+  const column = sheet?.data?.[0]?.length || 0;
+  const extraRow = (apiData.length - (row - r)) + 1;
+  const extraCol = headers.length - (column - c) + 1;
+  if (extraRow > 0) {
+    sheetEditorRef.current?.insertRowOrColumn('row', row - 1, extraRow);
+  }
+  if (extraCol > 0) {
+    sheetEditorRef.current?.insertRowOrColumn('column', column - 1, extraCol);
+  }
+  // set header
   headers.forEach((header, index) => {
     if (index === 0) {
       sheetEditorRef.current?.setCellValue(r, c, { ...newV, m: header });
@@ -17,6 +30,7 @@ const formulaResponseUiSync = (
     }
   });
 
+  // set data
   let startRow = r + 1;
   for (let i = 0; i < apiData.length; i++) {
     headers.forEach((header, index) => {
