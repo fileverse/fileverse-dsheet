@@ -77,7 +77,7 @@ export const handleCSVUpload = (
                 v: {
                   m:
                     (row as Record<string, string | number | null>)[header] !==
-                      null
+                    null
                       ? (row as Record<string, string | number | null>)[header]
                       : null,
                   ct: {
@@ -86,7 +86,7 @@ export const handleCSVUpload = (
                   },
                   v:
                     (row as Record<string, string | number | null>)[header] !==
-                      null
+                    null
                       ? (row as Record<string, string | number | null>)[header]
                       : null,
                 }, //(row as Record<string, any>)[header] !== undefined ? (row as Record<string, any>)[header] : ""

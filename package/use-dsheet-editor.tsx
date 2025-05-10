@@ -3,11 +3,11 @@ import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { Awareness } from 'y-protocols/awareness';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import { fromUint8Array, toUint8Array } from 'js-base64';
+
 import { isSpreadsheetChanged } from './utils/diff-sheet';
 import { updateSheetUIToYjs } from './utils/update-sheet-ui';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
-import { fromUint8Array, toUint8Array } from 'js-base64';
-
 import { Sheet } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
