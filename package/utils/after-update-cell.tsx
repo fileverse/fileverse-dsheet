@@ -13,7 +13,7 @@ const formulaResponseUiSync = (
   const sheet = sheetEditorRef.current?.getSheet();
   const row = sheet?.data?.length || 0;
   const column = sheet?.data?.[0]?.length || 0;
-  const extraRow = (apiData.length - (row - r)) + 1;
+  const extraRow = apiData.length - (row - r) + 1;
   const extraCol = headers.length - (column - c) + 1;
   if (extraRow > 0) {
     sheetEditorRef.current?.insertRowOrColumn('row', row - 1, extraRow);
