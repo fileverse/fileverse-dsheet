@@ -1,14 +1,21 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
 import { ChangeEventHandler } from 'react';
-import icon from '../assets/import-icon.svg';
+import {
+  LucideIcon,
+  IconButton,
+} from '@fileverse/ui';
+
+import "./import-button.scss";
 
 export const CustomButton = ({
+  setExportDropdownOpen,
   handleCSVUpload,
   handleXLSXUpload,
   handleExportToXLSX,
   handleExportToCSV,
   handleExportToJSON,
 }: {
+  setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleCSVUpload: ChangeEventHandler<HTMLInputElement>;
   handleXLSXUpload: ChangeEventHandler<HTMLInputElement>;
   handleExportToXLSX: () => void;
@@ -16,36 +23,82 @@ export const CustomButton = ({
   handleExportToJSON: () => void;
 }) => {
   return (
-    <Popover>
-      <PopoverTrigger>
-        <img src={icon} alt="Icon" style={{ width: '22px', height: '22px' }} />
+    <Popover onOpenChange={(open) => {
+      setExportDropdownOpen(open);
+    }}>
+      <PopoverTrigger onChange={() => {
+        console.log('handleXLSXUpload');
+      }}>
+        <IconButton
+          className='export-button'
+          icon="FileExport"
+          variant="ghost"
+          size="md"
+        />
       </PopoverTrigger>
       <PopoverContent
         align="start"
         alignOffset={0}
-        className="w-72 p-2"
+        className="w-72 export-content"
         elevation={2}
         side="bottom"
         sideOffset={4}
       >
         <div className="p-2 color-text-default">
-          <h1 className="export-text">Export</h1>
-          <div onClick={() => handleExportToJSON()} className="btn">
-            <p className="text-body-sm mt-2 btn">Export as .json</p>
-          </div>
-          <div onClick={() => handleExportToXLSX()} className="btn">
-            <p className="text-body-sm mt-2 btn">Export as .xlsx</p>
-          </div>
-          <div onClick={() => handleExportToCSV()} className="btn">
-            <p className="text-body-sm mt-2 btn">Export as .csv</p>
-          </div>
+          <h1 className="export-label-header pl-2">Export</h1>
+          <button
+            onClick={() => handleExportToJSON()}
+            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+          >
+            <LucideIcon
+              name="FileExport"
+              className="w-5 h-5"
+            />
+            <span className="text-sm">
+              Export to JSON
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleExportToXLSX()}
+            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+          >
+            <LucideIcon
+              name='FileExport'
+              className="w-5 h-5"
+            />
+            <span className="text-sm">
+              Export to XLSX
+            </span>
+          </button>
+
+          <button
+            onClick={() => handleExportToCSV()}
+            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+          >
+            <LucideIcon
+              name='FileExport'
+              className="w-5 h-5"
+            />
+            <span className="text-sm">
+              Export to CSV
+            </span>
+          </button>
         </div>
         <div className="p-2 color-text-default">
-          <h1 className="export-text">Import</h1>
+          <h1 className="export-label-header pl-2">Import</h1>
           <div className="btn">
-            <label htmlFor="xlsx-upload" className="text-body-sm mt-2 btn">
-              Import .xlsx
-            </label>
+            <button
+              className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            >
+              <LucideIcon
+                name='FileImport'
+                className="w-5 h-5"
+              />
+              <label htmlFor="xlsx-upload" className='export-label w-full cursor-pointer'>
+                <p>Import XLSX</p>
+              </label>
+            </button>
             <input
               type="file"
               accept=".xlsx"
@@ -65,9 +118,18 @@ export const CustomButton = ({
               onChange={handleCSVUpload}
               style={{ display: 'none' }}
             />
-            <label htmlFor="csv-upload">
-              <p className="text-body-sm mt-2 btn">Import .csv</p>
-            </label>
+            <button
+              className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            >
+              <LucideIcon
+                name='FileImport'
+                className="w-5 h-5"
+              />
+              <label htmlFor="csv-upload" className='export-label w-full cursor-pointer'>
+                <p>Import CSV</p>
+              </label>
+            </button>
+
           </div>
         </div>
       </PopoverContent>

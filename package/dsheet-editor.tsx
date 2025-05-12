@@ -5,6 +5,7 @@ import { Sheet, Cell } from '@fileverse-dev/fortune-core';
 import cn from 'classnames';
 
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
+import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { DsheetProp } from './types';
 import { handleCSVUpload } from './utils/csv-import';
@@ -33,10 +34,12 @@ const SpreadsheetEditor = forwardRef(
       username,
       selectedTemplate,
       toggleTemplateSidebar,
+      isTemplateOpen,
     }: DsheetProp,
     //ref: parentSheetEditorRef,
   ) => {
     const [forceSheetRender, setForceSheetRender] = useState(1);
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
     const { sheetEditorRef, handleChange, currentDataRef, ydocRef, loading } =
       useDsheetEditor({
         initialSheetData,
@@ -66,6 +69,8 @@ const SpreadsheetEditor = forwardRef(
       currentDataRef,
     });
 
+    useFortuneDocumentStyle(exportDropdownOpen, isTemplateOpen);
+
     const MemoizedSheetEditor = useMemo(() => {
       return (
         <Workbook
@@ -82,6 +87,7 @@ const SpreadsheetEditor = forwardRef(
           defaultColWidth={100}
           defaultRowHeight={21}
           customToolbarItems={getCustomToolbarItems({
+            setExportDropdownOpen,
             handleCSVUpload,
             handleXLSXUpload,
             handleExportToXLSX,
