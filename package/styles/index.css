@@ -5,6 +5,7 @@
 @tailwind utilities;
 
 @layer base {
+
   ul,
   ol {
     list-style: revert;
@@ -34,4 +35,10 @@ body {
   position: static;
   user-select: none;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.fortune-tooltip {
+  top: 50px !important;
+  background: black !important;
+  border-radius: 4px;
 }

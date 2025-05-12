@@ -10,6 +10,7 @@ export interface DsheetProp {
   enableWebrtc?: boolean;
   portalContent?: string;
   isReadOnly?: boolean;
+  isTemplateOpen?: boolean;
   isCollaborative?: boolean;
   selectedTemplate?: string;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;

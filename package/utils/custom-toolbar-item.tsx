@@ -4,9 +4,13 @@ import React, { ChangeEvent } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { CustomButton } from './../components/import-button-ui';
-import icon from './../assets/template-icon.svg';
+
+import {
+  IconButton,
+} from '@fileverse/ui';
 
 export const getCustomToolbarItems = ({
+  setExportDropdownOpen,
   handleCSVUpload,
   handleXLSXUpload,
   handleExportToXLSX,
@@ -19,6 +23,7 @@ export const getCustomToolbarItems = ({
   setForceSheetRender,
   toggleTemplateSidebar,
 }: {
+  setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleCSVUpload: (
     event: ChangeEvent<HTMLInputElement>,
     ydocRef: Y.Doc | null,
@@ -47,37 +52,46 @@ export const getCustomToolbarItems = ({
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
 }) => [
-  {
-    key: 'import-export',
-    tooltip: 'Import/Export',
-    icon: (
-      <CustomButton
-        handleCSVUpload={(event) =>
-          handleCSVUpload(
-            event,
-            ydocRef.current,
-            setForceSheetRender,
-            dsheetId,
-            currentDataRef,
-          )
-        }
-        handleXLSXUpload={handleXLSXUpload}
-        handleExportToXLSX={() =>
-          handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
-        }
-        handleExportToCSV={() =>
-          handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
-        }
-        handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
-      />
-    ),
-  },
-  {
-    key: 'templates',
-    tooltip: 'Templates',
-    icon: (
-      <img src={icon} alt="Icon" style={{ width: '20px', height: '20px' }} />
-    ),
-    onClick: toggleTemplateSidebar,
-  },
-];
+    {
+      key: 'import-export',
+      tooltip: 'Import/Export',
+      onClick: () => {
+        setExportDropdownOpen((prev) => !prev);
+      },
+      icon: (
+        <CustomButton
+          setExportDropdownOpen={setExportDropdownOpen}
+          handleCSVUpload={(event) =>
+            handleCSVUpload(
+              event,
+              ydocRef.current,
+              setForceSheetRender,
+              dsheetId,
+              currentDataRef,
+            )
+          }
+          handleXLSXUpload={handleXLSXUpload}
+          handleExportToXLSX={() =>
+            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+          }
+          handleExportToCSV={() =>
+            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+          }
+          handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
+        />
+      ),
+    },
+    {
+      key: 'templates',
+      tooltip: 'Templates',
+      icon: (
+        <IconButton
+          className='template-button'
+          icon="LayoutTemplate"
+          size="md"
+          variant="ghost"
+        />
+      ),
+      onClick: toggleTemplateSidebar,
+    },
+  ];
