@@ -112,7 +112,7 @@ export const OnboardingUI = ({ sheetEditorRef }: { sheetEditorRef: React.RefObje
         </div>
 
 
-        <div className={`onboarding-info-card w-[360px] h-auto border-[1px] border-grey-500 border-solid rounded-xl shadow-xl transition-all duration-1000 ease-in-out overflow-hidden ${expandInfoContainer ? 'h-[370px]' : 'h-0'}`}>
+        <div className={`onboarding-info-card w-[360px] border-[1px] border-grey-500 border-solid rounded-xl shadow-xl transition-all duration-1000 ease-in-out overflow-hidden ${expandInfoContainer ? 'h-[370px]' : 'h-0'}`}>
           <div className={`flex flex-col items-center justify-center w-full transition-opacity duration-1000 ${expandInfoContainer ? 'opacity-100' : 'opacity-0'}`}>
             <div className="relative bg-white w-full max-w-lg rounded-lg overflow-hidden">
               <div className="relative w-full bg-white rounded-md mb-2">
