@@ -1,0 +1,55 @@
+.first-blue {
+  position: absolute;
+  z-index: 19;
+  top: 266px;
+  left: 258px;
+  width: 104px;
+  height: 26px;
+  border: 2px solid #5C0AFF;
+  border-bottom: none;
+}
+
+.second-blue {
+  position: absolute;
+  z-index: 19;
+  top: 266px;
+  left: 258px;
+  width: 104px;
+  height: 26px;
+  border: 2px solid #5C0AFF;
+  border-top: none;
+}
+
+.wizard {
+  position: absolute;
+  z-index: 19;
+  top: 228px;
+  left: 80px;
+}
+
+.onboarding-info-card {
+  position: absolute;
+  z-index: 2000;
+  top: 300px;
+  left: 258px;
+  width: 100%;
+  height: 100%;
+}
+
+.onboarding-info-header {
+  font-family: Helvetica Neue;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 22px;
+  letter-spacing: 0%;
+  vertical-align: middle;
+}
+
+.onboarding-info-description {
+  font-family: Helvetica Neue;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0%;
+  vertical-align: middle;
+}
