@@ -15,6 +15,7 @@ import { handleExportToCSV } from './utils/csv-export';
 import { handleExportToJSON } from './utils/json-export';
 import { afterUpdateCell } from './utils/after-update-cell';
 import { getCustomToolbarItems } from './utils/custom-toolbar-item';
+import { OnboardingUI } from './components/onboarding';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/editor.scss';

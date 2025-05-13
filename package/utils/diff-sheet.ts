@@ -62,24 +62,12 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         ) {
           for (const prop in value) {
             if (value[prop] !== newValue[prop]) {
-              console.log(
-                `Property '${prop}' changed:`,
-                key,
-                value[prop],
-                newValue[prop],
-              );
               return true;
             }
           }
 
           for (const prop in newValue) {
             if (value[prop] !== newValue[prop]) {
-              console.log(
-                `Property '${prop}' changed:`,
-                key,
-                value[prop],
-                newValue[prop],
-              );
               return true;
             }
           }
