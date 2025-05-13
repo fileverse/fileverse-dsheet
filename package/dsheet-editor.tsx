@@ -65,6 +65,7 @@ const SpreadsheetEditor = ({
     initialTitle,
     isCollaborative,
     sheetEditorRef: editorRef,
+    setForceSheetRender,
   });
 
   // When title changes, notify parent component if handler exists

@@ -8,7 +8,6 @@ import { useYjsDocument } from './hooks/use-yjs-document';
 import { useWebRTCConnection } from './hooks/use-webrtc-connection';
 import { useSheetData } from './hooks/use-sheet-data';
 import { updateSheetData } from './utils/sheet-operations';
-import { updateSheetUIToYjs } from './utils/update-sheet-ui';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { DsheetProps } from './types';
 
@@ -22,6 +21,7 @@ export const useDsheetEditor = ({
   initialTitle = 'Untitled',
   sheetEditorRef: externalSheetEditorRef,
   initialSheetData,
+  setForceSheetRender,
 }: Partial<DsheetProps>) => {
   const [loading, setLoading] = useState(true);
   const firstRender = useRef(true);
@@ -123,12 +123,10 @@ export const useDsheetEditor = ({
         // Force set the current data ref
         currentDataRef.current = currentData;
 
-        // Ensure data is properly applied to editor when available
-        if (sheetEditorRef.current) {
-          updateSheetUIToYjs({
-            sheetEditorRef: sheetEditorRef.current,
-            sheetData: currentData,
-          });
+        // Instead of manually updating UI, force a complete re-render
+        // of the Workbook component with the new data
+        if (setForceSheetRender) {
+          setForceSheetRender((prev) => prev + 1);
         }
       }
 
@@ -160,14 +158,13 @@ export const useDsheetEditor = ({
     const map = newDoc.getArray(dsheetId);
     const newSheetData = Array.from(map) as Sheet[];
 
-    if (sheetEditorRef.current) {
-      updateSheetUIToYjs({
-        sheetEditorRef: sheetEditorRef.current,
-        sheetData: newSheetData,
-      });
-    }
-
+    // Update the current data reference
     currentDataRef.current = newSheetData;
+
+    // Force a complete re-render of the component with the new data
+    if (setForceSheetRender) {
+      setForceSheetRender((prev) => prev + 1);
+    }
   }, [portalContent, dsheetId]);
 
   const handleChange = useCallback(
