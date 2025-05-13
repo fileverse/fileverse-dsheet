@@ -12,7 +12,6 @@ import {
 import { useMediaQuery } from 'usehooks-ts';
 
 function App() {
-  const sheetEditorRef = useRef(null);
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
 
@@ -65,7 +64,7 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    onClick={() => { }}
+                    onClick={() => {}}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
@@ -106,11 +105,7 @@ function App() {
 
   const EditorPage = () => (
     <div>
-      <DSheetEditor
-        renderNavbar={renderNavbar}
-        ref={sheetEditorRef}
-        dsheetId='random-dsheet-id'
-      />
+      <DSheetEditor renderNavbar={renderNavbar} dsheetId="random-dsheet-id" />
     </div>
   );
 

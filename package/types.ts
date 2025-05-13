@@ -1,6 +1,6 @@
 import { Sheet } from '@fileverse-dev/fortune-core';
 
-export interface DsheetProp {
+export interface DsheetProps {
   renderNavbar?: () => JSX.Element;
   initialSheetData?: Sheet[];
   enableIndexeddbSync?: boolean;

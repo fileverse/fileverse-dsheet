@@ -16,7 +16,6 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       const newSheet = newSheets[i];
 
       if (JSON.stringify(oldSheet.config) !== JSON.stringify(newSheet.config)) {
-        console.log('Sheet config changed:', oldSheet.config, newSheet.config);
         return true;
       }
 
@@ -41,23 +40,14 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         }
       }
 
-      console.log('oldCellMap:', oldCellMap);
-      console.log('newCellMap:', newCellMap);
-
       // Different number of non-null cells means change
       if (oldCellMap.size !== newCellMap.size) {
-        console.log(
-          'Different number of non-null cells:',
-          oldCellMap.size,
-          newCellMap.size,
-        );
         return true;
       }
 
       // Check each non-null cell specifically
       for (const [key, value] of oldCellMap.entries()) {
         if (!newCellMap.has(key)) {
-          console.log('Cell removed:', key);
           return true;
         }
 
@@ -96,13 +86,11 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         }
         // Simple value comparison for non-objects
         else if (value !== newValue) {
-          console.log('Simple cell value changed:', key, value, newValue);
           return true;
         }
       }
     }
   }
 
-  console.log('No differences found');
   return false;
 }

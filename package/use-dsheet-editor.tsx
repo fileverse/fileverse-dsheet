@@ -1,227 +1,119 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import * as Y from 'yjs';
-import { WebsocketProvider } from 'y-websocket';
-import { Awareness } from 'y-protocols/awareness';
-import { IndexeddbPersistence } from 'y-indexeddb';
-import { fromUint8Array, toUint8Array } from 'js-base64';
-
-import { isSpreadsheetChanged } from './utils/diff-sheet';
-import { updateSheetUIToYjs } from './utils/update-sheet-ui';
-import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Sheet } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { toUint8Array } from 'js-base64';
+import * as Y from 'yjs';
 
-import { DsheetProp } from './types';
+import { useYjsDocument } from './hooks/use-yjs-document';
+import { useWebRTCConnection } from './hooks/use-webrtc-connection';
+import { useSheetData } from './hooks/use-sheet-data';
+import { updateSheetData } from './utils/sheet-operations';
+import { updateSheetUIToYjs } from './utils/update-sheet-ui';
+import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
+import { DsheetProps } from './types';
 
 export const useDsheetEditor = ({
-  initialSheetData,
   enableIndexeddbSync = true,
-  dsheetId,
+  dsheetId = '',
   onChange,
-  username,
+  username = 'Anonymous',
   enableWebrtc = true,
   portalContent,
-}: Partial<DsheetProp>) => {
-  // const collaborative = true;
+}: Partial<DsheetProps>) => {
   const [loading, setLoading] = useState(true);
   const firstRender = useRef(true);
-  const remoteUpdateRef = useRef(false);
-  const ydocRef = useRef<Y.Doc | null>(null);
-  const awarenessRef = useRef<Awareness | null>(null);
-  const persistenceRef = useRef<IndexeddbPersistence | null>(null);
-  const webrtcProviderRef = useRef<WebsocketProvider | null>(null);
-  const currentDataRef = useRef<Sheet[] | null>(null);
-  const sheetEditorRef = useRef<WorkbookInstance>(null);
-  const [sheetData, setSheetData] = useState<Sheet[] | null>(null);
+  const sheetEditorRef = useRef<WorkbookInstance | null>(null);
+  const dataInitialized = useRef(false);
 
+  const { ydocRef, persistenceRef } = useYjsDocument(
+    dsheetId,
+    enableIndexeddbSync,
+  );
+  useWebRTCConnection(
+    ydocRef.current,
+    dsheetId,
+    username,
+    enableWebrtc,
+    portalContent || '',
+  );
+  const { sheetData, setSheetData, currentDataRef, remoteUpdateRef } =
+    useSheetData(ydocRef.current, dsheetId, onChange);
+
+  // Handle initial data loading
   useEffect(() => {
-    if (!portalContent || portalContent?.length === 0) return;
-    const newDoc = ydocRef.current as Y.Doc;
+    if (!ydocRef.current || !dsheetId) return;
+
+    const initializeWithDefaultData = () => {
+      if (dataInitialized.current) return;
+
+      const sheetArray = ydocRef.current?.getArray(dsheetId);
+      const currentData = Array.from(sheetArray || []) as Sheet[];
+
+      if (currentData.length === 0) {
+        console.log('Initializing with default data');
+        ydocRef.current?.transact(() => {
+          sheetArray?.delete(0, sheetArray.length);
+          sheetArray?.insert(0, DEFAULT_SHEET_DATA);
+          currentDataRef.current = DEFAULT_SHEET_DATA;
+        });
+      } else {
+        console.log('Using persisted data:', currentData);
+        currentDataRef.current = currentData;
+      }
+
+      dataInitialized.current = true;
+      setLoading(false);
+    };
+
+    if (persistenceRef.current) {
+      // Wait for IndexedDB sync before initializing
+      persistenceRef.current.once('synced', initializeWithDefaultData);
+    } else {
+      // No persistence, initialize immediately
+      initializeWithDefaultData();
+    }
+
+    return () => {
+      dataInitialized.current = false;
+    };
+  }, [dsheetId]);
+
+  // Handle portal content updates
+  useEffect(() => {
+    if (!portalContent?.length || !ydocRef.current || !dsheetId) return;
+
+    const newDoc = ydocRef.current;
     const uint8Array = toUint8Array(portalContent);
     Y.applyUpdate(newDoc, uint8Array);
+
     const map = newDoc.getArray(dsheetId);
     const newSheetData = Array.from(map) as Sheet[];
-    updateSheetUIToYjs({
-      sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
-      sheetData: newSheetData as Sheet[],
-    });
-    currentDataRef.current = newSheetData as Sheet[];
+
+    if (sheetEditorRef.current) {
+      updateSheetUIToYjs({
+        sheetEditorRef: sheetEditorRef.current,
+        sheetData: newSheetData,
+      });
+    }
+
+    currentDataRef.current = newSheetData;
   }, [portalContent, dsheetId]);
 
-  useEffect(() => {
-    const ydoc = new Y.Doc({
-      gc: true,
-    });
-    ydocRef.current = ydoc;
-    if (enableIndexeddbSync && dsheetId) {
-      const persistence = new IndexeddbPersistence(dsheetId, ydoc);
-      persistenceRef.current = persistence;
-
-      persistence.on('synced', () => {
-        initializeWithDefaultData(ydoc);
-      });
-    } else {
-      initializeWithDefaultData(ydoc);
-    }
-
-    // Here we are update sheet UI according to the Yjs document update from remote changes.
-    ydoc.on('update', (update, origin) => {
-      onChange?.(
-        fromUint8Array(Y.encodeStateAsUpdate(ydocRef.current!)),
-        fromUint8Array(update),
-      );
-      if (origin === null) return;
-      const decodedUpdates = Y.decodeUpdate(update);
-      let newData;
-      for (const struct of decodedUpdates.structs) {
-        if (
-          'content' in struct &&
-          Object.keys(struct.content).includes('arr')
-        ) {
-          if ('arr' in struct.content) {
-            newData = struct.content.arr;
-          }
-        }
+  const handleChange = useCallback(
+    (data: Sheet[]) => {
+      if (firstRender.current) {
+        firstRender.current = false;
+        return;
       }
-      remoteUpdateRef.current = true;
-      updateSheetUIToYjs({
-        sheetEditorRef: sheetEditorRef.current as WorkbookInstance,
-        sheetData: newData as Sheet[],
-      });
-      currentDataRef.current = newData as Sheet[];
-    });
-
-    return () => {
-      if (persistenceRef.current) {
-        persistenceRef.current.destroy();
+      if (remoteUpdateRef.current) {
+        remoteUpdateRef.current = false;
+        return;
       }
-      if (ydocRef.current) {
-        ydocRef.current.destroy();
-      }
-      if (ydoc) {
-        ydoc.destroy();
-      }
-    };
-  }, []);
 
-  function initializeWithDefaultData(ydoc: Y.Doc) {
-    const sheetArray = ydoc.getArray(dsheetId);
-    let localIndexeddbData;
-    if (sheetArray && sheetArray.length > 0) {
-      localIndexeddbData = Array.from(sheetArray) as Sheet[];
-    }
-    const newSheetData =
-      localIndexeddbData || initialSheetData || DEFAULT_SHEET_DATA;
-    console.log('newSheetData', newSheetData);
-    // do this only when no aaray data, initialie with default data, and setloading false
-    //if (!collaborative) {
-    if (Array.from(sheetArray).length === 0) {
-      ydoc.transact(() => {
-        sheetArray.delete(0, sheetArray.length);
-        sheetArray.insert(0, DEFAULT_SHEET_DATA);
-        currentDataRef.current = DEFAULT_SHEET_DATA;
-      });
-    }
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    if (
-      !ydocRef.current ||
-      !enableWebrtc ||
-      !dsheetId ||
-      webrtcProviderRef.current
-    )
-      return;
-    const ydoc = ydocRef.current;
-    const awareness = new Awareness(ydoc);
-    awareness.setLocalState({
-      user: {
-        name: username,
-        color: 'yellow',
-        timestamp: new Date().toISOString(),
-      },
-    });
-    awarenessRef.current = awareness;
-
-    // removed isCollaborative check for some experiments.
-    if (!portalContent || portalContent?.length === 0) return;
-    if (!webrtcProviderRef.current && portalContent?.length !== 0) {
-      const webrtcProvider = new WebsocketProvider(
-        'wss://demos.yjs.dev/ws',
-        dsheetId,
-        ydoc,
-      );
-      webrtcProviderRef.current = webrtcProvider;
-      webrtcProviderRef.current.on('status', (event) => {
-        console.log('WebRTC connection status:', event);
-      });
-
-      webrtcProviderRef.current.on('sync', (synced) => {
-        console.log('WebRTC connection Synced status changed:', synced);
-      });
-    }
-
-    return () => {
-      if (webrtcProviderRef.current) {
-        webrtcProviderRef.current.disconnect();
-        webrtcProviderRef.current.destroy();
-        webrtcProviderRef.current = null;
-      }
-    };
-  }, [enableWebrtc, ydocRef.current, portalContent]);
-
-  const handleChange = useCallback((data: Sheet[]) => {
-    if (firstRender.current) {
-      firstRender.current = false;
-      return;
-    }
-    if (remoteUpdateRef.current) {
-      remoteUpdateRef.current = false;
-      return;
-    }
-    if (ydocRef.current) {
-      const ydoc = ydocRef.current;
-      const sheetArray = ydoc.getArray(dsheetId);
-      const preSheetArray = Array.from(sheetArray) as Sheet[];
-
-      // This need better diffing algorithm for better performance with large datasets
-      // For this simplified version, we'll still replace the array
-      // but we only do it when there's an actual change
-      const sheetFormatCellData = data.map((sheet: Sheet, index) => {
-        const sheetCellData = sheet['data'];
-        if (!sheetCellData) {
-          return sheet;
-        }
-        const transformedData =
-          sheetEditorRef?.current?.dataToCelldata(sheetCellData);
-        const newSheetdata = {
-          ...sheet,
-          celldata: transformedData,
-          row: preSheetArray[index]?.row,
-          column: preSheetArray[index]?.column,
-          status: preSheetArray[index]?.status,
-          order: preSheetArray[index]?.order,
-          config: preSheetArray[index]?.config,
-        };
-        delete newSheetdata.data;
-        newSheetdata.config = sheet.config;
-        return newSheetdata;
-      });
-      currentDataRef.current = sheetFormatCellData;
-      if (
-        isSpreadsheetChanged(
-          Array.from(sheetArray) as Sheet[],
-          sheetFormatCellData,
-        )
-      ) {
-        ydoc.transact(() => {
-          sheetArray.delete(0, preSheetArray.length);
-          sheetArray.insert(0, sheetFormatCellData);
-        });
-      }
-    }
-  }, []);
+      updateSheetData(ydocRef.current, dsheetId, data, sheetEditorRef.current);
+    },
+    [dsheetId],
+  );
 
   return {
     sheetEditorRef,
