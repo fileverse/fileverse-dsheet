@@ -80,6 +80,5 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
     }
   }
 
-  console.log('No differences found');
   return false;
 }
