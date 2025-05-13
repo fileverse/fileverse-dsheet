@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import * as Y from 'yjs';
 import { fromUint8Array } from 'js-base64';
 import { Sheet } from '@fileverse-dev/fortune-core';
+import { SheetUpdateData } from '../types';
 
 interface YjsStruct {
   content?: {
@@ -29,7 +30,7 @@ const extractSheetDataFromUpdate = (decodedUpdate: unknown) => {
 export const useSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
-  onChange?: (fullUpdate: string, update: string) => void,
+  onChange?: (updateData: SheetUpdateData, encodedUpdate?: string) => void,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[] | null>(null);
   const currentDataRef = useRef<Sheet[] | null>(null);
@@ -38,21 +39,38 @@ export const useSheetData = (
   useEffect(() => {
     if (!ydoc) return;
 
+    // Create a function to get a complete update with both sheet data and metadata
+    const getCompleteUpdate = () => {
+      // Generate a complete state update that includes everything
+      const completeUpdate = Y.encodeStateAsUpdate(ydoc);
+      return fromUint8Array(completeUpdate);
+    };
+
     const handleUpdate = (update: Uint8Array, origin: unknown) => {
-      // 1. Get the encoded data
-      const fullStateUpdate = Y.encodeStateAsUpdate(ydoc);
-      const encodedUpdate = fromUint8Array(update);
-      const encodedFullState = fromUint8Array(fullStateUpdate);
+      // Extract the sheet data from the update
+      const newData = extractSheetDataFromUpdate(Y.decodeUpdate(update));
 
-      // 2. Decode the update
-      const decodedUpdate = Y.decodeUpdate(update);
+      // Get title from metadata map
+      const titleMap = ydoc.getMap(`${dsheetId}-metadata`);
+      const title = titleMap.get('title') as string | undefined;
 
-      // Pass encoded data to consumer
-      onChange?.(encodedFullState, encodedUpdate);
+      // Create update data object
+      const updateData: SheetUpdateData = {
+        data: newData || currentDataRef.current || [],
+      };
+
+      if (title) {
+        updateData.title = title;
+      }
+
+      // Get a complete encoded update that includes both sheet data and metadata
+      const encodedCompleteUpdate = getCompleteUpdate();
+
+      // Pass data to consumer
+      onChange?.(updateData, encodedCompleteUpdate);
 
       if (origin === null) return;
 
-      const newData = extractSheetDataFromUpdate(decodedUpdate);
       if (newData) {
         remoteUpdateRef.current = true;
         currentDataRef.current = newData;
@@ -60,8 +78,40 @@ export const useSheetData = (
       }
     };
 
+    // Handle metadata changes separately
+    const handleMetadataChanges = () => {
+      // Only trigger if we have sheet data
+      if (!currentDataRef.current) return;
+
+      const titleMap = ydoc.getMap(`${dsheetId}-metadata`);
+      const title = titleMap.get('title') as string | undefined;
+
+      const updateData: SheetUpdateData = {
+        data: currentDataRef.current,
+        title,
+      };
+
+      // Get a complete encoded update
+      const encodedCompleteUpdate = getCompleteUpdate();
+
+      // Notify consumer with the complete state
+      onChange?.(updateData, encodedCompleteUpdate);
+    };
+
+    // Subscribe to sheet data updates
     ydoc.on('update', handleUpdate);
-    return () => ydoc.off('update', handleUpdate);
+
+    // Subscribe to metadata updates
+    const titleMap = ydoc.getMap(`${dsheetId}-metadata`);
+    titleMap.observe(() => {
+      handleMetadataChanges();
+    });
+
+    return () => {
+      ydoc.off('update', handleUpdate);
+      // No need to unsubscribe from titleMap observers as they're
+      // automatically cleaned up when the document is destroyed
+    };
   }, [ydoc, onChange, dsheetId]);
 
   return { sheetData, setSheetData, currentDataRef, remoteUpdateRef };

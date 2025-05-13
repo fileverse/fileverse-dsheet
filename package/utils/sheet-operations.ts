@@ -2,7 +2,6 @@ import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { isSpreadsheetChanged } from './diff-sheet';
-import { fromUint8Array } from 'js-base64';
 
 export const updateSheetData = (
   ydoc: Y.Doc | null,
@@ -10,7 +9,9 @@ export const updateSheetData = (
   data: Sheet[],
   sheetEditor: WorkbookInstance | null,
 ) => {
-  if (!ydoc || !sheetEditor) return;
+  if (!ydoc || !sheetEditor) {
+    return;
+  }
 
   const sheetArray = ydoc.getArray(dsheetId);
   const preSheetArray = Array.from(sheetArray) as Sheet[];
@@ -23,10 +24,8 @@ export const updateSheetData = (
       sheetArray.insert(0, formattedData);
     });
 
-    // Get and log the Yjs update after the transaction
-    const encodedState = Y.encodeStateAsUpdate(ydoc);
-    console.log('Yjs Encoded:', fromUint8Array(encodedState));
-    console.log('Yjs Decoded:', Y.decodeUpdate(encodedState));
+    // Update encoding state
+    Y.encodeStateAsUpdate(ydoc);
   }
 };
 
@@ -43,10 +42,10 @@ export const formatSheetData = (
     const newSheet = {
       ...sheet,
       celldata: transformedData,
-      row: preSheetArray[index]?.row,
-      column: preSheetArray[index]?.column,
-      status: preSheetArray[index]?.status,
-      order: preSheetArray[index]?.order,
+      row: preSheetArray[index]?.row || sheet.row,
+      column: preSheetArray[index]?.column || sheet.column,
+      status: preSheetArray[index]?.status || sheet.status,
+      order: preSheetArray[index]?.order || sheet.order,
       config: sheet.config,
     };
     delete newSheet.data;

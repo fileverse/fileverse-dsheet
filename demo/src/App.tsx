@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DSheetEditor from '../../package/dsheet-editor';
 import {
@@ -10,26 +10,38 @@ import {
   ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 function App() {
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
+  // Create a ref to control the sheet editor
+  const sheetEditorRef = useRef<WorkbookInstance>(null);
 
-  const renderNavbar = (): JSX.Element => {
+  // Use a stable dsheetId
+  const dsheetId = 'demo-dsheet-1';
+
+  // Handle data changes in the sheet - kept empty as we don't need to log anything
+  const handleSheetChange = useCallback(() => {}, []);
+
+  const renderNavbar = (props?: {
+    title: string;
+    onTitleChange: (title: string) => void;
+  }): JSX.Element => {
     return (
       <>
         <div className="flex items-center gap-[12px]">
           <IconButton variant={'ghost'} icon="Menu" size="md" />
           <div className="relative truncate inline-block xl:!max-w-[300px] !max-w-[108px] color-bg-default text-[14px] font-medium leading-[20px]">
             <span className="invisible whitespace-pre">
-              {title || 'Untitled'}
+              {props?.title || 'Untitled'}
             </span>
             <input
               className="focus:outline-none truncate color-bg-default absolute top-0 left-0 right-0 bottom-0 select-text"
               type="text"
               placeholder="Untitled"
-              value={title}
-              onChange={(e) => setTitle?.(e.target.value)}
+              value={props?.title || 'Untitled'}
+              onChange={(e) => props?.onTitleChange?.(e.target.value)}
             />
           </div>
           <Tag
@@ -74,14 +86,12 @@ function App() {
               }
             />
           ) : (
-            <>
-              <IconButton
-                variant={'ghost'}
-                icon="Share2"
-                className="flex xl:hidden"
-                size="md"
-              />
-            </>
+            <IconButton
+              variant={'ghost'}
+              icon="Share2"
+              className="flex xl:hidden"
+              size="md"
+            />
           )}
           <Button
             toggleLeftIcon={true}
@@ -105,7 +115,15 @@ function App() {
 
   const EditorPage = () => (
     <div>
-      <DSheetEditor renderNavbar={renderNavbar} dsheetId="random-dsheet-id" />
+      <DSheetEditor
+        renderNavbar={renderNavbar}
+        dsheetId={dsheetId}
+        initialTitle={title}
+        onTitleChange={setTitle}
+        onChange={handleSheetChange}
+        sheetEditorRef={sheetEditorRef}
+        enableIndexeddbSync={true}
+      />
     </div>
   );
 

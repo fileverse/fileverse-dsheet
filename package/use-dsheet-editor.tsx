@@ -19,11 +19,18 @@ export const useDsheetEditor = ({
   username = 'Anonymous',
   enableWebrtc = true,
   portalContent,
+  initialTitle = 'Untitled',
+  sheetEditorRef: externalSheetEditorRef,
+  initialSheetData,
 }: Partial<DsheetProps>) => {
   const [loading, setLoading] = useState(true);
   const firstRender = useRef(true);
-  const sheetEditorRef = useRef<WorkbookInstance | null>(null);
+  // Use externally provided ref or create one internally
+  const internalSheetEditorRef = useRef<WorkbookInstance | null>(null);
+  const sheetEditorRef = externalSheetEditorRef || internalSheetEditorRef;
   const dataInitialized = useRef(false);
+  const [title, setTitle] = useState(initialTitle);
+  const titleRef = useRef(initialTitle);
 
   const { ydocRef, persistenceRef } = useYjsDocument(
     dsheetId,
@@ -39,6 +46,47 @@ export const useDsheetEditor = ({
   const { sheetData, setSheetData, currentDataRef, remoteUpdateRef } =
     useSheetData(ydocRef.current, dsheetId, onChange);
 
+  // Function to handle title changes
+  const handleTitleChange = useCallback(
+    (newTitle: string) => {
+      setTitle(newTitle);
+      titleRef.current = newTitle;
+
+      // Store the title in YJS
+      if (ydocRef.current) {
+        const titleMap = ydocRef.current.getMap(`${dsheetId}-metadata`);
+        titleMap.set('title', newTitle);
+
+        // We no longer need to manually call onChange here
+        // The title change will be detected by the metadata observer in useSheetData
+      }
+    },
+    [dsheetId],
+  );
+
+  // Get initial title from YJS if available
+  useEffect(() => {
+    if (ydocRef.current && dsheetId) {
+      const titleMap = ydocRef.current.getMap(`${dsheetId}-metadata`);
+      titleMap.observe((event) => {
+        if (event.keysChanged.has('title')) {
+          const newTitle = titleMap.get('title') as string;
+          setTitle(newTitle);
+          titleRef.current = newTitle;
+        }
+      });
+
+      // Set initial title if available in YJS
+      if (titleMap.has('title')) {
+        const storedTitle = titleMap.get('title') as string;
+        setTitle(storedTitle);
+        titleRef.current = storedTitle;
+      } else {
+        titleMap.set('title', initialTitle);
+      }
+    }
+  }, [dsheetId, initialTitle]);
+
   // Handle initial data loading
   useEffect(() => {
     if (!ydocRef.current || !dsheetId) return;
@@ -49,16 +97,39 @@ export const useDsheetEditor = ({
       const sheetArray = ydocRef.current?.getArray(dsheetId);
       const currentData = Array.from(sheetArray || []) as Sheet[];
 
+      console.log('Initializing sheet data', {
+        dsheetId,
+        hasInitialData: initialSheetData && initialSheetData.length > 0,
+        hasPersistedData: currentData.length > 0,
+      });
+
       if (currentData.length === 0) {
-        console.log('Initializing with default data');
+        // No data in YJS storage
+        const dataToUse =
+          initialSheetData && initialSheetData.length > 0
+            ? initialSheetData
+            : DEFAULT_SHEET_DATA;
+
+        console.log(
+          'No persisted data found. Using initial data or default data.',
+        );
         ydocRef.current?.transact(() => {
           sheetArray?.delete(0, sheetArray.length);
-          sheetArray?.insert(0, DEFAULT_SHEET_DATA);
-          currentDataRef.current = DEFAULT_SHEET_DATA;
+          sheetArray?.insert(0, dataToUse);
+          currentDataRef.current = dataToUse;
         });
       } else {
-        console.log('Using persisted data:', currentData);
+        console.log('Using persisted data from IndexedDB:', currentData);
+        // Force set the current data ref
         currentDataRef.current = currentData;
+
+        // Ensure data is properly applied to editor when available
+        if (sheetEditorRef.current) {
+          updateSheetUIToYjs({
+            sheetEditorRef: sheetEditorRef.current,
+            sheetData: currentData,
+          });
+        }
       }
 
       dataInitialized.current = true;
@@ -76,7 +147,7 @@ export const useDsheetEditor = ({
     return () => {
       dataInitialized.current = false;
     };
-  }, [dsheetId]);
+  }, [dsheetId, initialSheetData]);
 
   // Handle portal content updates
   useEffect(() => {
@@ -123,5 +194,7 @@ export const useDsheetEditor = ({
     loading,
     ydocRef,
     setSheetData,
+    title,
+    handleTitleChange,
   };
 };

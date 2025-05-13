@@ -12,21 +12,36 @@ export const useYjsDocument = (
   useEffect(() => {
     if (!dsheetId) return;
 
+    // Create a unique database name based on the dsheetId
+    const dbName = `dsheet-${dsheetId}`;
     const ydoc = new Y.Doc({ gc: true });
+
+    // Initialize the document structure
+    // We ensure both the array and map exist immediately
+    ydoc.getArray(dsheetId);
+    ydoc.getMap(`${dsheetId}-metadata`);
+
     ydocRef.current = ydoc;
 
     if (enableIndexeddbSync) {
-      const persistence = new IndexeddbPersistence(dsheetId, ydoc);
+      const persistence = new IndexeddbPersistence(dbName, ydoc);
       persistenceRef.current = persistence;
 
       // Wait for the initial sync to complete
       persistence.once('synced', () => {
-        console.log('Initial IndexedDB sync completed');
+        // Initial sync completed
+        const sheetArray = ydoc.getArray(dsheetId);
+        Array.from(sheetArray);
+      });
+
+      // Add sync status handlers
+      persistence.on('sync', () => {
+        // Sync status changed
       });
 
       // Handle sync errors
-      persistence.on('error', (error: Error) => {
-        console.error('IndexedDB sync error:', error);
+      persistence.on('error', () => {
+        // IndexedDB sync error
       });
     }
 

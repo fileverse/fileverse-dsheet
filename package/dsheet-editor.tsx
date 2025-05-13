@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback, useRef, useId } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
-import { Workbook } from '@fileverse-dev/fortune-react';
+import { Workbook, WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
 import cn from 'classnames';
 
@@ -33,20 +33,49 @@ const SpreadsheetEditor = ({
   selectedTemplate,
   toggleTemplateSidebar,
   isTemplateOpen,
+  initialTitle = 'Untitled',
+  onTitleChange,
+  enableWebrtc,
+  sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps) => {
   const [forceSheetRender, setForceSheetRender] = useState(1);
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
-  const { sheetEditorRef, handleChange, currentDataRef, ydocRef, loading } =
-    useDsheetEditor({
-      initialSheetData,
-      enableIndexeddbSync,
-      dsheetId,
-      username,
-      onChange,
-      portalContent,
-      isCollaborative,
-      setForceSheetRender,
-    });
+  const workbookId = useId(); // Stable ID for the workbook
+
+  // Create an internal ref if none is provided
+  const internalEditorRef = useRef<WorkbookInstance>(null);
+  const editorRef = externalSheetEditorRef || internalEditorRef;
+
+  const {
+    handleChange,
+    currentDataRef,
+    ydocRef,
+    loading,
+    title,
+    handleTitleChange,
+  } = useDsheetEditor({
+    initialSheetData,
+    enableIndexeddbSync,
+    dsheetId,
+    username,
+    onChange,
+    portalContent,
+    enableWebrtc,
+    initialTitle,
+    isCollaborative,
+    sheetEditorRef: editorRef,
+  });
+
+  // When title changes, notify parent component if handler exists
+  const onInternalTitleChange = useCallback(
+    (newTitle: string) => {
+      handleTitleChange(newTitle);
+      if (onTitleChange) {
+        onTitleChange(newTitle);
+      }
+    },
+    [handleTitleChange, onTitleChange],
+  );
 
   useApplyTemplatesBtn({
     selectedTemplate,
@@ -54,11 +83,11 @@ const SpreadsheetEditor = ({
     dsheetId,
     currentDataRef,
     setForceSheetRender,
-    sheetEditorRef,
+    sheetEditorRef: editorRef,
   });
 
   const { handleXLSXUpload } = useXLSXImport({
-    sheetEditorRef,
+    sheetEditorRef: editorRef,
     ydocRef,
     setForceSheetRender,
     dsheetId,
@@ -70,8 +99,8 @@ const SpreadsheetEditor = ({
   const MemoizedSheetEditor = useMemo(() => {
     return (
       <Workbook
-        key={Date.now()}
-        ref={sheetEditorRef}
+        key={`${workbookId}-${forceSheetRender}`}
+        ref={editorRef}
         data={currentDataRef.current || DEFAULT_SHEET_DATA}
         onChange={handleChange}
         showFormulaBar={!isReadOnly}
@@ -89,7 +118,7 @@ const SpreadsheetEditor = ({
           handleExportToXLSX,
           handleExportToCSV,
           handleExportToJSON,
-          sheetEditorRef,
+          sheetEditorRef: editorRef,
           ydocRef,
           dsheetId,
           currentDataRef,
@@ -103,12 +132,20 @@ const SpreadsheetEditor = ({
             oldValue: Cell,
             newValue: Cell,
           ) => {
-            afterUpdateCell(row, column, oldValue, newValue, sheetEditorRef);
+            // Create a React.RefObject<WorkbookInstance | null> object
+            const refObj = { current: editorRef.current };
+            afterUpdateCell(row, column, oldValue, newValue, refObj);
           },
         }}
       />
     );
-  }, [forceSheetRender, loading]);
+  }, [forceSheetRender, loading, dsheetId, workbookId]);
+
+  // Prepare navbar props for title handling
+  const navbarProps = {
+    title,
+    onTitleChange: onInternalTitleChange,
+  };
 
   return (
     <div style={{ height: 'calc(100vh)' }}>
@@ -125,7 +162,7 @@ const SpreadsheetEditor = ({
             },
           )}
         >
-          {renderNavbar()}
+          {renderNavbar(navbarProps)}
         </nav>
       )}
       <div style={{ height: '96.4%', marginTop: '56px' }}>
