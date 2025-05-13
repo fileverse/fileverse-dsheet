@@ -169,6 +169,7 @@ const SpreadsheetEditor = ({
       <div style={{ height: '96.4%', marginTop: '56px' }}>
         {MemoizedSheetEditor}
       </div>
+      <OnboardingUI sheetEditorRef={editorRef} />
     </div>
   );
 };
