@@ -1,13 +1,24 @@
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+// import { SERVICE_API_KEY } from "@fileverse-dev/formulajs"
 
+/**
+ * Updates the UI with formula response data by setting cell values in the spreadsheet
+ * 
+ * @param r - The starting row index
+ * @param c - The starting column index
+ * @param newV - The new cell value object
+ * @param apiData - Array of data records to display in the spreadsheet
+ * @param sheetEditorRef - Reference to the workbook instance
+ * @returns {void}
+ */
 const formulaResponseUiSync = (
   r: number,
   c: number,
-  newV: object,
-  apiData: Array<Record<string, object>>,
+  newV: Record<string, any>,
+  apiData: Array<Record<string, any>>,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-) => {
+): void => {
   const headers: string[] = Object.keys(apiData[0]);
   // handle row and col ofbound and add new row and col
   const sheet = sheetEditorRef.current?.getSheet();
@@ -15,12 +26,14 @@ const formulaResponseUiSync = (
   const column = sheet?.data?.[0]?.length || 0;
   const extraRow = apiData.length - (row - r) + 1;
   const extraCol = headers.length - (column - c) + 1;
+
   if (extraRow > 0) {
     sheetEditorRef.current?.insertRowOrColumn('row', row - 1, extraRow);
   }
   if (extraCol > 0) {
     sheetEditorRef.current?.insertRowOrColumn('column', column - 1, extraCol);
   }
+
   // set header
   headers.forEach((header, index) => {
     if (index === 0) {
@@ -34,7 +47,7 @@ const formulaResponseUiSync = (
   let startRow = r + 1;
   for (let i = 0; i < apiData.length; i++) {
     headers.forEach((header, index) => {
-      const cellValue = (apiData[i] as Record<string, object>)[header];
+      const cellValue = apiData[i][header];
       sheetEditorRef.current?.setCellValue(startRow, c + index, {
         ct: { fa: '@', t: 's' },
         m: cellValue,
@@ -45,26 +58,62 @@ const formulaResponseUiSync = (
   }
 };
 
-export const afterUpdateCell = (
+/**
+ * Waits until the API key modal is closed
+ * 
+ * @param openApiKeyModal - Ref object tracking if the API key modal is open
+ * @returns {Promise<string>} - Promise that resolves when the modal is closed
+ */
+function delayExecution(openApiKeyModal: React.MutableRefObject<boolean>): Promise<string> {
+  return new Promise<string>(resolve => {
+    setInterval(() => {
+      if (openApiKeyModal.current === false) {
+        resolve('Function completed after 2 minutes');
+      }
+    }, 1);
+  });
+}
+
+/**
+ * Handles logic after a cell is updated, including processing formula results
+ * 
+ * @param row - The row index of the updated cell
+ * @param column - The column index of the updated cell
+ * @param oldValue - The previous value of the cell
+ * @param newValue - The new value of the cell
+ * @param sheetEditorRef - Reference to the workbook instance
+ * @param setOpenApiKeyModal - Function to set the API key modal open state
+ * @param openApiKeyModalRef - Ref object tracking if the API key modal is open
+ * @param contextApiKeyName - Ref object for the current API key name context
+ * @returns {Promise<void>}
+ */
+export const afterUpdateCell = async (
   row: number,
   column: number,
   oldValue: Cell,
   newValue: Cell,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-) => {
+  setOpenApiKeyModal: React.Dispatch<React.SetStateAction<boolean>>,
+  openApiKeyModalRef: React.MutableRefObject<boolean>,
+  contextApiKeyName: React.MutableRefObject<string | null>,
+): Promise<void> => {
   if (!newValue || (newValue?.v && !newValue.v)) {
     return;
   }
-  if (typeof newValue.v === 'string') {
+  console.log('update cell', oldValue, newValue);
+
+  if (typeof newValue.v === 'string' && newValue.v !== "#NAME?") {
     sheetEditorRef.current?.setCellValue(row, column, {
       ...newValue,
       tb: '1',
     });
   }
-  console.log('update cell', oldValue, newValue);
+
   if (newValue.m === '[object Promise]') {
-    // @ts-expect-error // Cell.v type need to include promise as well as type
-    newValue.v.then((data: object | string) => {
+    // Cell.v type needs to include promise as well
+    const promise = newValue.v as unknown as Promise<Record<string, any>[] | string>;
+
+    promise.then(async (data: Record<string, any>[] | string) => {
       if (typeof data === 'string' && data.includes('Error')) {
         sheetEditorRef.current?.setCellValue(row, column, {
           ...newValue,
@@ -72,11 +121,43 @@ export const afterUpdateCell = (
         });
         return;
       }
+
+      if (typeof data === 'string' && data.includes('MISSING')) {
+        const apiKeyName = data.split("_MISSING")[0];
+        contextApiKeyName.current = apiKeyName;
+
+        setOpenApiKeyModal(true);
+        openApiKeyModalRef.current = true;
+
+        await delayExecution(openApiKeyModalRef);
+
+        const funStr = newValue.f?.split("=")[1];
+        if (!funStr) return;
+
+        const res = await executeStringFunction(funStr);
+
+        if (window.localStorage.getItem(apiKeyName)) {
+          formulaResponseUiSync(
+            row,
+            column,
+            newValue as Record<string, any>,
+            res as Record<string, any>[],
+            sheetEditorRef,
+          );
+        } else {
+          sheetEditorRef.current?.setCellValue(row, column, {
+            ...newValue,
+            m: "#ERROR?:" + data,
+          });
+        }
+        return;
+      }
+
       formulaResponseUiSync(
         row,
         column,
-        newValue,
-        data as Record<string, object>[],
+        newValue as Record<string, any>,
+        data as Record<string, any>[],
         sheetEditorRef,
       );
     });
@@ -87,3 +168,152 @@ export const afterUpdateCell = (
     });
   }
 };
+
+/**
+ * Dynamically executes a function from a string representation
+ * 
+ * @param functionCallString - String representation of the function call
+ * @returns {Promise<unknown>} - Result of the function execution
+ */
+async function executeStringFunction(functionCallString: string): Promise<unknown> {
+  try {
+    // Dynamically import the module
+    const module = await import('@fileverse-dev/formulajs');
+
+    // Extract function name and full argument string
+    const functionMatch = functionCallString.match(/^(\w+)\((.*)\)$/);
+    if (!functionMatch) {
+      throw new Error(`Invalid function call format: ${functionCallString}`);
+    }
+
+    const functionName = functionMatch[1].toUpperCase(); // "test"
+    const argsString = functionMatch[2];   // The entire argument string
+
+    // Parse the arguments, respecting nested structures
+    const args = parseArguments(argsString);
+
+    // Check if the function exists in the imported module
+    // @ts-expect-error later
+    if (typeof module[functionName] === 'function') {
+      // Call the function with the parsed arguments
+      // @ts-expect-error later
+      const result = await module[functionName](...args);
+      return result;
+    } else {
+      throw new Error(`Function ${functionName} not found in module`);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Parses a complex argument string into an array of properly typed arguments
+ * 
+ * @param argsString - String containing function arguments
+ * @returns {any[]} - Array of parsed arguments with appropriate types
+ */
+function parseArguments(argsString: string): any[] {
+  if (!argsString.trim()) {
+    return []; // No arguments
+  }
+
+  const args: any[] = [];
+  let currentArg = '';
+  let inString = false;
+  let stringChar = '';
+  let parenCount = 0;
+  let bracketCount = 0;
+  let braceCount = 0;
+
+  for (let i = 0; i < argsString.length; i++) {
+    const char = argsString[i];
+
+    // Handle string literals
+    if ((char === '"' || char === "'") && (i === 0 || argsString[i - 1] !== '\\')) {
+      if (!inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar) {
+        inString = false;
+      }
+      currentArg += char;
+      continue;
+    }
+
+    // Track nested structures
+    if (!inString) {
+      if (char === '(') parenCount++;
+      if (char === ')') parenCount--;
+      if (char === '[') bracketCount++;
+      if (char === ']') bracketCount--;
+      if (char === '{') braceCount++;
+      if (char === '}') braceCount--;
+    }
+
+    // If comma outside a string or nested structure, it's an argument separator
+    if (char === ',' && !inString && parenCount === 0 && bracketCount === 0 && braceCount === 0) {
+      args.push(evaluateArg(currentArg.trim()));
+      currentArg = '';
+    } else {
+      currentArg += char;
+    }
+  }
+
+  // Add the last argument
+  if (currentArg.trim()) {
+    args.push(evaluateArg(currentArg.trim()));
+  }
+
+  return args;
+}
+
+/**
+ * Evaluates a string argument to convert it to the appropriate JavaScript type
+ * 
+ * @param arg - String representation of an argument
+ * @returns {any} - Argument converted to its appropriate JavaScript type
+ */
+function evaluateArg(arg: string): any {
+  // Simple numeric check
+  if (!isNaN(Number(arg)) && arg.trim() !== '') {
+    return Number(arg);
+  }
+
+  // Boolean values
+  if (arg === 'true') return true;
+  if (arg === 'false') return false;
+
+  // Null and undefined
+  if (arg === 'null') return null;
+  if (arg === 'undefined') return undefined;
+
+  // Array
+  if (arg.startsWith('[') && arg.endsWith(']')) {
+    try {
+      return JSON.parse(arg);
+    } catch (e) {
+      // If JSON.parse fails, return the raw string
+      return arg;
+    }
+  }
+
+  // Object
+  if (arg.startsWith('{') && arg.endsWith('}')) {
+    try {
+      return JSON.parse(arg);
+    } catch (e) {
+      return arg;
+    }
+  }
+
+  // String (remove outer quotes if present)
+  if ((arg.startsWith('"') && arg.endsWith('"')) ||
+    (arg.startsWith("'") && arg.endsWith("'"))) {
+    return arg.substring(1, arg.length - 1);
+  }
+
+  // Default: return as-is
+  return arg;
+}

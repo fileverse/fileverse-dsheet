@@ -16,11 +16,20 @@ import { handleExportToJSON } from './utils/json-export';
 import { afterUpdateCell } from './utils/after-update-cell';
 import { getCustomToolbarItems } from './utils/custom-toolbar-item';
 import { OnboardingUI } from './components/onboarding';
+import { ApiKeyModal } from './components/api-key-modal';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/editor.scss';
 import './styles/index.css';
 
+
+/**
+ * SpreadsheetEditor component that provides a collaborative spreadsheet interface
+ * with various import/export capabilities and template support.
+ * 
+ * @param props - Component properties
+ * @returns The SpreadsheetEditor component
+ */
 const SpreadsheetEditor = ({
   isCollaborative = false,
   isReadOnly = false,
@@ -38,9 +47,12 @@ const SpreadsheetEditor = ({
   onTitleChange,
   enableWebrtc,
   sheetEditorRef: externalSheetEditorRef,
-}: DsheetProps) => {
-  const [forceSheetRender, setForceSheetRender] = useState(1);
-  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+}: DsheetProps): JSX.Element => {
+  const [forceSheetRender, setForceSheetRender] = useState<number>(1);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
+  const [openApiKeyModal, setOpenApiKeyModal] = useState<boolean>(false);
+  const openApiKeyModalRef = useRef<boolean>(false);
+  const contextApiKeyName = useRef<string | null>(null);
   const workbookId = useId(); // Stable ID for the workbook
 
   // Create an internal ref if none is provided
@@ -68,9 +80,13 @@ const SpreadsheetEditor = ({
     setForceSheetRender,
   });
 
-  // When title changes, notify parent component if handler exists
+  /**
+   * Handles title changes and notifies parent component if handler exists
+   * 
+   * @param newTitle - New title for the spreadsheet
+   */
   const onInternalTitleChange = useCallback(
-    (newTitle: string) => {
+    (newTitle: string): void => {
       handleTitleChange(newTitle);
       if (onTitleChange) {
         onTitleChange(newTitle);
@@ -79,6 +95,7 @@ const SpreadsheetEditor = ({
     [handleTitleChange, onTitleChange],
   );
 
+  // Initialize template button functionality
   useApplyTemplatesBtn({
     selectedTemplate,
     ydocRef,
@@ -88,6 +105,7 @@ const SpreadsheetEditor = ({
     sheetEditorRef: editorRef,
   });
 
+  // Initialize XLSX import functionality
   const { handleXLSXUpload } = useXLSXImport({
     sheetEditorRef: editorRef,
     ydocRef,
@@ -96,8 +114,10 @@ const SpreadsheetEditor = ({
     currentDataRef,
   });
 
+  // Apply custom styling based on dropdown and template states
   useFortuneDocumentStyle(exportDropdownOpen, isTemplateOpen);
 
+  // Memoized spreadsheet editor component to avoid unnecessary re-renders
   const MemoizedSheetEditor = useMemo(() => {
     return (
       <Workbook
@@ -128,15 +148,32 @@ const SpreadsheetEditor = ({
           toggleTemplateSidebar,
         })}
         hooks={{
+          /**
+           * Hook called after a cell value is updated
+           * 
+           * @param row - Row index of the updated cell
+           * @param column - Column index of the updated cell
+           * @param oldValue - Previous cell value
+           * @param newValue - New cell value
+           */
           afterUpdateCell: (
             row: number,
             column: number,
             oldValue: Cell,
             newValue: Cell,
-          ) => {
+          ): void => {
             // Create a React.RefObject<WorkbookInstance | null> object
             const refObj = { current: editorRef.current };
-            afterUpdateCell(row, column, oldValue, newValue, refObj);
+            afterUpdateCell(
+              row,
+              column,
+              oldValue,
+              newValue,
+              refObj,
+              setOpenApiKeyModal,
+              openApiKeyModalRef,
+              contextApiKeyName
+            );
           },
         }}
       />
@@ -169,6 +206,13 @@ const SpreadsheetEditor = ({
       )}
       <div style={{ height: '96.4%', marginTop: '56px' }}>
         {MemoizedSheetEditor}
+        <OnboardingUI sheetEditorRef={editorRef} />
+        <ApiKeyModal
+          openApiKeyModal={openApiKeyModal}
+          setOpenApiKeyModal={setOpenApiKeyModal}
+          openApiKeyModalRef={openApiKeyModalRef}
+          contextApiKeyName={contextApiKeyName}
+        />
       </div>
       <OnboardingUI sheetEditorRef={editorRef} />
     </div>
