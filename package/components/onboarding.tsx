@@ -5,7 +5,7 @@ import "./onboarding.scss"
 export const OnboardingUI = ({ sheetEditorRef }: { sheetEditorRef: React.RefObject<any> }) => {
   const [onboardingComplete, setOnboardingComplete] = useState(() => {
     const storedValue = window.localStorage.getItem("onboardingComplete");
-    //return false
+    //return true
     return storedValue === "true";
   });
   const [expandInfoContainer, setExpandInfoContainer] = useState(false);
