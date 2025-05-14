@@ -6,23 +6,23 @@ export const useFortuneDocumentStyle = (
 ) => {
   useEffect(() => {
     const timerRef = setTimeout(() => {
-      const templateButton = document.getElementsByClassName('template-button')[0];
+      const templateButton =
+        document.getElementsByClassName('template-button')[0];
       if (templateButton && isTemplateOpen) {
-        (templateButton as HTMLElement).style.backgroundColor = "#FFDE0A";
+        (templateButton as HTMLElement).style.backgroundColor = '#FFDE0A';
       } else if (templateButton && !isTemplateOpen) {
-        (templateButton as HTMLElement).style.backgroundColor = "white";
+        (templateButton as HTMLElement).style.backgroundColor = 'white';
       }
     }, 300);
     const exportButton = document.getElementsByClassName('export-button')[0];
     if (exportButton && exportDropdownOpen) {
-      (exportButton as HTMLElement).style.backgroundColor = "#FFDE0A"
+      (exportButton as HTMLElement).style.backgroundColor = '#FFDE0A';
     } else if (exportButton) {
-      (exportButton as HTMLElement).style.backgroundColor = "white"
+      (exportButton as HTMLElement).style.backgroundColor = 'white';
     }
 
     return () => {
       clearTimeout(timerRef);
     };
-
   }, [exportDropdownOpen, isTemplateOpen]);
 };

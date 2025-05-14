@@ -1,16 +1,16 @@
-import React, { useState } from "react";
-import { Button, DynamicModal, TextField } from "@fileverse/ui";
+import React, { useState } from 'react';
+import { Button, DynamicModal, TextField } from '@fileverse/ui';
 
 /**
  * ApiKeyModal component
- * 
+ *
  * A modal dialog that prompts users to name their document before sharing it
  */
 export const ApiKeyModal = ({
   openApiKeyModal,
   setOpenApiKeyModal,
   openApiKeyModalRef,
-  contextApiKeyName
+  contextApiKeyName,
 }: {
   openApiKeyModal: boolean;
   setOpenApiKeyModal: React.Dispatch<React.SetStateAction<boolean>>;
@@ -18,7 +18,9 @@ export const ApiKeyModal = ({
   contextApiKeyName: React.MutableRefObject<string | null>;
 }) => {
   // State to track the user's input value
-  const [localStorageValue, setLocalStorageValue] = useState<null | string>(null);
+  const [localStorageValue, setLocalStorageValue] = useState<null | string>(
+    null,
+  );
 
   /**
    * Handles closing the modal
@@ -48,17 +50,11 @@ export const ApiKeyModal = ({
         }}
         className="rounded-lg"
         contentClassName="!pt-4 px-6"
-        title={
-          <div className="font-medium text-lg leading-6">
-            Setup
-          </div>
-        }
+        title={<div className="font-medium text-lg leading-6">Setup</div>}
         content={
           <div className="flex flex-col gap-4 font-normal text-sm leading-5">
             {/* Modal header text */}
-            <div>
-              {`Provide ${contextApiKeyName.current} to proceed:`}
-            </div>
+            <div>{`Provide ${contextApiKeyName.current} to proceed:`}</div>
 
             {/* Text input field */}
             <TextField
@@ -87,7 +83,7 @@ export const ApiKeyModal = ({
               <Button
                 className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 min-h-10 max-h-10 rounded"
                 size="lg"
-                disabled={localStorageValue === ""}
+                disabled={localStorageValue === ''}
                 onClick={handleSave}
               >
                 Save
