@@ -4,7 +4,7 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 /**
  * Updates the UI with formula response data by setting cell values in the spreadsheet
- * 
+ *
  * @param r - The starting row index
  * @param c - The starting column index
  * @param newV - The new cell value object
@@ -15,8 +15,8 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 const formulaResponseUiSync = (
   r: number,
   c: number,
-  newV: Record<string, any>,
-  apiData: Array<Record<string, any>>,
+  newV: Record<string, string>,
+  apiData: Array<Record<string, object>>,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
 ): void => {
   const headers: string[] = Object.keys(apiData[0]);
@@ -34,38 +34,51 @@ const formulaResponseUiSync = (
     sheetEditorRef.current?.insertRowOrColumn('column', column - 1, extraCol);
   }
 
+  const range = {
+    row: [r, r + apiData.length],
+    column: [c, c + (headers.length - 1)],
+  };
+
+  const data = [];
+
   // set header
+  const headerData: Array<Record<string, string> | string> = [];
   headers.forEach((header, index) => {
     if (index === 0) {
-      sheetEditorRef.current?.setCellValue(r, c, { ...newV, m: header });
+      headerData.push({ ...newV, m: header });
     } else {
-      sheetEditorRef.current?.setCellValue(r, c + index, header);
+      headerData.push(header);
     }
   });
+  data.push(headerData);
 
   // set data
-  let startRow = r + 1;
   for (let i = 0; i < apiData.length; i++) {
-    headers.forEach((header, index) => {
+    const tempData: { ct: { fa: string; t: string }; m: object; v: object }[] =
+      [];
+    headers.forEach((header) => {
       const cellValue = apiData[i][header];
-      sheetEditorRef.current?.setCellValue(startRow, c + index, {
+      tempData.push({
         ct: { fa: '@', t: 's' },
         m: cellValue,
         v: cellValue,
       });
     });
-    startRow++;
+    data.push(tempData);
   }
+  sheetEditorRef.current?.setCellValuesByRange(data, range);
 };
 
 /**
  * Waits until the API key modal is closed
- * 
+ *
  * @param openApiKeyModal - Ref object tracking if the API key modal is open
  * @returns {Promise<string>} - Promise that resolves when the modal is closed
  */
-function delayExecution(openApiKeyModal: React.MutableRefObject<boolean>): Promise<string> {
-  return new Promise<string>(resolve => {
+function delayExecution(
+  openApiKeyModal: React.MutableRefObject<boolean>,
+): Promise<string> {
+  return new Promise<string>((resolve) => {
     setInterval(() => {
       if (openApiKeyModal.current === false) {
         resolve('Function completed after 2 minutes');
@@ -76,7 +89,7 @@ function delayExecution(openApiKeyModal: React.MutableRefObject<boolean>): Promi
 
 /**
  * Handles logic after a cell is updated, including processing formula results
- * 
+ *
  * @param row - The row index of the updated cell
  * @param column - The column index of the updated cell
  * @param oldValue - The previous value of the cell
@@ -102,7 +115,7 @@ export const afterUpdateCell = async (
   }
   console.log('update cell', oldValue, newValue);
 
-  if (typeof newValue.v === 'string' && newValue.v !== "#NAME?") {
+  if (typeof newValue.v === 'string' && newValue.v !== '#NAME?') {
     sheetEditorRef.current?.setCellValue(row, column, {
       ...newValue,
       tb: '1',
@@ -111,9 +124,11 @@ export const afterUpdateCell = async (
 
   if (newValue.m === '[object Promise]') {
     // Cell.v type needs to include promise as well
-    const promise = newValue.v as unknown as Promise<Record<string, any>[] | string>;
+    const promise = newValue.v as unknown as Promise<
+      Record<string, string>[] | string
+    >;
 
-    promise.then(async (data: Record<string, any>[] | string) => {
+    promise.then(async (data: Record<string, string>[] | string) => {
       if (typeof data === 'string' && data.includes('Error')) {
         sheetEditorRef.current?.setCellValue(row, column, {
           ...newValue,
@@ -123,7 +138,7 @@ export const afterUpdateCell = async (
       }
 
       if (typeof data === 'string' && data.includes('MISSING')) {
-        const apiKeyName = data.split("_MISSING")[0];
+        const apiKeyName = data.split('_MISSING')[0];
         contextApiKeyName.current = apiKeyName;
 
         setOpenApiKeyModal(true);
@@ -131,7 +146,7 @@ export const afterUpdateCell = async (
 
         await delayExecution(openApiKeyModalRef);
 
-        const funStr = newValue.f?.split("=")[1];
+        const funStr = newValue.f?.split('=')[1];
         if (!funStr) return;
 
         const res = await executeStringFunction(funStr);
@@ -140,26 +155,34 @@ export const afterUpdateCell = async (
           formulaResponseUiSync(
             row,
             column,
-            newValue as Record<string, any>,
-            res as Record<string, any>[],
+            newValue as Record<string, string>,
+            res as Record<string, object>[],
             sheetEditorRef,
           );
         } else {
           sheetEditorRef.current?.setCellValue(row, column, {
             ...newValue,
-            m: "#ERROR?:" + data,
+            m: '#ERROR?:' + data,
           });
         }
         return;
       }
 
-      formulaResponseUiSync(
-        row,
-        column,
-        newValue as Record<string, any>,
-        data as Record<string, any>[],
-        sheetEditorRef,
-      );
+      if (Array.isArray(data)) {
+        formulaResponseUiSync(
+          row,
+          column,
+          newValue as Record<string, string>,
+          // @ts-expect-error later
+          data as Record<string, object>[],
+          sheetEditorRef,
+        );
+      } else {
+        sheetEditorRef.current?.setCellValue(row, column, {
+          ...newValue,
+          m: data,
+        });
+      }
     });
 
     sheetEditorRef.current?.setCellValue(row, column, {
@@ -171,11 +194,13 @@ export const afterUpdateCell = async (
 
 /**
  * Dynamically executes a function from a string representation
- * 
+ *
  * @param functionCallString - String representation of the function call
  * @returns {Promise<unknown>} - Result of the function execution
  */
-async function executeStringFunction(functionCallString: string): Promise<unknown> {
+async function executeStringFunction(
+  functionCallString: string,
+): Promise<unknown> {
   try {
     // Dynamically import the module
     const module = await import('@fileverse-dev/formulajs');
@@ -187,7 +212,7 @@ async function executeStringFunction(functionCallString: string): Promise<unknow
     }
 
     const functionName = functionMatch[1].toUpperCase(); // "test"
-    const argsString = functionMatch[2];   // The entire argument string
+    const argsString = functionMatch[2]; // The entire argument string
 
     // Parse the arguments, respecting nested structures
     const args = parseArguments(argsString);
@@ -210,16 +235,19 @@ async function executeStringFunction(functionCallString: string): Promise<unknow
 
 /**
  * Parses a complex argument string into an array of properly typed arguments
- * 
+ *
  * @param argsString - String containing function arguments
  * @returns {any[]} - Array of parsed arguments with appropriate types
  */
-function parseArguments(argsString: string): any[] {
+function parseArguments(
+  argsString: string,
+): (string | number | boolean | object | [] | null | undefined)[] {
   if (!argsString.trim()) {
     return []; // No arguments
   }
 
-  const args: any[] = [];
+  const args: (string | number | boolean | object | [] | null | undefined)[] =
+    [];
   let currentArg = '';
   let inString = false;
   let stringChar = '';
@@ -231,7 +259,10 @@ function parseArguments(argsString: string): any[] {
     const char = argsString[i];
 
     // Handle string literals
-    if ((char === '"' || char === "'") && (i === 0 || argsString[i - 1] !== '\\')) {
+    if (
+      (char === '"' || char === "'") &&
+      (i === 0 || argsString[i - 1] !== '\\')
+    ) {
       if (!inString) {
         inString = true;
         stringChar = char;
@@ -253,7 +284,13 @@ function parseArguments(argsString: string): any[] {
     }
 
     // If comma outside a string or nested structure, it's an argument separator
-    if (char === ',' && !inString && parenCount === 0 && bracketCount === 0 && braceCount === 0) {
+    if (
+      char === ',' &&
+      !inString &&
+      parenCount === 0 &&
+      bracketCount === 0 &&
+      braceCount === 0
+    ) {
       args.push(evaluateArg(currentArg.trim()));
       currentArg = '';
     } else {
@@ -271,11 +308,13 @@ function parseArguments(argsString: string): any[] {
 
 /**
  * Evaluates a string argument to convert it to the appropriate JavaScript type
- * 
+ *
  * @param arg - String representation of an argument
  * @returns {any} - Argument converted to its appropriate JavaScript type
  */
-function evaluateArg(arg: string): any {
+function evaluateArg(
+  arg: string,
+): number | null | undefined | string | object | boolean | [] {
   // Simple numeric check
   if (!isNaN(Number(arg)) && arg.trim() !== '') {
     return Number(arg);
@@ -309,8 +348,10 @@ function evaluateArg(arg: string): any {
   }
 
   // String (remove outer quotes if present)
-  if ((arg.startsWith('"') && arg.endsWith('"')) ||
-    (arg.startsWith("'") && arg.endsWith("'"))) {
+  if (
+    (arg.startsWith('"') && arg.endsWith('"')) ||
+    (arg.startsWith("'") && arg.endsWith("'"))
+  ) {
     return arg.substring(1, arg.length - 1);
   }
 

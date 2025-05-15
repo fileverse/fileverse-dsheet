@@ -22,11 +22,10 @@ import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/editor.scss';
 import './styles/index.css';
 
-
 /**
  * SpreadsheetEditor component that provides a collaborative spreadsheet interface
  * with various import/export capabilities and template support.
- * 
+ *
  * @param props - Component properties
  * @returns The SpreadsheetEditor component
  */
@@ -82,7 +81,7 @@ const SpreadsheetEditor = ({
 
   /**
    * Handles title changes and notifies parent component if handler exists
-   * 
+   *
    * @param newTitle - New title for the spreadsheet
    */
   const onInternalTitleChange = useCallback(
@@ -150,7 +149,7 @@ const SpreadsheetEditor = ({
         hooks={{
           /**
            * Hook called after a cell value is updated
-           * 
+           *
            * @param row - Row index of the updated cell
            * @param column - Column index of the updated cell
            * @param oldValue - Previous cell value
@@ -172,7 +171,7 @@ const SpreadsheetEditor = ({
               refObj,
               setOpenApiKeyModal,
               openApiKeyModalRef,
-              contextApiKeyName
+              contextApiKeyName,
             );
           },
         }}
