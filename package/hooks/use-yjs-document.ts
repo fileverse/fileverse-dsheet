@@ -5,6 +5,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 export const useYjsDocument = (
   dsheetId: string,
   enableIndexeddbSync: boolean,
+  isReadOnly: boolean = false,
 ) => {
   const ydocRef = useRef<Y.Doc | null>(null);
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
@@ -23,7 +24,8 @@ export const useYjsDocument = (
 
     ydocRef.current = ydoc;
 
-    if (enableIndexeddbSync) {
+    // Only create IndexedDB persistence if we're not in read-only mode
+    if (enableIndexeddbSync && !isReadOnly) {
       const persistence = new IndexeddbPersistence(dbName, ydoc);
       persistenceRef.current = persistence;
 
@@ -53,7 +55,7 @@ export const useYjsDocument = (
       ydoc.destroy();
       ydocRef.current = null;
     };
-  }, [dsheetId, enableIndexeddbSync]);
+  }, [dsheetId, enableIndexeddbSync, isReadOnly]);
 
   return { ydocRef, persistenceRef };
 };

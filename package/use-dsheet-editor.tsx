@@ -18,10 +18,10 @@ export const useDsheetEditor = ({
   username = 'Anonymous',
   enableWebrtc = true,
   portalContent,
-  initialTitle = 'Untitled',
   sheetEditorRef: externalSheetEditorRef,
   initialSheetData,
   setForceSheetRender,
+  isReadOnly = false,
 }: Partial<DsheetProps>) => {
   const [loading, setLoading] = useState(true);
   const firstRender = useRef(true);
@@ -29,12 +29,11 @@ export const useDsheetEditor = ({
   const internalSheetEditorRef = useRef<WorkbookInstance | null>(null);
   const sheetEditorRef = externalSheetEditorRef || internalSheetEditorRef;
   const dataInitialized = useRef(false);
-  const [title, setTitle] = useState(initialTitle);
-  const titleRef = useRef(initialTitle);
 
   const { ydocRef, persistenceRef } = useYjsDocument(
     dsheetId,
     enableIndexeddbSync,
+    isReadOnly,
   );
   useWebRTCConnection(
     ydocRef.current,
@@ -45,47 +44,6 @@ export const useDsheetEditor = ({
   );
   const { sheetData, setSheetData, currentDataRef, remoteUpdateRef } =
     useSheetData(ydocRef.current, dsheetId, onChange);
-
-  // Function to handle title changes
-  const handleTitleChange = useCallback(
-    (newTitle: string) => {
-      setTitle(newTitle);
-      titleRef.current = newTitle;
-
-      // Store the title in YJS
-      if (ydocRef.current) {
-        const titleMap = ydocRef.current.getMap(`${dsheetId}-metadata`);
-        titleMap.set('title', newTitle);
-
-        // We no longer need to manually call onChange here
-        // The title change will be detected by the metadata observer in useSheetData
-      }
-    },
-    [dsheetId],
-  );
-
-  // Get initial title from YJS if available
-  useEffect(() => {
-    if (ydocRef.current && dsheetId) {
-      const titleMap = ydocRef.current.getMap(`${dsheetId}-metadata`);
-      titleMap.observe((event) => {
-        if (event.keysChanged.has('title')) {
-          const newTitle = titleMap.get('title') as string;
-          setTitle(newTitle);
-          titleRef.current = newTitle;
-        }
-      });
-
-      // Set initial title if available in YJS
-      if (titleMap.has('title')) {
-        const storedTitle = titleMap.get('title') as string;
-        setTitle(storedTitle);
-        titleRef.current = storedTitle;
-      } else {
-        titleMap.set('title', initialTitle);
-      }
-    }
-  }, [dsheetId, initialTitle]);
 
   // Handle initial data loading
   useEffect(() => {
@@ -191,7 +149,5 @@ export const useDsheetEditor = ({
     loading,
     ydocRef,
     setSheetData,
-    title,
-    handleTitleChange,
   };
 };

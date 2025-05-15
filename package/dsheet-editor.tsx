@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, useId } from 'react';
+import { useMemo, useState, useRef, useId } from 'react';
 import { useDsheetEditor } from './use-dsheet-editor';
 import { Workbook, WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
@@ -7,7 +7,7 @@ import cn from 'classnames';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
-import { DsheetProps } from './types';
+import { DsheetProps, EditorValues } from './types';
 import { handleCSVUpload } from './utils/csv-import';
 import { useXLSXImport } from './hooks/use-xlsx-import';
 import { handleExportToXLSX } from './utils/xlsx-export';
@@ -19,7 +19,6 @@ import { OnboardingUI } from './components/onboarding';
 import { ApiKeyModal } from './components/api-key-modal';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
-import './styles/editor.scss';
 import './styles/index.css';
 
 /**
@@ -42,8 +41,6 @@ const SpreadsheetEditor = ({
   selectedTemplate,
   toggleTemplateSidebar,
   isTemplateOpen,
-  initialTitle = 'Untitled',
-  onTitleChange,
   enableWebrtc,
   sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps): JSX.Element => {
@@ -58,14 +55,7 @@ const SpreadsheetEditor = ({
   const internalEditorRef = useRef<WorkbookInstance>(null);
   const editorRef = externalSheetEditorRef || internalEditorRef;
 
-  const {
-    handleChange,
-    currentDataRef,
-    ydocRef,
-    loading,
-    title,
-    handleTitleChange,
-  } = useDsheetEditor({
+  const { handleChange, currentDataRef, ydocRef, loading } = useDsheetEditor({
     initialSheetData,
     enableIndexeddbSync,
     dsheetId,
@@ -73,26 +63,11 @@ const SpreadsheetEditor = ({
     onChange,
     portalContent,
     enableWebrtc,
-    initialTitle,
     isCollaborative,
     sheetEditorRef: editorRef,
     setForceSheetRender,
+    isReadOnly,
   });
-
-  /**
-   * Handles title changes and notifies parent component if handler exists
-   *
-   * @param newTitle - New title for the spreadsheet
-   */
-  const onInternalTitleChange = useCallback(
-    (newTitle: string): void => {
-      handleTitleChange(newTitle);
-      if (onTitleChange) {
-        onTitleChange(newTitle);
-      }
-    },
-    [handleTitleChange, onTitleChange],
-  );
 
   // Initialize template button functionality
   useApplyTemplatesBtn({
@@ -179,14 +154,18 @@ const SpreadsheetEditor = ({
     );
   }, [forceSheetRender, loading, dsheetId, workbookId]);
 
-  // Prepare navbar props for title handling
-  const navbarProps = {
-    title,
-    onTitleChange: onInternalTitleChange,
+  // Create editor values to pass to the navbar
+  const editorValues: EditorValues = {
+    sheetEditorRef: editorRef,
+    currentDataRef,
+    ydocRef,
   };
 
   return (
-    <div style={{ height: 'calc(100vh)' }}>
+    <div
+      style={{ height: 'calc(100vh)' }}
+      className={isReadOnly ? 'fortune-read-only' : ''}
+    >
       {renderNavbar && (
         <nav
           id="Navbar"
@@ -200,9 +179,10 @@ const SpreadsheetEditor = ({
             },
           )}
         >
-          {renderNavbar(navbarProps)}
+          {renderNavbar(editorValues)}
         </nav>
       )}
+
       <div style={{ height: '96.4%', marginTop: '56px' }}>
         {MemoizedSheetEditor}
         <OnboardingUI sheetEditorRef={editorRef} />

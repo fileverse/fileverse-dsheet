@@ -24,24 +24,22 @@ function App() {
   // Handle data changes in the sheet - kept empty as we don't need to log anything
   const handleSheetChange = useCallback(() => {}, []);
 
-  const renderNavbar = (props?: {
-    title: string;
-    onTitleChange: (title: string) => void;
-  }): JSX.Element => {
+  const renderNavbar = (editorValues: EditorValues): JSX.Element => {
+    console.log(editorValues);
     return (
       <>
         <div className="flex items-center gap-[12px]">
           <IconButton variant={'ghost'} icon="Menu" size="md" />
           <div className="relative truncate inline-block xl:!max-w-[300px] !max-w-[108px] color-bg-default text-[14px] font-medium leading-[20px]">
             <span className="invisible whitespace-pre">
-              {props?.title || 'Untitled'}
+              {title || 'Untitled'}
             </span>
             <input
               className="focus:outline-none truncate color-bg-default absolute top-0 left-0 right-0 bottom-0 select-text"
               type="text"
               placeholder="Untitled"
-              value={props?.title || 'Untitled'}
-              onChange={(e) => props?.onTitleChange?.(e.target.value)}
+              value={title || 'Untitled'}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </div>
           <Tag
@@ -118,8 +116,6 @@ function App() {
       <DSheetEditor
         renderNavbar={renderNavbar}
         dsheetId={dsheetId}
-        initialTitle={title}
-        onTitleChange={setTitle}
         onChange={handleSheetChange}
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}

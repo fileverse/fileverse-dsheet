@@ -5,7 +5,6 @@
 @tailwind utilities;
 
 @layer base {
-
   ul,
   ol {
     list-style: revert;
@@ -44,29 +43,29 @@ body {
 }
 
 .luckysheet-cell-selected {
-  border: 1.5px solid #EFC703 !important;
+  border: 1.5px solid #efc703 !important;
   /* background-color: white; */
 }
 
 .luckysheet-cs-fillhandle {
-  background-color: #EFC703 !important;
+  background-color: #efc703 !important;
   border-radius: 50%;
   height: 10px;
   width: 10px;
 }
 
 .fortune-cell-selected-move {
-  border: 2px solid #EFC703 !important;
+  border: 2px solid #efc703 !important;
 }
 
 .luckysheet-input-box-inner {
-  border: 1px solid #EFC703;
+  border: 1px solid #efc703;
 }
 
 .fortune-row-header-selected {
-  border: 0px solid #EFC703 !important;
+  border: 0px solid #efc703 !important;
 }
 
 .fortune-col-header-selected {
-  border: 0px solid #EFC703 !important;
+  border: 0px solid #efc703 !important;
 }

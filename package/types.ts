@@ -1,17 +1,20 @@
 import { Sheet } from '@fileverse-dev/fortune-core';
 import { RefObject } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import * as Y from 'yjs';
 
 export interface SheetUpdateData {
   data: Sheet[];
-  title?: string;
+}
+
+export interface EditorValues {
+  sheetEditorRef: RefObject<WorkbookInstance>;
+  currentDataRef: React.MutableRefObject<Sheet[] | null>;
+  ydocRef: React.RefObject<Y.Doc | null>;
 }
 
 export interface DsheetProps {
-  renderNavbar?: (props?: {
-    title: string;
-    onTitleChange: (title: string) => void;
-  }) => JSX.Element;
+  renderNavbar?: (editorValues?: EditorValues) => JSX.Element;
   initialSheetData?: Sheet[];
   enableIndexeddbSync?: boolean;
   dsheetId: string;
@@ -25,7 +28,5 @@ export interface DsheetProps {
   selectedTemplate?: string;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar?: () => void;
-  initialTitle?: string;
-  onTitleChange?: (title: string) => void;
   sheetEditorRef?: RefObject<WorkbookInstance>;
 }

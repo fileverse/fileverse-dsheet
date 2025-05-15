@@ -50,18 +50,10 @@ export const useSheetData = (
       // Extract the sheet data from the update
       const newData = extractSheetDataFromUpdate(Y.decodeUpdate(update));
 
-      // Get title from metadata map
-      const titleMap = ydoc.getMap(`${dsheetId}-metadata`);
-      const title = titleMap.get('title') as string | undefined;
-
       // Create update data object
       const updateData: SheetUpdateData = {
         data: newData || currentDataRef.current || [],
       };
-
-      if (title) {
-        updateData.title = title;
-      }
 
       // Get a complete encoded update that includes both sheet data and metadata
       const encodedCompleteUpdate = getCompleteUpdate();
@@ -78,39 +70,11 @@ export const useSheetData = (
       }
     };
 
-    // Handle metadata changes separately
-    const handleMetadataChanges = () => {
-      // Only trigger if we have sheet data
-      if (!currentDataRef.current) return;
-
-      const titleMap = ydoc.getMap(`${dsheetId}-metadata`);
-      const title = titleMap.get('title') as string | undefined;
-
-      const updateData: SheetUpdateData = {
-        data: currentDataRef.current,
-        title,
-      };
-
-      // Get a complete encoded update
-      const encodedCompleteUpdate = getCompleteUpdate();
-
-      // Notify consumer with the complete state
-      onChange?.(updateData, encodedCompleteUpdate);
-    };
-
     // Subscribe to sheet data updates
     ydoc.on('update', handleUpdate);
 
-    // Subscribe to metadata updates
-    const titleMap = ydoc.getMap(`${dsheetId}-metadata`);
-    titleMap.observe(() => {
-      handleMetadataChanges();
-    });
-
     return () => {
       ydoc.off('update', handleUpdate);
-      // No need to unsubscribe from titleMap observers as they're
-      // automatically cleaned up when the document is destroyed
     };
   }, [ydoc, onChange, dsheetId]);
 
