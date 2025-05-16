@@ -57,22 +57,37 @@ export const useDsheetEditor = ({
 
       if (currentData.length === 0) {
         // No data in YJS storage
-        const dataToUse =
-          initialSheetData && initialSheetData.length > 0
-            ? initialSheetData
-            : DEFAULT_SHEET_DATA;
+        let dataToUse: Sheet[];
+
+        if (portalContent) {
+          // If we have portal content, decode and use it
+          const tempDoc = new Y.Doc();
+          const uint8Array = toUint8Array(portalContent);
+          Y.applyUpdate(tempDoc, uint8Array);
+          const tempMap = tempDoc.getArray(dsheetId);
+          dataToUse = Array.from(tempMap) as Sheet[];
+          tempDoc.destroy();
+        } else {
+          // Use initialSheetData or default data
+          dataToUse =
+            initialSheetData && initialSheetData.length > 0
+              ? initialSheetData
+              : DEFAULT_SHEET_DATA;
+        }
 
         if (!isReadOnly) {
           // Only persist data if not in read-only mode
           console.log(
-            'No persisted data found. Persisting initial data or default data.',
+            'No persisted data found. Persisting initial data or portal content.',
           );
           ydocRef.current?.transact(() => {
             sheetArray?.delete(0, sheetArray.length);
             sheetArray?.insert(0, dataToUse);
           });
         } else {
-          console.log('Read-only mode: Using default data without persisting.');
+          console.log(
+            'Read-only mode: Using decoded portal content or default data.',
+          );
         }
         // Set the current data reference regardless of read-only mode
         currentDataRef.current = dataToUse;
@@ -103,27 +118,63 @@ export const useDsheetEditor = ({
     return () => {
       dataInitialized.current = false;
     };
-  }, [dsheetId, initialSheetData, isReadOnly]);
+  }, [dsheetId, initialSheetData, isReadOnly, portalContent]);
 
   // Handle portal content updates
   useEffect(() => {
     if (!portalContent?.length || !ydocRef.current || !dsheetId) return;
 
-    const newDoc = ydocRef.current;
-    const uint8Array = toUint8Array(portalContent);
-    Y.applyUpdate(newDoc, uint8Array);
+    try {
+      const newDoc = ydocRef.current;
+      const uint8Array = toUint8Array(portalContent);
 
-    const map = newDoc.getArray(dsheetId);
-    const newSheetData = Array.from(map) as Sheet[];
+      // Create a temporary doc to decode the update without affecting the current doc
+      const tempDoc = new Y.Doc();
+      Y.applyUpdate(tempDoc, uint8Array);
 
-    // Update the current data reference
-    currentDataRef.current = newSheetData;
+      // Get the sheet data from temp doc to extract metadata
+      const tempMap = tempDoc.getArray(dsheetId);
+      const decodedSheetData = Array.from(tempMap) as Sheet[];
 
-    // Force a complete re-render of the component with the new data
-    if (setForceSheetRender) {
-      setForceSheetRender((prev) => prev + 1);
+      // Now apply the update to the actual doc
+      Y.applyUpdate(newDoc, uint8Array);
+      const map = newDoc.getArray(dsheetId);
+      const newSheetData = Array.from(map) as Sheet[];
+
+      // Update the current data reference
+      currentDataRef.current = newSheetData;
+
+      // Force a complete re-render of the component with the new data
+      if (setForceSheetRender) {
+        setForceSheetRender((prev) => prev + 1);
+      }
+
+      // If we're in read-only mode and have sheet data, ensure we use the correct sheet names
+      if (isReadOnly && decodedSheetData.length > 0 && sheetEditorRef.current) {
+        // Update all sheet names from the decoded data
+        if (currentDataRef.current) {
+          // Create a new array with updated sheet names
+          const updatedSheetData = currentDataRef.current.map(
+            (sheet, index) => {
+              if (decodedSheetData[index]) {
+                return {
+                  ...sheet,
+                  name: decodedSheetData[index].name,
+                };
+              }
+              return sheet;
+            },
+          );
+
+          // Update the current data reference and trigger re-render
+          currentDataRef.current = updatedSheetData;
+          setSheetData([...updatedSheetData]);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing portal content:', error);
     }
-  }, [portalContent, dsheetId]);
+  }, [portalContent, dsheetId, isReadOnly]);
 
   const handleChange = useCallback(
     (data: Sheet[]) => {
