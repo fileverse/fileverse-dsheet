@@ -73,10 +73,6 @@ export const OnboardingUI = ({
       f: '=GETTXLIST("',
       v: '=GETTXLIST("',
     });
-    console.log(
-      'clicked',
-      document.getElementById('luckysheet-rich-text-editor'),
-    );
   };
 
   useEffect(() => {

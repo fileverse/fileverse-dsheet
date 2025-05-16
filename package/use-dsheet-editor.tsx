@@ -55,12 +55,6 @@ export const useDsheetEditor = ({
       const sheetArray = ydocRef.current?.getArray(dsheetId);
       const currentData = Array.from(sheetArray || []) as Sheet[];
 
-      console.log('Initializing sheet data', {
-        dsheetId,
-        hasInitialData: initialSheetData && initialSheetData.length > 0,
-        hasPersistedData: currentData.length > 0,
-      });
-
       if (currentData.length === 0) {
         // No data in YJS storage
         const dataToUse =
@@ -68,14 +62,20 @@ export const useDsheetEditor = ({
             ? initialSheetData
             : DEFAULT_SHEET_DATA;
 
-        console.log(
-          'No persisted data found. Using initial data or default data.',
-        );
-        ydocRef.current?.transact(() => {
-          sheetArray?.delete(0, sheetArray.length);
-          sheetArray?.insert(0, dataToUse);
-          currentDataRef.current = dataToUse;
-        });
+        if (!isReadOnly) {
+          // Only persist data if not in read-only mode
+          console.log(
+            'No persisted data found. Persisting initial data or default data.',
+          );
+          ydocRef.current?.transact(() => {
+            sheetArray?.delete(0, sheetArray.length);
+            sheetArray?.insert(0, dataToUse);
+          });
+        } else {
+          console.log('Read-only mode: Using default data without persisting.');
+        }
+        // Set the current data reference regardless of read-only mode
+        currentDataRef.current = dataToUse;
       } else {
         console.log('Using persisted data from IndexedDB:', currentData);
         // Force set the current data ref
@@ -103,7 +103,7 @@ export const useDsheetEditor = ({
     return () => {
       dataInitialized.current = false;
     };
-  }, [dsheetId, initialSheetData]);
+  }, [dsheetId, initialSheetData, isReadOnly]);
 
   // Handle portal content updates
   useEffect(() => {
