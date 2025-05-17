@@ -15,7 +15,6 @@ import { handleExportToCSV } from './utils/csv-export';
 import { handleExportToJSON } from './utils/json-export';
 import { afterUpdateCell } from './utils/after-update-cell';
 import { getCustomToolbarItems } from './utils/custom-toolbar-item';
-import { OnboardingUI } from './components/onboarding';
 import { ApiKeyModal } from './components/api-key-modal';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
@@ -42,6 +41,8 @@ const SpreadsheetEditor = ({
   toggleTemplateSidebar,
   isTemplateOpen,
   enableWebrtc,
+  onboardingComplete,
+  onboardingHandler,
   sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps): JSX.Element => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
@@ -136,18 +137,19 @@ const SpreadsheetEditor = ({
             oldValue: Cell,
             newValue: Cell,
           ): void => {
-            // Create a React.RefObject<WorkbookInstance | null> object
+            console.log("Update", oldValue, newValue)
             const refObj = { current: editorRef.current };
-            afterUpdateCell(
+            afterUpdateCell({
               row,
               column,
-              oldValue,
               newValue,
-              refObj,
+              sheetEditorRef: refObj,
               setOpenApiKeyModal,
               openApiKeyModalRef,
               contextApiKeyName,
-            );
+              onboardingComplete,
+              onboardingHandler,
+            });
           },
         }}
       />
@@ -185,7 +187,6 @@ const SpreadsheetEditor = ({
 
       <div style={{ height: '96.4%', marginTop: '56px' }}>
         {MemoizedSheetEditor}
-        <OnboardingUI sheetEditorRef={editorRef} />
         <ApiKeyModal
           openApiKeyModal={openApiKeyModal}
           setOpenApiKeyModal={setOpenApiKeyModal}
@@ -193,7 +194,6 @@ const SpreadsheetEditor = ({
           contextApiKeyName={contextApiKeyName}
         />
       </div>
-      <OnboardingUI sheetEditorRef={editorRef} />
     </div>
   );
 };

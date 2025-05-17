@@ -45,7 +45,7 @@ const formulaResponseUiSync = (
   const headerData: Array<Record<string, string> | string> = [];
   headers.forEach((header, index) => {
     if (index === 0) {
-      headerData.push({ ...newV, m: header });
+      headerData.push({ ...newV, m: header, v: header });
     } else {
       headerData.push(header);
     }
@@ -54,13 +54,12 @@ const formulaResponseUiSync = (
 
   // set data
   for (let i = 0; i < apiData.length; i++) {
-    const tempData: { ct: { fa: string; t: string }; m: object; v: object }[] =
+    const tempData: { ct: { fa: string; t: string }; m?: object; v: object }[] =
       [];
     headers.forEach((header) => {
       const cellValue = apiData[i][header];
       tempData.push({
         ct: { fa: '@', t: 's' },
-        m: cellValue,
         v: cellValue,
       });
     });
@@ -100,26 +99,47 @@ function delayExecution(
  * @param contextApiKeyName - Ref object for the current API key name context
  * @returns {Promise<void>}
  */
-export const afterUpdateCell = async (
-  row: number,
-  column: number,
-  oldValue: Cell,
-  newValue: Cell,
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-  setOpenApiKeyModal: React.Dispatch<React.SetStateAction<boolean>>,
-  openApiKeyModalRef: React.MutableRefObject<boolean>,
-  contextApiKeyName: React.MutableRefObject<string | null>,
-): Promise<void> => {
+export const afterUpdateCell = async ({
+  row,
+  column,
+  newValue,
+  sheetEditorRef,
+  setOpenApiKeyModal,
+  openApiKeyModalRef,
+  contextApiKeyName,
+  onboardingComplete,
+  onboardingHandler,
+}: {
+  row: number;
+  column: number;
+  newValue: Cell;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  setOpenApiKeyModal: React.Dispatch<React.SetStateAction<boolean>>;
+  openApiKeyModalRef: React.MutableRefObject<boolean>;
+  contextApiKeyName: React.MutableRefObject<string | null>;
+  onboardingComplete: boolean | undefined;
+  onboardingHandler: Function | undefined;
+}): Promise<void> => {
   if (!newValue || (newValue?.v && !newValue.v)) {
     return;
   }
-  console.log('update cell', oldValue, newValue);
+  console.log('update cell', newValue);
 
   if (typeof newValue.v === 'string' && newValue.v !== '#NAME?') {
     sheetEditorRef.current?.setCellValue(row, column, {
       ...newValue,
       tb: '1',
     });
+  }
+  if (!onboardingComplete && onboardingHandler) {
+    const { row: rowMod, column: colMod } = onboardingHandler({
+      row,
+      column,
+      sheetEditorRef,
+    });
+    console.log('klklkl', rowMod, colMod);
+    row = rowMod;
+    column = colMod;
   }
 
   if (newValue.m === '[object Promise]') {
