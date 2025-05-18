@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DSheetEditor from '../../package/dsheet-editor';
+import { EditorValues } from '../../package/types'
 import {
   Button,
   Tag,
@@ -22,9 +23,9 @@ function App() {
   const dsheetId = 'demo-dsheet-1';
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
-  const handleSheetChange = useCallback(() => {}, []);
+  const handleSheetChange = useCallback(() => { }, []);
 
-  const renderNavbar = (editorValues: EditorValues): JSX.Element => {
+  const renderNavbar = (editorValues: EditorValues = {} as EditorValues): JSX.Element => {
     console.log(editorValues);
     return (
       <>
@@ -74,7 +75,7 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    onClick={() => {}}
+                    onClick={() => { }}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
