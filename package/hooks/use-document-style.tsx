@@ -25,4 +25,12 @@ export const useFortuneDocumentStyle = (
       clearTimeout(timerRef);
     };
   }, [exportDropdownOpen, isTemplateOpen]);
+
+  useEffect(() => {
+    document.querySelectorAll('*').forEach(function (el) {
+      const element = el as HTMLElement;
+      element.style.userSelect = 'text';
+    });
+
+  }, [])
 };

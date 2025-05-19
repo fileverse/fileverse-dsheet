@@ -71,6 +71,7 @@ body {
   border: 0px solid #efc703 !important;
 }
 
+/* Style for formula suggestion list */
 .luckysheet-formula-help-title,
 .luckysheet-formula-search-item-active {
   padding: 10px !important;
@@ -132,4 +133,11 @@ body {
 .luckysheet-arguments-help-section-title {
   font-size: 14px;
   font-weight: 600;
+}
+
+/* style for scrollbar zindex */
+.luckysheet-scrollbar-y,
+.luckysheet-scrollbar-x,
+.luckysheet-bottom-controll-row {
+  z-index: 1 !important;
 }
