@@ -1,17 +1,7 @@
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-// import { SERVICE_API_KEY } from "@fileverse-dev/formulajs"
 
-// /**
-//  * Updates the UI with formula response data by setting cell values in the spreadsheet
-//  *
-//  * @param r - The starting row index
-//  * @param c - The starting column index
-//  * @param newV - The new cell value object
-//  * @param apiData - Array of data records to display in the spreadsheet
-//  * @param sheetEditorRef - Reference to the workbook instance
-//  * @returns {void}
-//  */
+
 export type FormulaSyncType = {
   row: number;
   column: number;
