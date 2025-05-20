@@ -15,6 +15,11 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       const oldSheet = oldSheets[i];
       const newSheet = newSheets[i];
 
+      // Check if sheet name has changed
+      if (oldSheet.name !== newSheet.name) {
+        return true;
+      }
+
       if (JSON.stringify(oldSheet.config) !== JSON.stringify(newSheet.config)) {
         return true;
       }
