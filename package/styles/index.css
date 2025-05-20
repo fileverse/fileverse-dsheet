@@ -84,6 +84,7 @@ body {
 
 .luckysheet-formula-help-c,
 .luckysheet-formula-search-c {
+  user-select: text;
   padding: 6px;
   border-radius: 10px;
   top: 25px;

@@ -2,41 +2,44 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 // import { SERVICE_API_KEY } from "@fileverse-dev/formulajs"
 
-/**
- * Updates the UI with formula response data by setting cell values in the spreadsheet
- *
- * @param r - The starting row index
- * @param c - The starting column index
- * @param newV - The new cell value object
- * @param apiData - Array of data records to display in the spreadsheet
- * @param sheetEditorRef - Reference to the workbook instance
- * @returns {void}
- */
-const formulaResponseUiSync = (
-  r: number,
-  c: number,
-  newV: Record<string, string>,
-  apiData: Array<Record<string, object>>,
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+// /**
+//  * Updates the UI with formula response data by setting cell values in the spreadsheet
+//  *
+//  * @param r - The starting row index
+//  * @param c - The starting column index
+//  * @param newV - The new cell value object
+//  * @param apiData - Array of data records to display in the spreadsheet
+//  * @param sheetEditorRef - Reference to the workbook instance
+//  * @returns {void}
+//  */
+export type FormulaSyncType = {
+  row: number;
+  column: number;
+  newValue: Record<string, string>;
+  apiData: Array<Record<string, object>>;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+}
+export const formulaResponseUiSync = (
+  { row, column, newValue, apiData, sheetEditorRef }: FormulaSyncType
 ): void => {
   const headers: string[] = Object.keys(apiData[0]);
   // handle row and col ofbound and add new row and col
   const sheet = sheetEditorRef.current?.getSheet();
-  const row = sheet?.data?.length || 0;
-  const column = sheet?.data?.[0]?.length || 0;
-  const extraRow = apiData.length - (row - r) + 1;
-  const extraCol = headers.length - (column - c) + 1;
+  const currentTotalRow = sheet?.data?.length || 0;
+  const currentTotalColumn = sheet?.data?.[0]?.length || 0;
+  const extraRow = apiData.length - (currentTotalRow - row) + 1;
+  const extraCol = headers.length - (currentTotalColumn - column) + 1;
 
   if (extraRow > 0) {
-    sheetEditorRef.current?.insertRowOrColumn('row', row - 1, extraRow);
+    sheetEditorRef.current?.insertRowOrColumn('row', currentTotalRow - 1, extraRow);
   }
   if (extraCol > 0) {
-    sheetEditorRef.current?.insertRowOrColumn('column', column - 1, extraCol);
+    sheetEditorRef.current?.insertRowOrColumn('column', currentTotalColumn - 1, extraCol);
   }
 
   const range = {
-    row: [r, r + apiData.length],
-    column: [c, c + (headers.length - 1)],
+    row: [row, row + apiData.length],
+    column: [column, column + (headers.length - 1)],
   };
 
   const data = [];
@@ -45,7 +48,7 @@ const formulaResponseUiSync = (
   const headerData: Array<Record<string, string> | string> = [];
   headers.forEach((header, index) => {
     if (index === 0) {
-      headerData.push({ ...newV, m: header, v: header });
+      headerData.push({ ...newValue, m: header, v: header });
     } else {
       headerData.push(header);
     }
@@ -69,24 +72,6 @@ const formulaResponseUiSync = (
 };
 
 /**
- * Waits until the API key modal is closed
- *
- * @param openApiKeyModal - Ref object tracking if the API key modal is open
- * @returns {Promise<string>} - Promise that resolves when the modal is closed
- */
-function delayExecution(
-  openApiKeyModal: React.MutableRefObject<boolean>,
-): Promise<string> {
-  return new Promise<string>((resolve) => {
-    setInterval(() => {
-      if (openApiKeyModal.current === false) {
-        resolve('Function completed after 2 minutes');
-      }
-    }, 1);
-  });
-}
-
-/**
  * Handles logic after a cell is updated, including processing formula results
  *
  * @param row - The row index of the updated cell
@@ -104,26 +89,21 @@ export const afterUpdateCell = async ({
   column,
   newValue,
   sheetEditorRef,
-  setOpenApiKeyModal,
-  openApiKeyModalRef,
-  contextApiKeyName,
   onboardingComplete,
   onboardingHandler,
+  dataBlockApiKeyHandler
 }: {
   row: number;
   column: number;
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  setOpenApiKeyModal: React.Dispatch<React.SetStateAction<boolean>>;
-  openApiKeyModalRef: React.MutableRefObject<boolean>;
-  contextApiKeyName: React.MutableRefObject<string | null>;
   onboardingComplete: boolean | undefined;
   onboardingHandler: Function | undefined;
+  dataBlockApiKeyHandler: Function | undefined;
 }): Promise<void> => {
   if (!newValue || (newValue?.v && !newValue.v)) {
     return;
   }
-  console.log('update cell', newValue);
 
   if (typeof newValue.v === 'string' && newValue.v !== '#NAME?') {
     sheetEditorRef.current?.setCellValue(row, column, {
@@ -157,46 +137,19 @@ export const afterUpdateCell = async ({
         return;
       }
 
-      if (typeof data === 'string' && data.includes('MISSING')) {
-        const apiKeyName = data.split('_MISSING')[0];
-        contextApiKeyName.current = apiKeyName;
-
-        setOpenApiKeyModal(true);
-        openApiKeyModalRef.current = true;
-
-        await delayExecution(openApiKeyModalRef);
-
-        const funStr = newValue.f?.split('=')[1];
-        if (!funStr) return;
-
-        const res = await executeStringFunction(funStr);
-
-        if (window.localStorage.getItem(apiKeyName)) {
-          formulaResponseUiSync(
-            row,
-            column,
-            newValue as Record<string, string>,
-            res as Record<string, object>[],
-            sheetEditorRef,
-          );
-        } else {
-          sheetEditorRef.current?.setCellValue(row, column, {
-            ...newValue,
-            m: '#ERROR?:' + data,
-          });
-        }
-        return;
+      if (typeof data === 'string' && data.includes('MISSING') && dataBlockApiKeyHandler) {
+        dataBlockApiKeyHandler({ data, sheetEditorRef, executeStringFunction, row, column, newValue, formulaResponseUiSync })
       }
 
       if (Array.isArray(data)) {
-        formulaResponseUiSync(
+        formulaResponseUiSync({
           row,
           column,
-          newValue as Record<string, string>,
+          newValue: newValue as Record<string, string>,
           // @ts-expect-error later
-          data as Record<string, object>[],
+          apiData: data as Record<string, object>[],
           sheetEditorRef,
-        );
+        });
       } else {
         sheetEditorRef.current?.setCellValue(row, column, {
           ...newValue,
@@ -218,7 +171,7 @@ export const afterUpdateCell = async ({
  * @param functionCallString - String representation of the function call
  * @returns {Promise<unknown>} - Result of the function execution
  */
-async function executeStringFunction(
+export async function executeStringFunction(
   functionCallString: string,
 ): Promise<unknown> {
   try {

@@ -28,6 +28,7 @@ export interface DsheetProps {
   selectedTemplate?: string;
   onboardingComplete?: boolean;
   onboardingHandler?: Function;
+  dataBlockApiKeyHandler?: Function;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<WorkbookInstance>;
