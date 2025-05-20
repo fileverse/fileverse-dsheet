@@ -69,9 +69,7 @@ export const formulaResponseUiSync = (
  * @param oldValue - The previous value of the cell
  * @param newValue - The new value of the cell
  * @param sheetEditorRef - Reference to the workbook instance
- * @param setOpenApiKeyModal - Function to set the API key modal open state
- * @param openApiKeyModalRef - Ref object tracking if the API key modal is open
- * @param contextApiKeyName - Ref object for the current API key name context
+ * @param onboardingHandler - Function to handle onboarding from consumer side
  * @returns {Promise<void>}
  */
 export const afterUpdateCell = async ({
@@ -161,7 +159,7 @@ export const afterUpdateCell = async ({
  * @param functionCallString - String representation of the function call
  * @returns {Promise<unknown>} - Result of the function execution
  */
-export async function executeStringFunction(
+async function executeStringFunction(
   functionCallString: string,
 ): Promise<unknown> {
   try {
