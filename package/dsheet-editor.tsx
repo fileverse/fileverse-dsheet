@@ -15,7 +15,6 @@ import { handleExportToCSV } from './utils/csv-export';
 import { handleExportToJSON } from './utils/json-export';
 import { afterUpdateCell } from './utils/after-update-cell';
 import { getCustomToolbarItems } from './utils/custom-toolbar-item';
-import { ApiKeyModal } from './components/api-key-modal';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
@@ -43,13 +42,11 @@ const SpreadsheetEditor = ({
   enableWebrtc,
   onboardingComplete,
   onboardingHandler,
+  dataBlockApiKeyHandler,
   sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps): JSX.Element => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
-  const [openApiKeyModal, setOpenApiKeyModal] = useState<boolean>(false);
-  const openApiKeyModalRef = useRef<boolean>(false);
-  const contextApiKeyName = useRef<string | null>(null);
   const workbookId = useId(); // Stable ID for the workbook
 
   // Create an internal ref if none is provided
@@ -144,11 +141,9 @@ const SpreadsheetEditor = ({
               column,
               newValue,
               sheetEditorRef: refObj,
-              setOpenApiKeyModal,
-              openApiKeyModalRef,
-              contextApiKeyName,
               onboardingComplete,
               onboardingHandler,
+              dataBlockApiKeyHandler
             });
           },
         }}
@@ -187,12 +182,6 @@ const SpreadsheetEditor = ({
 
       <div style={{ height: '96.4%', marginTop: '56px' }}>
         {MemoizedSheetEditor}
-        <ApiKeyModal
-          openApiKeyModal={openApiKeyModal}
-          setOpenApiKeyModal={setOpenApiKeyModal}
-          openApiKeyModalRef={openApiKeyModalRef}
-          contextApiKeyName={contextApiKeyName}
-        />
       </div>
     </div>
   );
