@@ -1,18 +1,19 @@
-import { useMemo, useState, useRef, useId } from 'react';
-import { useDsheetEditor } from './use-dsheet-editor';
+import { useMemo, useRef, useId, useState } from 'react';
 import { Workbook, WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
 import cn from 'classnames';
 
-import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
+import { useDSheetData } from './hooks/use-dsheet-data';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
-import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
+import { useTemplateManager } from './hooks/use-template-manager';
 import { DsheetProps, EditorValues } from './types';
-import { handleCSVUpload } from './utils/csv-import';
-import { useXLSXImport } from './hooks/use-xlsx-import';
-import { handleExportToXLSX } from './utils/xlsx-export';
-import { handleExportToCSV } from './utils/csv-export';
-import { handleExportToJSON } from './utils/json-export';
+import { handleCSVImport } from './utils/csv-import-adapter';
+import { useXLSXImportAdapter } from './hooks/use-xlsx-import-adapter';
+import {
+  exportToXLSX,
+  exportToCSV,
+  exportToJSON,
+} from './utils/export-adapters';
 import { afterUpdateCell } from './utils/after-update-cell';
 import { getCustomToolbarItems } from './utils/custom-toolbar-item';
 
@@ -30,133 +31,97 @@ const SpreadsheetEditor = ({
   isCollaborative = false,
   isReadOnly = false,
   renderNavbar,
-  initialSheetData,
-  enableIndexeddbSync,
-  dsheetId,
+  enableIndexeddbSync = false,
+  dsheetId = '',
   portalContent,
   onChange,
-  username,
+  username = 'Anonymous',
   selectedTemplate,
   toggleTemplateSidebar,
-  isTemplateOpen,
-  enableWebrtc,
+  isTemplateOpen = false,
+  enableWebrtc = false,
   onboardingComplete,
   onboardingHandler,
   dataBlockApiKeyHandler,
   sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps): JSX.Element => {
-  const [forceSheetRender, setForceSheetRender] = useState<number>(1);
+  const workbookId = useId();
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
-  const workbookId = useId(); // Stable ID for the workbook
+  const [dataVersion, setDataVersion] = useState(0);
 
-  // Create an internal ref if none is provided
   const internalEditorRef = useRef<WorkbookInstance>(null);
   const editorRef = externalSheetEditorRef || internalEditorRef;
 
-  const { handleChange, currentDataRef, ydocRef, loading } = useDsheetEditor({
-    initialSheetData,
-    enableIndexeddbSync,
-    dsheetId,
-    username,
-    onChange,
-    portalContent,
-    enableWebrtc,
-    isCollaborative,
-    sheetEditorRef: editorRef,
-    setForceSheetRender,
+  const {
+    data: sheetData,
+    isLoading,
+    updateData,
+  } = useDSheetData({
+    sheetId: dsheetId,
+    enablePersistence: enableIndexeddbSync,
     isReadOnly,
+    portalContent,
+    username,
+    enableWebrtc: enableWebrtc && isCollaborative,
+    webrtcServerUrl: 'wss://demos.yjs.dev/ws',
+    onChange,
   });
 
-  // Initialize template button functionality
-  useApplyTemplatesBtn({
-    selectedTemplate,
-    ydocRef,
-    dsheetId,
-    currentDataRef,
-    setForceSheetRender,
+  useTemplateManager({
+    selectedTemplate:
+      typeof selectedTemplate === 'object' ? selectedTemplate : null,
+    updateData,
     sheetEditorRef: editorRef,
   });
 
-  // Initialize XLSX import functionality
-  const { handleXLSXUpload } = useXLSXImport({
-    sheetEditorRef: editorRef,
-    ydocRef,
-    setForceSheetRender,
-    dsheetId,
-    currentDataRef,
-  });
-
-  // Apply custom styling based on dropdown and template states
   useFortuneDocumentStyle(exportDropdownOpen, isTemplateOpen);
 
-  // Memoized spreadsheet editor component to avoid unnecessary re-renders
-  const MemoizedSheetEditor = useMemo(() => {
-    return (
-      <Workbook
-        key={`${workbookId}-${forceSheetRender}`}
-        ref={editorRef}
-        data={currentDataRef.current || DEFAULT_SHEET_DATA}
-        onChange={handleChange}
-        showFormulaBar={!isReadOnly}
-        showToolbar={!isReadOnly}
-        allowEdit={!isReadOnly}
-        lang={'en'}
-        rowHeaderWidth={60}
-        columnHeaderHeight={24}
-        defaultColWidth={100}
-        defaultRowHeight={21}
-        customToolbarItems={getCustomToolbarItems({
-          setExportDropdownOpen,
-          handleCSVUpload,
-          handleXLSXUpload,
-          handleExportToXLSX,
-          handleExportToCSV,
-          handleExportToJSON,
-          sheetEditorRef: editorRef,
-          ydocRef,
-          dsheetId,
-          currentDataRef,
-          setForceSheetRender,
-          toggleTemplateSidebar,
-        })}
-        hooks={{
-          /**
-           * Hook called after a cell value is updated
-           *
-           * @param row - Row index of the updated cell
-           * @param column - Column index of the updated cell
-           * @param oldValue - Previous cell value
-           * @param newValue - New cell value
-           */
-          afterUpdateCell: (
-            row: number,
-            column: number,
-            oldValue: Cell,
-            newValue: Cell,
-          ): void => {
-            console.log("Update", oldValue, newValue)
-            const refObj = { current: editorRef.current };
-            afterUpdateCell({
-              row,
-              column,
-              newValue,
-              sheetEditorRef: refObj,
-              onboardingComplete,
-              onboardingHandler,
-              dataBlockApiKeyHandler
-            });
-          },
-        }}
-      />
-    );
-  }, [forceSheetRender, loading, dsheetId, workbookId]);
+  const { handleXLSXUpload: actualXLSXUploadHandler } = useXLSXImportAdapter({
+    onDataImported: updateData,
+  });
 
-  // Create editor values to pass to the navbar
+  const actualCSVUploadHandler = (file: File) => {
+    console.log(
+      '[SpreadsheetEditor] actualCSVUploadHandler called with file:',
+      file,
+    );
+    handleCSVImport(file, (newData) => {
+      console.log(
+        '[SpreadsheetEditor] Data received from handleCSVImport:',
+        newData,
+      );
+      updateData(newData);
+      setDataVersion((prev) => prev + 1);
+    });
+  };
+
+  const customToolbarItems = useMemo(() => {
+    return getCustomToolbarItems({
+      handleActualCSVUpload: actualCSVUploadHandler,
+      handleActualXLSXUpload: actualXLSXUploadHandler,
+      handleExportToXLSX: () => exportToXLSX(sheetData),
+      handleExportToCSV: () => exportToCSV(sheetData),
+      handleExportToJSON: () => exportToJSON(sheetData),
+      setExportDropdownOpen,
+      toggleTemplateSidebar,
+    });
+  }, [
+    sheetData,
+    toggleTemplateSidebar,
+    updateData,
+    actualXLSXUploadHandler,
+    exportDropdownOpen,
+  ]);
+
   const editorValues: EditorValues = {
     sheetEditorRef: editorRef,
-    currentDataRef,
-    ydocRef,
+    currentDataRef: { current: sheetData },
+    ydocRef: { current: null },
   };
+
+  if (isLoading) {
+    return <div className="loading-indicator">Loading spreadsheet...</div>;
+  }
 
   return (
     <div
@@ -181,7 +146,47 @@ const SpreadsheetEditor = ({
       )}
 
       <div style={{ height: '96.4%', marginTop: '56px' }}>
-        {MemoizedSheetEditor}
+        <Workbook
+          key={`${workbookId}-${dataVersion}`}
+          ref={editorRef}
+          data={sheetData}
+          onChange={updateData}
+          showFormulaBar={!isReadOnly}
+          showToolbar={!isReadOnly}
+          allowEdit={!isReadOnly}
+          lang={'en'}
+          rowHeaderWidth={60}
+          columnHeaderHeight={24}
+          defaultColWidth={100}
+          defaultRowHeight={21}
+          customToolbarItems={customToolbarItems}
+          hooks={{
+            /**
+             * Hook called after a cell value is updated
+             *
+             * @param row - Row index of the updated cell
+             * @param column - Column index of the updated cell
+             * @param oldValue - Previous cell value
+             * @param newValue - New cell value
+             */
+            afterUpdateCell: (
+              row: number,
+              column: number,
+              oldValue: Cell,
+              newValue: Cell,
+            ): void => {
+              afterUpdateCell({
+                row,
+                column,
+                newValue,
+                sheetEditorRef: { current: editorRef.current },
+                onboardingComplete,
+                onboardingHandler,
+                dataBlockApiKeyHandler,
+              });
+            },
+          }}
+        />
       </div>
     </div>
   );

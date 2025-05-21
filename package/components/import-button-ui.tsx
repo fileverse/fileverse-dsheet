@@ -1,6 +1,11 @@
-import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  LucideIcon,
+  IconButton,
+} from '@fileverse/ui';
 import { ChangeEventHandler } from 'react';
-import { LucideIcon, IconButton } from '@fileverse/ui';
 
 import './import-button.scss';
 

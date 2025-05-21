@@ -19,7 +19,6 @@ export const useDsheetEditor = ({
   enableWebrtc = true,
   portalContent,
   sheetEditorRef: externalSheetEditorRef,
-  initialSheetData,
   setForceSheetRender,
   isReadOnly = false,
 }: Partial<DsheetProps>) => {
@@ -35,6 +34,7 @@ export const useDsheetEditor = ({
     enableIndexeddbSync,
     isReadOnly,
   );
+
   useWebRTCConnection(
     ydocRef.current,
     dsheetId,
@@ -62,23 +62,47 @@ export const useDsheetEditor = ({
         if (portalContent) {
           // If we have portal content, decode and use it
           const tempDoc = new Y.Doc();
-          const uint8Array = toUint8Array(portalContent);
-          Y.applyUpdate(tempDoc, uint8Array);
-          const tempMap = tempDoc.getArray(dsheetId);
-          dataToUse = Array.from(tempMap) as Sheet[];
-          tempDoc.destroy();
+          console.log('Initial loading: Created temp doc');
+          try {
+            const uint8Array = toUint8Array(portalContent);
+            console.log(
+              'Initial loading: Decoded portalContent to uint8Array:',
+              uint8Array.length,
+              'bytes',
+            );
+            Y.applyUpdate(tempDoc, uint8Array);
+            const tempMap = tempDoc.getArray(dsheetId);
+            console.log(
+              'Initial loading: Got array from temp doc with dsheetId:',
+              dsheetId,
+            );
+            dataToUse = Array.from(tempMap) as Sheet[];
+            console.log('Initial loading: Extracted sheet data:', dataToUse);
+            if (dataToUse.length === 0) {
+              console.warn(
+                'Initial loading: No data found in portalContent for dsheetId:',
+                dsheetId,
+              );
+              dataToUse = DEFAULT_SHEET_DATA;
+            }
+          } catch (error) {
+            console.error(
+              'Initial loading: Error processing portalContent:',
+              error,
+            );
+            dataToUse = DEFAULT_SHEET_DATA;
+          } finally {
+            tempDoc.destroy();
+          }
         } else {
-          // Use initialSheetData or default data
-          dataToUse =
-            initialSheetData && initialSheetData.length > 0
-              ? initialSheetData
-              : DEFAULT_SHEET_DATA;
+          // Use default data if no portal content available
+          dataToUse = DEFAULT_SHEET_DATA;
         }
 
         if (!isReadOnly) {
           // Only persist data if not in read-only mode
           console.log(
-            'No persisted data found. Persisting initial data or portal content.',
+            'No persisted data found. Persisting portal content or default data.',
           );
           ydocRef.current?.transact(() => {
             sheetArray?.delete(0, sheetArray.length);
@@ -92,7 +116,6 @@ export const useDsheetEditor = ({
         // Set the current data reference regardless of read-only mode
         currentDataRef.current = dataToUse;
       } else {
-        console.log('Using persisted data from IndexedDB:', currentData);
         // Force set the current data ref
         currentDataRef.current = currentData;
 
@@ -112,13 +135,14 @@ export const useDsheetEditor = ({
       persistenceRef.current.once('synced', initializeWithDefaultData);
     } else {
       // No persistence, initialize immediately
+      console.log('No persistence, initializing immediately');
       initializeWithDefaultData();
     }
 
     return () => {
       dataInitialized.current = false;
     };
-  }, [dsheetId, initialSheetData, isReadOnly, portalContent]);
+  }, [dsheetId, isReadOnly, portalContent]);
 
   // Handle portal content updates
   useEffect(() => {
@@ -127,6 +151,11 @@ export const useDsheetEditor = ({
     try {
       const newDoc = ydocRef.current;
       const uint8Array = toUint8Array(portalContent);
+      console.log(
+        'Portal content decoded to uint8Array:',
+        uint8Array.length,
+        'bytes',
+      );
 
       // Create a temporary doc to decode the update without affecting the current doc
       const tempDoc = new Y.Doc();
@@ -135,22 +164,27 @@ export const useDsheetEditor = ({
       // Get the sheet data from temp doc to extract metadata
       const tempMap = tempDoc.getArray(dsheetId);
       const decodedSheetData = Array.from(tempMap) as Sheet[];
+      console.log('Decoded sheet data from portal content:', decodedSheetData);
 
       // Now apply the update to the actual doc
       Y.applyUpdate(newDoc, uint8Array);
       const map = newDoc.getArray(dsheetId);
       const newSheetData = Array.from(map) as Sheet[];
+      console.log('Updated sheet data in YDoc:', newSheetData);
 
       // Update the current data reference
       currentDataRef.current = newSheetData;
+      console.log('Set currentDataRef.current to:', newSheetData);
 
       // Force a complete re-render of the component with the new data
       if (setForceSheetRender) {
         setForceSheetRender((prev) => prev + 1);
+        console.log('Forced sheet re-render');
       }
 
       // If we're in read-only mode and have sheet data, ensure we use the correct sheet names
       if (isReadOnly && decodedSheetData.length > 0 && sheetEditorRef.current) {
+        console.log('Read-only mode: Updating sheet names');
         // Update all sheet names from the decoded data
         if (currentDataRef.current) {
           // Create a new array with updated sheet names
@@ -169,10 +203,19 @@ export const useDsheetEditor = ({
           // Update the current data reference and trigger re-render
           currentDataRef.current = updatedSheetData;
           setSheetData([...updatedSheetData]);
+          console.log(
+            'Updated sheet data with correct names:',
+            updatedSheetData,
+          );
         }
       }
     } catch (error) {
       console.error('Error processing portal content:', error);
+      console.error('Error details:', {
+        portalContent: portalContent?.substring(0, 50) + '...',
+        dsheetId,
+        isReadOnly,
+      });
     }
   }, [portalContent, dsheetId, isReadOnly]);
 

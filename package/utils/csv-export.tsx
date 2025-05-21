@@ -1,30 +1,33 @@
 import { Sheet } from '@fileverse-dev/fortune-core';
-import * as Y from 'yjs';
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { MutableRefObject } from 'react';
 
-export const handleExportToCSV = (
-  workbookRef: MutableRefObject<WorkbookInstance | null>,
-  ydocRef: MutableRefObject<Y.Doc | null>,
-  dsheetId: string,
-) => {
-  if (!workbookRef.current || !ydocRef.current) return;
-
+export const handleExportToCSV = (sheets: Sheet[]): void => {
   try {
-    const ydoc = ydocRef.current;
-    const sheetArray = ydoc.getArray(dsheetId);
-    const preSheetArray = Array.from(sheetArray) as Sheet[];
-    const sheetData = preSheetArray;
+    console.log(
+      '[csv-export] Starting CSV export. Sheets data:',
+      JSON.parse(JSON.stringify(sheets)),
+    );
+    const sheetData = sheets;
+
+    if (!sheetData || sheetData.length === 0) {
+      console.error('[csv-export] No sheets array provided or array is empty.');
+      alert('No data available to export to CSV.');
+      return;
+    }
 
     const activeSheet =
       sheetData.find((sheet) => sheet.status === 1) || sheetData[0];
+    console.log(
+      '[csv-export] Active sheet for export:',
+      JSON.parse(JSON.stringify(activeSheet)),
+    );
 
     if (
       !activeSheet ||
       !activeSheet.celldata ||
       activeSheet.celldata.length === 0
     ) {
-      console.error('No data to export');
+      console.error('[csv-export] No data to export in activeSheet.celldata');
+      alert('Active sheet has no data to export.'); // More specific alert
       return;
     }
 
@@ -36,6 +39,9 @@ export const handleExportToCSV = (
       maxRow = Math.max(maxRow, cell.r);
       maxCol = Math.max(maxCol, cell.c);
     });
+    console.log(
+      `[csv-export] Calculated dimensions: maxRow=${maxRow}, maxCol=${maxCol}`,
+    );
 
     const rows: string[][] = [];
     for (let i = 0; i <= maxRow; i++) {
@@ -47,6 +53,11 @@ export const handleExportToCSV = (
         cell.v && cell.v.v !== undefined && cell.v.v !== null ? cell.v.v : '';
       rows[cell.r][cell.c] = String(value);
     });
+
+    console.log(
+      '[csv-export] Constructed rows grid:',
+      JSON.parse(JSON.stringify(rows)),
+    );
 
     // Convert rows to CSV format
     const csvContent = rows
@@ -72,6 +83,7 @@ export const handleExportToCSV = (
           .join(',');
       })
       .join('\n');
+    console.log('[csv-export] Final CSV content:\n', csvContent);
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

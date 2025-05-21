@@ -1,7 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DSheetEditor from '../../package/dsheet-editor';
-import { EditorValues } from '../../package/types'
 import {
   Button,
   Tag,
@@ -11,22 +10,15 @@ import {
   ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 function App() {
   const [title, setTitle] = useState('Untitled');
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
-  // Create a ref to control the sheet editor
-  const sheetEditorRef = useRef<WorkbookInstance>(null);
 
-  // Use a stable dsheetId
-  const dsheetId = 'demo-dsheet-1';
+  // Use the correct dsheetId from the portalContent
+  const dsheetId = 'ads';
 
-  // Handle data changes in the sheet - kept empty as we don't need to log anything
-  const handleSheetChange = useCallback(() => { }, []);
-
-  const renderNavbar = (editorValues: EditorValues = {} as EditorValues): JSX.Element => {
-    console.log(editorValues);
+  const renderNavbar = (): JSX.Element => {
     return (
       <>
         <div className="flex items-center gap-[12px]">
@@ -75,7 +67,7 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    onClick={() => { }}
+                    onClick={() => {}}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
@@ -115,11 +107,9 @@ function App() {
   const EditorPage = () => (
     <div>
       <DSheetEditor
-        renderNavbar={renderNavbar}
         dsheetId={dsheetId}
-        onChange={handleSheetChange}
-        sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
+        renderNavbar={renderNavbar}
       />
     </div>
   );

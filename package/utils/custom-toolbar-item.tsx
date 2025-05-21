@@ -1,95 +1,96 @@
 // customToolbarItems.tsx
 
-import React, { ChangeEvent } from 'react';
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import * as Y from 'yjs';
+import React from 'react';
 import { CustomButton } from './../components/import-button-ui';
-
 import { IconButton } from '@fileverse/ui';
+// Sheet might not be needed here if not used directly
+// import { Sheet } from '@fileverse-dev/fortune-core';
+
+interface GetCustomToolbarItemsProps {
+  handleActualCSVUpload: (file: File) => void;
+  handleActualXLSXUpload: () => void;
+  handleExportToXLSX: () => void;
+  handleExportToCSV: () => void;
+  handleExportToJSON: () => void;
+  setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  toggleTemplateSidebar?: () => void;
+}
+
+// Define a more flexible type for toolbar items
+interface CustomToolbarItem {
+  key: string;
+  tooltip: string;
+  icon: React.ReactNode;
+  onClick?: () => void; // Make onClick optional
+}
 
 export const getCustomToolbarItems = ({
-  setExportDropdownOpen,
-  handleCSVUpload,
-  handleXLSXUpload,
+  handleActualCSVUpload,
+  handleActualXLSXUpload,
   handleExportToXLSX,
   handleExportToCSV,
   handleExportToJSON,
-  sheetEditorRef,
-  ydocRef,
-  dsheetId,
-  currentDataRef,
-  setForceSheetRender,
+  setExportDropdownOpen,
   toggleTemplateSidebar,
-}: {
-  setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  handleCSVUpload: (
-    event: ChangeEvent<HTMLInputElement>,
-    ydocRef: Y.Doc | null,
-    setForceSheetRender: React.Dispatch<React.SetStateAction<number>>,
-    dsheetId: string,
-    currentDataRef: React.MutableRefObject<object | null>,
-  ) => void;
-  handleXLSXUpload: React.ChangeEventHandler<HTMLInputElement>;
-  handleExportToXLSX: (
-    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-    ydocRef: React.RefObject<Y.Doc | null>,
-    dsheetId: string,
-  ) => void;
-  handleExportToCSV: (
-    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-    ydocRef: React.RefObject<Y.Doc | null>,
-    dsheetId: string,
-  ) => void;
-  handleExportToJSON: (
-    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-  ) => void;
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  ydocRef: React.RefObject<Y.Doc | null>;
-  dsheetId: string;
-  currentDataRef: React.MutableRefObject<object | null>;
-  setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
-  toggleTemplateSidebar: (() => void) | undefined;
-}) => [
-  {
-    key: 'import-export',
-    tooltip: 'Import/Export',
-    onClick: () => {
-      setExportDropdownOpen((prev) => !prev);
+}: GetCustomToolbarItemsProps): CustomToolbarItem[] => {
+  // Wrapper for CSV upload to match CustomButton's expected signature
+  const csvUploadHandler: React.ChangeEventHandler<HTMLInputElement> = (
+    event,
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleActualCSVUpload(file);
+    }
+  };
+
+  // Wrapper for XLSX upload to match CustomButton's expected signature
+  // and to call our adapter which doesn't need the event.
+  const xlsxUploadHandler: React.ChangeEventHandler<HTMLInputElement> = (
+    event,
+  ) => {
+    // The actual file selection is handled by the input within CustomButton,
+    // Our useXLSXImportAdapter hook (called by handleActualXLSXUpload) creates its own input.
+    // So, here we mainly just trigger the adapted function.
+    // If CustomButton's input is essential, useXLSXImportAdapter needs to accept a file.
+    // For now, assuming handleActualXLSXUpload internally manages file picking if needed or CustomButton handles it.
+    if (event.target.files?.length) {
+      // Ensure a file was selected to trigger the action
+      handleActualXLSXUpload();
+    }
+  };
+
+  const items: CustomToolbarItem[] = [
+    {
+      key: 'import-export',
+      tooltip: 'Import/Export',
+      icon: (
+        <CustomButton
+          setExportDropdownOpen={setExportDropdownOpen}
+          handleCSVUpload={csvUploadHandler} // Use wrapper
+          handleXLSXUpload={xlsxUploadHandler} // Use wrapper
+          handleExportToXLSX={handleExportToXLSX} // Direct pass-through
+          handleExportToCSV={handleExportToCSV} // Direct pass-through
+          handleExportToJSON={handleExportToJSON} // Direct pass-through
+        />
+      ),
     },
-    icon: (
-      <CustomButton
-        setExportDropdownOpen={setExportDropdownOpen}
-        handleCSVUpload={(event) =>
-          handleCSVUpload(
-            event,
-            ydocRef.current,
-            setForceSheetRender,
-            dsheetId,
-            currentDataRef,
-          )
-        }
-        handleXLSXUpload={handleXLSXUpload}
-        handleExportToXLSX={() =>
-          handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
-        }
-        handleExportToCSV={() =>
-          handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
-        }
-        handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
-      />
-    ),
-  },
-  {
-    key: 'templates',
-    tooltip: 'Templates',
-    icon: (
-      <IconButton
-        className="template-button"
-        icon="LayoutTemplate"
-        size="md"
-        variant="ghost"
-      />
-    ),
-    onClick: toggleTemplateSidebar,
-  },
-];
+  ];
+
+  if (toggleTemplateSidebar) {
+    items.push({
+      key: 'templates',
+      tooltip: 'Templates',
+      icon: (
+        <IconButton
+          className="template-button"
+          icon="LayoutTemplate"
+          size="md"
+          variant="ghost"
+        />
+      ),
+      onClick: toggleTemplateSidebar,
+    });
+  }
+
+  return items; // .filter(Boolean) is not strictly necessary if we ensure items are always objects
+};

@@ -55,3 +55,39 @@ The `DsheetProps` interface is a TypeScript interface that defines the propertie
 It will open up a vite server, that will have the Dsheet Editor.
 
 ⚠️ This repository is currently undergoing rapid development, over the time more customization and API will be added.
+
+## Architecture
+
+The dSheet Editor has been refactored to follow a clean architecture with separation of concerns:
+
+### Data Layer
+
+- `DSheetDataProvider` - Core class that manages all YJS document operations, including:
+  - Real-time collaboration via WebRTC
+  - Persistence via IndexedDB
+  - Data import/export
+  - Sheet data operations
+
+### React Integration
+
+- `useDSheetData` - React hook that provides a simple interface to the data provider
+- `useTemplateManager` - Dedicated hook for template handling
+- `useXLSXImportAdapter` - Simplified XLSX import functionality
+
+### Utility Layer
+
+- `csv-import-adapter.ts` - CSV import functionality
+- `export-adapters.ts` - Export functions for XLSX, CSV, and JSON formats
+- `custom-toolbar-items.ts` - UI components for the toolbar
+
+### Main Component
+
+- `SpreadsheetEditor` - The main React component that ties everything together
+
+This architecture provides several benefits:
+
+1. **Separation of Concerns** - Each part of the system has a clear responsibility
+2. **Maintainability** - Easier to modify or extend specific parts of the system
+3. **Testability** - Components and functions can be tested in isolation
+4. **Performance** - Optimized rendering and data flow
+5. **Type Safety** - Improved TypeScript typing throughout the codebase
