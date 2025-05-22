@@ -15,7 +15,6 @@ export interface EditorValues {
 
 export interface DsheetProps {
   renderNavbar?: (editorValues?: EditorValues) => JSX.Element;
-  initialSheetData?: Sheet[];
   enableIndexeddbSync?: boolean;
   dsheetId: string;
   onChange?: (updateData: SheetUpdateData, encodedUpdate?: string) => void;

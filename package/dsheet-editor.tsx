@@ -15,6 +15,7 @@ import { handleExportToCSV } from './utils/csv-export';
 import { handleExportToJSON } from './utils/json-export';
 import { afterUpdateCell } from './utils/after-update-cell';
 import { getCustomToolbarItems } from './utils/custom-toolbar-item';
+import SkeletonLoader from './components/skeleton-loader';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
@@ -30,7 +31,6 @@ const SpreadsheetEditor = ({
   isCollaborative = false,
   isReadOnly = false,
   renderNavbar,
-  initialSheetData,
   enableIndexeddbSync,
   dsheetId,
   portalContent,
@@ -54,7 +54,6 @@ const SpreadsheetEditor = ({
   const editorRef = externalSheetEditorRef || internalEditorRef;
 
   const { handleChange, currentDataRef, ydocRef, loading } = useDsheetEditor({
-    initialSheetData,
     enableIndexeddbSync,
     dsheetId,
     username,
@@ -120,21 +119,13 @@ const SpreadsheetEditor = ({
           toggleTemplateSidebar,
         })}
         hooks={{
-          /**
-           * Hook called after a cell value is updated
-           *
-           * @param row - Row index of the updated cell
-           * @param column - Column index of the updated cell
-           * @param oldValue - Previous cell value
-           * @param newValue - New cell value
-           */
           afterUpdateCell: (
             row: number,
             column: number,
             oldValue: Cell,
             newValue: Cell,
           ): void => {
-            console.log("Update", oldValue, newValue)
+            console.log('Update', oldValue, newValue);
             const refObj = { current: editorRef.current };
             afterUpdateCell({
               row,
@@ -143,7 +134,7 @@ const SpreadsheetEditor = ({
               sheetEditorRef: refObj,
               onboardingComplete,
               onboardingHandler,
-              dataBlockApiKeyHandler
+              dataBlockApiKeyHandler,
             });
           },
         }}
@@ -181,7 +172,7 @@ const SpreadsheetEditor = ({
       )}
 
       <div style={{ height: '96.4%', marginTop: '56px' }}>
-        {MemoizedSheetEditor}
+        {loading ? <SkeletonLoader /> : MemoizedSheetEditor}
       </div>
     </div>
   );

@@ -98,7 +98,7 @@ export const handleCSVUpload = (
 
           // Create sheet object in fortune-sheet format
           const sheetObject = {
-            name: 'Sheet1',
+            name: file.name || 'Sheet1',
             celldata: [...cellData],
             row: maxRow + 1, // +1 for header
             column: maxCol + 1,

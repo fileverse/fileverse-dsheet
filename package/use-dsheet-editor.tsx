@@ -19,7 +19,6 @@ export const useDsheetEditor = ({
   enableWebrtc = true,
   portalContent,
   sheetEditorRef: externalSheetEditorRef,
-  initialSheetData,
   setForceSheetRender,
   isReadOnly = false,
 }: Partial<DsheetProps>) => {
@@ -68,36 +67,19 @@ export const useDsheetEditor = ({
           dataToUse = Array.from(tempMap) as Sheet[];
           tempDoc.destroy();
         } else {
-          // Use initialSheetData or default data
-          dataToUse =
-            initialSheetData && initialSheetData.length > 0
-              ? initialSheetData
-              : DEFAULT_SHEET_DATA;
+          dataToUse = DEFAULT_SHEET_DATA;
         }
 
         if (!isReadOnly) {
-          // Only persist data if not in read-only mode
-          console.log(
-            'No persisted data found. Persisting initial data or portal content.',
-          );
           ydocRef.current?.transact(() => {
             sheetArray?.delete(0, sheetArray.length);
             sheetArray?.insert(0, dataToUse);
           });
-        } else {
-          console.log(
-            'Read-only mode: Using decoded portal content or default data.',
-          );
         }
-        // Set the current data reference regardless of read-only mode
         currentDataRef.current = dataToUse;
       } else {
-        console.log('Using persisted data from IndexedDB:', currentData);
-        // Force set the current data ref
         currentDataRef.current = currentData;
 
-        // Instead of manually updating UI, force a complete re-render
-        // of the Workbook component with the new data
         if (setForceSheetRender) {
           setForceSheetRender((prev) => prev + 1);
         }
@@ -118,7 +100,7 @@ export const useDsheetEditor = ({
     return () => {
       dataInitialized.current = false;
     };
-  }, [dsheetId, initialSheetData, isReadOnly, portalContent]);
+  }, [dsheetId, isReadOnly, portalContent]);
 
   // Handle portal content updates
   useEffect(() => {
