@@ -65,11 +65,13 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     // Create a unique key to force re-render when needed
     const workbookKey = `workbook-${dsheetId}-${forceSheetRender}`;
 
-    // Make sure we have data to display
+    // Use actual data if available, otherwise fallback to default data only in edit mode
     const data =
       currentDataRef.current && currentDataRef.current.length > 0
         ? currentDataRef.current
-        : DEFAULT_SHEET_DATA;
+        : isReadOnly
+          ? []
+          : DEFAULT_SHEET_DATA;
 
     return (
       <Workbook
@@ -107,7 +109,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             newValue: Cell,
           ): void => {
             const refObj = { current: sheetEditorRef.current };
-            console.log(oldValue);
             afterUpdateCell({
               row,
               column,
@@ -131,7 +132,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     dataBlockApiKeyHandler,
     dsheetId,
     exportDropdownOpen,
-    // Add syncStatus to the dependency array to ensure re-render when sync completes
     syncStatus,
+    currentDataRef.current,
   ]);
 };

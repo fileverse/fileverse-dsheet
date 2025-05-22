@@ -134,9 +134,14 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     }
   }, [isDataLoaded, syncStatus]);
 
-  // Loading state is based on data loading and sync status
+  // Loading state is based on data loading, sync status, and data availability in read-only mode
   const loading =
-    !isDataLoaded || syncStatus === 'initializing' || syncStatus === 'syncing';
+    !isDataLoaded ||
+    syncStatus === 'initializing' ||
+    syncStatus === 'syncing' ||
+    // In read-only mode, continue showing the loading state if we have no data yet
+    (isReadOnly &&
+      (!currentDataRef.current || currentDataRef.current.length === 0));
 
   // Create the context value
   const contextValue: EditorContextType = {
