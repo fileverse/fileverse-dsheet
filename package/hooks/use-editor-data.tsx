@@ -27,7 +27,6 @@ export const useEditorData = (
   const remoteUpdateRef = useRef<boolean>(false);
   const dataInitialized = useRef<boolean>(false);
   const firstRender = useRef<boolean>(true);
-  const hasSyncedOnce = useRef<boolean>(false);
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
 
@@ -37,11 +36,10 @@ export const useEditorData = (
       return;
     }
 
-    // Only proceed with initialization if we've synced or if sync isn't needed
-    if (syncStatus === 'synced' || !hasSyncedOnce.current) {
-      hasSyncedOnce.current = true;
-
+    // Only proceed with initialization if we've synced
+    if (syncStatus === 'synced') {
       const initializeWithDefaultData = () => {
+        // If we've already initialized, don't do it again
         if (dataInitialized.current) {
           return;
         }

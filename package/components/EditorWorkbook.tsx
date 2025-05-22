@@ -107,6 +107,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             newValue: Cell,
           ): void => {
             const refObj = { current: sheetEditorRef.current };
+            console.log(oldValue);
             afterUpdateCell({
               row,
               column,
