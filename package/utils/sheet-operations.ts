@@ -18,14 +18,13 @@ export const updateSheetData = (
 
   const formattedData = formatSheetData(data, preSheetArray, sheetEditor);
 
+  // Only update YJS if there's an actual change
   if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], formattedData)) {
+    // Perform the update in a transaction
     ydoc.transact(() => {
       sheetArray.delete(0, preSheetArray.length);
       sheetArray.insert(0, formattedData);
     });
-
-    // Update encoding state
-    Y.encodeStateAsUpdate(ydoc);
   }
 };
 

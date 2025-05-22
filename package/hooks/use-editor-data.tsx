@@ -1,0 +1,224 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Sheet } from '@fileverse-dev/fortune-core';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { toUint8Array } from 'js-base64';
+import * as Y from 'yjs';
+
+import { DEFAULT_SHEET_DATA } from '../constants/shared-constants';
+import { updateSheetData } from '../utils/sheet-operations';
+
+/**
+ * Hook for managing sheet data
+ * Handles initialization, updates, and persistence of sheet data
+ */
+export const useEditorData = (
+  ydocRef: React.MutableRefObject<Y.Doc | null>,
+  dsheetId: string,
+  sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
+  setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>,
+  portalContent?: string,
+  isReadOnly = false,
+  onChange?: (data: Sheet[]) => void,
+  syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
+) => {
+  const [sheetData, setSheetData] = useState<Sheet[]>([]);
+  const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
+  const currentDataRef = useRef<Sheet[]>([]);
+  const remoteUpdateRef = useRef<boolean>(false);
+  const dataInitialized = useRef<boolean>(false);
+  const firstRender = useRef<boolean>(true);
+  const hasSyncedOnce = useRef<boolean>(false);
+  const isUpdatingRef = useRef<boolean>(false);
+  const debounceTimerRef = useRef<number | null>(null);
+
+  // Initialize sheet data AFTER sync is complete
+  useEffect(() => {
+    if (!ydocRef.current || !dsheetId) {
+      return;
+    }
+
+    // Only proceed with initialization if we've synced or if sync isn't needed
+    if (syncStatus === 'synced' || !hasSyncedOnce.current) {
+      hasSyncedOnce.current = true;
+
+      const initializeWithDefaultData = () => {
+        if (dataInitialized.current) {
+          return;
+        }
+
+        const sheetArray = ydocRef.current?.getArray(dsheetId);
+        const currentData = Array.from(sheetArray || []) as Sheet[];
+
+        if (currentData.length === 0) {
+          // No data in YJS storage
+          let dataToUse: Sheet[];
+
+          if (portalContent) {
+            // If we have portal content, decode and use it
+            const tempDoc = new Y.Doc();
+            const uint8Array = toUint8Array(portalContent);
+            Y.applyUpdate(tempDoc, uint8Array);
+            const tempMap = tempDoc.getArray(dsheetId);
+            dataToUse = Array.from(tempMap) as Sheet[];
+            tempDoc.destroy();
+          } else {
+            dataToUse = DEFAULT_SHEET_DATA;
+          }
+
+          if (!isReadOnly) {
+            ydocRef.current?.transact(() => {
+              sheetArray?.delete(0, sheetArray.length);
+              sheetArray?.insert(0, dataToUse);
+            });
+          }
+          currentDataRef.current = dataToUse;
+        } else {
+          currentDataRef.current = currentData;
+
+          if (setForceSheetRender) {
+            setForceSheetRender((prev) => prev + 1);
+          }
+        }
+
+        dataInitialized.current = true;
+        setIsDataLoaded(true);
+      };
+
+      initializeWithDefaultData();
+    }
+  }, [dsheetId, isReadOnly, portalContent, syncStatus]);
+
+  // Attach listener for YJS data changes
+  useEffect(() => {
+    if (!ydocRef.current || !dsheetId) return;
+    const sheetArray = ydocRef.current.getArray(dsheetId);
+
+    // Update local state when YJS array changes
+    const observerCallback = () => {
+      // Skip updates if we're in the middle of updating YJS ourselves
+      // This prevents flickering when the update comes from the local user
+      if (isUpdatingRef.current) {
+        return;
+      }
+
+      remoteUpdateRef.current = true;
+      const newData = Array.from(sheetArray) as Sheet[];
+      currentDataRef.current = newData;
+
+      // Debounce the re-render to prevent multiple quick updates
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+
+      debounceTimerRef.current = window.setTimeout(() => {
+        if (setForceSheetRender) {
+          setForceSheetRender((prev) => prev + 1);
+        }
+        debounceTimerRef.current = null;
+      }, 50); // 50ms debounce
+    };
+
+    sheetArray.observe(observerCallback);
+
+    return () => {
+      sheetArray.unobserve(observerCallback);
+      if (debounceTimerRef.current !== null) {
+        window.clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [ydocRef, dsheetId]);
+
+  // Handle portal content updates
+  useEffect(() => {
+    if (!portalContent?.length || !ydocRef.current || !dsheetId) return;
+
+    try {
+      const newDoc = ydocRef.current;
+      const uint8Array = toUint8Array(portalContent);
+
+      // Create a temporary doc to decode the update without affecting the current doc
+      const tempDoc = new Y.Doc();
+      Y.applyUpdate(tempDoc, uint8Array);
+
+      // Get the sheet data from temp doc to extract metadata
+      const tempMap = tempDoc.getArray(dsheetId);
+      const decodedSheetData = Array.from(tempMap) as Sheet[];
+
+      // Now apply the update to the actual doc
+      Y.applyUpdate(newDoc, uint8Array);
+      const map = newDoc.getArray(dsheetId);
+      const newSheetData = Array.from(map) as Sheet[];
+
+      // Update the current data reference
+      currentDataRef.current = newSheetData;
+
+      // Force a complete re-render of the component with the new data
+      if (setForceSheetRender) {
+        setForceSheetRender((prev) => prev + 1);
+      }
+
+      // If we're in read-only mode and have sheet data, ensure we use the correct sheet names
+      if (isReadOnly && decodedSheetData.length > 0 && sheetEditorRef.current) {
+        // Update all sheet names from the decoded data
+        if (currentDataRef.current) {
+          // Create a new array with updated sheet names
+          const updatedSheetData = currentDataRef.current.map(
+            (sheet, index) => {
+              if (decodedSheetData[index]) {
+                return {
+                  ...sheet,
+                  name: decodedSheetData[index].name,
+                };
+              }
+              return sheet;
+            },
+          );
+
+          // Update the current data reference and trigger re-render
+          currentDataRef.current = updatedSheetData;
+          setSheetData([...updatedSheetData]);
+        }
+      }
+    } catch (error) {
+      console.error('[DSheet] Error processing portal content:', error);
+    }
+  }, [portalContent, dsheetId, isReadOnly]);
+
+  // Handle changes to the sheet
+  const handleChange = useCallback(
+    (data: Sheet[]) => {
+      if (firstRender.current) {
+        firstRender.current = false;
+        return;
+      }
+      if (remoteUpdateRef.current) {
+        remoteUpdateRef.current = false;
+        return;
+      }
+
+      // Set the flag to indicate we're in the process of updating YJS
+      isUpdatingRef.current = true;
+      updateSheetData(ydocRef.current, dsheetId, data, sheetEditorRef.current);
+
+      // Reset the flag after a short delay to allow the update to complete
+      setTimeout(() => {
+        isUpdatingRef.current = false;
+      }, 50);
+
+      // Call external onChange handler if provided
+      if (onChange) {
+        onChange(data);
+      }
+    },
+    [dsheetId, onChange],
+  );
+
+  return {
+    sheetData,
+    setSheetData,
+    currentDataRef,
+    remoteUpdateRef,
+    isDataLoaded,
+    handleChange,
+  };
+};
