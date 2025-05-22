@@ -60,9 +60,13 @@ export const SkeletonGrid = () => (
 );
 
 // Main skeleton loader component
-const SkeletonLoader = () => (
+const SkeletonLoader = ({
+  isReadOnly,
+}: {
+  isReadOnly: boolean | undefined;
+}) => (
   <div className="w-full h-full flex flex-col">
-    <SkeletonToolbar />
+    {!isReadOnly && <SkeletonToolbar />}
     <div className="flex-1 overflow-hidden">
       <SkeletonGrid />
     </div>

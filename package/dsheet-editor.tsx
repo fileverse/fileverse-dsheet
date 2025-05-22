@@ -103,7 +103,7 @@ const EditorContent = ({
 
       <div style={{ height: '96.4%', marginTop: '56px' }}>
         {loading ? (
-          <SkeletonLoader />
+          <SkeletonLoader isReadOnly={isReadOnly} />
         ) : (
           <EditorWorkbook
             isReadOnly={isReadOnly}
