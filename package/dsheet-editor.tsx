@@ -1,70 +1,63 @@
-import { useMemo, useState, useRef, useId } from 'react';
-import { useDsheetEditor } from './use-dsheet-editor';
-import { Workbook, WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { Cell } from '@fileverse-dev/fortune-core';
+import { useState } from 'react';
 import cn from 'classnames';
 
-import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
-import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
-import { DsheetProps, EditorValues } from './types';
-import { handleCSVUpload } from './utils/csv-import';
-import { useXLSXImport } from './hooks/use-xlsx-import';
-import { handleExportToXLSX } from './utils/xlsx-export';
-import { handleExportToCSV } from './utils/csv-export';
-import { handleExportToJSON } from './utils/json-export';
-import { afterUpdateCell } from './utils/after-update-cell';
-import { getCustomToolbarItems } from './utils/custom-toolbar-item';
+import {
+  DsheetProps,
+  EditorValues,
+  OnboardingHandlerType,
+  DataBlockApiKeyHandlerType,
+} from './types';
 import SkeletonLoader from './components/skeleton-loader';
+import { EditorProvider, useEditor } from './contexts/editor-context';
+import { EditorWorkbook } from './components/editor-workbook';
+import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
 
+// Use the types defined in types.ts
+type OnboardingHandler = OnboardingHandlerType;
+type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
+
 /**
- * SpreadsheetEditor component that provides a collaborative spreadsheet interface
- * with various import/export capabilities and template support.
- *
- * @param props - Component properties
- * @returns The SpreadsheetEditor component
+ * EditorContent - Internal component that renders the editor content
+ * Uses the context to access state and renders appropriate UI
  */
-const SpreadsheetEditor = ({
-  isCollaborative = false,
-  isReadOnly = false,
+const EditorContent = ({
   renderNavbar,
-  enableIndexeddbSync,
-  dsheetId,
-  portalContent,
-  onChange,
-  username,
-  selectedTemplate,
+  isReadOnly,
   toggleTemplateSidebar,
-  isTemplateOpen,
-  enableWebrtc,
   onboardingComplete,
   onboardingHandler,
   dataBlockApiKeyHandler,
-  sheetEditorRef: externalSheetEditorRef,
-}: DsheetProps): JSX.Element => {
-  const [forceSheetRender, setForceSheetRender] = useState<number>(1);
-  const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
-  const workbookId = useId(); // Stable ID for the workbook
-
-  // Create an internal ref if none is provided
-  const internalEditorRef = useRef<WorkbookInstance>(null);
-  const editorRef = externalSheetEditorRef || internalEditorRef;
-
-  const { handleChange, currentDataRef, ydocRef, loading } = useDsheetEditor({
-    enableIndexeddbSync,
-    dsheetId,
-    username,
-    onChange,
-    portalContent,
-    enableWebrtc,
-    isCollaborative,
-    sheetEditorRef: editorRef,
+  isTemplateOpen,
+  exportDropdownOpen,
+  setExportDropdownOpen,
+  dsheetId,
+  selectedTemplate,
+}: Pick<
+  DsheetProps,
+  | 'renderNavbar'
+  | 'isReadOnly'
+  | 'toggleTemplateSidebar'
+  | 'selectedTemplate'
+  | 'dsheetId'
+> & {
+  isTemplateOpen?: boolean;
+  exportDropdownOpen: boolean;
+  setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onboardingComplete?: boolean;
+  onboardingHandler?: OnboardingHandler;
+  dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
+}) => {
+  const {
+    loading,
+    sheetEditorRef,
+    currentDataRef,
+    ydocRef,
     setForceSheetRender,
-    isReadOnly,
-  });
+  } = useEditor();
 
   // Initialize template button functionality
   useApplyTemplatesBtn({
@@ -73,78 +66,15 @@ const SpreadsheetEditor = ({
     dsheetId,
     currentDataRef,
     setForceSheetRender,
-    sheetEditorRef: editorRef,
-  });
-
-  // Initialize XLSX import functionality
-  const { handleXLSXUpload } = useXLSXImport({
-    sheetEditorRef: editorRef,
-    ydocRef,
-    setForceSheetRender,
-    dsheetId,
-    currentDataRef,
+    sheetEditorRef,
   });
 
   // Apply custom styling based on dropdown and template states
-  useFortuneDocumentStyle(exportDropdownOpen, isTemplateOpen);
-
-  // Memoized spreadsheet editor component to avoid unnecessary re-renders
-  const MemoizedSheetEditor = useMemo(() => {
-    return (
-      <Workbook
-        key={`${workbookId}-${forceSheetRender}`}
-        ref={editorRef}
-        data={currentDataRef.current || DEFAULT_SHEET_DATA}
-        onChange={handleChange}
-        showFormulaBar={!isReadOnly}
-        showToolbar={!isReadOnly}
-        allowEdit={!isReadOnly}
-        lang={'en'}
-        rowHeaderWidth={60}
-        columnHeaderHeight={24}
-        defaultColWidth={100}
-        defaultRowHeight={21}
-        customToolbarItems={getCustomToolbarItems({
-          setExportDropdownOpen,
-          handleCSVUpload,
-          handleXLSXUpload,
-          handleExportToXLSX,
-          handleExportToCSV,
-          handleExportToJSON,
-          sheetEditorRef: editorRef,
-          ydocRef,
-          dsheetId,
-          currentDataRef,
-          setForceSheetRender,
-          toggleTemplateSidebar,
-        })}
-        hooks={{
-          afterUpdateCell: (
-            row: number,
-            column: number,
-            oldValue: Cell,
-            newValue: Cell,
-          ): void => {
-            console.log('Update', oldValue, newValue);
-            const refObj = { current: editorRef.current };
-            afterUpdateCell({
-              row,
-              column,
-              newValue,
-              sheetEditorRef: refObj,
-              onboardingComplete,
-              onboardingHandler,
-              dataBlockApiKeyHandler,
-            });
-          },
-        }}
-      />
-    );
-  }, [forceSheetRender, loading, dsheetId, workbookId]);
+  useFortuneDocumentStyle(exportDropdownOpen || false, isTemplateOpen || false);
 
   // Create editor values to pass to the navbar
   const editorValues: EditorValues = {
-    sheetEditorRef: editorRef,
+    sheetEditorRef,
     currentDataRef,
     ydocRef,
   };
@@ -172,9 +102,80 @@ const SpreadsheetEditor = ({
       )}
 
       <div style={{ height: '96.4%', marginTop: '56px' }}>
-        {loading ? <SkeletonLoader /> : MemoizedSheetEditor}
+        {loading ? (
+          <SkeletonLoader isReadOnly={isReadOnly} />
+        ) : (
+          <EditorWorkbook
+            isReadOnly={isReadOnly}
+            toggleTemplateSidebar={toggleTemplateSidebar}
+            onboardingComplete={onboardingComplete}
+            onboardingHandler={onboardingHandler}
+            dataBlockApiKeyHandler={dataBlockApiKeyHandler}
+            exportDropdownOpen={exportDropdownOpen}
+            setExportDropdownOpen={setExportDropdownOpen}
+            dsheetId={dsheetId}
+          />
+        )}
       </div>
     </div>
+  );
+};
+
+/**
+ * SpreadsheetEditor component that provides a collaborative spreadsheet interface
+ * with various import/export capabilities and template support.
+ *
+ * @param props - Component properties
+ * @returns The SpreadsheetEditor component
+ */
+const SpreadsheetEditor = ({
+  isCollaborative = false,
+  isReadOnly = false,
+  renderNavbar,
+  enableIndexeddbSync,
+  dsheetId = '',
+  portalContent,
+  onChange,
+  username,
+  selectedTemplate,
+  toggleTemplateSidebar,
+  isTemplateOpen,
+  enableWebrtc,
+  onboardingComplete,
+  onboardingHandler,
+  dataBlockApiKeyHandler,
+  sheetEditorRef: externalSheetEditorRef,
+}: DsheetProps): JSX.Element => {
+  const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
+
+  return (
+    <EditorProvider
+      dsheetId={dsheetId}
+      username={username}
+      portalContent={portalContent}
+      enableIndexeddbSync={enableIndexeddbSync}
+      enableWebrtc={enableWebrtc}
+      isReadOnly={isReadOnly}
+      onChange={onChange}
+      externalEditorRef={externalSheetEditorRef}
+      isCollaborative={isCollaborative}
+    >
+      <EditorContent
+        renderNavbar={renderNavbar}
+        isReadOnly={isReadOnly}
+        toggleTemplateSidebar={toggleTemplateSidebar}
+        onboardingComplete={onboardingComplete}
+        onboardingHandler={onboardingHandler as OnboardingHandler}
+        dataBlockApiKeyHandler={
+          dataBlockApiKeyHandler as DataBlockApiKeyHandler
+        }
+        isTemplateOpen={isTemplateOpen}
+        exportDropdownOpen={exportDropdownOpen}
+        setExportDropdownOpen={setExportDropdownOpen}
+        dsheetId={dsheetId}
+        selectedTemplate={selectedTemplate}
+      />
+    </EditorProvider>
   );
 };
 

@@ -2,6 +2,7 @@ import { Sheet } from '@fileverse-dev/fortune-core';
 import { RefObject } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
+import { Cell } from '@fileverse-dev/fortune-core';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -12,6 +13,30 @@ export interface EditorValues {
   currentDataRef: React.MutableRefObject<Sheet[] | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
 }
+
+// Define the onboarding handler type
+export type OnboardingHandlerType = (params: {
+  row: number;
+  column: number;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+}) => { row: number; column: number };
+
+// Define the data block API key handler type
+export type DataBlockApiKeyHandlerType = (params: {
+  data: string;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  executeStringFunction: (functionCallString: string) => Promise<unknown>;
+  row: number;
+  column: number;
+  newValue: Cell;
+  formulaResponseUiSync: (params: {
+    row: number;
+    column: number;
+    newValue: Record<string, string>;
+    apiData: Array<Record<string, object>>;
+    sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  }) => void;
+}) => void;
 
 export interface DsheetProps {
   renderNavbar?: (editorValues?: EditorValues) => JSX.Element;
@@ -26,8 +51,8 @@ export interface DsheetProps {
   isCollaborative?: boolean;
   selectedTemplate?: string;
   onboardingComplete?: boolean;
-  onboardingHandler?: Function;
-  dataBlockApiKeyHandler?: Function;
+  onboardingHandler?: OnboardingHandlerType;
+  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<WorkbookInstance>;

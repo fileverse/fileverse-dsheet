@@ -1,6 +1,6 @@
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-
+import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 
 export type FormulaSyncType = {
   row: number;
@@ -8,10 +8,14 @@ export type FormulaSyncType = {
   newValue: Record<string, string>;
   apiData: Array<Record<string, object>>;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-}
-export const formulaResponseUiSync = (
-  { row, column, newValue, apiData, sheetEditorRef }: FormulaSyncType
-): void => {
+};
+export const formulaResponseUiSync = ({
+  row,
+  column,
+  newValue,
+  apiData,
+  sheetEditorRef,
+}: FormulaSyncType): void => {
   const headers: string[] = Object.keys(apiData[0]);
   // handle row and col ofbound and add new row and col
   const sheet = sheetEditorRef.current?.getSheet();
@@ -21,10 +25,18 @@ export const formulaResponseUiSync = (
   const extraCol = headers.length - (currentTotalColumn - column) + 1;
 
   if (extraRow > 0) {
-    sheetEditorRef.current?.insertRowOrColumn('row', currentTotalRow - 1, extraRow);
+    sheetEditorRef.current?.insertRowOrColumn(
+      'row',
+      currentTotalRow - 1,
+      extraRow,
+    );
   }
   if (extraCol > 0) {
-    sheetEditorRef.current?.insertRowOrColumn('column', currentTotalColumn - 1, extraCol);
+    sheetEditorRef.current?.insertRowOrColumn(
+      'column',
+      currentTotalColumn - 1,
+      extraCol,
+    );
   }
 
   const range = {
@@ -79,15 +91,15 @@ export const afterUpdateCell = async ({
   sheetEditorRef,
   onboardingComplete,
   onboardingHandler,
-  dataBlockApiKeyHandler
+  dataBlockApiKeyHandler,
 }: {
   row: number;
   column: number;
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   onboardingComplete: boolean | undefined;
-  onboardingHandler: Function | undefined;
-  dataBlockApiKeyHandler: Function | undefined;
+  onboardingHandler: OnboardingHandlerType | undefined;
+  dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
 }): Promise<void> => {
   if (!newValue || (newValue?.v && !newValue.v)) {
     return;
@@ -105,7 +117,6 @@ export const afterUpdateCell = async ({
       column,
       sheetEditorRef,
     });
-    console.log('klklkl', rowMod, colMod);
     row = rowMod;
     column = colMod;
   }
@@ -125,8 +136,20 @@ export const afterUpdateCell = async ({
         return;
       }
 
-      if (typeof data === 'string' && data.includes('MISSING') && dataBlockApiKeyHandler) {
-        dataBlockApiKeyHandler({ data, sheetEditorRef, executeStringFunction, row, column, newValue, formulaResponseUiSync })
+      if (
+        typeof data === 'string' &&
+        data.includes('MISSING') &&
+        dataBlockApiKeyHandler
+      ) {
+        dataBlockApiKeyHandler({
+          data,
+          sheetEditorRef,
+          executeStringFunction,
+          row,
+          column,
+          newValue,
+          formulaResponseUiSync,
+        });
       }
 
       if (Array.isArray(data)) {
