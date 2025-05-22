@@ -4,7 +4,7 @@ import { Cell } from '@fileverse-dev/fortune-core';
 
 import { DEFAULT_SHEET_DATA } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
-import { useEditor } from '../contexts/EditorContext';
+import { useEditor } from '../contexts/editor-context';
 import { afterUpdateCell } from '../utils/after-update-cell';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';

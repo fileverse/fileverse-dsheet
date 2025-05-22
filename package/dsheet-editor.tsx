@@ -9,8 +9,8 @@ import {
   DataBlockApiKeyHandlerType,
 } from './types';
 import SkeletonLoader from './components/skeleton-loader';
-import { EditorProvider, useEditor } from './contexts/EditorContext';
-import { EditorWorkbook } from './components/EditorWorkbook';
+import { EditorProvider, useEditor } from './contexts/editor-context';
+import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
