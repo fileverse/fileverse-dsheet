@@ -84,7 +84,6 @@ body {
 
 .luckysheet-formula-help-c,
 .luckysheet-formula-search-c {
-  user-select: text;
   padding: 6px;
   border-radius: 10px;
   top: 25px;
@@ -141,4 +140,24 @@ body {
 .luckysheet-scrollbar-x,
 .luckysheet-bottom-controll-row {
   z-index: 1 !important;
+}
+
+/*Style for inline cell commnet*/
+.luckysheet-postil-show-main {
+  height: fit-content !important;
+  width: 300px !important;
+  background-color: white !important;
+  border: 1px solid #E8EBEC !important;
+  border-radius: 4px !important;
+  padding: 0 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18), 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/*Right click menu*/
+.luckysheet-cols-menuitem-content {
+  padding: 6px 7em 6px 10px !important;
+}
+
+.fortune-context-menu {
+  max-width: 250px;
 }

@@ -177,6 +177,7 @@ export const useEditorData = (
   // Handle changes to the sheet
   const handleChange = useCallback(
     (data: Sheet[]) => {
+      console.log('handleChange =======', data);
       if (firstRender.current) {
         firstRender.current = false;
         return;

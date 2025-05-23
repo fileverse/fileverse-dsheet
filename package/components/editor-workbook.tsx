@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
 
-import { DEFAULT_SHEET_DATA } from '../constants/shared-constants';
+import { DEFAULT_SHEET_DATA, TOOL_BAR_ITEMS } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
 import { afterUpdateCell } from '../utils/after-update-cell';
@@ -24,6 +24,8 @@ interface EditorWorkbookProps {
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
+  commentData?: Object;
+  getCommentCellUI?: (row: number, column: number) => void;
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
 }
@@ -38,7 +40,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   onboardingHandler,
   dataBlockApiKeyHandler,
   exportDropdownOpen = false,
-  setExportDropdownOpen = () => {},
+  commentData,
+  getCommentCellUI,
+  setExportDropdownOpen = () => { },
   dsheetId,
 }) => {
   const {
@@ -78,6 +82,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         key={workbookKey}
         ref={sheetEditorRef}
         data={data}
+        toolbarItems={TOOL_BAR_ITEMS}
+        //@ts-ignore
+        getCommentCellUI={getCommentCellUI}
         onChange={handleChange}
         showFormulaBar={!isReadOnly}
         showToolbar={!isReadOnly}
@@ -133,6 +140,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     dataBlockApiKeyHandler,
     dsheetId,
     exportDropdownOpen,
+    commentData,
     syncStatus,
     currentDataRef.current,
   ]);
