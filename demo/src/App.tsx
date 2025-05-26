@@ -7,7 +7,6 @@ import {
   IconButton,
   LucideIcon,
   DynamicDropdown,
-  ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
@@ -56,7 +55,6 @@ function App() {
           </div>
         </div>
         <div className="flex gap-2">
-          <ThemeToggle />
           {isMediaMax1280px ? (
             <DynamicDropdown
               key="navbar-more-actions"

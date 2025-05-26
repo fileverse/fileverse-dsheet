@@ -2,7 +2,10 @@ import React, { useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
 
-import { DEFAULT_SHEET_DATA, TOOL_BAR_ITEMS } from '../constants/shared-constants';
+import {
+  DEFAULT_SHEET_DATA,
+  TOOL_BAR_ITEMS,
+} from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
 import { afterUpdateCell } from '../utils/after-update-cell';
@@ -42,7 +45,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
 }) => {
   const {
