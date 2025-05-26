@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import cn from 'classnames';
 
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
@@ -12,6 +12,7 @@ import SkeletonLoader from './components/skeleton-loader';
 import { EditorProvider, useEditor } from './contexts/editor-context';
 import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
+import { TransitionWrapper } from './components/transition-wrapper';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
@@ -19,54 +20,6 @@ import './styles/index.css';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
-
-// Transition wrapper component with improved transitions
-const TransitionWrapper = ({
-  show,
-  children,
-}: {
-  show: boolean;
-  children: React.ReactNode;
-}) => {
-  const [isVisible, setIsVisible] = useState(show);
-  const [shouldRender, setShouldRender] = useState(show);
-
-  useEffect(() => {
-    if (show) {
-      setShouldRender(true);
-      // Small delay to ensure DOM is ready before starting fade in
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-      });
-    } else {
-      setIsVisible(false);
-      // Wait for fade out to complete before unmounting
-      const timer = setTimeout(() => {
-        setShouldRender(false);
-      }, 500); // Match duration-500
-      return () => clearTimeout(timer);
-    }
-  }, [show]);
-
-  if (!shouldRender) return null;
-
-  return (
-    <div
-      className={cn(
-        'absolute inset-0 transition-all duration-500 ease-in-out transform',
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
-      )}
-      style={{
-        willChange: 'opacity, transform',
-        pointerEvents: isVisible ? 'auto' : 'none',
-      }}
-    >
-      {children}
-    </div>
-  );
-};
 
 /**
  * EditorContent - Internal component that renders the editor content
