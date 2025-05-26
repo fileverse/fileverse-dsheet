@@ -151,7 +151,7 @@ body {
   border: 1px solid #E8EBEC !important;
   border-radius: 4px !important;
   padding: 0 !important;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18), 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 1px #0000002e, 0 4px 8px #0000001a;
 }
 
 /*Right click menu*/
