@@ -12,6 +12,7 @@ import SkeletonLoader from './components/skeleton-loader';
 import { EditorProvider, useEditor } from './contexts/editor-context';
 import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
+import { TransitionWrapper } from './components/transition-wrapper';
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
@@ -46,7 +47,7 @@ const EditorContent = ({
   | 'selectedTemplate'
   | 'dsheetId'
 > & {
-  commentData?: Object;
+  commentData?: object;
   getCommentCellUI?: (row: number, column: number) => void;
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;
@@ -105,10 +106,15 @@ const EditorContent = ({
         </nav>
       )}
 
-      <div style={{ height: '96.4%', marginTop: '56px' }}>
-        {loading ? (
+      <div
+        style={{ height: '96.4%', marginTop: '56px' }}
+        className="relative overflow-hidden"
+      >
+        <TransitionWrapper show={loading}>
           <SkeletonLoader isReadOnly={isReadOnly} />
-        ) : (
+        </TransitionWrapper>
+
+        <TransitionWrapper show={!loading}>
           <EditorWorkbook
             commentData={commentData}
             getCommentCellUI={getCommentCellUI}
@@ -121,7 +127,7 @@ const EditorContent = ({
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
           />
-        )}
+        </TransitionWrapper>
       </div>
     </div>
   );
