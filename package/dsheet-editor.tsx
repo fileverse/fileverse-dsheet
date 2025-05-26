@@ -35,6 +35,8 @@ const EditorContent = ({
   exportDropdownOpen,
   setExportDropdownOpen,
   dsheetId,
+  commentData,
+  getCommentCellUI,
   selectedTemplate,
 }: Pick<
   DsheetProps,
@@ -44,6 +46,8 @@ const EditorContent = ({
   | 'selectedTemplate'
   | 'dsheetId'
 > & {
+  commentData?: Object;
+  getCommentCellUI?: (row: number, column: number) => void;
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -106,6 +110,8 @@ const EditorContent = ({
           <SkeletonLoader isReadOnly={isReadOnly} />
         ) : (
           <EditorWorkbook
+            commentData={commentData}
+            getCommentCellUI={getCommentCellUI}
             isReadOnly={isReadOnly}
             toggleTemplateSidebar={toggleTemplateSidebar}
             onboardingComplete={onboardingComplete}
@@ -143,6 +149,8 @@ const SpreadsheetEditor = ({
   enableWebrtc,
   onboardingComplete,
   onboardingHandler,
+  commentData,
+  getCommentCellUI,
   dataBlockApiKeyHandler,
   sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps): JSX.Element => {
@@ -161,6 +169,8 @@ const SpreadsheetEditor = ({
       isCollaborative={isCollaborative}
     >
       <EditorContent
+        commentData={commentData}
+        getCommentCellUI={getCommentCellUI}
         renderNavbar={renderNavbar}
         isReadOnly={isReadOnly}
         toggleTemplateSidebar={toggleTemplateSidebar}

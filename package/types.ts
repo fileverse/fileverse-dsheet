@@ -54,6 +54,8 @@ export interface DsheetProps {
   onboardingHandler?: OnboardingHandlerType;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
+  getCommentCellUI?: (row: number, column: number) => void;
+  commentData?: Object;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<WorkbookInstance>;
 }
