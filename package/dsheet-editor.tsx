@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import cn from 'classnames';
 
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
@@ -19,6 +19,54 @@ import './styles/index.css';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
+
+// Transition wrapper component with improved transitions
+const TransitionWrapper = ({
+  show,
+  children,
+}: {
+  show: boolean;
+  children: React.ReactNode;
+}) => {
+  const [isVisible, setIsVisible] = useState(show);
+  const [shouldRender, setShouldRender] = useState(show);
+
+  useEffect(() => {
+    if (show) {
+      setShouldRender(true);
+      // Small delay to ensure DOM is ready before starting fade in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+      });
+    } else {
+      setIsVisible(false);
+      // Wait for fade out to complete before unmounting
+      const timer = setTimeout(() => {
+        setShouldRender(false);
+      }, 500); // Match duration-500
+      return () => clearTimeout(timer);
+    }
+  }, [show]);
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 transition-all duration-500 ease-in-out transform',
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
+      )}
+      style={{
+        willChange: 'opacity, transform',
+        pointerEvents: isVisible ? 'auto' : 'none',
+      }}
+    >
+      {children}
+    </div>
+  );
+};
 
 /**
  * EditorContent - Internal component that renders the editor content
@@ -105,22 +153,15 @@ const EditorContent = ({
         </nav>
       )}
 
-      <div style={{ height: '96.4%', marginTop: '56px' }} className="relative">
-        {/* Show skeleton when not loaded, fade out when loading is true */}
-        <div
-          className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-            loading ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
-        >
+      <div
+        style={{ height: '96.4%', marginTop: '56px' }}
+        className="relative overflow-hidden"
+      >
+        <TransitionWrapper show={loading}>
           <SkeletonLoader isReadOnly={isReadOnly} />
-        </div>
+        </TransitionWrapper>
 
-        {/* Show editor when loaded, fade in when loading is true */}
-        <div
-          className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-            !loading ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
-        >
+        <TransitionWrapper show={!loading}>
           <EditorWorkbook
             commentData={commentData}
             getCommentCellUI={getCommentCellUI}
@@ -133,7 +174,7 @@ const EditorContent = ({
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
           />
-        </div>
+        </TransitionWrapper>
       </div>
     </div>
   );
