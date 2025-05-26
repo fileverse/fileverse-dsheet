@@ -46,7 +46,7 @@ const EditorContent = ({
   | 'selectedTemplate'
   | 'dsheetId'
 > & {
-  commentData?: Object;
+  commentData?: object;
   getCommentCellUI?: (row: number, column: number) => void;
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;
@@ -105,10 +105,22 @@ const EditorContent = ({
         </nav>
       )}
 
-      <div style={{ height: '96.4%', marginTop: '56px' }}>
-        {loading ? (
+      <div style={{ height: '96.4%', marginTop: '56px' }} className="relative">
+        {/* Show skeleton when not loaded, fade out when loading is true */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+            loading ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          }`}
+        >
           <SkeletonLoader isReadOnly={isReadOnly} />
-        ) : (
+        </div>
+
+        {/* Show editor when loaded, fade in when loading is true */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
+            !loading ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          }`}
+        >
           <EditorWorkbook
             commentData={commentData}
             getCommentCellUI={getCommentCellUI}
@@ -121,7 +133,7 @@ const EditorContent = ({
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
           />
-        )}
+        </div>
       </div>
     </div>
   );
