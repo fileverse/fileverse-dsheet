@@ -5,6 +5,7 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import {
   DEFAULT_SHEET_DATA,
   TOOL_BAR_ITEMS,
+  CELL_CONTEXT_MENU_ITEMS
 } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
@@ -45,7 +46,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
 }) => {
   const {
@@ -67,6 +68,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     currentDataRef,
   });
 
+  const cellContextMenu = isReadOnly ? ["comment"] : CELL_CONTEXT_MENU_ITEMS;
+
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
     // Create a unique key to force re-render when needed
@@ -86,12 +89,12 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         ref={sheetEditorRef}
         data={data}
         toolbarItems={TOOL_BAR_ITEMS}
+        cellContextMenu={cellContextMenu}
         //@ts-ignore
         getCommentCellUI={getCommentCellUI}
         onChange={handleChange}
         showFormulaBar={!isReadOnly}
         showToolbar={!isReadOnly}
-        allowEdit={!isReadOnly}
         lang={'en'}
         rowHeaderWidth={60}
         columnHeaderHeight={24}

@@ -61,6 +61,7 @@ interface EditorProviderProps {
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   isCollaborative?: boolean;
+  commentData?: Object
 }
 
 // Provider component that wraps the app
@@ -75,6 +76,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   onChange,
   externalEditorRef,
   isCollaborative = false,
+  commentData
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
@@ -115,6 +117,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isReadOnly,
     handleOnChange,
     syncStatus,
+    commentData
   );
 
   // Initialize collaboration
