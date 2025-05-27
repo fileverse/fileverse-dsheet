@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Sheet } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { CellWithRowAndCol } from '@fileverse-dev/fortune-core';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 
-import { DEFAULT_SHEET_DATA } from '../constants/shared-constants';
+import { DEFAULT_SHEET_DATA, CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
 
 /**
@@ -20,6 +21,7 @@ export const useEditorData = (
   isReadOnly = false,
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
+  commentData?: object,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -30,6 +32,7 @@ export const useEditorData = (
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
+  const commentDataProcessed = useRef<boolean>(false);
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
@@ -77,6 +80,38 @@ export const useEditorData = (
       console.error('[DSheet] Error processing portal content:', error);
     }
   }, [portalContent, dsheetId, ydocRef, isReadOnly]);
+
+  // Apply comment data if provided (do this before any other initialization)
+  useEffect(() => {
+    if (!commentData || !ydocRef.current || !dsheetId) {
+      return;
+    }
+
+    try {
+      const currentDocData = ydocRef.current.getArray(dsheetId);
+      const currentData = Array.from(currentDocData) as Sheet[];
+      if (currentData.length > 0 && commentData && !commentDataProcessed.current) {
+        currentData.forEach((sheet) => {
+          const sheetCellData = sheet.celldata;
+          sheetCellData?.forEach((cell: CellWithRowAndCol) => {
+            // @ts-expect-error later
+            const comment = commentData[`${cell.r}_${cell.c}`];
+            if (comment && comment.sheetId === sheet.id) {
+              if (cell.v) {
+                cell.v = {
+                  ...cell.v,
+                  ps: CELL_COMMENT_DEFAULT_VALUE
+                }
+              }
+            }
+          })
+        });
+        commentDataProcessed.current = true;
+      }
+    } catch (error) {
+      console.error('[DSheet] Error processing comment data:', error);
+    }
+  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {

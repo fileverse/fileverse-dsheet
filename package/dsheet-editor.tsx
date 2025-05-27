@@ -75,7 +75,7 @@ const EditorContent = ({
   });
 
   // Apply custom styling based on dropdown and template states
-  useFortuneDocumentStyle(exportDropdownOpen || false, isTemplateOpen || false);
+  useFortuneDocumentStyle({ exportDropdownOpen, isTemplateOpen, isReadOnly });
 
   // Create editor values to pass to the navbar
   const editorValues: EditorValues = {
@@ -173,6 +173,7 @@ const SpreadsheetEditor = ({
       onChange={onChange}
       externalEditorRef={externalSheetEditorRef}
       isCollaborative={isCollaborative}
+      commentData={commentData}
     >
       <EditorContent
         commentData={commentData}
