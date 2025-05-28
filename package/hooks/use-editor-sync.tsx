@@ -27,7 +27,7 @@ export const useEditorSync = (
     }
 
     // Set up IndexedDB persistence if enabled
-    if (enableIndexeddbSync && dsheetId && !isReadOnly) {
+    if (enableIndexeddbSync && dsheetId) {
       setSyncStatus('syncing');
       try {
         // Create persistence provider using the dsheetId as the database name
