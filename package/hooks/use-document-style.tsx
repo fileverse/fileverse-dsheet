@@ -4,12 +4,10 @@ export const useFortuneDocumentStyle = (
   {
     exportDropdownOpen = false,
     isTemplateOpen = false,
-    isReadOnly = false,
   }:
     {
       exportDropdownOpen: boolean,
       isTemplateOpen: boolean | undefined,
-      isReadOnly?: boolean
     }
 ) => {
   // this effect is used to change the background color of the template and export buttons
@@ -39,24 +37,4 @@ export const useFortuneDocumentStyle = (
     };
   }, [exportDropdownOpen, isTemplateOpen]);
 
-  useEffect(() => {
-    const toggleDisplay = (element: HTMLElement | null, shouldHide: boolean) => {
-      if (element) {
-        element.style.display = shouldHide ? 'none' : 'block';
-      }
-    };
-    const updateDisplay = () => {
-      const inputContainer = document.getElementById('luckysheet-rich-text-editor');
-      const inputContainer2 = document.getElementsByClassName('luckysheet-input-box-inner')[0] as HTMLElement;
-
-      toggleDisplay(inputContainer, isReadOnly);
-      toggleDisplay(inputContainer2, isReadOnly);
-    };
-
-    const timerRef = setTimeout(updateDisplay, 500);
-
-    return () => {
-      clearTimeout(timerRef);
-    };
-  }, [isReadOnly]);
 };

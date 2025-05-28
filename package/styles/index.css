@@ -37,6 +37,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.fortune-read-only {
+
+  .luckysheet-rich-text-editor,
+  .luckysheet-input-box-inner {
+    display: none;
+  }
+}
+
 .fortune-tooltip {
   top: 50px !important;
   background: black !important;
