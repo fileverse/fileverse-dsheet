@@ -88,7 +88,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         key={workbookKey}
         ref={sheetEditorRef}
         data={data}
-        config={{}}
         toolbarItems={TOOL_BAR_ITEMS}
         cellContextMenu={cellContextMenu}
         //@ts-ignore

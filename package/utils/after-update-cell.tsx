@@ -104,10 +104,8 @@ export const afterUpdateCell = async ({
   if (!newValue || (newValue?.v && !newValue.v)) {
     return;
   }
-  console.log('afterUpdateCell New value', newValue);
 
-
-  if (typeof newValue?.v === 'string' && newValue?.v !== '#NAME?') {
+  if (typeof newValue.v === 'string' && newValue.v !== '#NAME?') {
     sheetEditorRef.current?.setCellValue(row, column, {
       ...newValue,
       tb: '1',
