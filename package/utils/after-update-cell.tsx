@@ -111,6 +111,21 @@ export const afterUpdateCell = async ({
       tb: '1',
     });
   }
+
+  if (newValue?.ct && newValue?.ct?.s) {
+    const valueStr = newValue.ct.s[0]?.v;
+    const fonstSize = newValue?.fs || 10;
+    const lineBreakCount = (valueStr.match(/\r?\n/g) || []).length;
+    const newHeight = (fonstSize * 1.5) * (lineBreakCount + 1);
+    const rowHeightObj = {
+      [String(row)]: newHeight,
+    };
+    const currentRowHeight = sheetEditorRef.current?.getRowHeight([row])[row];
+    if (currentRowHeight && currentRowHeight < newHeight) {
+      sheetEditorRef.current?.setRowHeight(rowHeightObj);
+    }
+  }
+
   if (!onboardingComplete && onboardingHandler) {
     const { row: rowMod, column: colMod } = onboardingHandler({
       row,
