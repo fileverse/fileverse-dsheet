@@ -104,13 +104,30 @@ export const afterUpdateCell = async ({
   if (!newValue || (newValue?.v && !newValue.v)) {
     return;
   }
+  console.log('afterUpdateCell New value', newValue);
 
-  if (typeof newValue.v === 'string' && newValue.v !== '#NAME?') {
+
+  if (typeof newValue?.v === 'string' && newValue?.v !== '#NAME?') {
     sheetEditorRef.current?.setCellValue(row, column, {
       ...newValue,
       tb: '1',
     });
   }
+
+  if (newValue?.ct && newValue?.ct?.s) {
+    const valueStr = newValue.ct.s[0]?.v;
+    const fonstSize = newValue?.fs || 10;
+    const lineBreakCount = (valueStr.match(/\r?\n/g) || []).length;
+    const newHeight = (fonstSize * 1.5) * (lineBreakCount + 1);
+    const rowHeightObj = {
+      [String(row)]: newHeight,
+    };
+    const currentRowHeight = sheetEditorRef.current?.getRowHeight([row])[row];
+    if (currentRowHeight && currentRowHeight < newHeight) {
+      sheetEditorRef.current?.setRowHeight(rowHeightObj);
+    }
+  }
+
   if (!onboardingComplete && onboardingHandler) {
     const { row: rowMod, column: colMod } = onboardingHandler({
       row,
