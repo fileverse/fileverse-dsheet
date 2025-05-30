@@ -1,0 +1,21 @@
+
+/* System Font Faces */
+@font-face {
+  font-family: 'Calibri';
+  src: local('Calibri');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Times New Roman';
+  src: local('Times New Roman');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Times New Roman';
+  src: local('Times New Roman Bold');
+  font-weight: 700;
+  font-display: swap;
+}

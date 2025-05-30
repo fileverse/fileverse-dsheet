@@ -46,41 +46,45 @@ export const CustomButton = ({
         sideOffset={4}
       >
         <div className="p-2 color-text-default">
-          <h1 className="export-label-header pl-2">Export</h1>
+          <h1 className="text-helper-text-sm color-text-secondary pl-2">
+            Export
+          </h1>
           <button
             onClick={() => handleExportToJSON()}
             className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
           >
-            <LucideIcon name="FileExport" className="w-5 h-5" />
-            <span className="text-sm">Export to JSON</span>
+            <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
+            <span className="text-body-sm">Export to .json</span>
           </button>
 
           <button
             onClick={() => handleExportToXLSX()}
             className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
           >
-            <LucideIcon name="FileExport" className="w-5 h-5" />
-            <span className="text-sm">Export to XLSX</span>
+            <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
+            <span className="text-body-sm">Export to .xlsx</span>
           </button>
 
           <button
             onClick={() => handleExportToCSV()}
             className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
           >
-            <LucideIcon name="FileExport" className="w-5 h-5" />
-            <span className="text-sm">Export to CSV</span>
+            <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
+            <span className="text-body-sm">Export to .csv</span>
           </button>
         </div>
         <div className="p-2 color-text-default">
-          <h1 className="export-label-header pl-2">Import</h1>
+          <h1 className="text-helper-text-sm color-text-secondary pl-2">
+            Import
+          </h1>
           <div className="btn">
             <button className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition">
-              <LucideIcon name="FileImport" className="w-5 h-5" />
+              <LucideIcon name="FileImport" />
               <label
                 htmlFor="xlsx-upload"
-                className="export-label w-full cursor-pointer"
+                className="text-body-sm w-full cursor-pointer"
               >
-                <p>Import XLSX</p>
+                <p>Import .xlsx</p>
               </label>
             </button>
             <input
@@ -103,12 +107,12 @@ export const CustomButton = ({
               style={{ display: 'none' }}
             />
             <button className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition">
-              <LucideIcon name="FileImport" className="w-5 h-5" />
+              <LucideIcon width={18} height={18} name="FileImport" />
               <label
                 htmlFor="csv-upload"
-                className="export-label w-full cursor-pointer"
+                className="text-body-sm w-full cursor-pointer"
               >
-                <p>Import CSV</p>
+                <p>Import .csv</p>
               </label>
             </button>
           </div>
