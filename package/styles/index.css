@@ -38,6 +38,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.fetch-url-button {
+  color: #1977E4;
+}
+
+.fetch-url-modal {
+  top: 22% !important;
+}
+
 .fortune-read-only {
 
   .luckysheet-rich-text-editor,

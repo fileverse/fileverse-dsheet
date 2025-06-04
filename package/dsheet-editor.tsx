@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import cn from 'classnames';
 
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
@@ -13,6 +13,12 @@ import { EditorProvider, useEditor } from './contexts/editor-context';
 import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
+// import { FLVURL } from '@fileverse-dev/formulajs';
+// import { formulaResponseUiSync } from './utils/formula-ui-sync';
+
+// import { Button, TextField, LucideIcon, Toggle } from '@fileverse/ui';
+
+
 
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
@@ -26,6 +32,7 @@ type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
  * Uses the context to access state and renders appropriate UI
  */
 const EditorContent = ({
+  setShowFetchURLModal,
   renderNavbar,
   isReadOnly,
   toggleTemplateSidebar,
@@ -39,6 +46,8 @@ const EditorContent = ({
   commentData,
   getCommentCellUI,
   selectedTemplate,
+  setFetching,
+  setInputFetchURLDataBlock
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -46,6 +55,9 @@ const EditorContent = ({
   | 'toggleTemplateSidebar'
   | 'selectedTemplate'
   | 'dsheetId'
+  | 'setFetching'
+  | 'setShowFetchURLModal'
+  | 'setInputFetchURLDataBlock'
 > & {
   commentData?: object;
   getCommentCellUI?: (row: number, column: number) => void;
@@ -116,6 +128,9 @@ const EditorContent = ({
 
         <TransitionWrapper show={!loading}>
           <EditorWorkbook
+            setShowFetchURLModal={setShowFetchURLModal}
+            setFetching={setFetching}
+            setInputFetchURLDataBlock={setInputFetchURLDataBlock}
             commentData={commentData}
             getCommentCellUI={getCommentCellUI}
             isReadOnly={isReadOnly}
@@ -158,6 +173,9 @@ const SpreadsheetEditor = ({
   commentData,
   getCommentCellUI,
   dataBlockApiKeyHandler,
+  setFetching,
+  setShowFetchURLModal,
+  setInputFetchURLDataBlock,
   sheetEditorRef: externalSheetEditorRef,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
@@ -179,6 +197,9 @@ const SpreadsheetEditor = ({
         commentData={commentData}
         getCommentCellUI={getCommentCellUI}
         renderNavbar={renderNavbar}
+        setFetching={setFetching}
+        setShowFetchURLModal={setShowFetchURLModal}
+        setInputFetchURLDataBlock={setInputFetchURLDataBlock}
         isReadOnly={isReadOnly}
         toggleTemplateSidebar={toggleTemplateSidebar}
         onboardingComplete={onboardingComplete}

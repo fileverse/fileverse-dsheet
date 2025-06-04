@@ -20,6 +20,7 @@ export const getCustomToolbarItems = ({
   currentDataRef,
   setForceSheetRender,
   toggleTemplateSidebar,
+  setShowFetchURLModal,
 }: {
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleCSVUpload: (
@@ -49,47 +50,73 @@ export const getCustomToolbarItems = ({
   currentDataRef: React.MutableRefObject<object | null>;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
+  setShowFetchURLModal: React.Dispatch<React.SetStateAction<boolean>> | undefined;
 }) => [
-  {
-    key: 'import-export',
-    tooltip: 'Import/Export',
-    onClick: () => {
-      setExportDropdownOpen((prev) => !prev);
+    {
+      key: 'import-export',
+      tooltip: 'Import/Export',
+      onClick: () => {
+        setExportDropdownOpen((prev) => !prev);
+      },
+      icon: (
+        <CustomButton
+          setExportDropdownOpen={setExportDropdownOpen}
+          handleCSVUpload={(event) =>
+            handleCSVUpload(
+              event,
+              ydocRef.current,
+              setForceSheetRender,
+              dsheetId,
+              currentDataRef,
+            )
+          }
+          handleXLSXUpload={handleXLSXUpload}
+          handleExportToXLSX={() =>
+            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+          }
+          handleExportToCSV={() =>
+            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+          }
+          handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
+        />
+      ),
     },
-    icon: (
-      <CustomButton
-        setExportDropdownOpen={setExportDropdownOpen}
-        handleCSVUpload={(event) =>
-          handleCSVUpload(
-            event,
-            ydocRef.current,
-            setForceSheetRender,
-            dsheetId,
-            currentDataRef,
-          )
-        }
-        handleXLSXUpload={handleXLSXUpload}
-        handleExportToXLSX={() =>
-          handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
-        }
-        handleExportToCSV={() =>
-          handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
-        }
-        handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
-      />
-    ),
-  },
-  {
-    key: 'templates',
-    tooltip: 'Templates',
-    icon: (
-      <IconButton
-        className="template-button"
-        icon="LayoutTemplate"
-        size="md"
-        variant="ghost"
-      />
-    ),
-    onClick: toggleTemplateSidebar,
-  },
-];
+    {
+      /*template-button is used in use xocument style */
+      key: 'templates',
+      tooltip: 'Templates',
+      icon: (
+        <IconButton
+          className="template-button"
+          icon="LayoutTemplate"
+          size="md"
+          variant="ghost"
+        />
+      ),
+      onClick: toggleTemplateSidebar,
+    },
+    {
+      /*template-button is used in use xocument style */
+      key: 'templatest',
+      tooltip: 'Templates',
+      icon: (
+        <IconButton
+          className="fetch-url-button"
+          icon="PanelTopOpen"
+          size="md"
+          variant="ghost"
+          color='blue'
+        />
+      ),
+      onClick: () => {
+        const selection = sheetEditorRef.current?.getSelection();
+        setShowFetchURLModal?.(prev => {
+          if (selection && !prev) {
+            return true
+          } else {
+            return false
+          }
+        })
+      },
+    },
+  ];

@@ -39,6 +39,9 @@ export type DataBlockApiKeyHandlerType = (params: {
 }) => void;
 
 export interface DsheetProps {
+  setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
+  setFetching?: (fetching: boolean) => void;
+  setInputFetchURLDataBlock: React.Dispatch<React.SetStateAction<string>>;
   renderNavbar?: (editorValues?: EditorValues) => JSX.Element;
   enableIndexeddbSync?: boolean;
   dsheetId: string;
