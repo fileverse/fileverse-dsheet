@@ -189,5 +189,6 @@ body {
 /*Right click menu*/
 .luckysheet-cols-menuitem,
 .luckysheet-mousedown-cancel {
-  display: flex;
+  /* display: flex; */
+  width: 100%;
 }
