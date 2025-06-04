@@ -18,7 +18,7 @@ function App() {
   const sheetEditorRef = useRef<WorkbookInstance>(null);
 
   // Use a stable dsheetId
-  const dsheetId = 'demo-dsheet-1';
+  const dsheetId = 'demo-dsheet-2';
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
   const handleSheetChange = useCallback(() => { }, []);

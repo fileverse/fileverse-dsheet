@@ -25,13 +25,10 @@ export const CustomButton = ({
         setExportDropdownOpen(open);
       }}
     >
-      <PopoverTrigger
-        onChange={() => {
-          console.log('handleXLSXUpload');
-        }}
-      >
+      <PopoverTrigger className='hover:bg-red' style={{ backgroundColor: "red!important" }}>
+        {/* export-button is used in use xocument style */}
         <IconButton
-          className="export-button"
+          className="export-button hover:bg-red"
           icon="FileExport"
           variant="ghost"
           size="md"

@@ -22,6 +22,9 @@ type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 interface EditorWorkbookProps {
+  setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
+  setFetching?: (fetching: boolean) => void;
+  setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
   isReadOnly?: boolean;
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
@@ -38,6 +41,9 @@ interface EditorWorkbookProps {
  * EditorWorkbook component handles rendering the Fortune Workbook with proper configuration
  */
 export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
+  setInputFetchURLDataBlock,
+  setShowFetchURLModal,
+  setFetching,
   isReadOnly = false,
   toggleTemplateSidebar,
   onboardingComplete,
@@ -84,6 +90,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           : DEFAULT_SHEET_DATA;
 
     return (
+      // @ts-ignore
       <Workbook
         key={workbookKey}
         ref={sheetEditorRef}
@@ -113,6 +120,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           currentDataRef,
           setForceSheetRender,
           toggleTemplateSidebar,
+          setShowFetchURLModal,
         })}
         hooks={{
           afterUpdateCell: (
@@ -129,8 +137,11 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               newValue,
               sheetEditorRef: refObj,
               onboardingComplete,
+              // @ts-ignore
+              setFetching,
               onboardingHandler,
               dataBlockApiKeyHandler,
+              setInputFetchURLDataBlock,
             });
           },
         }}

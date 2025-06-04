@@ -1,359 +1,343 @@
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import { formulaResponseUiSync } from './formula-ui-sync';
+import { executeStringFunction } from './executeStringFunction';
 
-export type FormulaSyncType = {
-  row: number;
-  column: number;
-  newValue: Record<string, string>;
-  apiData: Array<Record<string, object>>;
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-};
-export const formulaResponseUiSync = ({
-  row,
-  column,
-  newValue,
-  apiData,
-  sheetEditorRef,
-}: FormulaSyncType): void => {
-  const headers: string[] = Object.keys(apiData[0]);
-  // handle row and col ofbound and add new row and col
-  const sheet = sheetEditorRef.current?.getSheet();
-  const currentTotalRow = sheet?.data?.length || 0;
-  const currentTotalColumn = sheet?.data?.[0]?.length || 0;
-  const extraRow = apiData.length - (currentTotalRow - row) + 1;
-  const extraCol = headers.length - (currentTotalColumn - column) + 1;
-
-  if (extraRow > 0) {
-    sheetEditorRef.current?.insertRowOrColumn(
-      'row',
-      currentTotalRow - 1,
-      extraRow,
-    );
-  }
-  if (extraCol > 0) {
-    sheetEditorRef.current?.insertRowOrColumn(
-      'column',
-      currentTotalColumn - 1,
-      extraCol,
-    );
-  }
-
-  const range = {
-    row: [row, row + apiData.length],
-    column: [column, column + (headers.length - 1)],
-  };
-
-  const data = [];
-
-  // set header
-  const headerData: Array<Record<string, string> | string> = [];
-  headers.forEach((header, index) => {
-    if (index === 0) {
-      headerData.push({ ...newValue, m: header, v: header });
-    } else {
-      headerData.push(header);
-    }
-  });
-  data.push(headerData);
-
-  // set data
-  for (let i = 0; i < apiData.length; i++) {
-    const tempData: { ct: { fa: string; t: string }; m?: object; v: object }[] =
-      [];
-    headers.forEach((header) => {
-      const cellValue = apiData[i][header];
-      tempData.push({
-        ct: { fa: '@', t: 's' },
-        v: cellValue,
-      });
-    });
-    data.push(tempData);
-  }
-  sheetEditorRef.current?.setCellValuesByRange(data, range);
-};
+// Constants
+const DEFAULT_FONT_SIZE = 10;
+const LINE_HEIGHT_MULTIPLIER = 1.5;
+const PROMISE_OBJECT_STRING = '[object Promise]';
+const LOADING_MESSAGE = 'Loading...';
+const FETCH_URL_MODAL_ID = 'fetch-url-modal';
+const FLVURL_FUNCTIONS = ['FLVURL', 'flvurl'];
 
 /**
- * Handles logic after a cell is updated, including processing formula results
- *
- * @param row - The row index of the updated cell
- * @param column - The column index of the updated cell
- * @param oldValue - The previous value of the cell
- * @param newValue - The new value of the cell
- * @param sheetEditorRef - Reference to the workbook instance
- * @param onboardingHandler - Function to handle onboarding from consumer side
- * @returns {Promise<void>}
+ * Parameters for the afterUpdateCell function
  */
-export const afterUpdateCell = async ({
-  row,
-  column,
-  newValue,
-  sheetEditorRef,
-  onboardingComplete,
-  onboardingHandler,
-  dataBlockApiKeyHandler,
-}: {
+interface AfterUpdateCellParams {
   row: number;
   column: number;
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   onboardingComplete: boolean | undefined;
+  setFetching: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
-}): Promise<void> => {
-  if (!newValue || (newValue?.v && !newValue.v)) {
-    return;
-  }
+  setInputFetchURLDataBlock: React.Dispatch<React.SetStateAction<string>> | undefined;
+}
 
-  if (typeof newValue.v === 'string' && newValue.v !== '#NAME?') {
-    sheetEditorRef.current?.setCellValue(row, column, {
-      ...newValue,
-      tb: '1',
-    });
-  }
+/**
+ * Parameters for the adjustRowHeight function
+ */
+interface AdjustRowHeightParams {
+  newValue: Cell;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  row: number;
+}
 
-  if (newValue?.ct && newValue?.ct?.s) {
-    const valueStr = newValue.ct.s[0]?.v;
-    const fonstSize = newValue?.fs || 10;
-    const lineBreakCount = (valueStr.match(/\r?\n/g) || []).length;
-    const newHeight = (fonstSize * 1.5) * (lineBreakCount + 1);
-    const rowHeightObj = {
-      [String(row)]: newHeight,
-    };
-    const currentRowHeight = sheetEditorRef.current?.getRowHeight([row])[row];
-    if (currentRowHeight && currentRowHeight < newHeight) {
-      sheetEditorRef.current?.setRowHeight(rowHeightObj);
-    }
-  }
+/**
+ * Checks if the cell value is empty or invalid
+ */
+const isCellValueEmpty = (newValue: Cell): boolean => {
+  // @ts-ignore
+  return !newValue || (newValue?.v && !newValue.v);
+};
 
-  if (!onboardingComplete && onboardingHandler) {
-    const { row: rowMod, column: colMod } = onboardingHandler({
+/**
+ * Checks if the cell value is a string that needs text block formatting
+ */
+const shouldApplyTextBlockFormatting = (newValue: Cell): boolean => {
+  return (
+    typeof newValue.v === 'string' &&
+    newValue.v !== '#NAME?' &&
+    !newValue?.tb
+  );
+};
+
+/**
+ * Applies text block formatting to a cell
+ */
+const applyTextBlockFormatting = (
+  newValue: Cell,
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+  row: number,
+  column: number
+): void => {
+  sheetEditorRef.current?.setCellValue(row, column, {
+    ...newValue,
+    tb: '1',
+  });
+};
+
+/**
+ * Handles onboarding logic and updates row/column if needed
+ */
+const handleOnboarding = (
+  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'onboardingComplete' | 'onboardingHandler' | 'sheetEditorRef'>
+): { row: number; column: number } => {
+  let { row, column } = params;
+
+  if (!params.onboardingComplete && params.onboardingHandler) {
+    const result = params.onboardingHandler({
       row,
       column,
-      sheetEditorRef,
+      sheetEditorRef: params.sheetEditorRef,
     });
-    row = rowMod;
-    column = colMod;
+    row = result.row;
+    column = result.column;
   }
 
-  if (newValue.m === '[object Promise]') {
-    // Cell.v type needs to include promise as well
-    const promise = newValue.v as unknown as Promise<
-      Record<string, string>[] | string
-    >;
+  return { row, column };
+};
 
-    promise.then(async (data: Record<string, string>[] | string) => {
-      if (typeof data === 'string' && data.includes('Error')) {
-        sheetEditorRef.current?.setCellValue(row, column, {
-          ...newValue,
-          m: data,
-        });
-        return;
-      }
+/**
+ * Checks if the formula contains FLVURL function
+ */
+const containsFlvurlFunction = (formula: string): boolean => {
+  return FLVURL_FUNCTIONS.some(func => formula.includes(func));
+};
 
-      if (
-        typeof data === 'string' &&
-        data.includes('MISSING') &&
-        dataBlockApiKeyHandler
-      ) {
-        dataBlockApiKeyHandler({
-          data,
-          sheetEditorRef,
-          executeStringFunction,
-          row,
-          column,
-          newValue,
-          formulaResponseUiSync,
-        });
-      }
+/**
+ * Extracts URL from FLVURL function
+ */
+const extractUrlFromFlvurlFunction = (formula: string): string => {
+  const lowerCaseMatch = formula.split("flvurl(");
+  const upperCaseMatch = formula.split("FLVURL(");
 
-      if (Array.isArray(data)) {
-        formulaResponseUiSync({
-          row,
-          column,
-          newValue: newValue as Record<string, string>,
-          // @ts-expect-error later
-          apiData: data as Record<string, object>[],
-          sheetEditorRef,
-        });
-      } else {
-        sheetEditorRef.current?.setCellValue(row, column, {
-          ...newValue,
-          m: data,
-        });
-      }
-    });
+  if (lowerCaseMatch.length > 1) {
+    return lowerCaseMatch[1].split(")")[0];
+  } else if (upperCaseMatch.length > 1) {
+    return upperCaseMatch[1].split(")")[0];
+  } else {
+    return ""; // or throw an error, depending on your requirements
+  }
+};
+
+/**
+ * Handles error response from promise
+ */
+const handlePromiseError = (
+  data: string,
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+  row: number,
+  column: number,
+  newValue: Cell
+): void => {
+  sheetEditorRef.current?.setCellValue(row, column, {
+    ...newValue,
+    m: data,
+  });
+};
+
+/**
+ * Handles missing API key scenario
+ */
+const handleMissingApiKey = (
+  data: string,
+  dataBlockApiKeyHandler: DataBlockApiKeyHandlerType,
+  params: Pick<AfterUpdateCellParams, 'sheetEditorRef' | 'row' | 'column' | 'newValue'>
+): void => {
+  dataBlockApiKeyHandler({
+    data,
+    sheetEditorRef: params.sheetEditorRef,
+    executeStringFunction,
+    row: params.row,
+    column: params.column,
+    newValue: params.newValue,
+    formulaResponseUiSync,
+  });
+};
+
+/**
+ * Handles array response from promise
+ */
+const handleArrayResponse = (
+  data: Record<string, object>[],
+  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef'>
+): void => {
+  formulaResponseUiSync({
+    row: params.row,
+    column: params.column,
+    newValue: params.newValue as Record<string, string>,
+    apiData: data,
+    sheetEditorRef: params.sheetEditorRef,
+  });
+};
+
+/**
+ * Handles string response from promise
+ */
+const handleStringResponse = (
+  data: string,
+  params: Pick<AfterUpdateCellParams, 'sheetEditorRef' | 'row' | 'column' | 'newValue'>
+): void => {
+  params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
+    ...params.newValue,
+    m: data,
+  });
+};
+
+/**
+ * Processes promise resolution for FLVURL functions
+ */
+const processFlvurlPromise = async (
+  promise: Promise<Record<string, string>[] | string>,
+  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'setFetching'>
+): Promise<void> => {
+  try {
+    const data = await promise;
+
+    if (typeof data === 'string' && data.includes('Error')) {
+      handlePromiseError(data, params.sheetEditorRef, params.row, params.column, params.newValue);
+      return;
+    }
+
+    const fetchView = document.getElementById(FETCH_URL_MODAL_ID);
+    if (Array.isArray(data) && fetchView) {
+      // @ts-ignore
+      handleArrayResponse(data, params);
+    }
+
+    params.setFetching?.(false);
+  } catch (error) {
+    console.error('Error processing FLVURL promise:', error);
+    params.setFetching?.(false);
+  }
+};
+
+/**
+ * Processes promise resolution for regular formulas
+ */
+const processRegularPromise = async (
+  promise: Promise<Record<string, string>[] | string>,
+  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'dataBlockApiKeyHandler'>
+): Promise<void> => {
+  try {
+    const data = await promise;
+
+    if (typeof data === 'string' && data.includes('Error')) {
+      handlePromiseError(data, params.sheetEditorRef, params.row, params.column, params.newValue);
+      return;
+    }
+
+    if (typeof data === 'string' && data.includes('MISSING') && params.dataBlockApiKeyHandler) {
+      handleMissingApiKey(data, params.dataBlockApiKeyHandler, params);
+      return;
+    }
+
+    if (Array.isArray(data)) {
+      // @ts-ignore
+      handleArrayResponse(data, params);
+    } else {
+      handleStringResponse(data as string, params);
+    }
+  } catch (error) {
+    console.error('Error processing regular promise:', error);
+    handleStringResponse('Error processing data', params);
+  }
+};
+
+/**
+ * Handles promise-based cell values
+ */
+const handlePromiseValue = async (
+  newValue: Cell,
+  params: AfterUpdateCellParams
+): Promise<void> => {
+  const { row, column, sheetEditorRef } = params;
+  const promise = newValue.v as unknown as Promise<Record<string, string>[] | string>;
+
+  // Check if this is a FLVURL function
+  if (newValue.f && containsFlvurlFunction(newValue.f)) {
+    const inputURL = extractUrlFromFlvurlFunction(newValue.f);
+    params.setInputFetchURLDataBlock?.(inputURL);
+    params.setFetching(true);
+
+    processFlvurlPromise(promise, params);
+    sheetEditorRef.current?.setCellValue(row, column, null);
+  } else {
+    // Regular promise handling
+    processRegularPromise(promise, params);
 
     sheetEditorRef.current?.setCellValue(row, column, {
       ...newValue,
-      m: 'Fetching...',
+      m: LOADING_MESSAGE,
     });
   }
 };
 
 /**
- * Dynamically executes a function from a string representation
- *
- * @param functionCallString - String representation of the function call
- * @returns {Promise<unknown>} - Result of the function execution
+ * Calculates the number of line breaks in a string
  */
-async function executeStringFunction(
-  functionCallString: string,
-): Promise<unknown> {
-  try {
-    // Dynamically import the module
-    const module = await import('@fileverse-dev/formulajs');
-
-    // Extract function name and full argument string
-    const functionMatch = functionCallString.match(/^(\w+)\((.*)\)$/);
-    if (!functionMatch) {
-      throw new Error(`Invalid function call format: ${functionCallString}`);
-    }
-
-    const functionName = functionMatch[1].toUpperCase(); // "test"
-    const argsString = functionMatch[2]; // The entire argument string
-
-    // Parse the arguments, respecting nested structures
-    const args = parseArguments(argsString);
-
-    // Check if the function exists in the imported module
-    // @ts-expect-error later
-    if (typeof module[functionName] === 'function') {
-      // Call the function with the parsed arguments
-      // @ts-expect-error later
-      const result = await module[functionName](...args);
-      return result;
-    } else {
-      throw new Error(`Function ${functionName} not found in module`);
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    throw error;
-  }
-}
+const countLineBreaks = (text: string): number => {
+  return (text.match(/\r?\n/g) || []).length;
+};
 
 /**
- * Parses a complex argument string into an array of properly typed arguments
- *
- * @param argsString - String containing function arguments
- * @returns {any[]} - Array of parsed arguments with appropriate types
+ * Calculates the required row height based on content
  */
-function parseArguments(
-  argsString: string,
-): (string | number | boolean | object | [] | null | undefined)[] {
-  if (!argsString.trim()) {
-    return []; // No arguments
-  }
-
-  const args: (string | number | boolean | object | [] | null | undefined)[] =
-    [];
-  let currentArg = '';
-  let inString = false;
-  let stringChar = '';
-  let parenCount = 0;
-  let bracketCount = 0;
-  let braceCount = 0;
-
-  for (let i = 0; i < argsString.length; i++) {
-    const char = argsString[i];
-
-    // Handle string literals
-    if (
-      (char === '"' || char === "'") &&
-      (i === 0 || argsString[i - 1] !== '\\')
-    ) {
-      if (!inString) {
-        inString = true;
-        stringChar = char;
-      } else if (char === stringChar) {
-        inString = false;
-      }
-      currentArg += char;
-      continue;
-    }
-
-    // Track nested structures
-    if (!inString) {
-      if (char === '(') parenCount++;
-      if (char === ')') parenCount--;
-      if (char === '[') bracketCount++;
-      if (char === ']') bracketCount--;
-      if (char === '{') braceCount++;
-      if (char === '}') braceCount--;
-    }
-
-    // If comma outside a string or nested structure, it's an argument separator
-    if (
-      char === ',' &&
-      !inString &&
-      parenCount === 0 &&
-      bracketCount === 0 &&
-      braceCount === 0
-    ) {
-      args.push(evaluateArg(currentArg.trim()));
-      currentArg = '';
-    } else {
-      currentArg += char;
-    }
-  }
-
-  // Add the last argument
-  if (currentArg.trim()) {
-    args.push(evaluateArg(currentArg.trim()));
-  }
-
-  return args;
-}
+const calculateRowHeight = (fontSize: number, lineBreakCount: number): number => {
+  return fontSize * LINE_HEIGHT_MULTIPLIER * (lineBreakCount + 1);
+};
 
 /**
- * Evaluates a string argument to convert it to the appropriate JavaScript type
- *
- * @param arg - String representation of an argument
- * @returns {any} - Argument converted to its appropriate JavaScript type
+ * Adjusts row height based on cell content
  */
-function evaluateArg(
-  arg: string,
-): number | null | undefined | string | object | boolean | [] {
-  // Simple numeric check
-  if (!isNaN(Number(arg)) && arg.trim() !== '') {
-    return Number(arg);
+const adjustRowHeight = ({ newValue, sheetEditorRef, row }: AdjustRowHeightParams): void => {
+  // Early return if no cell text content
+  if (!newValue?.ct?.s?.[0]?.v) {
+    return;
   }
 
-  // Boolean values
-  if (arg === 'true') return true;
-  if (arg === 'false') return false;
+  const valueStr = newValue.ct.s[0].v;
+  const fontSize = newValue?.fs || DEFAULT_FONT_SIZE;
+  const lineBreakCount = countLineBreaks(valueStr);
+  const newHeight = calculateRowHeight(fontSize, lineBreakCount);
 
-  // Null and undefined
-  if (arg === 'null') return null;
-  if (arg === 'undefined') return undefined;
+  const rowHeightObj = {
+    [String(row)]: newHeight,
+  };
 
-  // Array
-  if (arg.startsWith('[') && arg.endsWith(']')) {
-    try {
-      return JSON.parse(arg);
-    } catch (e) {
-      // If JSON.parse fails, return the raw string
-      return arg;
-    }
+  const currentRowHeight = sheetEditorRef.current?.getRowHeight([row])?.[row];
+
+  if (currentRowHeight && currentRowHeight < newHeight) {
+    sheetEditorRef.current?.setRowHeight(rowHeightObj);
+  }
+};
+
+/**
+ * Handles logic after a cell is updated, including processing formula results
+ *
+ * @param params - Object containing all required parameters
+ * @returns Promise that resolves when processing is complete
+ */
+export const afterUpdateCell = async (params: AfterUpdateCellParams): Promise<void> => {
+  const { newValue, sheetEditorRef } = params;
+
+  // Early return for empty values
+  if (isCellValueEmpty(newValue)) {
+    return;
   }
 
-  // Object
-  if (arg.startsWith('{') && arg.endsWith('}')) {
-    try {
-      return JSON.parse(arg);
-    } catch (e) {
-      return arg;
-    }
+  // Apply text block formatting if needed
+  if (shouldApplyTextBlockFormatting(newValue)) {
+    applyTextBlockFormatting(newValue, sheetEditorRef, params.row, params.column);
   }
 
-  // String (remove outer quotes if present)
-  if (
-    (arg.startsWith('"') && arg.endsWith('"')) ||
-    (arg.startsWith("'") && arg.endsWith("'"))
-  ) {
-    return arg.substring(1, arg.length - 1);
-  }
+  // Adjust row height based on content
+  adjustRowHeight({
+    newValue,
+    sheetEditorRef,
+    row: params.row,
+  });
 
-  // Default: return as-is
-  return arg;
-}
+  // Handle onboarding if needed
+  const { row, column } = handleOnboarding(params);
+  const updatedParams = { ...params, row, column };
+
+  // Handle promise-based values
+  if (newValue.m === PROMISE_OBJECT_STRING) {
+    await handlePromiseValue(newValue, updatedParams);
+  }
+};
