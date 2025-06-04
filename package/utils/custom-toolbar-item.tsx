@@ -97,8 +97,8 @@ export const getCustomToolbarItems = ({
     },
     {
       /*template-button is used in use xocument style */
-      key: 'templatest',
-      tooltip: 'Templates',
+      key: 'fetch-url',
+      tooltip: 'Fetch URL',
       icon: (
         <IconButton
           className="fetch-url-button"
