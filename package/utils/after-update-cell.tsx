@@ -21,7 +21,7 @@ interface AfterUpdateCellParams {
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   onboardingComplete: boolean | undefined;
-  setFetching: (fetching: boolean) => void;
+  setFetchingURLData: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock: React.Dispatch<React.SetStateAction<string>> | undefined;
@@ -183,7 +183,7 @@ const handleStringResponse = (
  */
 const processFlvurlPromise = async (
   promise: Promise<Record<string, string>[] | string>,
-  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'setFetching'>
+  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'setFetchingURLData'>
 ): Promise<void> => {
   try {
     const data = await promise;
@@ -199,10 +199,10 @@ const processFlvurlPromise = async (
       handleArrayResponse(data, params);
     }
 
-    params.setFetching?.(false);
+    params.setFetchingURLData?.(false);
   } catch (error) {
     console.error('Error processing FLVURL promise:', error);
-    params.setFetching?.(false);
+    params.setFetchingURLData?.(false);
   }
 };
 
@@ -252,7 +252,7 @@ const handlePromiseValue = async (
   if (newValue.f && containsFlvurlFunction(newValue.f)) {
     const inputURL = extractUrlFromFlvurlFunction(newValue.f);
     params.setInputFetchURLDataBlock?.(inputURL);
-    params.setFetching(true);
+    params.setFetchingURLData(true);
 
     processFlvurlPromise(promise, params);
     sheetEditorRef.current?.setCellValue(row, column, null);

@@ -46,7 +46,7 @@ const EditorContent = ({
   commentData,
   getCommentCellUI,
   selectedTemplate,
-  setFetching,
+  setFetchingURLData,
   setInputFetchURLDataBlock
 }: Pick<
   DsheetProps,
@@ -55,7 +55,7 @@ const EditorContent = ({
   | 'toggleTemplateSidebar'
   | 'selectedTemplate'
   | 'dsheetId'
-  | 'setFetching'
+  | 'setFetchingURLData'
   | 'setShowFetchURLModal'
   | 'setInputFetchURLDataBlock'
 > & {
@@ -129,7 +129,7 @@ const EditorContent = ({
         <TransitionWrapper show={!loading}>
           <EditorWorkbook
             setShowFetchURLModal={setShowFetchURLModal}
-            setFetching={setFetching}
+            setFetchingURLData={setFetchingURLData}
             setInputFetchURLDataBlock={setInputFetchURLDataBlock}
             commentData={commentData}
             getCommentCellUI={getCommentCellUI}
@@ -173,7 +173,7 @@ const SpreadsheetEditor = ({
   commentData,
   getCommentCellUI,
   dataBlockApiKeyHandler,
-  setFetching,
+  setFetchingURLData,
   setShowFetchURLModal,
   setInputFetchURLDataBlock,
   sheetEditorRef: externalSheetEditorRef,
@@ -197,7 +197,7 @@ const SpreadsheetEditor = ({
         commentData={commentData}
         getCommentCellUI={getCommentCellUI}
         renderNavbar={renderNavbar}
-        setFetching={setFetching}
+        setFetchingURLData={setFetchingURLData}
         setShowFetchURLModal={setShowFetchURLModal}
         setInputFetchURLDataBlock={setInputFetchURLDataBlock}
         isReadOnly={isReadOnly}
