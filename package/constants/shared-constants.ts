@@ -47,11 +47,11 @@ export const TOOL_BAR_ITEMS = [
 ];
 
 export const CELL_CONTEXT_MENU_ITEMS = [
-  "copy",
-  "paste",
-  "|",
-  "insert-row",
-  "insert-column",
+  'copy',
+  'paste',
+  '|',
+  'insert-row',
+  'insert-column',
   // "delete-row",
   // "delete-column",
   // "delete-cell",
@@ -59,25 +59,27 @@ export const CELL_CONTEXT_MENU_ITEMS = [
   // "hide-column",
   // "set-row-height",
   // "set-column-width",
-  "|",
-  "clear",
-  "sort",
-  "orderAZ",
-  "orderZA",
-  "filter",
-  "chart",
-  "image",
-  "link",
-  "data",
-  "cell-format",
-  "comment",
-]
+  '|',
+  'clear',
+  'sort',
+  'orderAZ',
+  'orderZA',
+  'filter',
+  'chart',
+  'image',
+  'link',
+  'data',
+  'cell-format',
+  'comment',
+  'freeze-row',
+  'freeze-column',
+];
 
 export const CELL_COMMENT_DEFAULT_VALUE = {
   height: null,
   isShow: false,
   left: null,
   top: null,
-  value: "",
-  width: null
-}
+  value: '',
+  width: null,
+};
