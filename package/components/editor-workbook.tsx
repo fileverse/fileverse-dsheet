@@ -23,7 +23,7 @@ type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 interface EditorWorkbookProps {
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
-  setFetching?: (fetching: boolean) => void;
+  setFetchingURLData?: (fetching: boolean) => void;
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
   isReadOnly?: boolean;
   toggleTemplateSidebar?: () => void;
@@ -43,7 +43,7 @@ interface EditorWorkbookProps {
 export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   setInputFetchURLDataBlock,
   setShowFetchURLModal,
-  setFetching,
+  setFetchingURLData,
   isReadOnly = false,
   toggleTemplateSidebar,
   onboardingComplete,
@@ -138,7 +138,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               sheetEditorRef: refObj,
               onboardingComplete,
               // @ts-ignore
-              setFetching,
+              setFetchingURLData,
               onboardingHandler,
               dataBlockApiKeyHandler,
               setInputFetchURLDataBlock,
