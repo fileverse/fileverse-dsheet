@@ -40,10 +40,10 @@
   },
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.7",
-    "@fileverse-dev/fortune-core": "^1.0.2-mod-23",
-    "@fileverse-dev/fortune-react": "^1.0.2-mod-23",
     "@fileverse-dev/formulajs": "^4.4.11-mod-11",
-    "@fileverse/ui": "^4.1.6-patch-2",
+    "@fileverse-dev/fortune-core": "^1.0.2-mod-24",
+    "@fileverse-dev/fortune-react": "^1.0.2-mod-24",
+    "@fileverse/ui": "^4.1.7-patch-11",
     "classnames": "^2.5.1",
     "exceljs": "^4.4.0",
     "js-base64": "^3.7.7",
