@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "0.0.43",
+  "version": "0.0.44",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
