@@ -1,9 +1,10 @@
 import { Sheet } from '@fileverse-dev/fortune-core';
+
 /**
- * Compare two spreadsheets' cell data and check if anything changed
+ * Compare two spreadsheets' cell data and images, checking if anything changed
  * @param {Array} oldSheets - Original sheets data
  * @param {Array} newSheets - New sheets data
- * @returns {boolean} - true if any cell data changed, false if identical
+ * @returns {boolean} - true if any cell data or images changed, false if identical
  */
 export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
   if (!oldSheets || !newSheets || oldSheets.length !== newSheets.length) {
@@ -24,6 +25,7 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         return true;
       }
 
+      // Check celldata changes
       const oldCellData = oldSheet?.celldata || [];
       const newCellData = newSheet?.celldata || [];
 
@@ -80,6 +82,94 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         // Simple value comparison for non-objects
         else if (value !== newValue) {
           return true;
+        }
+      }
+
+      // Check image changes
+      const oldImages = oldSheet?.images || [];
+      const newImages = newSheet?.images || [];
+
+      // Different number of images means change
+      if (oldImages.length !== newImages.length) {
+        return true;
+      }
+
+      // Create maps for efficient image comparison
+      const oldImageMap = new Map();
+      const newImageMap = new Map();
+
+      // Map images by their position or unique identifier
+      // Assuming images have some identifying property like id, src, or position
+      for (const image of oldImages) {
+        // You can adjust this key generation based on your image object structure
+        // For example, if images have id: use image.id
+        // If they have position: use `${image.x},${image.y}` or similar
+        // @ts-ignore
+        const key = image.id || `${image.x || 0},${image.y || 0}` || JSON.stringify(image);
+        oldImageMap.set(key, image);
+      }
+
+      for (const image of newImages) {
+        // @ts-ignore
+        const key = image.id || `${image.x || 0},${image.y || 0}` || JSON.stringify(image);
+        newImageMap.set(key, image);
+      }
+
+      // Check each image for changes
+      for (const [key, oldImage] of oldImageMap.entries()) {
+        if (!newImageMap.has(key)) {
+          return true; // Image was removed
+        }
+
+        const newImage = newImageMap.get(key);
+
+        // Compare each property of the image objects
+        const oldImageProps = Object.keys(oldImage);
+        const newImageProps = Object.keys(newImage);
+
+        // Check if number of properties changed
+        if (oldImageProps.length !== newImageProps.length) {
+          return true;
+        }
+
+        // Compare each property
+        for (const prop of oldImageProps) {
+          if (!newImage.hasOwnProperty(prop)) {
+            return true; // Property was removed
+          }
+
+          const oldValue = oldImage[prop];
+          const newValue = newImage[prop];
+
+          // Deep comparison for nested objects
+          if (
+            typeof oldValue === 'object' &&
+            oldValue !== null &&
+            typeof newValue === 'object' &&
+            newValue !== null
+          ) {
+            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+              return true;
+            }
+          }
+          // Simple value comparison
+          else if (oldValue !== newValue) {
+            return true;
+          }
+        }
+
+        // Check for new properties in newImage
+        for (const prop of newImageProps) {
+          if (!oldImage.hasOwnProperty(prop)) {
+            return true; // New property was added
+          }
+        }
+      }
+
+      // Check for new images that weren't in oldImages
+      for (const key of newImageMap.keys()) {
+        if (!oldImageMap.has(key)) {
+          return true; // New image was added
         }
       }
     }
