@@ -4,10 +4,14 @@ export const useFortuneDocumentStyle = (
   {
     exportDropdownOpen = false,
     isTemplateOpen = false,
+    isReadOnly = false,
+    loading = false
   }:
     {
       exportDropdownOpen: boolean,
       isTemplateOpen: boolean | undefined,
+      isReadOnly: boolean | undefined,
+      loading: boolean
     }
 ) => {
   // this effect is used to change the background color of the template and export buttons
@@ -37,5 +41,43 @@ export const useFortuneDocumentStyle = (
       clearInterval(timerRef);
     };
   }, [exportDropdownOpen, isTemplateOpen]);
+
+
+  useEffect(() => {
+    if (isReadOnly && loading) {
+      // Select all elements with the class "luckysheet-sheets-item-name"
+      const targetElements = document.querySelectorAll('.luckysheet-sheets-item-name');
+
+      // Create a MutationObserver callback function
+      const observerCallback = (mutationsList: MutationRecord[]) => {
+        for (let mutation of mutationsList) {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'contenteditable') {
+            const element = mutation.target as HTMLElement;  // Type the target as HTMLElement
+            const oldValue = mutation.oldValue;
+
+            console.log(`contenteditable changed from '${oldValue}' to '${element.contentEditable}'`);
+
+            // If contenteditable was set to true, force it back to false
+            if (element.contentEditable === 'true') {
+              console.log('Attempted to set contenteditable to true, forcing it to false.');
+              element.contentEditable = 'false';  // Force it back to false
+            }
+          }
+        }
+      };
+
+      // Create a MutationObserver instance
+      const observer = new MutationObserver(observerCallback);
+
+      // Set up the observer to watch for changes to contenteditable
+      targetElements.forEach((element) => {
+        observer.observe(element, {
+          attributes: true,          // Watch for changes to attributes
+          attributeOldValue: true    // Track the old value of attributes
+        });
+      });
+
+    }
+  }, [isReadOnly, loading]);
 
 };
