@@ -87,7 +87,7 @@ const EditorContent = ({
   });
 
   // Apply custom styling based on dropdown and template states
-  useFortuneDocumentStyle({ exportDropdownOpen, isTemplateOpen });
+  useFortuneDocumentStyle({ exportDropdownOpen, isTemplateOpen, isReadOnly, loading });
 
   // Create editor values to pass to the navbar
   const editorValues: EditorValues = {
@@ -105,7 +105,7 @@ const EditorContent = ({
         <nav
           id="Navbar"
           className={cn(
-            `h-14 color-bg-default py-2 px-4 flex gap-2 items-center
+            `h-[44px] color-bg-default px-4 flex gap-2 items-center
              justify-between w-screen fixed left-0 top-0 border-b
              color-border-default z-50 transition-transform duration-300`,
             {
@@ -119,7 +119,7 @@ const EditorContent = ({
       )}
 
       <div
-        style={{ height: '96.4%', marginTop: '56px' }}
+        style={{ height: '97.8%', marginTop: '44px' }}
         className="relative overflow-hidden"
       >
         <TransitionWrapper show={loading}>
