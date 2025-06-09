@@ -67,7 +67,7 @@ const EditorContent = ({
   onboardingComplete?: boolean;
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
-  storeApiKey: (apiKeyName: string) => void;
+  storeApiKey?: (apiKeyName: string) => void;
 }) => {
   const {
     loading,

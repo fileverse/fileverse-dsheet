@@ -28,7 +28,7 @@ interface AfterUpdateCellParams {
   setInputFetchURLDataBlock:
     | React.Dispatch<React.SetStateAction<string>>
     | undefined;
-  storeApiKey: (apiKeyName: string) => void;
+  storeApiKey?: (apiKeyName: string) => void;
 }
 
 /**
@@ -281,7 +281,7 @@ const processRegularPromise = async (
     const formulaName = params.newValue?.f?.match(/^=([A-Z0-9_]+)\s*\(/)?.[1];
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
-    params.storeApiKey(apiKeyName);
+    params.storeApiKey?.(apiKeyName);
   } catch (error) {
     console.error('Error processing regular promise:', error);
     handleStringResponse('Error processing data', params);

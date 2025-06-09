@@ -37,7 +37,7 @@ interface EditorWorkbookProps {
   getCommentCellUI?: (row: number, column: number) => void;
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
-  storeApiKey: (apiKeyName: string) => void;
+  storeApiKey?: (apiKeyName: string) => void;
 }
 
 /**
