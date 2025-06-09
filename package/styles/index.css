@@ -49,6 +49,8 @@ body {
 .fortune-read-only {
 
   .luckysheet-rich-text-editor,
+  .luckysheet-sheets-item-function,
+  .fortune-sheettab-button,
   .luckysheet-input-box-inner {
     display: none;
   }

@@ -172,6 +172,95 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
           return true; // New image was added
         }
       }
+
+      // Check iframe changes
+      const oldIframes = oldSheet?.iframes || [];
+      const newIframes = newSheet?.iframes || [];
+
+      // Different number of iframes means change
+      if (oldIframes.length !== newIframes.length) {
+        return true;
+      }
+
+      // Create maps for efficient iframe comparison
+      const oldIframeMap = new Map();
+      const newIframeMap = new Map();
+
+      // Map iframes by their position or unique identifier
+      for (const iframe of oldIframes) {
+        // Use iframe id or position as key
+        const key =
+          iframe.id ||
+          `${iframe.left || 0},${iframe.top || 0}` ||
+          JSON.stringify(iframe);
+        oldIframeMap.set(key, iframe);
+      }
+
+      for (const iframe of newIframes) {
+        const key =
+          iframe.id ||
+          `${iframe.left || 0},${iframe.top || 0}` ||
+          JSON.stringify(iframe);
+        newIframeMap.set(key, iframe);
+      }
+
+      // Check each iframe for changes
+      for (const [key, oldIframe] of oldIframeMap.entries()) {
+        if (!newIframeMap.has(key)) {
+          return true; // Iframe was removed
+        }
+
+        const newIframe = newIframeMap.get(key);
+
+        // Compare each property of the iframe objects
+        const oldIframeProps = Object.keys(oldIframe);
+        const newIframeProps = Object.keys(newIframe);
+
+        // Check if number of properties changed
+        if (oldIframeProps.length !== newIframeProps.length) {
+          return true;
+        }
+
+        // Compare each property
+        for (const prop of oldIframeProps) {
+          if (!Object.prototype.hasOwnProperty.call(newIframe, prop)) {
+            return true; // Property was removed
+          }
+
+          const oldValue = oldIframe[prop];
+          const newValue = newIframe[prop];
+
+          // Deep comparison for nested objects
+          if (
+            typeof oldValue === 'object' &&
+            oldValue !== null &&
+            typeof newValue === 'object' &&
+            newValue !== null
+          ) {
+            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+              return true;
+            }
+          }
+          // Simple value comparison
+          else if (oldValue !== newValue) {
+            return true;
+          }
+        }
+
+        // Check for new properties in newIframe
+        for (const prop of newIframeProps) {
+          if (!Object.prototype.hasOwnProperty.call(oldIframe, prop)) {
+            return true; // New property was added
+          }
+        }
+      }
+
+      // Check for new iframes that weren't in oldIframes
+      for (const key of newIframeMap.keys()) {
+        if (!oldIframeMap.has(key)) {
+          return true; // New iframe was added
+        }
+      }
     }
   }
 
