@@ -58,7 +58,9 @@ export interface DsheetProps {
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
   getCommentCellUI?: (row: number, column: number) => void;
+  // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<WorkbookInstance>;
+  storeApiKey: (apiKeyName: string) => void;
 }

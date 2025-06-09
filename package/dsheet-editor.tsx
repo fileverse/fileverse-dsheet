@@ -18,8 +18,6 @@ import { TransitionWrapper } from './components/transition-wrapper';
 
 // import { Button, TextField, LucideIcon, Toggle } from '@fileverse/ui';
 
-
-
 import '@fileverse-dev/fortune-react/dist/index.css';
 import './styles/index.css';
 
@@ -47,7 +45,8 @@ const EditorContent = ({
   getCommentCellUI,
   selectedTemplate,
   setFetchingURLData,
-  setInputFetchURLDataBlock
+  setInputFetchURLDataBlock,
+  storeApiKey,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -58,6 +57,7 @@ const EditorContent = ({
   | 'setFetchingURLData'
   | 'setShowFetchURLModal'
   | 'setInputFetchURLDataBlock'
+  | 'storeApiKey'
 > & {
   commentData?: object;
   getCommentCellUI?: (row: number, column: number) => void;
@@ -67,6 +67,7 @@ const EditorContent = ({
   onboardingComplete?: boolean;
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
+  storeApiKey: (apiKeyName: string) => void;
 }) => {
   const {
     loading,
@@ -141,6 +142,7 @@ const EditorContent = ({
             exportDropdownOpen={exportDropdownOpen}
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
+            storeApiKey={storeApiKey}
           />
         </TransitionWrapper>
       </div>
@@ -177,6 +179,7 @@ const SpreadsheetEditor = ({
   setShowFetchURLModal,
   setInputFetchURLDataBlock,
   sheetEditorRef: externalSheetEditorRef,
+  storeApiKey,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -212,6 +215,7 @@ const SpreadsheetEditor = ({
         setExportDropdownOpen={setExportDropdownOpen}
         dsheetId={dsheetId}
         selectedTemplate={selectedTemplate}
+        storeApiKey={storeApiKey}
       />
     </EditorProvider>
   );

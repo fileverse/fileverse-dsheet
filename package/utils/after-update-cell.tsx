@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
@@ -24,7 +25,10 @@ interface AfterUpdateCellParams {
   setFetchingURLData: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
-  setInputFetchURLDataBlock: React.Dispatch<React.SetStateAction<string>> | undefined;
+  setInputFetchURLDataBlock:
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
+  storeApiKey: (apiKeyName: string) => void;
 }
 
 /**
@@ -49,9 +53,7 @@ const isCellValueEmpty = (newValue: Cell): boolean => {
  */
 const shouldApplyTextBlockFormatting = (newValue: Cell): boolean => {
   return (
-    typeof newValue.v === 'string' &&
-    newValue.v !== '#NAME?' &&
-    !newValue?.tb
+    typeof newValue.v === 'string' && newValue.v !== '#NAME?' && !newValue?.tb
   );
 };
 
@@ -62,7 +64,7 @@ const applyTextBlockFormatting = (
   newValue: Cell,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   row: number,
-  column: number
+  column: number,
 ): void => {
   sheetEditorRef.current?.setCellValue(row, column, {
     ...newValue,
@@ -74,7 +76,14 @@ const applyTextBlockFormatting = (
  * Handles onboarding logic and updates row/column if needed
  */
 const handleOnboarding = (
-  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'onboardingComplete' | 'onboardingHandler' | 'sheetEditorRef'>
+  params: Pick<
+    AfterUpdateCellParams,
+    | 'row'
+    | 'column'
+    | 'onboardingComplete'
+    | 'onboardingHandler'
+    | 'sheetEditorRef'
+  >,
 ): { row: number; column: number } => {
   let { row, column } = params;
 
@@ -95,22 +104,22 @@ const handleOnboarding = (
  * Checks if the formula contains FLVURL function
  */
 const containsFlvurlFunction = (formula: string): boolean => {
-  return FLVURL_FUNCTIONS.some(func => formula.includes(func));
+  return FLVURL_FUNCTIONS.some((func) => formula.includes(func));
 };
 
 /**
  * Extracts URL from FLVURL function
  */
 const extractUrlFromFlvurlFunction = (formula: string): string => {
-  const lowerCaseMatch = formula.split("flvurl(");
-  const upperCaseMatch = formula.split("FLVURL(");
+  const lowerCaseMatch = formula.split('flvurl(');
+  const upperCaseMatch = formula.split('FLVURL(');
 
   if (lowerCaseMatch.length > 1) {
-    return lowerCaseMatch[1].split(")")[0];
+    return lowerCaseMatch[1].split(')')[0];
   } else if (upperCaseMatch.length > 1) {
-    return upperCaseMatch[1].split(")")[0];
+    return upperCaseMatch[1].split(')')[0];
   } else {
-    return ""; // or throw an error, depending on your requirements
+    return ''; // or throw an error, depending on your requirements
   }
 };
 
@@ -122,7 +131,7 @@ const handlePromiseError = (
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   row: number,
   column: number,
-  newValue: Cell
+  newValue: Cell,
 ): void => {
   sheetEditorRef.current?.setCellValue(row, column, {
     ...newValue,
@@ -136,7 +145,10 @@ const handlePromiseError = (
 const handleMissingApiKey = (
   data: string,
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType,
-  params: Pick<AfterUpdateCellParams, 'sheetEditorRef' | 'row' | 'column' | 'newValue'>
+  params: Pick<
+    AfterUpdateCellParams,
+    'sheetEditorRef' | 'row' | 'column' | 'newValue'
+  >,
 ): void => {
   dataBlockApiKeyHandler({
     data,
@@ -154,7 +166,10 @@ const handleMissingApiKey = (
  */
 const handleArrayResponse = (
   data: Record<string, object>[],
-  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef'>
+  params: Pick<
+    AfterUpdateCellParams,
+    'row' | 'column' | 'newValue' | 'sheetEditorRef'
+  >,
 ): void => {
   formulaResponseUiSync({
     row: params.row,
@@ -170,7 +185,10 @@ const handleArrayResponse = (
  */
 const handleStringResponse = (
   data: string,
-  params: Pick<AfterUpdateCellParams, 'sheetEditorRef' | 'row' | 'column' | 'newValue'>
+  params: Pick<
+    AfterUpdateCellParams,
+    'sheetEditorRef' | 'row' | 'column' | 'newValue'
+  >,
 ): void => {
   params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
     ...params.newValue,
@@ -183,13 +201,22 @@ const handleStringResponse = (
  */
 const processFlvurlPromise = async (
   promise: Promise<Record<string, string>[] | string>,
-  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'setFetchingURLData'>
+  params: Pick<
+    AfterUpdateCellParams,
+    'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'setFetchingURLData'
+  >,
 ): Promise<void> => {
   try {
     const data = await promise;
 
     if (typeof data === 'string' && data.includes('Error')) {
-      handlePromiseError(data, params.sheetEditorRef, params.row, params.column, params.newValue);
+      handlePromiseError(
+        data,
+        params.sheetEditorRef,
+        params.row,
+        params.column,
+        params.newValue,
+      );
       return;
     }
 
@@ -211,17 +238,35 @@ const processFlvurlPromise = async (
  */
 const processRegularPromise = async (
   promise: Promise<Record<string, string>[] | string>,
-  params: Pick<AfterUpdateCellParams, 'row' | 'column' | 'newValue' | 'sheetEditorRef' | 'dataBlockApiKeyHandler'>
+  params: Pick<
+    AfterUpdateCellParams,
+    | 'row'
+    | 'column'
+    | 'newValue'
+    | 'sheetEditorRef'
+    | 'dataBlockApiKeyHandler'
+    | 'storeApiKey'
+  >,
 ): Promise<void> => {
   try {
     const data = await promise;
 
     if (typeof data === 'string' && data.includes('Error')) {
-      handlePromiseError(data, params.sheetEditorRef, params.row, params.column, params.newValue);
+      handlePromiseError(
+        data,
+        params.sheetEditorRef,
+        params.row,
+        params.column,
+        params.newValue,
+      );
       return;
     }
 
-    if (typeof data === 'string' && data.includes('MISSING') && params.dataBlockApiKeyHandler) {
+    if (
+      typeof data === 'string' &&
+      data.includes('MISSING') &&
+      params.dataBlockApiKeyHandler
+    ) {
       handleMissingApiKey(data, params.dataBlockApiKeyHandler, params);
       return;
     }
@@ -232,6 +277,11 @@ const processRegularPromise = async (
     } else {
       handleStringResponse(data as string, params);
     }
+    const workbookContext = params.sheetEditorRef.current?.getWorkbookContext();
+    const formulaName = params.newValue?.f?.match(/^=([A-Z0-9_]+)\s*\(/)?.[1];
+    const apiKeyName =
+      workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
+    params.storeApiKey(apiKeyName);
   } catch (error) {
     console.error('Error processing regular promise:', error);
     handleStringResponse('Error processing data', params);
@@ -243,10 +293,12 @@ const processRegularPromise = async (
  */
 const handlePromiseValue = async (
   newValue: Cell,
-  params: AfterUpdateCellParams
+  params: AfterUpdateCellParams,
 ): Promise<void> => {
   const { row, column, sheetEditorRef } = params;
-  const promise = newValue.v as unknown as Promise<Record<string, string>[] | string>;
+  const promise = newValue.v as unknown as Promise<
+    Record<string, string>[] | string
+  >;
 
   // Check if this is a FLVURL function
   if (newValue.f && containsFlvurlFunction(newValue.f)) {
@@ -277,14 +329,21 @@ const countLineBreaks = (text: string): number => {
 /**
  * Calculates the required row height based on content
  */
-const calculateRowHeight = (fontSize: number, lineBreakCount: number): number => {
+const calculateRowHeight = (
+  fontSize: number,
+  lineBreakCount: number,
+): number => {
   return fontSize * LINE_HEIGHT_MULTIPLIER * (lineBreakCount + 1);
 };
 
 /**
  * Adjusts row height based on cell content
  */
-const adjustRowHeight = ({ newValue, sheetEditorRef, row }: AdjustRowHeightParams): void => {
+const adjustRowHeight = ({
+  newValue,
+  sheetEditorRef,
+  row,
+}: AdjustRowHeightParams): void => {
   // Early return if no cell text content
   if (!newValue?.ct?.s?.[0]?.v) {
     return;
@@ -312,7 +371,9 @@ const adjustRowHeight = ({ newValue, sheetEditorRef, row }: AdjustRowHeightParam
  * @param params - Object containing all required parameters
  * @returns Promise that resolves when processing is complete
  */
-export const afterUpdateCell = async (params: AfterUpdateCellParams): Promise<void> => {
+export const afterUpdateCell = async (
+  params: AfterUpdateCellParams,
+): Promise<void> => {
   const { newValue, sheetEditorRef } = params;
 
   // Early return for empty values
@@ -322,7 +383,12 @@ export const afterUpdateCell = async (params: AfterUpdateCellParams): Promise<vo
 
   // Apply text block formatting if needed
   if (shouldApplyTextBlockFormatting(newValue)) {
-    applyTextBlockFormatting(newValue, sheetEditorRef, params.row, params.column);
+    applyTextBlockFormatting(
+      newValue,
+      sheetEditorRef,
+      params.row,
+      params.column,
+    );
   }
 
   // Adjust row height based on content
