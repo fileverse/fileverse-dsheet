@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
@@ -5,7 +6,7 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import {
   DEFAULT_SHEET_DATA,
   TOOL_BAR_ITEMS,
-  CELL_CONTEXT_MENU_ITEMS
+  CELL_CONTEXT_MENU_ITEMS,
 } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
@@ -31,10 +32,12 @@ interface EditorWorkbookProps {
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
+  // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
   getCommentCellUI?: (row: number, column: number) => void;
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
+  storeApiKey?: (apiKeyName: string) => void;
 }
 
 /**
@@ -52,8 +55,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
+  storeApiKey,
 }) => {
   const {
     sheetEditorRef,
@@ -74,7 +78,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     currentDataRef,
   });
 
-  const cellContextMenu = isReadOnly ? ["comment"] : CELL_CONTEXT_MENU_ITEMS;
+  const cellContextMenu = isReadOnly ? ['comment'] : CELL_CONTEXT_MENU_ITEMS;
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -141,6 +145,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               setFetchingURLData,
               onboardingHandler,
               dataBlockApiKeyHandler,
+              storeApiKey,
               setInputFetchURLDataBlock,
             });
           },
