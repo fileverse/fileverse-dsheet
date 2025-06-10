@@ -3,7 +3,6 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 import { formulaResponseUiSync } from './formula-ui-sync';
-import { executeStringFunction } from './executeStringFunction';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -26,8 +25,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
 }
 
@@ -139,27 +138,6 @@ const handlePromiseError = (
   });
 };
 
-/**
- * Handles missing API key scenario
- */
-const handleMissingApiKey = (
-  data: string,
-  dataBlockApiKeyHandler: DataBlockApiKeyHandlerType,
-  params: Pick<
-    AfterUpdateCellParams,
-    'sheetEditorRef' | 'row' | 'column' | 'newValue'
-  >,
-): void => {
-  dataBlockApiKeyHandler({
-    data,
-    sheetEditorRef: params.sheetEditorRef,
-    executeStringFunction,
-    row: params.row,
-    column: params.column,
-    newValue: params.newValue,
-    formulaResponseUiSync,
-  });
-};
 
 /**
  * Handles array response from promise
@@ -259,15 +237,6 @@ const processRegularPromise = async (
         params.column,
         params.newValue,
       );
-      return;
-    }
-
-    if (
-      typeof data === 'string' &&
-      data.includes('MISSING') &&
-      params.dataBlockApiKeyHandler
-    ) {
-      handleMissingApiKey(data, params.dataBlockApiKeyHandler, params);
       return;
     }
 
