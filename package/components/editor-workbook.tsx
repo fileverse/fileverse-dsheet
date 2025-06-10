@@ -7,6 +7,7 @@ import {
   DEFAULT_SHEET_DATA,
   TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
+  HEADER_CONTEXT_MENU_ITEMS,
 } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
@@ -55,7 +56,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
 }) => {
@@ -101,6 +102,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         data={data}
         toolbarItems={TOOL_BAR_ITEMS}
         cellContextMenu={cellContextMenu}
+        headerContextMenu={HEADER_CONTEXT_MENU_ITEMS}
         //@ts-ignore
         getCommentCellUI={getCommentCellUI}
         onChange={handleChange}
