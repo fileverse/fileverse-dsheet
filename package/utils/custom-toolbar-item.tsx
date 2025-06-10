@@ -50,73 +50,75 @@ export const getCustomToolbarItems = ({
   currentDataRef: React.MutableRefObject<object | null>;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
-  setShowFetchURLModal: React.Dispatch<React.SetStateAction<boolean>> | undefined;
+  setShowFetchURLModal:
+    | React.Dispatch<React.SetStateAction<boolean>>
+    | undefined;
 }) => [
-    {
-      key: 'import-export',
-      tooltip: 'Import/Export',
-      onClick: () => {
-        setExportDropdownOpen((prev) => !prev);
-      },
-      icon: (
-        <CustomButton
-          setExportDropdownOpen={setExportDropdownOpen}
-          handleCSVUpload={(event) =>
-            handleCSVUpload(
-              event,
-              ydocRef.current,
-              setForceSheetRender,
-              dsheetId,
-              currentDataRef,
-            )
-          }
-          handleXLSXUpload={handleXLSXUpload}
-          handleExportToXLSX={() =>
-            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
-          }
-          handleExportToCSV={() =>
-            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
-          }
-          handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
-        />
-      ),
+  {
+    key: 'import-export',
+    tooltip: 'Import/Export',
+    onClick: () => {
+      setExportDropdownOpen((prev) => !prev);
     },
-    {
-      /*template-button is used in use xocument style */
-      key: 'templates',
-      tooltip: 'Templates',
-      icon: (
-        <IconButton
-          className="template-button"
-          icon="LayoutTemplate"
-          size="md"
-          variant="ghost"
-        />
-      ),
-      onClick: toggleTemplateSidebar,
+    icon: (
+      <CustomButton
+        setExportDropdownOpen={setExportDropdownOpen}
+        handleCSVUpload={(event) =>
+          handleCSVUpload(
+            event,
+            ydocRef.current,
+            setForceSheetRender,
+            dsheetId,
+            currentDataRef,
+          )
+        }
+        handleXLSXUpload={handleXLSXUpload}
+        handleExportToXLSX={() =>
+          handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+        }
+        handleExportToCSV={() =>
+          handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+        }
+        handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
+      />
+    ),
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'templates',
+    tooltip: 'Templates',
+    icon: (
+      <IconButton
+        className="!min-w-[30px] w-[30px] h-[30px] !px-0 template-button text-[#CF1C82] bg-[#CF1C821F] rounded-lg hover:!bg-[#CF1C821F] "
+        icon="LayoutTemplate"
+        size="md"
+        variant="ghost"
+      />
+    ),
+    onClick: toggleTemplateSidebar,
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'fetch-url',
+    tooltip: 'Fetch URL',
+    icon: (
+      <IconButton
+        className="fetch-url-button !min-w-[30px] w-[30px] h-[30px] !px-0 bg-[#1977E42E] hover:!bg-[#1977E42E] rounded-lg"
+        icon="PanelTopOpen"
+        size="md"
+        variant="ghost"
+        color="blue"
+      />
+    ),
+    onClick: () => {
+      const selection = sheetEditorRef.current?.getSelection();
+      setShowFetchURLModal?.((prev) => {
+        if (selection && !prev) {
+          return true;
+        } else {
+          return false;
+        }
+      });
     },
-    {
-      /*template-button is used in use xocument style */
-      key: 'fetch-url',
-      tooltip: 'Fetch URL',
-      icon: (
-        <IconButton
-          className="fetch-url-button"
-          icon="PanelTopOpen"
-          size="md"
-          variant="ghost"
-          color='blue'
-        />
-      ),
-      onClick: () => {
-        const selection = sheetEditorRef.current?.getSelection();
-        setShowFetchURLModal?.(prev => {
-          if (selection && !prev) {
-            return true
-          } else {
-            return false
-          }
-        })
-      },
-    },
-  ];
+  },
+];

@@ -6,7 +6,6 @@
 @tailwind utilities;
 
 @layer base {
-
   ul,
   ol {
     list-style: revert;
@@ -39,7 +38,7 @@ body {
 }
 
 .fetch-url-button {
-  color: #1977E4;
+  color: #1977e4;
 }
 
 .fetch-url-modal {
@@ -47,7 +46,6 @@ body {
 }
 
 .fortune-read-only {
-
   .luckysheet-rich-text-editor,
   .luckysheet-sheets-item-function,
   .fortune-sheettab-button,
@@ -64,11 +62,11 @@ body {
 
 .luckysheet-cell-selected {
   border: 2.5px solid #efc703 !important;
-  background-color: #FFDF0A1A;
+  background-color: #ffdf0a1a;
 }
 
 .luckysheet-cell-selected-focus {
-  background-color: #FFDF0A1A;
+  background-color: #ffdf0a1a;
 }
 
 .luckysheet-cs-fillhandle {
@@ -117,10 +115,12 @@ body {
   height: fit-content !important;
   width: 300px !important;
   background-color: white !important;
-  border: 1px solid #E8EBEC !important;
+  border: 1px solid #e8ebec !important;
   border-radius: 4px !important;
   padding: 0 !important;
-  box-shadow: 0 1px 1px #0000002e, 0 4px 8px #0000001a;
+  box-shadow:
+    0 1px 1px #0000002e,
+    0 4px 8px #0000001a;
 }
 
 /*Right click menu*/
@@ -128,4 +128,12 @@ body {
 .luckysheet-mousedown-cancel {
   /* display: flex; */
   width: 100%;
+}
+
+.fortune-toolbar-button:hover {
+  background-color: none !important;
+}
+
+.template-button:hover {
+  background-color: #cf1c821f !important;
 }
