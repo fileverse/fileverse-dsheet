@@ -108,6 +108,7 @@ export const HEADER_CONTEXT_MENU_ITEMS = [
   'data',
   'cell-format',
   // 'comment',
+  'split-text',
   'freeze-row',
   'freeze-column',
 ];
