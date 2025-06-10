@@ -6,6 +6,7 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import {
   DEFAULT_SHEET_DATA,
   TOOL_BAR_ITEMS,
+  READ_ONLY_TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
   HEADER_CONTEXT_MENU_ITEMS,
 } from '../constants/shared-constants';
@@ -56,7 +57,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
 }) => {
@@ -80,6 +81,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   });
 
   const cellContextMenu = isReadOnly ? ['comment'] : CELL_CONTEXT_MENU_ITEMS;
+  const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
+  const toolbarItems = isReadOnly ? READ_ONLY_TOOL_BAR_ITEMS : TOOL_BAR_ITEMS;
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -100,34 +103,38 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         key={workbookKey}
         ref={sheetEditorRef}
         data={data}
-        toolbarItems={TOOL_BAR_ITEMS}
+        toolbarItems={toolbarItems}
         cellContextMenu={cellContextMenu}
-        headerContextMenu={HEADER_CONTEXT_MENU_ITEMS}
+        headerContextMenu={headerContextMenu}
         //@ts-ignore
         getCommentCellUI={getCommentCellUI}
         onChange={handleChange}
-        showFormulaBar={!isReadOnly}
-        showToolbar={!isReadOnly}
+        showFormulaBar={true}
+        showToolbar={true}
         lang={'en'}
         rowHeaderWidth={60}
         columnHeaderHeight={24}
         defaultColWidth={100}
         defaultRowHeight={21}
-        customToolbarItems={getCustomToolbarItems({
-          setExportDropdownOpen,
-          handleCSVUpload,
-          handleXLSXUpload,
-          handleExportToXLSX,
-          handleExportToCSV,
-          handleExportToJSON,
-          sheetEditorRef,
-          ydocRef,
-          dsheetId,
-          currentDataRef,
-          setForceSheetRender,
-          toggleTemplateSidebar,
-          setShowFetchURLModal,
-        })}
+        customToolbarItems={
+          !isReadOnly
+            ? getCustomToolbarItems({
+                setExportDropdownOpen,
+                handleCSVUpload,
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
+            : []
+        }
         hooks={{
           afterUpdateCell: (
             row: number,

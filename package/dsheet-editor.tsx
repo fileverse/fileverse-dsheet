@@ -88,7 +88,12 @@ const EditorContent = ({
   });
 
   // Apply custom styling based on dropdown and template states
-  useFortuneDocumentStyle({ exportDropdownOpen, isTemplateOpen, isReadOnly, loading });
+  useFortuneDocumentStyle({
+    exportDropdownOpen,
+    isTemplateOpen,
+    isReadOnly,
+    loading,
+  });
 
   // Create editor values to pass to the navbar
   const editorValues: EditorValues = {

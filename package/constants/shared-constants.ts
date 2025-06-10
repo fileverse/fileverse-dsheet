@@ -48,6 +48,8 @@ export const TOOL_BAR_ITEMS = [
   'search',
 ];
 
+export const READ_ONLY_TOOL_BAR_ITEMS = ['filter'];
+
 export const CELL_CONTEXT_MENU_ITEMS = [
   'cut',
   'copy',
@@ -90,10 +92,10 @@ export const HEADER_CONTEXT_MENU_ITEMS = [
   'delete-row',
   'delete-column',
   // "delete-cell",
-  "hide-row",
-  "hide-column",
-  "set-row-height",
-  "set-column-width",
+  'hide-row',
+  'hide-column',
+  'set-row-height',
+  'set-column-width',
   '|',
   'conditionFormat',
   'filter',
