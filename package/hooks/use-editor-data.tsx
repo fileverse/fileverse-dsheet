@@ -103,6 +103,13 @@ export const useEditorData = (
                   ps: CELL_COMMENT_DEFAULT_VALUE
                 }
               }
+            } else {
+              if (cell.v) {
+                cell.v = {
+                  ...cell.v,
+                  ps: undefined
+                }
+              }
             }
           })
         });
