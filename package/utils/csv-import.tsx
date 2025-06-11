@@ -71,12 +71,27 @@ export const handleCSVUpload = (
           let maxCol = 0;
           results.data.forEach((row, rowIndex) => {
             headers.forEach((header, colIndex) => {
-              // @ts-expect-error parse error
-              const value = row[header];
               cellData.push({
                 r: rowIndex + 1, // +1 because header is row 0
                 c: colIndex,
-                v: value != null ? value.toString() : null,
+                v: {
+                  // @ts-expect-error later
+                  m:
+                    (row as Record<string, string | null>)[header] !==
+                      null
+                      ? (row as Record<string, string | null>)[header]?.toString()
+                      : null,
+                  ct: {
+                    fa: 'General',
+                    t: 'g',
+                  },
+                  // @ts-expect-error later
+                  v:
+                    (row as Record<string, string | number | null>)[header] !==
+                      null
+                      ? (row as Record<string, string | number | null>)[header]?.toString()
+                      : null,
+                },
               });
               maxRow = Math.max(maxRow, rowIndex + 1);
               maxCol = Math.max(maxCol, colIndex + 1);
