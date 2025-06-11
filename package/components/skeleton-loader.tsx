@@ -37,8 +37,8 @@ const useGridDimensions = (containerRef: React.RefObject<HTMLDivElement>) => {
   const CELL_WIDTH = 96; // w-24 = 96px
   const CELL_HEIGHT = 24; // h-6 = 24px
   const HEADER_HEIGHT = 28; // h-7 = 28px
-  const TOOLBAR_HEIGHT = 48; // Always show toolbar now
-  const FORMULA_BAR_HEIGHT = 32; // Always show formula bar now
+  const TOOLBAR_HEIGHT = 39; // Actual toolbar height
+  const FORMULA_BAR_HEIGHT = 28; // Actual formula bar height
   const ROW_HEADER_WIDTH = 64; // w-16 = 64px
 
   // Calculate available space within the container
@@ -56,13 +56,10 @@ const useGridDimensions = (containerRef: React.RefObject<HTMLDivElement>) => {
 // Skeleton formula bar component
 export const SkeletonFormulaBar = () => (
   <div
-    className={`w-full h-8 px-4 flex items-center bg-gray-50 border-b ${pulseAnimation}`}
+    className={`w-full h-7 px-4 flex items-center bg-gray-50 border-b ${pulseAnimation}`}
   >
     <div className="flex items-center gap-2">
-      <div className="h-5 w-8 bg-gray-200 rounded"></div>{' '}
-      {/* Cell reference like A1 */}
-      <div className="h-5 w-6 bg-gray-200 rounded"></div> {/* fx icon */}
-      <div className="h-5 w-32 bg-gray-200 rounded"></div>{' '}
+      <div className="h-4 w-32 bg-gray-200 rounded"></div>{' '}
       {/* Formula content */}
     </div>
   </div>
@@ -99,7 +96,8 @@ export const SkeletonToolbar = ({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-12 px-2 flex items-center border-b ml-5 bg-gray-50 ${pulseAnimation}`}
+      className={`w-full h-10 px-2 flex items-center border-b ml-5 bg-gray-50 ${pulseAnimation}`}
+      style={{ height: '39px' }}
     >
       {sections.map((section, sectionIndex) => (
         <div key={sectionIndex} className="flex items-center">
@@ -107,8 +105,12 @@ export const SkeletonToolbar = ({
             {[...Array(section.items)].map((_, i) => (
               <div
                 key={i}
-                className="h-7 w-7 bg-gray-200"
-                style={{ opacity: 0.7 + i * 0.1 }}
+                className="bg-gray-200"
+                style={{
+                  height: '30px',
+                  width: '30px',
+                  opacity: 0.7 + i * 0.1,
+                }}
               />
             ))}
           </div>
