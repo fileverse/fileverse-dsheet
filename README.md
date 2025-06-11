@@ -44,6 +44,7 @@ The `DsheetProps` interface is a TypeScript interface that defines the propertie
 | `onChange`               | `(changes: JSONContent, chunk?: any) => void` | Callback triggered on editor content changes    |
 | `ref`                    | `React.RefObject`                             | Reference to access editor instance             |
 | `isReadOnly`          | `boolean`                                     | Controls if editor is in preview/read-only mode |
+| `allowComments`          | `boolean`                                     | Enables commenting in read-only mode - adds comment icon to toolbar and context menu (requires `isReadOnly=true`) |
 | `dsheetId`          | `string`                                     | Used as room id for collaboration |
 
 ### Steps to run this example locally

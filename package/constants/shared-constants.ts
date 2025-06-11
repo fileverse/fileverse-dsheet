@@ -48,8 +48,6 @@ export const TOOL_BAR_ITEMS = [
   'search',
 ];
 
-export const READ_ONLY_TOOL_BAR_ITEMS = ['filter'];
-
 export const CELL_CONTEXT_MENU_ITEMS = [
   'cut',
   'copy',

@@ -63,4 +63,5 @@ export interface DsheetProps {
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<WorkbookInstance>;
   storeApiKey?: (apiKeyName: string) => void;
+  allowComments?: boolean;
 }

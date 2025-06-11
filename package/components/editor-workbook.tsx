@@ -6,7 +6,6 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import {
   DEFAULT_SHEET_DATA,
   TOOL_BAR_ITEMS,
-  READ_ONLY_TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
   HEADER_CONTEXT_MENU_ITEMS,
 } from '../constants/shared-constants';
@@ -29,6 +28,7 @@ interface EditorWorkbookProps {
   setFetchingURLData?: (fetching: boolean) => void;
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
   isReadOnly?: boolean;
+  allowComments?: boolean;
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
   onboardingHandler?: OnboardingHandler;
@@ -50,6 +50,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   setShowFetchURLModal,
   setFetchingURLData,
   isReadOnly = false,
+  allowComments = false,
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingHandler,
@@ -80,9 +81,17 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     currentDataRef,
   });
 
-  const cellContextMenu = isReadOnly ? ['comment'] : CELL_CONTEXT_MENU_ITEMS;
+  const cellContextMenu = isReadOnly
+    ? allowComments
+      ? ['comment']
+      : []
+    : CELL_CONTEXT_MENU_ITEMS;
   const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
-  const toolbarItems = isReadOnly ? READ_ONLY_TOOL_BAR_ITEMS : TOOL_BAR_ITEMS;
+  const toolbarItems = isReadOnly
+    ? allowComments
+      ? ['filter', 'comment']
+      : ['filter']
+    : TOOL_BAR_ITEMS;
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {

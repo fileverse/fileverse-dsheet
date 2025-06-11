@@ -13,6 +13,7 @@ import { EditorProvider, useEditor } from './contexts/editor-context';
 import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
+import { PermissionChip } from './components/permission-chip';
 // import { FLVURL } from '@fileverse-dev/formulajs';
 // import { formulaResponseUiSync } from './utils/formula-ui-sync';
 
@@ -33,6 +34,7 @@ const EditorContent = ({
   setShowFetchURLModal,
   renderNavbar,
   isReadOnly,
+  allowComments,
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingHandler,
@@ -51,6 +53,7 @@ const EditorContent = ({
   DsheetProps,
   | 'renderNavbar'
   | 'isReadOnly'
+  | 'allowComments'
   | 'toggleTemplateSidebar'
   | 'selectedTemplate'
   | 'dsheetId'
@@ -128,6 +131,13 @@ const EditorContent = ({
         style={{ height: '97.8%', marginTop: '44px' }}
         className="relative overflow-hidden"
       >
+        {/* Permission chip - only visible in read-only mode */}
+        {isReadOnly && (
+          <div className="absolute top-2 right-4 z-20">
+            <PermissionChip allowComments={allowComments || false} />
+          </div>
+        )}
+
         <TransitionWrapper show={loading}>
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
@@ -148,6 +158,7 @@ const EditorContent = ({
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
             storeApiKey={storeApiKey}
+            allowComments={allowComments}
           />
         </TransitionWrapper>
       </div>
@@ -165,6 +176,7 @@ const EditorContent = ({
 const SpreadsheetEditor = ({
   isCollaborative = false,
   isReadOnly = false,
+  allowComments = false,
   renderNavbar,
   enableIndexeddbSync,
   dsheetId = '',
@@ -221,6 +233,7 @@ const SpreadsheetEditor = ({
         dsheetId={dsheetId}
         selectedTemplate={selectedTemplate}
         storeApiKey={storeApiKey}
+        allowComments={allowComments}
       />
     </EditorProvider>
   );
