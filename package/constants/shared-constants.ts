@@ -79,6 +79,7 @@ export const CELL_CONTEXT_MENU_ITEMS = [
   'data',
   'cell-format',
   'comment',
+  'freeze-row',
 ];
 
 export const HEADER_CONTEXT_MENU_ITEMS = [
