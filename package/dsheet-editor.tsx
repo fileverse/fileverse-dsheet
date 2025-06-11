@@ -131,18 +131,18 @@ const EditorContent = ({
         style={{ height: '97.8%', marginTop: '44px' }}
         className="relative overflow-hidden"
       >
-        {/* Permission chip - only visible in read-only mode */}
-        {isReadOnly && (
-          <div className="absolute top-2 right-4 z-20">
-            <PermissionChip allowComments={allowComments || false} />
-          </div>
-        )}
-
         <TransitionWrapper show={loading}>
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
 
         <TransitionWrapper show={!loading}>
+          {/* Permission chip - only visible with real content */}
+          {isReadOnly && (
+            <div className="absolute top-2 right-4 z-20">
+              <PermissionChip allowComments={allowComments || false} />
+            </div>
+          )}
+
           <EditorWorkbook
             setShowFetchURLModal={setShowFetchURLModal}
             setFetchingURLData={setFetchingURLData}
