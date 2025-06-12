@@ -34,7 +34,7 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
 
       // Only store cells with non-null values
       for (const cell of oldCellData) {
-        if (cell.v !== null) {
+        if (cell && cell.v !== null) {
           const key = `${cell.r},${cell.c}`;
           oldCellMap.set(key, cell.v);
         }
