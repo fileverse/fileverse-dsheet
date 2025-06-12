@@ -99,11 +99,13 @@ export const handleCSVUpload = (
           });
 
           // Create sheet object in fortune-sheet format
+          const rowCount = maxRow + 1 < 500 ? 500 : maxRow + 1;
+          const colCount = maxCol + 1 < 36 ? 36 : maxCol + 1;
           const sheetObject = {
             name: file.name || 'Sheet1',
-            celldata: [...cellData],
-            row: maxRow + 1, // +1 for header
-            column: maxCol + 1,
+            celldata: [, ...cellData],
+            row: rowCount,
+            column: colCount,
             status: 1,
             order: 0,
             config: {
