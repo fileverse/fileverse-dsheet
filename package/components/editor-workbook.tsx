@@ -17,11 +17,10 @@ import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
-import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import { OnboardingHandlerType } from '../types';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
-type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 interface EditorWorkbookProps {
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -32,7 +31,6 @@ interface EditorWorkbookProps {
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
   onboardingHandler?: OnboardingHandler;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
@@ -54,11 +52,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingHandler,
-  dataBlockApiKeyHandler,
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
 }) => {
@@ -128,20 +125,20 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
@@ -162,7 +159,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               // @ts-ignore
               setFetchingURLData,
               onboardingHandler,
-              dataBlockApiKeyHandler,
               storeApiKey,
               setInputFetchURLDataBlock,
             });
@@ -177,7 +173,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     toggleTemplateSidebar,
     onboardingComplete,
     onboardingHandler,
-    dataBlockApiKeyHandler,
     dsheetId,
     exportDropdownOpen,
     commentData,

@@ -6,7 +6,6 @@ import {
   DsheetProps,
   EditorValues,
   OnboardingHandlerType,
-  DataBlockApiKeyHandlerType,
 } from './types';
 import SkeletonLoader from './components/skeleton-loader';
 import { EditorProvider, useEditor } from './contexts/editor-context';
@@ -24,7 +23,6 @@ import './styles/index.css';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
-type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 /**
  * EditorContent - Internal component that renders the editor content
@@ -38,7 +36,6 @@ const EditorContent = ({
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingHandler,
-  dataBlockApiKeyHandler,
   isTemplateOpen,
   exportDropdownOpen,
   setExportDropdownOpen,
@@ -69,7 +66,6 @@ const EditorContent = ({
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onboardingComplete?: boolean;
   onboardingHandler?: OnboardingHandler;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   storeApiKey?: (apiKeyName: string) => void;
 }) => {
   const {
@@ -153,7 +149,6 @@ const EditorContent = ({
             toggleTemplateSidebar={toggleTemplateSidebar}
             onboardingComplete={onboardingComplete}
             onboardingHandler={onboardingHandler}
-            dataBlockApiKeyHandler={dataBlockApiKeyHandler}
             exportDropdownOpen={exportDropdownOpen}
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
@@ -191,7 +186,6 @@ const SpreadsheetEditor = ({
   onboardingHandler,
   commentData,
   getCommentCellUI,
-  dataBlockApiKeyHandler,
   setFetchingURLData,
   setShowFetchURLModal,
   setInputFetchURLDataBlock,
@@ -224,9 +218,6 @@ const SpreadsheetEditor = ({
         toggleTemplateSidebar={toggleTemplateSidebar}
         onboardingComplete={onboardingComplete}
         onboardingHandler={onboardingHandler as OnboardingHandler}
-        dataBlockApiKeyHandler={
-          dataBlockApiKeyHandler as DataBlockApiKeyHandler
-        }
         isTemplateOpen={isTemplateOpen}
         exportDropdownOpen={exportDropdownOpen}
         setExportDropdownOpen={setExportDropdownOpen}
