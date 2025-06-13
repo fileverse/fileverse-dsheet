@@ -52,6 +52,26 @@ body {
   .luckysheet-input-box-inner {
     display: none;
   }
+
+  /* Hide link editing UI but allow viewing popover in read-only mode */
+  .fortune-link-modify-modal:not(.link-toolbar),
+  .fortune-link-cards-container,
+  .fortune-link-card,
+  .fortune-link-type-select,
+  .fortune-link-type-dropdown,
+  .fortune-input-with-icon,
+  .fortune-link-input,
+  .fortune-insert-button,
+  .luckysheet-link-dialog,
+  .luckysheet-link-panel {
+    display: none !important;
+  }
+
+  /* Hide edit and remove buttons in link toolbar but keep "Open link" */
+  .fortune-link-modify-modal.link-toolbar
+    .fortune-toolbar-button:not(:first-child) {
+    display: none !important;
+  }
 }
 
 .fortune-tooltip {
