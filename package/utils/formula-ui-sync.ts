@@ -14,9 +14,9 @@ export const formulaResponseUiSync = ({
   apiData,
   sheetEditorRef,
 }: FormulaSyncType): void => {
-  const headers: string[] = Array.isArray(apiData[0]) ? apiData[0] : Object.keys(
-    apiData[0],
-  )
+  const headers: string[] = Array.isArray(apiData[0])
+    ? apiData[0]
+    : Object.keys(apiData[0]);
   // handle row and col ofbound and add new row and col
   const sheet = sheetEditorRef.current?.getSheet();
   const currentTotalRow = sheet?.data?.length || 0;
@@ -46,7 +46,7 @@ export const formulaResponseUiSync = ({
     range = {
       row: [row, row + apiData.length],
       column: [column, column + (headers.length - 1)],
-    }
+    };
 
     const headerData: Array<Record<string, string> | string> = [];
     headers.forEach((header, index) => {
@@ -60,8 +60,11 @@ export const formulaResponseUiSync = ({
 
     // set data
     for (let i = 0; i < apiData.length; i++) {
-      const tempData: { ct: { fa: string; t: string }; m?: object; v: object }[] =
-        [];
+      const tempData: {
+        ct: { fa: string; t: string };
+        m?: object;
+        v: object;
+      }[] = [];
       headers.forEach((header: string) => {
         // @ts-expect-error later
         const cellValue = apiData[i][header];
@@ -77,14 +80,21 @@ export const formulaResponseUiSync = ({
     range = {
       row: [row, row + apiData.length - 1],
       column: [column, column + (apiData[0].length - 1)],
-    }
+    };
     const headerData: Array<Record<string, string> | string> = apiData[0];
-    headerData[0] = { ...newValue, m: headerData[0] as string, v: headerData[0] as string };
+    headerData[0] = {
+      ...newValue,
+      m: headerData[0] as string,
+      v: headerData[0] as string,
+    };
 
     data.push(headerData);
     for (let i = 1; i < apiData.length; i++) {
-      const tempData: { ct: { fa: string; t: string }; m?: object; v: string }[] =
-        [];
+      const tempData: {
+        ct: { fa: string; t: string };
+        m?: object;
+        v: string;
+      }[] = [];
       // @ts-expect-error later
       apiData[i].forEach((cellValue: string) => {
         tempData.push({
