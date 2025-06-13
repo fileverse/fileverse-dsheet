@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { OnboardingHandlerType } from '../types';
+import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 import { formulaResponseUiSync } from './formula-ui-sync';
 
 // Constants
@@ -23,6 +23,7 @@ interface AfterUpdateCellParams {
   onboardingComplete: boolean | undefined;
   setFetchingURLData: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
+  dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
   | React.Dispatch<React.SetStateAction<string>>
   | undefined;
@@ -221,6 +222,7 @@ const processRegularPromise = async (
     | 'column'
     | 'newValue'
     | 'sheetEditorRef'
+    | 'dataBlockApiKeyHandler'
     | 'storeApiKey'
   >,
 ): Promise<void> => {
