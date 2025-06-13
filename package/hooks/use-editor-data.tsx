@@ -32,7 +32,6 @@ export const useEditorData = (
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
-  const commentDataProcessed = useRef<boolean>(false);
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
@@ -90,13 +89,13 @@ export const useEditorData = (
     try {
       const currentDocData = ydocRef.current.getArray(dsheetId);
       const currentData = Array.from(currentDocData) as Sheet[];
-      if (currentData.length > 0 && commentData && !commentDataProcessed.current) {
-        currentData.forEach((sheet) => {
+      if (currentData.length > 0 && commentData) {
+        currentData.forEach((sheet, index) => {
           const sheetCellData = sheet.celldata;
           sheetCellData?.forEach((cell: CellWithRowAndCol) => {
             // @ts-expect-error later
-            const comment = commentData[`${cell.r}_${cell.c}`];
-            if (comment && comment.sheetId === sheet.id) {
+            const comment = commentData[`${index}_${cell.r}_${cell.c}`];
+            if (comment) {
               if (cell.v) {
                 cell.v = {
                   ...cell.v,
@@ -113,7 +112,6 @@ export const useEditorData = (
             }
           })
         });
-        commentDataProcessed.current = true;
       }
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
