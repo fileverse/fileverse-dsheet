@@ -261,6 +261,14 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
           return true; // New iframe was added
         }
       }
+
+      // check for freeze changes
+      const oldSheetFreezeString = JSON.stringify(oldSheet?.frozen || {});
+      const newSheetFreezeString = JSON.stringify(newSheet?.frozen || {});
+      if (oldSheetFreezeString !== newSheetFreezeString) {
+        return true;
+      }
+
     }
   }
 
