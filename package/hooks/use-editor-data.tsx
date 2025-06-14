@@ -72,10 +72,6 @@ export const useEditorData = (
         // Update the current data reference
         currentDataRef.current = newSheetData;
 
-        // Mark data as initialized since we've loaded from portal content
-        // dataInitialized.current = true;
-        // setIsDataLoaded(true);
-
         // Always mark portal content as processed
         portalContentProcessed.current = true;
 
