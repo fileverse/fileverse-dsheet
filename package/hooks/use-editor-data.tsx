@@ -42,7 +42,7 @@ export const useEditorData = (
     try {
       const uint8Array = toUint8Array(portalContent);
 
-      // Create a temporary doc to decode the update and extract metadata
+      // Create a temporary doc to decode the update.
       const tempDoc = new Y.Doc();
       Y.applyUpdate(tempDoc, uint8Array);
 
@@ -50,23 +50,16 @@ export const useEditorData = (
       const tempMap = tempDoc.getArray(dsheetId);
       const decodedSheetData = Array.from(tempMap) as Sheet[];
 
-      // Only proceed if we have valid data in the portal content
-      console.log('newSheetData decoded', decodedSheetData);
-
       if (decodedSheetData.length > 0) {
-        // REPLACE instead of merge: Create a completely new document
+        // REPLACE instead of merge: Create a completely new document with portal content
         const newDoc = new Y.Doc();
         Y.applyUpdate(newDoc, uint8Array);
 
         // Replace the current document reference
-        //ydocRef.current.destroy();
         ydocRef.current = newDoc;
-        // @ts-ignore
-        window.testDoc = newDoc;
 
         const map = newDoc.getArray(dsheetId);
         const newSheetData = Array.from(map) as Sheet[];
-        console.log('newSheetData', newSheetData,);
 
 
         // Update the current data reference
