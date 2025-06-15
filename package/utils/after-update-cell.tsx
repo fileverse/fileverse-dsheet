@@ -26,8 +26,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
 }
 
@@ -362,6 +362,11 @@ const adjustRowHeight = ({
   }
 };
 
+function isHexValue(str: string): boolean {
+  // Accepts with or without 0x prefix
+  return /^0x?[a-fA-F0-9]+$/.test(str);
+}
+
 /**
  * Handles logic after a cell is updated, including processing formula results
  *
@@ -394,6 +399,13 @@ export const afterUpdateCell = async (
     sheetEditorRef,
     row: params.row,
   });
+
+  if (isHexValue(newValue.v as string)) {
+    sheetEditorRef.current?.setCellValue(params.row, params.column, {
+      ...newValue,
+      m: newValue.v,
+    });
+  }
 
   // Handle onboarding if needed
   const { row, column } = handleOnboarding(params);
