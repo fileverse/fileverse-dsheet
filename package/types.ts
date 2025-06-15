@@ -65,4 +65,6 @@ export interface DsheetProps {
   storeApiKey?: (apiKeyName: string) => void;
   allowComments?: boolean;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
+  onDuneChartEmbed?: () => void;
+  onSheetCountChange?: (sheetCount: number) => void;
 }

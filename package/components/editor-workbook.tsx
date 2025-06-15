@@ -41,6 +41,8 @@ interface EditorWorkbookProps {
   dsheetId: string;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
+  onDuneChartEmbed?: () => void;
+  onSheetCountChange?: (sheetCount: number) => void;
 }
 
 /**
@@ -63,6 +65,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
+  onDuneChartEmbed,
+  onSheetCountChange,
 }) => {
   const {
     sheetEditorRef,
@@ -171,6 +175,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             });
           },
         }}
+        onDuneChartEmbed={onDuneChartEmbed}
+        onSheetCountChange={onSheetCountChange}
       />
     );
   }, [

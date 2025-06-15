@@ -50,6 +50,8 @@ const EditorContent = ({
   setInputFetchURLDataBlock,
   storeApiKey,
   onDataBlockApiResponse,
+  onDuneChartEmbed,
+  onSheetCountChange,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -73,6 +75,8 @@ const EditorContent = ({
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
+  onDuneChartEmbed?: () => void;
+  onSheetCountChange?: (sheetCount: number) => void;
 }) => {
   const {
     loading,
@@ -162,6 +166,8 @@ const EditorContent = ({
             storeApiKey={storeApiKey}
             allowComments={allowComments}
             onDataBlockApiResponse={onDataBlockApiResponse}
+            onDuneChartEmbed={onDuneChartEmbed}
+            onSheetCountChange={onSheetCountChange}
           />
         </TransitionWrapper>
       </div>
@@ -200,6 +206,8 @@ const SpreadsheetEditor = ({
   setInputFetchURLDataBlock,
   sheetEditorRef: externalSheetEditorRef,
   storeApiKey,
+  onDuneChartEmbed,
+  onSheetCountChange,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -237,6 +245,8 @@ const SpreadsheetEditor = ({
         selectedTemplate={selectedTemplate}
         storeApiKey={storeApiKey}
         allowComments={allowComments}
+        onDuneChartEmbed={onDuneChartEmbed}
+        onSheetCountChange={onSheetCountChange}
       />
     </EditorProvider>
   );
