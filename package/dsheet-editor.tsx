@@ -49,6 +49,7 @@ const EditorContent = ({
   setFetchingURLData,
   setInputFetchURLDataBlock,
   storeApiKey,
+  onDataBlockApiResponse,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -71,6 +72,7 @@ const EditorContent = ({
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   storeApiKey?: (apiKeyName: string) => void;
+  onDataBlockApiResponse?: (dataBlockName: string) => void;
 }) => {
   const {
     loading,
@@ -159,6 +161,7 @@ const EditorContent = ({
             dsheetId={dsheetId}
             storeApiKey={storeApiKey}
             allowComments={allowComments}
+            onDataBlockApiResponse={onDataBlockApiResponse}
           />
         </TransitionWrapper>
       </div>

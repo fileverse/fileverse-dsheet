@@ -64,4 +64,5 @@ export interface DsheetProps {
   sheetEditorRef?: RefObject<WorkbookInstance>;
   storeApiKey?: (apiKeyName: string) => void;
   allowComments?: boolean;
+  onDataBlockApiResponse?: (dataBlockName: string) => void;
 }
