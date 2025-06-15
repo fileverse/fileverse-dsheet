@@ -40,10 +40,9 @@ export const useEditorData = (
     }
 
     try {
-      const newDoc = ydocRef.current;
       const uint8Array = toUint8Array(portalContent);
 
-      // Create a temporary doc to decode the update without affecting the current doc
+      // Create a temporary doc to decode the update.
       const tempDoc = new Y.Doc();
       Y.applyUpdate(tempDoc, uint8Array);
 
@@ -51,19 +50,20 @@ export const useEditorData = (
       const tempMap = tempDoc.getArray(dsheetId);
       const decodedSheetData = Array.from(tempMap) as Sheet[];
 
-      // Only proceed if we have valid data in the portal content
       if (decodedSheetData.length > 0) {
-        // Apply the update to the actual doc
+        // REPLACE instead of merge: Create a completely new document with portal content
+        const newDoc = new Y.Doc();
         Y.applyUpdate(newDoc, uint8Array);
+
+        // Replace the current document reference
+        ydocRef.current = newDoc;
+
         const map = newDoc.getArray(dsheetId);
         const newSheetData = Array.from(map) as Sheet[];
 
+
         // Update the current data reference
         currentDataRef.current = newSheetData;
-
-        // Mark data as initialized since we've loaded from portal content
-        dataInitialized.current = true;
-        setIsDataLoaded(true);
 
         // Always mark portal content as processed
         portalContentProcessed.current = true;
@@ -78,7 +78,7 @@ export const useEditorData = (
     } catch (error) {
       console.error('[DSheet] Error processing portal content:', error);
     }
-  }, [portalContent, dsheetId, ydocRef, isReadOnly]);
+  }, [portalContent]);
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
