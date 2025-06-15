@@ -29,6 +29,7 @@ interface AfterUpdateCellParams {
   | React.Dispatch<React.SetStateAction<string>>
   | undefined;
   storeApiKey?: (apiKeyName: string) => void;
+  onDataBlockApiResponse?: (dataBlockName: string) => void;
 }
 
 /**
@@ -243,6 +244,7 @@ const processRegularPromise = async (
     | 'sheetEditorRef'
     | 'dataBlockApiKeyHandler'
     | 'storeApiKey'
+    | 'onDataBlockApiResponse'
   >,
 ): Promise<void> => {
   try {
@@ -279,6 +281,8 @@ const processRegularPromise = async (
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
     params.storeApiKey?.(apiKeyName);
+    //after datablock api response is processed
+    params.onDataBlockApiResponse?.(formulaName as string);
   } catch (error) {
     console.error('Error processing regular promise:', error);
     handleStringResponse('Error processing data', params);

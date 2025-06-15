@@ -40,6 +40,9 @@ interface EditorWorkbookProps {
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
   storeApiKey?: (apiKeyName: string) => void;
+  onDataBlockApiResponse?: (dataBlockName: string) => void;
+  onDuneChartEmbed?: () => void;
+  onSheetCountChange?: (sheetCount: number) => void;
 }
 
 /**
@@ -61,6 +64,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
+  onDataBlockApiResponse,
+  onDuneChartEmbed,
+  onSheetCountChange,
 }) => {
   const {
     sheetEditorRef,
@@ -165,9 +171,12 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               dataBlockApiKeyHandler,
               storeApiKey,
               setInputFetchURLDataBlock,
+              onDataBlockApiResponse,
             });
           },
         }}
+        onDuneChartEmbed={onDuneChartEmbed}
+        onSheetCountChange={onSheetCountChange}
       />
     );
   }, [
