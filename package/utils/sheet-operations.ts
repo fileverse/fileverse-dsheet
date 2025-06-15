@@ -46,6 +46,8 @@ export const formatSheetData = (
       status: preSheetArray[index]?.status || sheet.status,
       order: preSheetArray[index]?.order || sheet.order,
       config: sheet.config,
+      dataVerification:
+        sheet.dataVerification || preSheetArray[index]?.dataVerification,
     };
     delete newSheet.data;
     return newSheet;

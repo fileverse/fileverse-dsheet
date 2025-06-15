@@ -25,6 +25,14 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         return true;
       }
 
+      // Check if data verification settings have changed
+      if (
+        JSON.stringify(oldSheet.dataVerification) !==
+        JSON.stringify(newSheet.dataVerification)
+      ) {
+        return true;
+      }
+
       // Check celldata changes
       const oldCellData = oldSheet?.celldata || [];
       const newCellData = newSheet?.celldata || [];
@@ -268,7 +276,6 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       if (oldSheetFreezeString !== newSheetFreezeString) {
         return true;
       }
-
     }
   }
 
