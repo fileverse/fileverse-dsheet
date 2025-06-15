@@ -20,7 +20,7 @@ export const getCustomToolbarItems = ({
   currentDataRef,
   setForceSheetRender,
   toggleTemplateSidebar,
-  setShowFetchURLModal,
+  // setShowFetchURLModal,
 }: {
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleCSVUpload: (
@@ -96,16 +96,7 @@ export const getCustomToolbarItems = ({
           color="blue"
         />
       ),
-      onClick: () => {
-        const selection = sheetEditorRef.current?.getSelection();
-        setShowFetchURLModal?.((prev) => {
-          if (selection && !prev) {
-            return true;
-          } else {
-            return false;
-          }
-        });
-      },
+      onClick: () => { },
     },
     {
       /*template-button is used in use xocument style */
@@ -121,14 +112,15 @@ export const getCustomToolbarItems = ({
         />
       ),
       onClick: () => {
-        const selection = sheetEditorRef.current?.getSelection();
-        setShowFetchURLModal?.((prev) => {
-          if (selection && !prev) {
-            return true;
-          } else {
-            return false;
-          }
-        });
+        return;
+        // const selection = sheetEditorRef.current?.getSelection();
+        // setShowFetchURLModal?.((prev) => {
+        //   if (selection && !prev) {
+        //     return true;
+        //   } else {
+        //     return false;
+        //   }
+        // });
       },
     },
     {
