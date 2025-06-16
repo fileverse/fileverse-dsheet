@@ -35,9 +35,9 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
 
       // Check if condition rules have changed
       if (
-        // @ts-expect-error later
+        // @ts-ignore
         JSON.stringify(oldSheet.conditionRules) !==
-        // @ts-expect-error later
+        // @ts-ignore
         JSON.stringify(newSheet.conditionRules)
       ) {
         return true;

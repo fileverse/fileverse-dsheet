@@ -58,7 +58,7 @@ export const formatSheetData = (
       dataVerification:
         sheet.dataVerification || preSheetArray[index]?.dataVerification,
       conditionRules:
-        // @ts-expect-error later
+        // @ts-ignore
         sheet.conditionRules || preSheetArray[index]?.conditionRules,
     };
     delete newSheet.data;
