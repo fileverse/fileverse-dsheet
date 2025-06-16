@@ -7,6 +7,7 @@ import * as Y from 'yjs';
 
 import { DEFAULT_SHEET_DATA, CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
+import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
 /**
  * Hook for managing sheet data
@@ -22,6 +23,8 @@ export const useEditorData = (
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
+  dataBlockCalcFunction?: Array<{ row: number, column: number, sheetId: string }>,
+  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, sheetId: string }>>>
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -218,6 +221,16 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       if (firstRender.current) {
+        let cachedDataBlockCalcFunction: { row: number, column: number, sheetId: string }[] = []
+        data.map((sheet) => {
+          // @ts-expect-error later
+          cachedDataBlockCalcFunction.push(...sheet.dataBlockCalcFunction);
+        });
+        setDataBlockCalcFunction?.([...cachedDataBlockCalcFunction]);
+        setTimeout(() => {
+          dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
+        }, 1000)
+
         firstRender.current = false;
         return;
       }
@@ -228,7 +241,7 @@ export const useEditorData = (
 
       // Set the flag to indicate we're in the process of updating YJS
       isUpdatingRef.current = true;
-      updateSheetData(ydocRef.current, dsheetId, data, sheetEditorRef.current);
+      updateSheetData(ydocRef.current, dsheetId, data, sheetEditorRef.current, dataBlockCalcFunction);
 
       // Reset the flag after a short delay to allow the update to complete
       setTimeout(() => {

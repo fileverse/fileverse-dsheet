@@ -61,7 +61,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -76,6 +76,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     forceSheetRender,
     setForceSheetRender,
     syncStatus,
+    dataBlockCalcFunction,
+    setDataBlockCalcFunction,
   } = useEditor();
 
   // Initialize XLSX import functionality
@@ -134,20 +136,20 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
@@ -172,6 +174,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               storeApiKey,
               setInputFetchURLDataBlock,
               onDataBlockApiResponse,
+              setDataBlockCalcFunction,
+              dataBlockCalcFunction,
             });
           },
         }}

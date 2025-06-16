@@ -8,7 +8,16 @@ export const updateSheetData = (
   dsheetId: string,
   data: Sheet[],
   sheetEditor: WorkbookInstance | null,
+  dataBlockCalcFunction?: Array<object>
 ) => {
+  if (dataBlockCalcFunction && dataBlockCalcFunction?.length > 0) {
+    data = data.map((sheet) => {
+      return {
+        ...sheet,
+        dataBlockCalcFunction
+      };
+    })
+  }
   if (!ydoc || !sheetEditor) {
     return;
   }

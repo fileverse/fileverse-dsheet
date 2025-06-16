@@ -4,6 +4,7 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 import { formulaResponseUiSync } from './formula-ui-sync';
 import { executeStringFunction } from './executeStringFunction';
+import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction'
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -30,6 +31,8 @@ interface AfterUpdateCellParams {
   | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
+  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, sheetId: string }>>>
+  dataBlockCalcFunction?: Array<object>
 }
 
 /**
@@ -408,6 +411,7 @@ export const afterUpdateCell = async (
     sheetEditorRef.current?.setCellValue(params.row, params.column, {
       ...newValue,
       m: newValue.v,
+      ct: { fa: '@', t: 's' },
     });
   }
 
@@ -418,5 +422,32 @@ export const afterUpdateCell = async (
   // Handle promise-based values
   if (newValue.m === PROMISE_OBJECT_STRING) {
     await handlePromiseValue(newValue, updatedParams);
+    // register dataBlockCalcFunction cell
+    if (params?.setDataBlockCalcFunction) {
+      params?.setDataBlockCalcFunction((dataBlockCalcFunction) => {
+        const newItem = {
+          row: params.row,
+          column: params.column,
+          sheetId: "6cdbd650-e077-4df4-9c83-1218a2c186af"
+        };
+
+        // Check if item already exists
+        const exists = dataBlockCalcFunction.some(item =>
+          item.row === newItem.row &&
+          item.column === newItem.column &&
+          item.sheetId === newItem.sheetId
+        );
+
+        if (exists) {
+          return dataBlockCalcFunction; // Return unchanged if duplicate
+        }
+
+        return [...dataBlockCalcFunction, newItem];
+      });
+    }
   }
+
+  const dataBlockCalcFunction = params?.dataBlockCalcFunction
+  // @ts-expect-error later
+  dataBlockCalcFunctionHandler({ dataBlockCalcFunction, sheetEditorRef })
 };

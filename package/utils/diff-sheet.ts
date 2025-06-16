@@ -276,6 +276,18 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       if (oldSheetFreezeString !== newSheetFreezeString) {
         return true;
       }
+
+      const oldSheetDataBlockCalcString = JSON.stringify(
+        // @ts-expect-error later
+        oldSheet?.dataBlockCalcFunction || {},
+      );
+      const newSheetDataBlockCalcString = JSON.stringify(
+        // @ts-expect-error later
+        newSheet?.dataBlockCalcFunction || {},
+      );
+      if (oldSheetDataBlockCalcString !== newSheetDataBlockCalcString) {
+        return true;
+      }
     }
   }
 
