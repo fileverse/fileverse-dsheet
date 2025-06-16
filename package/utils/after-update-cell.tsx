@@ -27,8 +27,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, sheetId: string }>>>
@@ -284,8 +284,6 @@ const processRegularPromise = async (
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
     params.storeApiKey?.(apiKeyName);
-    //after datablock api response is processed
-    params.onDataBlockApiResponse?.(formulaName as string);
   } catch (error) {
     console.error('Error processing regular promise:', error);
     handleStringResponse('Error processing data', params);
@@ -428,6 +426,8 @@ export const afterUpdateCell = async (
       updateDataCalcFunc({ params: updatedParams })
     }
 
+    const formulaName = newValue.f?.match(/^=([A-Z0-9_]+)\s*\(/)?.[1];
+    params.onDataBlockApiResponse?.(formulaName as string);
   }
 
   const dataBlockCalcFunction = params?.dataBlockCalcFunction

@@ -208,6 +208,7 @@ const SpreadsheetEditor = ({
   storeApiKey,
   onDuneChartEmbed,
   onSheetCountChange,
+  onDataBlockApiResponse,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -247,6 +248,7 @@ const SpreadsheetEditor = ({
         allowComments={allowComments}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
+        onDataBlockApiResponse={onDataBlockApiResponse}
       />
     </EditorProvider>
   );
