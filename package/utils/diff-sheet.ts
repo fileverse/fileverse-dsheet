@@ -33,6 +33,16 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         return true;
       }
 
+      // Check if condition rules have changed
+      if (
+        // @ts-expect-error later
+        JSON.stringify(oldSheet.conditionRules) !==
+        // @ts-expect-error later
+        JSON.stringify(newSheet.conditionRules)
+      ) {
+        return true;
+      }
+
       // Check celldata changes
       const oldCellData = oldSheet?.celldata || [];
       const newCellData = newSheet?.celldata || [];
