@@ -224,10 +224,13 @@ export const useEditorData = (
         let cachedDataBlockCalcFunction: { row: number, column: number, sheetId: string }[] = []
         data.map((sheet) => {
           // @ts-expect-error later
-          cachedDataBlockCalcFunction.push(...sheet.dataBlockCalcFunction);
+          if (!sheet.dataBlockCalcFunction) return
+          // @ts-expect-error later
+          cachedDataBlockCalcFunction?.push(...sheet.dataBlockCalcFunction);
         });
         setDataBlockCalcFunction?.([...cachedDataBlockCalcFunction]);
         setTimeout(() => {
+          // @ts-expect-error later
           dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
         }, 1000)
 
