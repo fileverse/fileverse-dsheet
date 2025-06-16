@@ -1,34 +1,36 @@
 import { useEffect } from 'react';
 
-export const useFortuneDocumentStyle = (
-  {
-    exportDropdownOpen = false,
-    isTemplateOpen = false,
-    isReadOnly = false,
-    loading = false
-  }:
-    {
-      exportDropdownOpen: boolean,
-      isTemplateOpen: boolean | undefined,
-      isReadOnly: boolean | undefined,
-      loading: boolean
-    }
-) => {
+export const useFortuneDocumentStyle = ({
+  exportDropdownOpen = false,
+  isTemplateOpen = false,
+  isReadOnly = false,
+  loading = false,
+}: {
+  exportDropdownOpen: boolean;
+  isTemplateOpen: boolean | undefined;
+  isReadOnly: boolean | undefined;
+  loading: boolean;
+}) => {
   // this effect is used to change the background color of the template and export buttons
   useEffect(() => {
     //return
     const updateTemplateButtonBackgroundColor = () => {
-      const templateButton =
-        document.getElementsByClassName('template-button')[0] as HTMLElement | null;
+      const templateButton = document.getElementsByClassName(
+        'template-button',
+      )[0] as HTMLElement | null;
       if (templateButton) {
         templateButton.style.backgroundColor = isTemplateOpen ? '#FFDE0A' : '';
       }
     };
 
     const updateExportButtonBackgroundColor = () => {
-      const exportButton = document.getElementsByClassName('export-button')[0] as HTMLElement | null;
+      const exportButton = document.getElementsByClassName(
+        'export-button',
+      )[0] as HTMLElement | null;
       if (exportButton) {
-        exportButton.style.backgroundColor = exportDropdownOpen ? '#FFDE0A' : '';
+        exportButton.style.backgroundColor = exportDropdownOpen
+          ? '#FFDE0A'
+          : '';
       }
     };
 
@@ -42,25 +44,33 @@ export const useFortuneDocumentStyle = (
     };
   }, [exportDropdownOpen, isTemplateOpen]);
 
-
   useEffect(() => {
     if (isReadOnly && loading) {
       // Select all elements with the class "luckysheet-sheets-item-name"
-      const targetElements = document.querySelectorAll('.luckysheet-sheets-item-name');
+      const targetElements = document.querySelectorAll(
+        '.luckysheet-sheets-item-name',
+      );
 
       // Create a MutationObserver callback function
       const observerCallback = (mutationsList: MutationRecord[]) => {
-        for (let mutation of mutationsList) {
-          if (mutation.type === 'attributes' && mutation.attributeName === 'contenteditable') {
-            const element = mutation.target as HTMLElement;  // Type the target as HTMLElement
+        for (const mutation of mutationsList) {
+          if (
+            mutation.type === 'attributes' &&
+            mutation.attributeName === 'contenteditable'
+          ) {
+            const element = mutation.target as HTMLElement; // Type the target as HTMLElement
             const oldValue = mutation.oldValue;
 
-            console.log(`contenteditable changed from '${oldValue}' to '${element.contentEditable}'`);
+            console.log(
+              `contenteditable changed from '${oldValue}' to '${element.contentEditable}'`,
+            );
 
             // If contenteditable was set to true, force it back to false
             if (element.contentEditable === 'true') {
-              console.log('Attempted to set contenteditable to true, forcing it to false.');
-              element.contentEditable = 'false';  // Force it back to false
+              console.log(
+                'Attempted to set contenteditable to true, forcing it to false.',
+              );
+              element.contentEditable = 'false'; // Force it back to false
             }
           }
         }
@@ -72,12 +82,32 @@ export const useFortuneDocumentStyle = (
       // Set up the observer to watch for changes to contenteditable
       targetElements.forEach((element) => {
         observer.observe(element, {
-          attributes: true,          // Watch for changes to attributes
-          attributeOldValue: true    // Track the old value of attributes
+          attributes: true, // Watch for changes to attributes
+          attributeOldValue: true, // Track the old value of attributes
         });
       });
-
     }
   }, [isReadOnly, loading]);
 
+  useEffect(() => {
+    const styleId = 'readonly-pointer-events-style';
+    let styleTag = document.getElementById(styleId);
+
+    if (isReadOnly) {
+      if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = styleId;
+        styleTag.innerHTML = `
+          #luckysheet-modal-dialog-activeImage {
+            pointer-events: none !important;
+          }
+        `;
+        document.head.appendChild(styleTag);
+      }
+    } else {
+      if (styleTag) {
+        styleTag.remove();
+      }
+    }
+  }, [isReadOnly]);
 };
