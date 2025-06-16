@@ -151,7 +151,6 @@ export const useXLSXImport = ({
             }
             const sheetArray = ydocRef.current.getArray(dsheetId);
             ydocRef.current.transact(() => {
-              sheetArray.delete(0, sheetArray.length);
               sheetArray.insert(0, sheets);
               currentDataRef.current = sheets;
             });

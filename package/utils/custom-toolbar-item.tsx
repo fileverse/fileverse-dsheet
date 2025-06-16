@@ -29,6 +29,7 @@ export const getCustomToolbarItems = ({
     setForceSheetRender: React.Dispatch<React.SetStateAction<number>>,
     dsheetId: string,
     currentDataRef: React.MutableRefObject<object | null>,
+    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   ) => void;
   handleXLSXUpload: React.ChangeEventHandler<HTMLInputElement>;
   handleExportToXLSX: (
@@ -51,90 +52,91 @@ export const getCustomToolbarItems = ({
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
   setShowFetchURLModal:
-  | React.Dispatch<React.SetStateAction<boolean>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<boolean>>
+    | undefined;
 }) => [
-    {
-      key: 'import-export',
-      tooltip: 'Import/Export',
-      onClick: () => {
-        setExportDropdownOpen((prev) => !prev);
-      },
-      icon: (
-        <CustomButton
-          setExportDropdownOpen={setExportDropdownOpen}
-          handleCSVUpload={(event) =>
-            handleCSVUpload(
-              event,
-              ydocRef.current,
-              setForceSheetRender,
-              dsheetId,
-              currentDataRef,
-            )
-          }
-          handleXLSXUpload={handleXLSXUpload}
-          handleExportToXLSX={() =>
-            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
-          }
-          handleExportToCSV={() =>
-            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
-          }
-          handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
-        />
-      ),
+  {
+    key: 'import-export',
+    tooltip: 'Import/Export',
+    onClick: () => {
+      setExportDropdownOpen((prev) => !prev);
     },
-    {
-      /*template-button is used in use xocument style */
-      key: 'ethereum',
-      tooltip: 'Crypto denominations: Coming soon',
-      icon: (
-        <IconButton
-          className=" !min-w-[30px] w-[30px] h-[30px] !px-0 rounded-lg bg-[#E8EBEC] hover:bg-[#E8EBEC]"
-          icon="Ethereum"
-          size="md"
-          variant="ghost"
-          color="blue"
-        />
-      ),
-      onClick: () => { },
+    icon: (
+      <CustomButton
+        setExportDropdownOpen={setExportDropdownOpen}
+        handleCSVUpload={(event) =>
+          handleCSVUpload(
+            event,
+            ydocRef.current,
+            setForceSheetRender,
+            dsheetId,
+            currentDataRef,
+            sheetEditorRef,
+          )
+        }
+        handleXLSXUpload={handleXLSXUpload}
+        handleExportToXLSX={() =>
+          handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+        }
+        handleExportToCSV={() =>
+          handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+        }
+        handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
+      />
+    ),
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'ethereum',
+    tooltip: 'Crypto denominations: Coming soon',
+    icon: (
+      <IconButton
+        className=" !min-w-[30px] w-[30px] h-[30px] !px-0 rounded-lg bg-[#E8EBEC] hover:bg-[#E8EBEC]"
+        icon="Ethereum"
+        size="md"
+        variant="ghost"
+        color="blue"
+      />
+    ),
+    onClick: () => {},
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'fetch-url',
+    tooltip: 'Fetch data: Coming soon',
+    icon: (
+      <IconButton
+        className="fetch-url-button !min-w-[30px] w-[30px] h-[30px] !px-0 bg-[#1977E42E] hover:!bg-[#1977E42E] rounded-lg"
+        icon="FetchData"
+        size="md"
+        variant="ghost"
+        color="blue"
+      />
+    ),
+    onClick: () => {
+      return;
+      // const selection = sheetEditorRef.current?.getSelection();
+      // setShowFetchURLModal?.((prev) => {
+      //   if (selection && !prev) {
+      //     return true;
+      //   } else {
+      //     return false;
+      //   }
+      // });
     },
-    {
-      /*template-button is used in use xocument style */
-      key: 'fetch-url',
-      tooltip: 'Fetch data: Coming soon',
-      icon: (
-        <IconButton
-          className="fetch-url-button !min-w-[30px] w-[30px] h-[30px] !px-0 bg-[#1977E42E] hover:!bg-[#1977E42E] rounded-lg"
-          icon="FetchData"
-          size="md"
-          variant="ghost"
-          color="blue"
-        />
-      ),
-      onClick: () => {
-        return;
-        // const selection = sheetEditorRef.current?.getSelection();
-        // setShowFetchURLModal?.((prev) => {
-        //   if (selection && !prev) {
-        //     return true;
-        //   } else {
-        //     return false;
-        //   }
-        // });
-      },
-    },
-    {
-      /*template-button is used in use xocument style */
-      key: 'templates',
-      tooltip: 'Templates',
-      icon: (
-        <IconButton
-          className="!min-w-[30px] w-[30px] h-[30px] !px-0 template-button text-[#CF1C82] bg-[#CF1C821F] rounded-lg hover:!bg-[#CF1C821F] "
-          icon="LayoutTemplate"
-          size="md"
-          variant="ghost"
-        />
-      ),
-      onClick: toggleTemplateSidebar,
-    },
-  ];
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'templates',
+    tooltip: 'Templates',
+    icon: (
+      <IconButton
+        className="!min-w-[30px] w-[30px] h-[30px] !px-0 template-button text-[#CF1C82] bg-[#CF1C821F] rounded-lg hover:!bg-[#CF1C821F] "
+        icon="LayoutTemplate"
+        size="md"
+        variant="ghost"
+      />
+    ),
+    onClick: toggleTemplateSidebar,
+  },
+];
