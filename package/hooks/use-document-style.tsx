@@ -98,7 +98,10 @@ export const useFortuneDocumentStyle = ({
         styleTag = document.createElement('style');
         styleTag.id = styleId;
         styleTag.innerHTML = `
-          #luckysheet-modal-dialog-activeImage {
+          #luckysheet-modal-dialog-activeImage,
+          .luckysheet-modal-dialog-iframe,
+          .luckysheet-modal-dialog-image,
+          #fortune-iframe-boxes {
             pointer-events: none !important;
           }
         `;
