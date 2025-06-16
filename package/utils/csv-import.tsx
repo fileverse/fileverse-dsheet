@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import { Sheet } from '@fileverse-dev/fortune-core';
 import React from 'react';
 import * as Y from 'yjs';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 export const handleCSVUpload = (
   event: React.ChangeEvent<HTMLInputElement>,
@@ -9,6 +10,7 @@ export const handleCSVUpload = (
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>,
   dsheetId: string,
   currentDataRef: React.MutableRefObject<object | null>,
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
 ) => {
   const input = event.target;
   if (!input.files?.length) {
@@ -77,9 +79,10 @@ export const handleCSVUpload = (
                 v: {
                   // @ts-expect-error later
                   m:
-                    (row as Record<string, string | null>)[header] !==
-                      null
-                      ? (row as Record<string, string | null>)[header]?.toString()
+                    (row as Record<string, string | null>)[header] !== null
+                      ? (row as Record<string, string | null>)[
+                          header
+                        ]?.toString()
                       : null,
                   ct: {
                     fa: 'General',
@@ -88,8 +91,10 @@ export const handleCSVUpload = (
                   // @ts-expect-error later
                   v:
                     (row as Record<string, string | number | null>)[header] !==
-                      null
-                      ? (row as Record<string, string | number | null>)[header]?.toString()
+                    null
+                      ? (row as Record<string, string | number | null>)[
+                          header
+                        ]?.toString()
                       : null,
                 },
               });
@@ -101,29 +106,40 @@ export const handleCSVUpload = (
           // Create sheet object in fortune-sheet format
           const rowCount = maxRow + 1 < 500 ? 500 : maxRow + 1;
           const colCount = maxCol + 1 < 36 ? 36 : maxCol + 1;
-          const sheetObject = {
-            name: file.name || 'Sheet1',
-            celldata: [, ...cellData],
-            row: rowCount,
-            column: colCount,
-            status: 1,
-            order: 0,
-            config: {
-              merge: {}, // No merge cells for CSV by default
-            },
-          };
 
           if (!ydoc) {
             console.error('ydocRef.current is null');
             return;
           }
+
           const sheetArray = ydoc.getArray(dsheetId);
+          const data = Array.from(sheetArray) as Sheet[];
+
+          const sheetObject = {
+            name: file.name || 'Sheet1',
+            celldata: [...cellData],
+            row: rowCount,
+            column: colCount,
+            status: 1,
+            order: data.length,
+            config: {
+              merge: {}, // No merge cells for CSV by default
+            },
+          };
+
+          const finalData = [...data, sheetObject as Sheet];
           ydoc.transact(() => {
             sheetArray.delete(0, sheetArray.length);
-            sheetArray.insert(0, [sheetObject]);
-            currentDataRef.current = [sheetObject as Sheet];
+            sheetArray.insert(0, finalData);
+
+            currentDataRef.current = finalData;
           });
           setForceSheetRender((prev: number) => prev + 1);
+          setTimeout(() => {
+            sheetEditorRef.current?.activateSheet({
+              index: finalData.length - 1,
+            });
+          }, 100);
         },
       });
     }
