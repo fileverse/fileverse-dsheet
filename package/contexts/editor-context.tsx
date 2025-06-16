@@ -18,6 +18,8 @@ import { SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  dataBlockCalcFunction: Array<object>;
+  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, sheetId: string }>>>
   // Core refs
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
   ydocRef: React.MutableRefObject<Y.Doc | null>;
@@ -81,6 +83,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
   const sheetEditorRef = externalEditorRef || internalEditorRef;
+  const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<Array<{ row: number, column: number, sheetId: string }>>([]);
 
   // Initialize YJS document and persistence
   const { ydocRef, persistenceRef, syncStatus, isSyncedRef } = useEditorSync(
@@ -117,7 +120,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isReadOnly,
     handleOnChange,
     syncStatus,
-    commentData
+    commentData,
+    dataBlockCalcFunction,
+    setDataBlockCalcFunction
   );
 
   // Initialize collaboration
@@ -148,6 +153,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   // Create the context value
   const contextValue: EditorContextType = {
+    dataBlockCalcFunction,
+    setDataBlockCalcFunction,
     sheetEditorRef,
     ydocRef,
     persistenceRef,

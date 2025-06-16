@@ -35,7 +35,9 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
 
       // Check if condition rules have changed
       if (
+        // @ts-ignore
         JSON.stringify(oldSheet.conditionRules) !==
+        // @ts-ignore
         JSON.stringify(newSheet.conditionRules)
       ) {
         return true;
@@ -282,6 +284,18 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       const oldSheetFreezeString = JSON.stringify(oldSheet?.frozen || {});
       const newSheetFreezeString = JSON.stringify(newSheet?.frozen || {});
       if (oldSheetFreezeString !== newSheetFreezeString) {
+        return true;
+      }
+
+      const oldSheetDataBlockCalcString = JSON.stringify(
+        // @ts-expect-error later
+        oldSheet?.dataBlockCalcFunction || {},
+      );
+      const newSheetDataBlockCalcString = JSON.stringify(
+        // @ts-expect-error later
+        newSheet?.dataBlockCalcFunction || {},
+      );
+      if (oldSheetDataBlockCalcString !== newSheetDataBlockCalcString) {
         return true;
       }
     }

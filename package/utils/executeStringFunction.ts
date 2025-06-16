@@ -1,3 +1,4 @@
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 /**
  * Dynamically executes a function from a string representation
  *
@@ -6,13 +7,14 @@
  */
 export const executeStringFunction = async (
   functionCallString: string,
+  sheetEditorRef?: React.RefObject<WorkbookInstance | null>,
 ): Promise<unknown> => {
   try {
     // Dynamically import the module
     const module = await import('@fileverse-dev/formulajs');
 
     // Extract function name and full argument string
-    const functionMatch = functionCallString.match(/^(\w+)\((.*)\)$/);
+    const functionMatch = functionCallString?.match(/^(\w+)\((.*)\)$/);
     if (!functionMatch) {
       throw new Error(`Invalid function call format: ${functionCallString}`);
     }
@@ -21,7 +23,29 @@ export const executeStringFunction = async (
     const argsString = functionMatch[2]; // The entire argument string
 
     // Parse the arguments, respecting nested structures
-    const args = parseArguments(argsString);
+    const ar = parseArguments(argsString);
+
+    //@ts-expect-error later
+    const args = ar.map((arg: string) => {
+      if (isCellRangeReference(arg)) {
+        const cells = cellRangeToRowCol(arg);
+        const values = cells?.map((cell) => {
+          return sheetEditorRef?.current?.getCellValue(cell?.row, cell?.column);
+        })
+        return values;
+      }
+      if (isCellReference(arg)) {
+        const cell = cellReferenceToRowCol(arg);
+        // @ts-expect-error later
+        const value = sheetEditorRef?.current?.getCellValue(cell?.row, cell?.column);
+        return value;
+      }
+      return arg;
+    });
+
+    console.log('args in util exce', args);
+
+
 
     // Check if the function exists in the imported module
     // @ts-expect-error later
@@ -45,7 +69,7 @@ export const executeStringFunction = async (
  * @param argsString - String containing function arguments
  * @returns {any[]} - Array of parsed arguments with appropriate types
  */
-function parseArguments(
+export function parseArguments(
   argsString: string,
 ): (string | number | boolean | object | [] | null | undefined)[] {
   if (!argsString.trim()) {
@@ -164,3 +188,117 @@ function evaluateArg(
   // Default: return as-is
   return arg;
 }
+
+
+// ==================
+
+
+/**
+ * Checks if a string is a valid cell reference (e.g., A1, B2, AA10, etc.)
+ * @param {string} str - The string to check
+ * @returns {boolean} - True if it's a valid cell reference, false otherwise
+ */
+export function isCellReference(str: string) {
+  if (!str || typeof str !== 'string') {
+    return false;
+  }
+
+  // Regex pattern: starts with one or more capital letters, followed by one or more digits
+  const cellReferencePattern = /^[A-Z]+\d+$/;
+  return cellReferencePattern.test(str);
+}
+
+/**
+ * Checks if a string is a valid cell range reference (e.g., A1:B2, A1:A10, etc.)
+ * @param {string} str - The string to check
+ * @returns {boolean} - True if it's a valid cell range reference, false otherwise
+ */
+export function isCellRangeReference(str: string) {
+  if (!str || typeof str !== 'string') {
+    return false;
+  }
+
+  // Check if it contains a colon
+  if (!str.includes(':')) {
+    return false;
+  }
+
+  // Split by colon and check if both parts are valid cell references
+  const parts = str.split(':');
+  if (parts.length !== 2) {
+    return false;
+  }
+
+  return isCellReference(parts[0]) && isCellReference(parts[1]);
+}
+
+/**
+ * Converts a cell reference (e.g., A1, B2, AA10) to row and column numbers
+ * @param {string} cellRef - The cell reference string (e.g., "A1", "B2")
+ * @returns {Object|null} - Object with row and column properties, or null if invalid
+ */
+export function cellReferenceToRowCol(cellRef: string) {
+  if (!isCellReference(cellRef)) {
+    return null;
+  }
+
+  // Split the string into letters and numbers
+  const match = cellRef.match(/^([A-Z]+)(\d+)$/);
+  if (!match) {
+    return null;
+  }
+
+  const columnStr = match[1];
+  const rowStr = match[2];
+
+  // Convert column letters to column number (0-based)
+  let column = 0;
+  for (let i = 0; i < columnStr.length; i++) {
+    const charCode = columnStr.charCodeAt(i) - 65; // A=0, B=1, etc.
+    column = column * 26 + charCode;
+  }
+
+  // Convert row string to row number (0-based)
+  const row = parseInt(rowStr, 10) - 1; // 1-based to 0-based
+
+  return {
+    row: row,
+    column: column
+  };
+}
+
+/**
+ * Converts a cell range reference (e.g., A1:B2) to an array of all cells in the range
+ * @param {string} rangeRef - The range reference string (e.g., "A1:B2", "A4:B4")
+ * @returns {Array|null} - Array of objects with row and column properties, or null if invalid
+ */
+export function cellRangeToRowCol(rangeRef: string) {
+  if (!isCellRangeReference(rangeRef)) {
+    return null;
+  }
+
+  const parts = rangeRef.split(':');
+  const startCell = cellReferenceToRowCol(parts[0]);
+  const endCell = cellReferenceToRowCol(parts[1]);
+
+  if (!startCell || !endCell) {
+    return null;
+  }
+
+  // Determine the actual start and end (in case the range is specified backwards)
+  const minRow = Math.min(startCell.row, endCell.row);
+  const maxRow = Math.max(startCell.row, endCell.row);
+  const minColumn = Math.min(startCell.column, endCell.column);
+  const maxColumn = Math.max(startCell.column, endCell.column);
+
+  // Generate array of all cells in the range
+  const cells = [];
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let column = minColumn; column <= maxColumn; column++) {
+      cells.push({ row, column });
+    }
+  }
+
+  return cells;
+}
+

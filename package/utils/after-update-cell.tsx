@@ -3,7 +3,8 @@ import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 import { formulaResponseUiSync } from './formula-ui-sync';
-import { executeStringFunction } from './executeStringFunction';
+import { executeStringFunction, parseArguments, isCellReference, isCellRangeReference, cellRangeToRowCol, cellReferenceToRowCol } from './executeStringFunction';
+import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction'
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -30,6 +31,8 @@ interface AfterUpdateCellParams {
   | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
+  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, sheetId: string }>>>
+  dataBlockCalcFunction?: Array<object>
 }
 
 /**
@@ -408,6 +411,7 @@ export const afterUpdateCell = async (
     sheetEditorRef.current?.setCellValue(params.row, params.column, {
       ...newValue,
       m: newValue.v,
+      ct: { fa: '@', t: 's' },
     });
   }
 
@@ -418,5 +422,85 @@ export const afterUpdateCell = async (
   // Handle promise-based values
   if (newValue.m === PROMISE_OBJECT_STRING) {
     await handlePromiseValue(newValue, updatedParams);
+
+    // register dataBlockCalcFunction cell
+    if (params?.dataBlockCalcFunction) {
+      updateDataCalcFunc({ params: updatedParams })
+    }
+
   }
+
+  const dataBlockCalcFunction = params?.dataBlockCalcFunction
+  // @ts-expect-error later
+  dataBlockCalcFunctionHandler({ dataBlockCalcFunction, sheetEditorRef, currentRow: params.row, currentColumn: params.column })
 };
+
+// add new entry for new data block refernce
+const updateDataCalcFunc = ({ params }: { params: AfterUpdateCellParams }) => {
+  params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
+    console.log("newItem", params.newValue);
+    const formulaString = params.newValue.f?.split('=')[1];
+
+    const functionMatch = formulaString?.match(/^(\w+)\((.*)\)$/);
+    if (!functionMatch) {
+      throw new Error(`Invalid function call format: ${formulaString}`);
+    }
+
+    const argsString = functionMatch[2]; // The entire argument string
+
+    // Parse the arguments, respecting nested structures
+    const ar = parseArguments(argsString);
+
+    //@ts-expect-error later
+    let args = ar.filter((arg: string) => {
+      if (isCellRangeReference(arg)) {
+        return cellRangeToRowCol(arg);
+      }
+      if (isCellReference(arg)) {
+        return cellReferenceToRowCol(arg);
+      }
+      return false;
+      // @ts-expect-error later
+    }).map((arg: string) => {
+      if (isCellRangeReference(arg)) {
+        return cellRangeToRowCol(arg);
+      }
+      if (isCellReference(arg)) {
+        return cellReferenceToRowCol(arg);
+      }
+      return false;
+    });
+
+    args = args.flat();
+
+    // @ts-expect-error later
+    const rowRefrenced = args.map(item => item.row);
+    // @ts-expect-error later
+    const columnRefrenced = args.map(item => item.column);
+
+    const newItem = {
+      row: params.row,
+      column: params.column,
+      sheetId: "6cdbd650-e077-4df4-9c83-1218a2c186af",
+      rowRefrenced,
+      columnRefrenced,
+    };
+
+    // Find existing item index
+    const existingIndex = dataBlockCalcFunction.findIndex(item =>
+      item.row === newItem.row &&
+      item.column === newItem.column &&
+      item.sheetId === newItem.sheetId
+    );
+
+    if (existingIndex !== -1) {
+      // Update existing item
+      const updatedArray = [...dataBlockCalcFunction];
+      updatedArray[existingIndex] = newItem;
+      return updatedArray;
+    }
+
+    // Add new item if it doesn't exist
+    return [...dataBlockCalcFunction, newItem];
+  });
+}
