@@ -48,6 +48,8 @@ export const formatSheetData = (
       config: sheet.config,
       dataVerification:
         sheet.dataVerification || preSheetArray[index]?.dataVerification,
+      conditionRules:
+        sheet.conditionRules || preSheetArray[index]?.conditionRules,
     };
     delete newSheet.data;
     return newSheet;
