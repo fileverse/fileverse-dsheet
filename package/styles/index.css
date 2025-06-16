@@ -6,6 +6,7 @@
 @tailwind utilities;
 
 @layer base {
+
   ul,
   ol {
     list-style: revert;
@@ -46,6 +47,7 @@ body {
 }
 
 .fortune-read-only {
+
   .luckysheet-rich-text-editor,
   .luckysheet-sheets-item-function,
   .fortune-sheettab-button,
@@ -68,9 +70,12 @@ body {
   }
 
   /* Hide edit and remove buttons in link toolbar but keep "Open link" */
-  .fortune-link-modify-modal.link-toolbar
-    .fortune-toolbar-button:not(:first-child) {
+  .fortune-link-modify-modal.link-toolbar .fortune-toolbar-button:not(:first-child) {
     display: none !important;
+  }
+
+  .luckysheet-sheets-item {
+    pointer-events: none;
   }
 }
 

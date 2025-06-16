@@ -7,7 +7,7 @@ import * as Y from 'yjs';
 
 import { DEFAULT_SHEET_DATA, CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
-import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
+// import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
 /**
  * Hook for managing sheet data
@@ -229,10 +229,11 @@ export const useEditorData = (
           cachedDataBlockCalcFunction?.push(...sheet.dataBlockCalcFunction);
         });
         setDataBlockCalcFunction?.([...cachedDataBlockCalcFunction]);
-        setTimeout(() => {
-          // @ts-expect-error later
-          dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
-        }, 1000)
+        /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
+        // setTimeout(() => {
+        //   // @ts-expect-error later
+        //   dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
+        // }, 1000)
 
         firstRender.current = false;
         return;
