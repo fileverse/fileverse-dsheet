@@ -15,7 +15,7 @@ export const dataBlockCalcFunctionHandler = ({ dataBlockCalcFunction, sheetEdito
   if (dataBlockCalcFunction && dataBlockCalcFunction?.length > 0) {
     dataBlockCalcFunction.forEach((dataBlock: { row: number, column: number }) => {
       // @ts-expect-error later
-      const isCurrentIncludedInReference = dataBlock.rowRefrenced.includes(currentRow) && dataBlock.columnRefrenced.includes(currentColumn) && dataBlock.formulaName.includes(currentFormulaName);
+      const isCurrentIncludedInReference = dataBlock?.rowRefrenced?.includes(currentRow) && dataBlock.columnRefrenced?.includes(currentColumn) && dataBlock.formulaName?.includes(currentFormulaName);
       if (!isCurrentIncludedInReference) return
       //@ts-expect-error later
       const dataBlockValue = sheetEditorRef?.current?.getSheet().data[dataBlock.row][dataBlock.column]
