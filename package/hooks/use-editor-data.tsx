@@ -23,8 +23,8 @@ export const useEditorData = (
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
-  dataBlockCalcFunction?: Array<{ row: number, column: number, sheetId: string }>,
-  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, sheetId: string }>>>
+  dataBlockCalcFunction?: Array<{ row: number, column: number }>,
+  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, }>>>
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -221,7 +221,7 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       if (firstRender.current) {
-        let cachedDataBlockCalcFunction: { row: number, column: number, sheetId: string }[] = []
+        let cachedDataBlockCalcFunction: { row: number, column: number }[] = []
         data.map((sheet) => {
           // @ts-expect-error later
           if (!sheet.dataBlockCalcFunction) return
