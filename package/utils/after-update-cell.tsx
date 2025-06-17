@@ -34,14 +34,12 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
-    React.SetStateAction<
-      Array<{ row: number; column: number; }>
-    >
+    React.SetStateAction<Array<{ row: number; column: number }>>
   >;
   dataBlockCalcFunction?: Array<object>;
 }
@@ -288,7 +286,7 @@ const processRegularPromise = async (
       if (!data.length) {
         params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
           ...params.newValue,
-          m: data,
+          m: 'No Data',
         });
       } else {
         // @ts-ignore
@@ -514,9 +512,7 @@ const updateDataCalcFunc = ({ params }: { params: AfterUpdateCellParams }) => {
 
     // Find existing item index
     const existingIndex = dataBlockCalcFunction.findIndex(
-      (item) =>
-        item.row === newItem.row &&
-        item.column === newItem.column
+      (item) => item.row === newItem.row && item.column === newItem.column,
     );
 
     if (existingIndex !== -1) {
