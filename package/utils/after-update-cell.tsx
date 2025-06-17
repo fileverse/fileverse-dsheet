@@ -365,7 +365,7 @@ const adjustRowHeight = ({
   row,
 }: AdjustRowHeightParams): void => {
   // Early return if no cell text content
-  if (!newValue?.ct?.s?.[0]?.v) {
+  if (!newValue?.ct?.s?.[0]?.v || newValue?.ct?.s?.[0]?.v === '\r\n') {
     return;
   }
 
