@@ -44,13 +44,23 @@ export const useApplyTemplatesBtn = ({
         });
       }, 100);
       setDataBlockCalcFunction((prev) => {
-        let returnValue;
-        if (prev?.length > 0) {
-          // @ts-expect-error later
-          returnValue = [...prev, ...templateData[0].dataBlockCalcFunction]
-          // @ts-expect-error later
-        } else { returnValue = [...templateData[0].dataBlockCalcFunction] }
-        return returnValue
+        // @ts-expect-error later
+        let returnValue = [];
+
+        // @ts-expect-error late
+        if (Array.isArray(templateData[0]?.dataBlockCalcFunction)) {
+          if (prev?.length > 0) {
+            // @ts-expect-error later
+            returnValue = [...prev, ...templateData[0].dataBlockCalcFunction];
+          } else {
+            // @ts-expect-error later
+            returnValue = [...templateData[0].dataBlockCalcFunction];
+          }
+        } else {
+          returnValue = [];
+        }
+        // @ts-expect-error later  
+        return returnValue;
       });
     }
   }, [selectedTemplate]);
