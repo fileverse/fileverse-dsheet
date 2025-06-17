@@ -11,6 +11,7 @@ export const useApplyTemplatesBtn = ({
   currentDataRef,
   setForceSheetRender,
   sheetEditorRef,
+  setDataBlockCalcFunction,
 }: {
   selectedTemplate: string | undefined;
   ydocRef: React.RefObject<Y.Doc | null>;
@@ -18,6 +19,7 @@ export const useApplyTemplatesBtn = ({
   currentDataRef: React.MutableRefObject<object | null>;
   setForceSheetRender: Dispatch<SetStateAction<number>>;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number }>>>
 }) => {
   useEffect(() => {
     if (!selectedTemplate) return;
@@ -41,6 +43,15 @@ export const useApplyTemplatesBtn = ({
           index: finalData.length - 1,
         });
       }, 100);
+      setDataBlockCalcFunction((prev) => {
+        let returnValue;
+        if (prev?.length > 0) {
+          // @ts-expect-error later
+          returnValue = [...prev, ...templateData[0].dataBlockCalcFunction]
+          // @ts-expect-error later
+        } else { returnValue = [...templateData[0].dataBlockCalcFunction] }
+        return returnValue
+      });
     }
   }, [selectedTemplate]);
 };

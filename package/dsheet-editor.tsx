@@ -84,6 +84,7 @@ const EditorContent = ({
     currentDataRef,
     ydocRef,
     setForceSheetRender,
+    setDataBlockCalcFunction,
   } = useEditor();
 
   // Initialize template button functionality
@@ -94,6 +95,7 @@ const EditorContent = ({
     currentDataRef,
     setForceSheetRender,
     sheetEditorRef,
+    setDataBlockCalcFunction,
   });
 
   // Apply custom styling based on dropdown and template states

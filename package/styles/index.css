@@ -74,9 +74,6 @@ body {
     display: none !important;
   }
 
-  .luckysheet-sheets-item {
-    pointer-events: none;
-  }
 }
 
 .fortune-tooltip {
