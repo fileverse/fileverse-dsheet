@@ -8,7 +8,6 @@ export const CustomButton = ({
   setExportDropdownOpen,
   handleCSVUpload,
   handleXLSXUpload,
-  handleExportToXLSX,
   handleExportToCSV,
   handleExportToJSON,
 }: {
@@ -25,7 +24,10 @@ export const CustomButton = ({
         setExportDropdownOpen(open);
       }}
     >
-      <PopoverTrigger className='hover:bg-red' style={{ backgroundColor: "red!important" }}>
+      <PopoverTrigger
+        className="hover:bg-red"
+        style={{ backgroundColor: 'red!important' }}
+      >
         {/* export-button is used in use xocument style */}
         <IconButton
           className="export-button hover:bg-red"
@@ -54,13 +56,13 @@ export const CustomButton = ({
             <span className="text-body-sm">Export to .json</span>
           </button>
 
-          <button
+          {/* <button
             onClick={() => handleExportToXLSX()}
             className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
             <span className="text-body-sm">Export to .xlsx</span>
-          </button>
+          </button> */}
 
           <button
             onClick={() => handleExportToCSV()}
