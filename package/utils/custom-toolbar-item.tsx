@@ -44,6 +44,8 @@ export const getCustomToolbarItems = ({
   ) => void;
   handleExportToJSON: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+    ydocRef: React.RefObject<Y.Doc | null>,
+    dsheetId: string
   ) => void;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
@@ -81,7 +83,7 @@ export const getCustomToolbarItems = ({
           handleExportToCSV={() =>
             handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
           }
-          handleExportToJSON={() => handleExportToJSON(sheetEditorRef)}
+          handleExportToJSON={() => handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)}
         />
       ),
     },
