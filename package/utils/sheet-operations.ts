@@ -22,10 +22,14 @@ export const updateSheetData = (
     return;
   }
 
+
   const sheetArray = ydoc.getArray(dsheetId);
   const preSheetArray = Array.from(sheetArray) as Sheet[];
 
   const formattedData = formatSheetData(data, preSheetArray, sheetEditor);
+
+  console.log('updateSheetData', data, isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], formattedData));
+
 
   // Only update YJS if there's an actual change
   if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], formattedData)) {
