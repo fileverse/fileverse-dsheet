@@ -211,6 +211,7 @@ const SpreadsheetEditor = ({
   onDuneChartEmbed,
   onSheetCountChange,
   onDataBlockApiResponse,
+  isAuthorized
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -226,6 +227,7 @@ const SpreadsheetEditor = ({
       externalEditorRef={externalSheetEditorRef}
       isCollaborative={isCollaborative}
       commentData={commentData}
+      isAuthorized={isAuthorized}
     >
       <EditorContent
         commentData={commentData}

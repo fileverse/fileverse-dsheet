@@ -61,7 +61,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -78,6 +78,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     syncStatus,
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
+    isAuthorized,
   } = useEditor();
 
   // Initialize XLSX import functionality
@@ -117,6 +118,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     return (
       // @ts-ignore
       <Workbook
+        isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
         data={data}
@@ -136,20 +138,20 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
@@ -196,5 +198,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     commentData,
     syncStatus,
     currentDataRef.current,
+    isAuthorized,
   ]);
 };
