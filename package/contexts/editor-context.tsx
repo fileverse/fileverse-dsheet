@@ -18,6 +18,7 @@ import { SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  isAuthorized: boolean;
   dataBlockCalcFunction: Array<object>;
   setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number }>>>
   // Core refs
@@ -53,6 +54,7 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
+  isAuthorized: boolean;
   children: React.ReactNode;
   dsheetId: string;
   username?: string;
@@ -78,7 +80,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   onChange,
   externalEditorRef,
   isCollaborative = false,
-  commentData
+  commentData,
+  isAuthorized,
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
@@ -170,6 +173,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     collaborationStatus,
     syncStatus,
     isCollaborative,
+    isAuthorized,
   };
 
   return (
