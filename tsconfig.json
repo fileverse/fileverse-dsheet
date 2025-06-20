@@ -15,6 +15,12 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "emitDeclarationOnly": true,
+    "declarationDir": "./dist",
     /* The "typeRoots" configuration specifies the locations where 
        TypeScript looks for type definitions (.d.ts files) to 
        include in the compilation process.*/
