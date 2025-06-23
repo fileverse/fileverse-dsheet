@@ -19,7 +19,7 @@ import { PermissionChip } from './components/permission-chip';
 
 // import { Button, TextField, LucideIcon, Toggle } from '@fileverse/ui';
 
-import '@fileverse-dev/fortune-react/dist/index.css';
+import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
 
 // Use the types defined in types.ts
@@ -211,7 +211,7 @@ const SpreadsheetEditor = ({
   onDuneChartEmbed,
   onSheetCountChange,
   onDataBlockApiResponse,
-  isAuthorized
+  isAuthorized,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
