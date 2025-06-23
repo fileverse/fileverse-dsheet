@@ -135,10 +135,7 @@ const EditorContent = ({
         </nav>
       )}
 
-      <div
-        style={{ height: '97.8%', marginTop: '44px' }}
-        className="relative overflow-hidden"
-      >
+      <div className="relative overflow-hidden h-[94dvh] md:!h-[calc(100vh-44px)] mt-[44px]">
         <TransitionWrapper show={loading}>
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
