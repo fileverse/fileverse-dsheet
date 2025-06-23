@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -17,9 +17,6 @@
   "files": [
     "/dist"
   ],
-  "publishConfig": {
-    "access": "restricted"
-  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
