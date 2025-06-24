@@ -159,3 +159,11 @@ body {
 .template-button:hover {
   background-color: #cf1c821f !important;
 }
+
+#luckysheet-sheet-area {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}

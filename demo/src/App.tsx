@@ -111,12 +111,13 @@ function App() {
   const EditorPage = () => (
     <div>
       <DSheetEditor
-        isReadOnly={false}
+        isReadOnly={true}
         renderNavbar={renderNavbar}
         dsheetId={dsheetId}
         onChange={handleSheetChange}
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
+        isAuthorized={true}
       />
     </div>
   );
