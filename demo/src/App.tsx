@@ -21,7 +21,7 @@ function App() {
   const dsheetId = 'demo-dsheet-2';
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
-  const handleSheetChange = useCallback(() => {}, []);
+  const handleSheetChange = useCallback(() => { }, []);
 
   const renderNavbar = (): JSX.Element => {
     return (
@@ -71,7 +71,7 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    onClick={() => {}}
+                    onClick={() => { }}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
@@ -111,13 +111,13 @@ function App() {
   const EditorPage = () => (
     <div>
       <DSheetEditor
-        isReadOnly={true}
+        isReadOnly={false}
         renderNavbar={renderNavbar}
         dsheetId={dsheetId}
         onChange={handleSheetChange}
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
-        isAuthorized={true}
+        isAuthorized={false}
       />
     </div>
   );
