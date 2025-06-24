@@ -23,8 +23,8 @@ export const useEditorData = (
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
-  dataBlockCalcFunction?: Array<{ row: number, column: number }>,
-  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, }>>>
+  dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
+  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -221,14 +221,18 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       if (firstRender.current) {
-        let cachedDataBlockCalcFunction: { row: number, column: number }[] = []
+        let cachedDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
         data.map((sheet) => {
+          // @ts-expect-error later
+          console.log('sheet.dataBlockCalcFunction', sheet.dataBlockCalcFunction, data)
           // @ts-expect-error later
           if (!sheet.dataBlockCalcFunction) return
           // @ts-expect-error later
-          cachedDataBlockCalcFunction?.push(...sheet.dataBlockCalcFunction);
+          cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction
+          //.push(...sheet.dataBlockCalcFunction);
         });
-        setDataBlockCalcFunction?.([...cachedDataBlockCalcFunction]);
+        console.log('cachedDataBlockCalcFunction', cachedDataBlockCalcFunction)
+        setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
         /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
         // setTimeout(() => {
         //   // @ts-expect-error later

@@ -19,7 +19,7 @@ export const useApplyTemplatesBtn = ({
   currentDataRef: React.MutableRefObject<object | null>;
   setForceSheetRender: Dispatch<SetStateAction<number>>;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number }>>>
+  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
 }) => {
   useEffect(() => {
     if (!selectedTemplate) return;
@@ -44,23 +44,24 @@ export const useApplyTemplatesBtn = ({
         });
       }, 100);
       setDataBlockCalcFunction((prev) => {
-        // @ts-expect-error later
-        let returnValue = [];
+        // let returnValue = [];
 
         // @ts-expect-error late
         if (Array.isArray(templateData[0]?.dataBlockCalcFunction)) {
-          if (prev?.length > 0) {
-            // @ts-expect-error later
-            returnValue = [...prev, ...templateData[0].dataBlockCalcFunction];
-          } else {
-            // @ts-expect-error later
-            returnValue = [...templateData[0].dataBlockCalcFunction];
-          }
-        } else {
-          returnValue = [];
+          // @ts-expect-error late
+          return { prev, [templateData[0]?.id]: templateData[0]?.dataBlockCalcFunction };
+          // if (prev?.length > 0) {
+          //   // @ts-expect-error later
+          //   returnValue = [...prev, ...templateData[0].dataBlockCalcFunction];
+          // } else {
+          //   // @ts-expect-error later
+          //   returnValue = [...templateData[0].dataBlockCalcFunction];
+          // }
         }
-        // @ts-expect-error later  
-        return returnValue;
+        // else {
+        //   returnValue = [];
+        // }
+        return prev;
       });
     }
   }, [selectedTemplate]);
