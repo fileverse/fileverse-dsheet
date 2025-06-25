@@ -445,15 +445,6 @@ export const afterUpdateCell = async (
     }
 
     params.onDataBlockApiResponse?.(formulaName as string);
-  } else {
-    // params.setDataBlockCalcFunction(dataBlockCalcFunction => {
-    //   if (dataBlockCalcFunction[currentSheetId][row + '_' + column]) {
-    //     console.log('delete dataBlockCalcFunction', dataBlockCalcFunction[currentSheetId][row + '_' + column])
-    //     delete dataBlockCalcFunction[currentSheetId][row + '_' + column]
-    //     return dataBlockCalcFunction;
-    //   }
-    //   return dataBlockCalcFunction;
-    // })
   }
 
   const dataBlockCalcFunction = params?.dataBlockCalcFunction;
@@ -513,7 +504,6 @@ const updateDataCalcFunc = ({ params, currentSheetId }: { params: AfterUpdateCel
     // @ts-expect-error later
     const columnRefrenced = args.map((item) => item.column);
     const formulaName = params.newValue.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
-    console.log('formulaName }}}}}}}}}}}', formulaName, params.newValue.f);
 
     const newItem = {
       formulaName,
@@ -522,20 +512,6 @@ const updateDataCalcFunc = ({ params, currentSheetId }: { params: AfterUpdateCel
       rowRefrenced,
       columnRefrenced,
     };
-
-    // // Find existing item index
-    // const existingIndex = dataBlockCalcFunction.findIndex(
-    //   (item) => item.row === newItem.row && item.column === newItem.column,
-    // );
-
-    // if (existingIndex !== -1) {
-    //   // Update existing item
-    //   const updatedArray = [...dataBlockCalcFunction];
-    //   updatedArray[existingIndex] = newItem;
-    //   return updatedArray;
-    // }
-
-    //const ctData = dataBlockCalcFunction[currentSheetId] || {};
 
     // Add new item if it doesn't exist
     return {
