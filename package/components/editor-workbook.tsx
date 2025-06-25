@@ -118,6 +118,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     return (
       // @ts-ignore
       <Workbook
+        isFlvReadOnly={isReadOnly}
         isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
