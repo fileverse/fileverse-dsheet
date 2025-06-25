@@ -122,7 +122,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         key={workbookKey}
         ref={sheetEditorRef}
         data={data}
-        allowEdit={!isReadOnly}
         toolbarItems={toolbarItems}
         cellContextMenu={cellContextMenu}
         headerContextMenu={headerContextMenu}
