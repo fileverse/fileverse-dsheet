@@ -29,8 +29,12 @@ export const useApplyTemplatesBtn = ({
       selectedTemplate as string
     ] as Sheet[];
     if (templateData) {
+      console.log(sheetEditorRef.current?.getLocaleContext(), 'templateData', sheetEditorRef.current?.getWorkbookContext());
+      console.log(sheetEditorRef.current?.getSettings(), 'templateData',);
+      const newSheetId = sheetEditorRef.current?.getSettings().generateSheetId();
       const data = Array.from(sheetArray) as Sheet[];
       templateData[0].order = data.length;
+      templateData[0].id = newSheetId;
       const finalData = [...data, ...templateData];
       ydocRef.current.transact(() => {
         sheetArray.delete(0, sheetArray.length);
@@ -47,9 +51,11 @@ export const useApplyTemplatesBtn = ({
         // let returnValue = [];
 
         // @ts-expect-error late
-        if (Array.isArray(templateData[0]?.dataBlockCalcFunction)) {
+        if (templateData[0]?.dataBlockCalcFunction) {
           // @ts-expect-error late
-          return { prev, [templateData[0]?.id]: templateData[0]?.dataBlockCalcFunction };
+          console.log(templateData[0], 'templateData[0]?.dataBlockCalcFunction', { ...prev, [newSheetId]: templateData[0]?.dataBlockCalcFunction })
+          // @ts-expect-error late
+          return { ...prev, [newSheetId]: templateData[0]?.dataBlockCalcFunction };
           // if (prev?.length > 0) {
           //   // @ts-expect-error later
           //   returnValue = [...prev, ...templateData[0].dataBlockCalcFunction];
