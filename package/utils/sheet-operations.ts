@@ -19,7 +19,6 @@ export const updateSheetData = (
       };
     })
   }
-  console.log('updateSheetData', data, dataBlockCalcFunction)
   if (!ydoc || !sheetEditor) {
     return;
   }

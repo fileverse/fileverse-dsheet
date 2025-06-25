@@ -223,15 +223,18 @@ export const useEditorData = (
       if (firstRender.current) {
         let cachedDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
         data.map((sheet) => {
-          // @ts-expect-error later
-          console.log('sheet.dataBlockCalcFunction', sheet.dataBlockCalcFunction, data)
-          // @ts-expect-error later
-          if (!sheet.dataBlockCalcFunction) return
-          // @ts-expect-error later
-          cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction
-          //.push(...sheet.dataBlockCalcFunction);
+          if (Array.isArray(sheet.dataBlockCalcFunction)) {
+            const newDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
+            sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
+              newDataBlockCalcFunction[dataBlockCalc.row + '_' + dataBlockCalc.column] = dataBlockCalc
+            })
+            cachedDataBlockCalcFunction[sheet.id as string] = { ...newDataBlockCalcFunction };
+          } else {
+            if (!sheet.dataBlockCalcFunction) return
+            // @ts-expect-error later
+            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction
+          }
         });
-        console.log('cachedDataBlockCalcFunction', cachedDataBlockCalcFunction)
         setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
         /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
         // setTimeout(() => {

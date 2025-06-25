@@ -288,11 +288,9 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       }
 
       const oldSheetDataBlockCalcString = JSON.stringify(
-        // @ts-expect-error later
         oldSheet?.dataBlockCalcFunction || {},
       );
       const newSheetDataBlockCalcString = JSON.stringify(
-        // @ts-expect-error later
         newSheet?.dataBlockCalcFunction || {},
       );
       if (oldSheetDataBlockCalcString !== newSheetDataBlockCalcString) {
