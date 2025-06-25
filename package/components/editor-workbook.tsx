@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
 
@@ -81,6 +81,13 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     isAuthorized,
   } = useEditor();
 
+  useEffect(() => {
+    // @ts-ignore
+    window.editorRef = sheetEditorRef.current;
+    // @ts-ignore
+    window.ydocRef = ydocRef.current;
+  }, [isReadOnly]);
+
   // Initialize XLSX import functionality
   const { handleXLSXUpload } = useXLSXImport({
     sheetEditorRef,
@@ -139,20 +146,20 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{

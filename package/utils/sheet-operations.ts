@@ -8,13 +8,14 @@ export const updateSheetData = (
   dsheetId: string,
   data: Sheet[],
   sheetEditor: WorkbookInstance | null,
-  dataBlockCalcFunction?: Array<object>
+  dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
 ) => {
-  if (dataBlockCalcFunction && dataBlockCalcFunction?.length > 0) {
-    data = data.map((sheet) => {
+  const currentSheetId: string = sheetEditor?.getWorkbookContext()?.currentSheetId as string;
+  if (dataBlockCalcFunction?.[currentSheetId as string]) {
+    data = (data as Sheet[]).map((sheet) => {
       return {
         ...sheet,
-        dataBlockCalcFunction
+        dataBlockCalcFunction: dataBlockCalcFunction[sheet.id as string],
       };
     })
   }

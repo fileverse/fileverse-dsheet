@@ -34,14 +34,14 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
-    React.SetStateAction<Array<{ row: number; column: number }>>
+    React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >;
-  dataBlockCalcFunction?: Array<object>;
+  dataBlockCalcFunction?: { [key: string]: { [key: string]: any } };
 }
 
 /**
@@ -296,7 +296,7 @@ const processRegularPromise = async (
       handleStringResponse(data as string, params);
     }
     const workbookContext = params.sheetEditorRef.current?.getWorkbookContext();
-    const formulaName = params.newValue?.f?.match(/^=([A-Z0-9_]+)\s*\(/)?.[1];
+    const formulaName = params.newValue?.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
     params.storeApiKey?.(apiKeyName);
@@ -432,16 +432,15 @@ export const afterUpdateCell = async (
   // Handle onboarding if needed
   const { row, column } = handleOnboarding(params);
   const updatedParams = { ...params, row, column };
-  const formulaName = newValue.f?.match(/^=([A-Z0-9_]+)\s*\(/)?.[1];
+  const formulaName = newValue.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
+  const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()?.currentSheetId as string;
 
   // Handle promise-based values
   if (newValue.m === PROMISE_OBJECT_STRING) {
     await handlePromiseValue(newValue, updatedParams);
 
     // register dataBlockCalcFunction cell
-    if (params?.dataBlockCalcFunction) {
-      updateDataCalcFunc({ params: updatedParams });
-    }
+    updateDataCalcFunc({ params: updatedParams, currentSheetId });
 
     params.onDataBlockApiResponse?.(formulaName as string);
   }
@@ -458,7 +457,8 @@ export const afterUpdateCell = async (
 };
 
 // add new entry for new data block refernce
-const updateDataCalcFunc = ({ params }: { params: AfterUpdateCellParams }) => {
+const updateDataCalcFunc = ({ params, currentSheetId }: { params: AfterUpdateCellParams, currentSheetId: string }) => {
+  //return;
   params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
     const formulaString = params.newValue.f?.split('=')[1];
 
@@ -500,7 +500,7 @@ const updateDataCalcFunc = ({ params }: { params: AfterUpdateCellParams }) => {
     const rowRefrenced = args.map((item) => item.row);
     // @ts-expect-error later
     const columnRefrenced = args.map((item) => item.column);
-    const formulaName = params.newValue.f?.match(/^=([A-Z0-9_]+)\s*\(/)?.[1];
+    const formulaName = params.newValue.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
 
     const newItem = {
       formulaName,
@@ -510,19 +510,13 @@ const updateDataCalcFunc = ({ params }: { params: AfterUpdateCellParams }) => {
       columnRefrenced,
     };
 
-    // Find existing item index
-    const existingIndex = dataBlockCalcFunction.findIndex(
-      (item) => item.row === newItem.row && item.column === newItem.column,
-    );
-
-    if (existingIndex !== -1) {
-      // Update existing item
-      const updatedArray = [...dataBlockCalcFunction];
-      updatedArray[existingIndex] = newItem;
-      return updatedArray;
-    }
-
     // Add new item if it doesn't exist
-    return [...dataBlockCalcFunction, newItem];
+    return {
+      ...dataBlockCalcFunction,
+      [currentSheetId]: {
+        ...dataBlockCalcFunction?.[currentSheetId as string] || {},
+        [params.row + '_' + params.column]: newItem,
+      }
+    };
   });
 };

@@ -23,8 +23,8 @@ export const useEditorData = (
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
-  dataBlockCalcFunction?: Array<{ row: number, column: number }>,
-  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<Array<{ row: number, column: number, }>>>
+  dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
+  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -221,14 +221,21 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       if (firstRender.current) {
-        let cachedDataBlockCalcFunction: { row: number, column: number }[] = []
+        let cachedDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
         data.map((sheet) => {
-          // @ts-expect-error later
-          if (!sheet.dataBlockCalcFunction) return
-          // @ts-expect-error later
-          cachedDataBlockCalcFunction?.push(...sheet.dataBlockCalcFunction);
+          if (Array.isArray(sheet.dataBlockCalcFunction)) {
+            const newDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
+            sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
+              newDataBlockCalcFunction[dataBlockCalc.row + '_' + dataBlockCalc.column] = dataBlockCalc
+            })
+            cachedDataBlockCalcFunction[sheet.id as string] = { ...newDataBlockCalcFunction };
+          } else {
+            if (!sheet.dataBlockCalcFunction) return
+            // @ts-expect-error later
+            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction
+          }
         });
-        setDataBlockCalcFunction?.([...cachedDataBlockCalcFunction]);
+        setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
         /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
         // setTimeout(() => {
         //   // @ts-expect-error later
