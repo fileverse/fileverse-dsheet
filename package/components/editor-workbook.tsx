@@ -146,26 +146,23 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
-          afterActivateSheet: () => {
-            console.log('afterActivateSheet');
-          },
           afterUpdateCell: (
             row: number,
             column: number,
