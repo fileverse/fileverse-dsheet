@@ -14,8 +14,6 @@ export const dataBlockCalcFunctionHandler = ({ dataBlockCalcFunction, sheetEdito
   const currentSheetDataBlock = dataBlockCalcFunction[currentSheetId];
   const currentSheetDataBlockList: Array<{ row: number, column: number }> = currentSheetDataBlock ? Object.values(currentSheetDataBlock) : [];
 
-  console.log('dataBlockCalcFunction', dataBlockCalcFunction, currentSheetDataBlockList)
-
   if (currentSheetDataBlockList && currentSheetDataBlockList?.length > 0) {
     currentSheetDataBlockList.forEach((dataBlock: { row: number, column: number }) => {
       //@ts-expect-error later
@@ -23,12 +21,10 @@ export const dataBlockCalcFunctionHandler = ({ dataBlockCalcFunction, sheetEdito
       const currentFormulaName = dataBlockValue?.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
       // @ts-expect-error later
       const isCurrentIncludedInReference = dataBlock?.rowRefrenced?.includes(currentRow) && dataBlock.columnRefrenced?.includes(currentColumn) && dataBlock.formulaName?.includes(currentFormulaName);
-      console.log('isCurrentIncludedInReference', isCurrentIncludedInReference, dataBlock)
       if (!isCurrentIncludedInReference) return
       if (!dataBlockValue || dataBlockValue?.v === "") return
       const funcString = dataBlockValue?.f?.split('=')[1] as string
       executeStringFunction(funcString, sheetEditorRef).then((result) => {
-        console.log('result ===', result)
         formulaResponseUiSync({
           row: dataBlock.row,
           column: dataBlock.column,

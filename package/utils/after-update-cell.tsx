@@ -440,9 +440,7 @@ export const afterUpdateCell = async (
     await handlePromiseValue(newValue, updatedParams);
 
     // register dataBlockCalcFunction cell
-    if (params?.dataBlockCalcFunction || true) {
-      updateDataCalcFunc({ params: updatedParams, currentSheetId });
-    }
+    updateDataCalcFunc({ params: updatedParams, currentSheetId });
 
     params.onDataBlockApiResponse?.(formulaName as string);
   }
@@ -460,7 +458,6 @@ export const afterUpdateCell = async (
 
 // add new entry for new data block refernce
 const updateDataCalcFunc = ({ params, currentSheetId }: { params: AfterUpdateCellParams, currentSheetId: string }) => {
-  console.log('updateDataCalcFunc', params.sheetEditorRef.current?.getWorkbookContext());
   //return;
   params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
     const formulaString = params.newValue.f?.split('=')[1];
