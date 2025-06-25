@@ -46,7 +46,7 @@ export const useApplyTemplatesBtn = ({
         });
       }, 100);
       setDataBlockCalcFunction((prev) => {
-        if (Array.isArray(templateData[0]?.dataBlockCalcFunction)) {
+        if (templateData[0]?.dataBlockCalcFunction) {
           // @ts-expect-error late
           return { prev, [newSheetId]: templateData[0]?.dataBlockCalcFunction };
         }
