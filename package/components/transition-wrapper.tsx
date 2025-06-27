@@ -49,13 +49,13 @@ export const TransitionWrapper = ({
   return (
     <div
       className={cn(
-        'absolute inset-0 transition-all ease-in-out transform',
+        'absolute inset-0 transition-opacity ease-in-out',
         `duration-${duration}`,
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
+        isVisible ? 'opacity-100' : 'opacity-0',
         transitionClasses,
       )}
       style={{
-        willChange: 'opacity, transform',
+        willChange: 'opacity',
         pointerEvents: isVisible ? 'auto' : 'none',
       }}
     >
