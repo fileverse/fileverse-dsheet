@@ -12,6 +12,8 @@ import {
   cellReferenceToRowCol,
 } from './executeStringFunction';
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
+//@ts-ignore
+import { ERROR_MESSAGES_FLAG } from '@fileverse-dev/formulajs/crypto-constants';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -34,8 +36,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -84,6 +86,15 @@ const applyTextBlockFormatting = (
     tb: '1',
   });
 };
+type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
+
+/**
+ * Returns true if `msg` contains any of the ERROR_MESSAGES_FLAG values.
+ */
+function containsErrorFlag(msg: string): boolean {
+  const flags = Object.values(ERROR_MESSAGES_FLAG) as ErrorFlag[];
+  return flags.some((flag) => msg.includes(flag)) || msg.includes('Error');
+}
 
 /**
  * Handles onboarding logic and updates row/column if needed
@@ -224,7 +235,7 @@ const processFlvurlPromise = async (
   }
 };
 
-const handleMissingApiKey = (
+const handleDatablockErroMessage = (
   data: string,
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType,
   params: Pick<
@@ -261,24 +272,13 @@ const processRegularPromise = async (
 ): Promise<void> => {
   try {
     const data = await promise;
-
-    if (typeof data === 'string' && data.includes('Error')) {
-      handlePromiseError(
-        data,
-        params.sheetEditorRef,
-        params.row,
-        params.column,
-        params.newValue,
-      );
-      return;
-    }
-
     if (
       typeof data === 'string' &&
-      data.includes('RATE_LIMIT_REACHED') &&
+      containsErrorFlag(data) &&
       params.dataBlockApiKeyHandler
     ) {
-      handleMissingApiKey(data, params.dataBlockApiKeyHandler, params);
+      handleStringResponse(data as string, params);
+      handleDatablockErroMessage(data, params.dataBlockApiKeyHandler, params);
       return;
     }
 
@@ -296,7 +296,9 @@ const processRegularPromise = async (
       handleStringResponse(data as string, params);
     }
     const workbookContext = params.sheetEditorRef.current?.getWorkbookContext();
-    const formulaName = params.newValue?.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
+    const formulaName = params.newValue?.f
+      ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
+      ?.toUpperCase();
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
     params.storeApiKey?.(apiKeyName);
@@ -419,8 +421,11 @@ export const afterUpdateCell = async (
   // Handle onboarding if needed
   const { row, column } = handleOnboarding(params);
   const updatedParams = { ...params, row, column };
-  const formulaName = newValue.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
-  const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()?.currentSheetId as string;
+  const formulaName = newValue.f
+    ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
+    ?.toUpperCase();
+  const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
+    ?.currentSheetId as string;
 
   // Handle promise-based values
   if (newValue.m === PROMISE_OBJECT_STRING) {
@@ -444,66 +449,88 @@ export const afterUpdateCell = async (
 };
 
 // add new entry for new data block refernce
-const updateDataCalcFunc = ({ params, currentSheetId }: { params: AfterUpdateCellParams, currentSheetId: string }) => {
+const updateDataCalcFunc = ({
+  params,
+  currentSheetId,
+}: {
+  params: AfterUpdateCellParams;
+  currentSheetId: string;
+}) => {
   //return;
-  params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
-    const formulaString = params.newValue.f?.split('=')[1];
+  try {
+    params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
+      const formulaString = params.newValue.f?.split('=')[1];
 
-    const functionMatch = formulaString?.match(/^(\w+)\((.*)\)$/);
-    if (!functionMatch) {
-      throw new Error(`Invalid function call format: ${formulaString}`);
-    }
+      const functionMatch = formulaString?.match(/^(\w+)\((.*)\)$/);
+      if (!functionMatch) {
+        throw new Error(`Invalid function call format: ${formulaString}`);
+      }
 
-    const argsString = functionMatch[2]; // The entire argument string
+      const argsString = functionMatch[2]; // The entire argument string
 
-    // Parse the arguments, respecting nested structures
-    const ar = parseArguments(argsString);
+      // Parse the arguments, respecting nested structures
+      const ar = parseArguments(argsString);
 
-    let args = ar
-      //@ts-expect-error later
-      .filter((arg: string) => {
-        if (isCellRangeReference(arg)) {
-          return cellRangeToRowCol(arg);
-        }
-        if (isCellReference(arg)) {
-          return cellReferenceToRowCol(arg);
-        }
-        return false;
-      })
+      let args = ar
+        //@ts-expect-error later
+        .filter((arg: string) => {
+          if (isCellRangeReference(arg)) {
+            return cellRangeToRowCol(arg);
+          }
+          if (isCellReference(arg)) {
+            return cellReferenceToRowCol(arg);
+          }
+          return false;
+        })
+        // @ts-expect-error later
+        .map((arg: string) => {
+          if (isCellRangeReference(arg)) {
+            return cellRangeToRowCol(arg);
+          }
+          if (isCellReference(arg)) {
+            return cellReferenceToRowCol(arg);
+          }
+          return false;
+        });
+
+      args = args.flat();
+
       // @ts-expect-error later
-      .map((arg: string) => {
-        if (isCellRangeReference(arg)) {
-          return cellRangeToRowCol(arg);
-        }
-        if (isCellReference(arg)) {
-          return cellReferenceToRowCol(arg);
-        }
-        return false;
-      });
+      const rowRefrenced = args.map((item) => item.row);
+      // @ts-expect-error later
+      const columnRefrenced = args.map((item) => item.column);
+      const formulaName = params.newValue.f
+        ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
+        ?.toUpperCase();
 
-    args = args.flat();
+      const newItem = {
+        formulaName,
+        row: params.row,
+        column: params.column,
+        rowRefrenced,
+        columnRefrenced,
+      };
 
-    // @ts-expect-error later
-    const rowRefrenced = args.map((item) => item.row);
-    // @ts-expect-error later
-    const columnRefrenced = args.map((item) => item.column);
-    const formulaName = params.newValue.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
-
-    const newItem = {
-      formulaName,
+      // Add new item if it doesn't exist
+      return {
+        ...dataBlockCalcFunction,
+        [currentSheetId]: {
+          ...(dataBlockCalcFunction?.[currentSheetId as string] || {}),
+          [params.row + '_' + params.column]: newItem,
+        },
+      };
+    });
+  } catch (error: any) {
+    console.log({ error });
+    // send error message to dsheet.new to commit to sentry
+    params?.dataBlockApiKeyHandler?.({
+      data: `ERROR from updateDataCalcFunc ${error?.message}`,
+      sheetEditorRef: params.sheetEditorRef,
+      executeStringFunction,
       row: params.row,
       column: params.column,
-      rowRefrenced,
-      columnRefrenced,
-    };
-
-    // Add new item if it doesn't exist
-    return {
-      ...dataBlockCalcFunction,
-      [currentSheetId]: {
-        ...dataBlockCalcFunction?.[currentSheetId as string] || {},
-        [params.row + '_' + params.column]: newItem,
-      }
-    };
-  });
+      newValue: params.newValue,
+      formulaResponseUiSync,
+    });
+  }
 };
