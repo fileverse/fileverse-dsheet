@@ -3,11 +3,24 @@
 [![NPM](https://img.shields.io/npm/v/@fileverse-dev/dsheet)](https://www.npmjs.com/package/@fileverse-dev/dsheet)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
-Privacy-first, decentralized spreadsheet editor with real-time collaboration.
+[dsheets.new](http://dsheets.new/) is your decentralised alternative to google sheets & excel. Use it to read, manipulate, and even write onchain data, in real-time. Built on the same middleware as ddocs.new, the app is privacy-first, self-sovereign, and gives you full control over your data <3 
+
+## 👩‍🏭 Features:
+- End-to-end encryption
+- Local & peer-to-peer storage
+- Query live data from APIs & smart contracts  
+- Write onchain: simulate + submit transactions (V0.3)
+- Use a familiar spreadsheets interface & functions (VLOOKUP, INDEX, MATCH…)
+- Granular access permissions (email, wallet, ENS)
 
 [**Try Live Demo →**](https://fileverse-dsheet.vercel.app/)
 
+![image](https://github.com/user-attachments/assets/b3953811-3e02-43ac-9e8e-ee0c3923a22f)
+
+
 ## Installation
+
+Install via npm to get started:
 
 ```bash
 npm install @fileverse-dev/dsheet
@@ -16,6 +29,8 @@ npm install @fileverse-dev/dsheet
 ## Setup
 
 ### 1. Import
+
+Add the following imports
 
 ```typescript
 import DsheetEditor from '@fileverse-dev/dsheet';
