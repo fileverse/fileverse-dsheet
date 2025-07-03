@@ -8,6 +8,10 @@
   "files.exclude": {
     "**/.git": true,
     "**/.DS_Store": true,
+<<<<<<< Updated upstream
+=======
+    "**/node_modules": false
+>>>>>>> Stashed changes
   },
   "files.associations": {
     "*.js": "javascriptreact",
