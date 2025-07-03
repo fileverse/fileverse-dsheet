@@ -82,14 +82,14 @@ type CustomError = BaseError & {
   reason: string;
 };
 
-type NetworkError = BaseError & {
+export type NetworkError = BaseError & {
   type:
     | typeof ERROR_MESSAGES_FLAG.NETWORK_ERROR
     | typeof ERROR_MESSAGES_FLAG.RATE_LIMIT;
 };
 
-type DefaultError = BaseError & {
-  reason: any;
+export type DefaultError = BaseError & {
+  reason: string;
 };
 
 export type ErrorMessageHandlerReturnType =
