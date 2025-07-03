@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Cell } from '@fileverse-dev/fortune-core';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import {
+  OnboardingHandlerType,
+  DataBlockApiKeyHandlerType,
+  ErrorMessageHandlerReturnType,
+} from '../types';
 import { formulaResponseUiSync } from './formula-ui-sync';
 import {
   executeStringFunction,
@@ -236,7 +240,7 @@ const processFlvurlPromise = async (
 };
 
 const handleDatablockErroMessage = (
-  data: string,
+  data: ErrorMessageHandlerReturnType,
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType,
   params: Pick<
     AfterUpdateCellParams,
@@ -254,11 +258,18 @@ const handleDatablockErroMessage = (
   });
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isDatablockError = (value: any) => {
+  const isObject =
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  return isObject && containsErrorFlag(value.type);
+};
+
 /**
  * Processes promise resolution for regular formulas
  */
 const processRegularPromise = async (
-  promise: Promise<Record<string, string>[] | string>,
+  promise: Promise<unknown[] | ErrorMessageHandlerReturnType | string>,
   params: Pick<
     AfterUpdateCellParams,
     | 'row'
@@ -272,18 +283,21 @@ const processRegularPromise = async (
 ): Promise<void> => {
   try {
     const data = await promise;
-    if (
-      typeof data === 'string' &&
-      containsErrorFlag(data) &&
-      params.dataBlockApiKeyHandler
-    ) {
-      handleStringResponse(data as string, params);
-      handleDatablockErroMessage(data, params.dataBlockApiKeyHandler, params);
+    const formulaName = params.newValue?.f
+      ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
+      ?.toUpperCase();
+    if (isDatablockError(data)) {
+      if (!params.dataBlockApiKeyHandler) {
+        throw new Error('dataBlockApiKeyHandler missing');
+      }
+      const _data = data as ErrorMessageHandlerReturnType;
+      handleDatablockErroMessage(_data, params.dataBlockApiKeyHandler, params);
       return;
     }
 
     if (Array.isArray(data)) {
-      if (!data.length) {
+      const firstItem = (data as any[])?.[0];
+      if (!data.length || Object.keys(firstItem).length === 0) {
         params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
           ...params.newValue,
           m: 'No Data',
@@ -295,16 +309,33 @@ const processRegularPromise = async (
     } else {
       handleStringResponse(data as string, params);
     }
+    params.onDataBlockApiResponse?.(formulaName as string);
     const workbookContext = params.sheetEditorRef.current?.getWorkbookContext();
-    const formulaName = params.newValue?.f
-      ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
-      ?.toUpperCase();
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
     params.storeApiKey?.(apiKeyName);
-  } catch (error) {
-    console.error('Error processing regular promise:', error);
-    handleStringResponse('Error processing data', params);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    if (
+      error === 'dataBlockApiKeyHandler missing' ||
+      error?.message === 'dataBlockApiKeyHandler missing'
+    ) {
+      throw new Error('dataBlockApiKeyHandler missing');
+    } else {
+      const formulaName = params.newValue?.f
+        ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
+        ?.toUpperCase();
+      handleDatablockErroMessage(
+        {
+          type: 'DSHEET_ERROR',
+          message: 'Unexpected Error',
+          functionName: formulaName,
+          reason: error?.message,
+        },
+        params.dataBlockApiKeyHandler!,
+        params,
+      );
+    }
   }
 };
 
@@ -433,8 +464,6 @@ export const afterUpdateCell = async (
 
     // register dataBlockCalcFunction cell
     updateDataCalcFunc({ params: updatedParams, currentSheetId });
-
-    params.onDataBlockApiResponse?.(formulaName as string);
   }
 
   const dataBlockCalcFunction = params?.dataBlockCalcFunction;
@@ -521,10 +550,16 @@ const updateDataCalcFunc = ({
       };
     });
   } catch (error: any) {
-    console.log({ error });
+    const formulaName = params.newValue.f
+      ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
+      ?.toUpperCase();
     // send error message to dsheet.new to commit to sentry
     params?.dataBlockApiKeyHandler?.({
-      data: `ERROR from updateDataCalcFunc ${error?.message}`,
+      data: {
+        message: `ERROR from updateDataCalcFunc ${error?.message}`,
+        type: 'Unexpected error',
+        functionName: formulaName,
+      },
       sheetEditorRef: params.sheetEditorRef,
       executeStringFunction,
       row: params.row,
