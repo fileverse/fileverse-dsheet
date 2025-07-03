@@ -71,7 +71,6 @@ export const handleCSVUpload = (
           });
 
           headerRow.forEach((cell) => {
-            console.log(cell);
             cellData.push(cell);
           });
 
