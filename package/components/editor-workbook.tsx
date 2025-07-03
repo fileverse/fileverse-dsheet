@@ -61,7 +61,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -146,30 +146,29 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-              setExportDropdownOpen,
-              handleCSVUpload,
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
+                setExportDropdownOpen,
+                handleCSVUpload,
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
             : []
         }
         hooks={{
           afterUpdateCell: (
             row: number,
             column: number,
-            oldValue: Cell,
+            _oldValue: Cell,
             newValue: Cell,
           ): void => {
-            console.log('afterUpdateCell Old value', oldValue);
             const refObj = { current: sheetEditorRef.current };
             afterUpdateCell({
               row,

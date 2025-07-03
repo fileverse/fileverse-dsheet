@@ -3,6 +3,8 @@ import { RefObject } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { Cell } from '@fileverse-dev/fortune-core';
+// @ts-ignore
+import { ERROR_MESSAGES_FLAG } from '@fileverse-dev/formulajs/crypto-constants';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -23,7 +25,7 @@ export type OnboardingHandlerType = (params: {
 
 // Define the data block API key handler type
 export type DataBlockApiKeyHandlerType = (params: {
-  data: string;
+  data: ErrorMessageHandlerReturnType;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   executeStringFunction: (functionCallString: string) => Promise<unknown>;
   row: number;
@@ -69,3 +71,29 @@ export interface DsheetProps {
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
 }
+type BaseError = {
+  message: string;
+  functionName?: string;
+  type: string;
+};
+
+type CustomError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.CUSTOM;
+  reason: string;
+};
+
+export type NetworkError = BaseError & {
+  type:
+    | typeof ERROR_MESSAGES_FLAG.NETWORK_ERROR
+    | typeof ERROR_MESSAGES_FLAG.RATE_LIMIT;
+};
+
+export type DefaultError = BaseError & {
+  reason: string;
+};
+
+export type ErrorMessageHandlerReturnType =
+  | BaseError
+  | CustomError
+  | NetworkError
+  | DefaultError;
