@@ -71,29 +71,55 @@ export interface DsheetProps {
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
 }
-type BaseError = {
+export type BaseError = {
   message: string;
   functionName?: string;
-  type: string;
+  type: `${ERROR_MESSAGES_FLAG}`;
 };
 
-type CustomError = BaseError & {
+export type CustomError = BaseError & {
   type: typeof ERROR_MESSAGES_FLAG.CUSTOM;
   reason: string;
 };
 
+export type InvalidParamError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.INVALID_PARAM;
+};
+
+export type MissingKeyError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.MISSING_KEY;
+};
+
+export type EnsResolveError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.ENS;
+};
+
+export type InvalidApiKeyError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.INVALID_API_KEY;
+  apiKeyName?: string;
+};
+
+export type RateLimitError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.RATE_LIMIT;
+  apiKeyName?: string;
+};
+
 export type NetworkError = BaseError & {
-  type:
-    | typeof ERROR_MESSAGES_FLAG.NETWORK_ERROR
-    | typeof ERROR_MESSAGES_FLAG.RATE_LIMIT;
+  type: typeof ERROR_MESSAGES_FLAG.NETWORK_ERROR;
+  apiKeyName?: string;
 };
 
 export type DefaultError = BaseError & {
+  type: typeof ERROR_MESSAGES_FLAG.DEFAULT;
   reason: string;
 };
 
 export type ErrorMessageHandlerReturnType =
-  | BaseError
-  | CustomError
+  | InvalidParamError
+  | MissingKeyError
+  | RateLimitError
   | NetworkError
+  | EnsResolveError
+  | InvalidApiKeyError
+  | CustomError
   | DefaultError;
