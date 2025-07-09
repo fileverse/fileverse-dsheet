@@ -18,7 +18,6 @@ import {
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 //@ts-ignore
 import { ERROR_MESSAGES_FLAG } from '@fileverse-dev/formulajs/crypto-constants';
-import { basename, sep } from 'path';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -34,6 +33,7 @@ const FLVURL_FUNCTIONS = ['FLVURL', 'flvurl'];
 interface AfterUpdateCellParams {
   row: number;
   column: number;
+  oldValue: Cell;
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   onboardingComplete: boolean | undefined;
@@ -433,8 +433,6 @@ export const afterUpdateCell = async (
     return;
   }
 
-  console.log('afterUpdateCell', newValue, params, newValue?.m, newValue?.v);
-
   if (!newValue?.m && !newValue?.v) {
     sheetEditorRef.current?.setCellValue(params.row, params.column, {
       ...newValue,
@@ -443,19 +441,18 @@ export const afterUpdateCell = async (
     });
   }
 
-  if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
-    const separatedValue = parseFloat(params.oldValue.m.split(" ")[0]);
-    const coin = params.oldValue.m.split(" ")[1]
-    console.log('separatedValue', separatedValue);
-    const price = parseFloat(params.oldValue.v) / separatedValue;
-    console.log('price', price);
+  // @ts-expect-error later
+  if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue.m && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
+    const decemialCount = params.oldValue.m?.toString().includes('.') ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length : 0;
+    const separatedValue = parseFloat(params.oldValue.m.toString().split(" ")[0] as string);
+    const coin = params.oldValue?.m?.toString().split(" ")[1]
+    const price = parseFloat(params.oldValue.v as string) / separatedValue;
     const newCell = {
       ...newValue,
-      baseValue: parseFloat(newValue.v),
-      m: `${parseFloat(newValue.v) / price} ${coin}`,
+      baseValue: parseFloat(newValue.v as string),
+      m: `${(parseFloat(newValue?.v as string) / price).toFixed(decemialCount)} ${coin}`,
     }
     sheetEditorRef.current?.setCellValue(params.row, params.column, newCell);
-
   }
 
   // Apply text block formatting if needed

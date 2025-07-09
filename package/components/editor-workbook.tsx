@@ -109,74 +109,64 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       : ['filter']
     : TOOL_BAR_ITEMS;
 
-  const cryptoPriceRef = useRef({});
-  const intervalRef = useRef(null);
+  const cryptoPriceRef = useRef<{ ETH: number | null, BTC: number | null, SOL: number | null }>({ BTC: null, ETH: 0, SOL: 0 });
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPrice = async () => {
-    // const ETH = await sheetEditorRef.current?.getCryptoPrice('ethereum', 'usd');
-    // const BTC = await sheetEditorRef.current?.getCryptoPrice('bitcoin', 'usd');
-    // const SOL = await sheetEditorRef.current?.getCryptoPrice('solana', 'usd');
-
-    const cryptoPrices = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd', {
-      headers: {
-        accept: 'application/json',
-        'x-cg-demo-api-key': 'CG-uwNr6AVqHrfcvCw84RUN4fb8',
+    const cryptoPrices = await fetch(`${process.env.NEXT_PUBLIC_PROXY_BASE_URL}/proxy`, {
+      headers:
+      {
+        'target-url': 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd',
+        method: 'GET',
+        'Content-Type': 'application/json'
       }
     });
     const cryptoData = await cryptoPrices.json();
     const ETH = cryptoData.ethereum.usd;
     const BTC = cryptoData.bitcoin.usd;
     const SOL = cryptoData.solana.usd;
-
     cryptoPriceRef.current = {
       ETH,
       BTC,
       SOL
     }
-
     refreshDenomination();
-
   }
 
   const refreshDenomination = () => {
-    if (!cryptoPriceRef.current.BTC) return;
+    const { ETH, BTC, SOL } = cryptoPriceRef.current;
+    if (BTC === null || ETH === null || SOL === null) return;
     const currentData = sheetEditorRef.current?.getSheet();
-    console.log("currentData", currentData);
-    const cellData = currentData.celldata;
+    const cellData = currentData?.celldata;
+    if (!cellData) return;
 
-    for (let i = 0; i < cellData.length; i++) {
+    for (let i = 0; i < cellData?.length; i++) {
       const cell = { ...cellData[i] } as any; cellData[i];
-
       cell.v = typeof cell.v === 'string' ? cell.v : { ...cellData[i].v };
 
-      const value = cell.v.m?.toString();
+      const value = cell.v?.m?.toString();
+      const decemialCount = cell.v?.m?.includes('.') ? cell.v?.m?.split(' ')[0].split('.')[1].length : 0;
       if (value?.includes("BTC")) {
-        const decemialCount = cell.v.m.includes('.') ? cell.v.m.split(' ')[0].split('.')[1].length : 0;
-        console.log("BTC", cell.baseValue, cryptoPriceRef.current.BTC, cell.v.m.toString(), decemialCount, cell.v.m.split(' ')[0].split('.')[1].length);
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v.baseValue / cryptoPriceRef.current.BTC).toFixed(decemialCount).toString());
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / BTC).toFixed(decemialCount).toString());
       } else if (value?.includes("ETH")) {
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v.baseValue / cryptoPriceRef.current.ETH).toString());
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / ETH).toFixed(decemialCount).toString());
       } else if (value?.includes("SOL")) {
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v.baseValue / cryptoPriceRef.current.SOL).toString());
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / SOL).toFixed(decemialCount).toString());
       }
 
-      console.log("cell", cell);
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
-
     }
   }
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       fetchPrice();
-      console.log("hahahah", cryptoPriceRef.current);
-
     }, 24000);
 
     return () => {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current)
+        clearInterval(intervalRef.current);
     };
-
   }, []);
 
   // Memoized workbook component to avoid unnecessary re-renders
@@ -234,13 +224,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         }
         hooks={{
           afterActivateSheet: () => {
-            console.log('afterActivateSheet', currentDataRef.current, sheetEditorRef.current?.getAllSheets());
-            if (sheetEditorRef.current?.getAllSheets().length > 0) {
-              console.log('afterActivateSheet ==', sheetEditorRef.current?.getSheet());
+            if (sheetEditorRef.current && sheetEditorRef.current?.getAllSheets().length > 0) {
               refreshDenomination();
-
             }
-
           },
           afterUpdateCell: (
             row: number,
