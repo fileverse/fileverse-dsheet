@@ -113,7 +113,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPrice = async () => {
-    const cryptoPrices = await fetch(`${process.env.NEXT_PUBLIC_PROXY_BASE_URL}/proxy`, {
+    // @ts-expect-error later
+    const cryptoPrices = await fetch(`${window.NEXT_PUBLIC_PROXY_BASE_URL}/proxy`, {
       headers:
       {
         'target-url': 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd',
@@ -161,7 +162,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       fetchPrice();
-    }, 24000);
+    }, 20 * 60 * 1000);
 
     return () => {
       if (intervalRef.current)
