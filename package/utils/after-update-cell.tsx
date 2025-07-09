@@ -18,6 +18,7 @@ import {
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 //@ts-ignore
 import { ERROR_MESSAGES_FLAG } from '@fileverse-dev/formulajs/crypto-constants';
+import { basename, sep } from 'path';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -40,8 +41,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -430,6 +431,31 @@ export const afterUpdateCell = async (
   // Early return for empty values
   if (isCellValueEmpty(newValue)) {
     return;
+  }
+
+  console.log('afterUpdateCell', newValue, params, newValue?.m, newValue?.v);
+
+  if (!newValue?.m && !newValue?.v) {
+    sheetEditorRef.current?.setCellValue(params.row, params.column, {
+      ...newValue,
+      baseValue: undefined,
+      ct: { fa: '@', t: 's' },
+    });
+  }
+
+  if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
+    const separatedValue = parseFloat(params.oldValue.m.split(" ")[0]);
+    const coin = params.oldValue.m.split(" ")[1]
+    console.log('separatedValue', separatedValue);
+    const price = parseFloat(params.oldValue.v) / separatedValue;
+    console.log('price', price);
+    const newCell = {
+      ...newValue,
+      baseValue: parseFloat(newValue.v),
+      m: `${parseFloat(newValue.v) / price} ${coin}`,
+    }
+    sheetEditorRef.current?.setCellValue(params.row, params.column, newCell);
+
   }
 
   // Apply text block formatting if needed

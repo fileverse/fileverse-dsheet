@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-core';
 
@@ -61,7 +61,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -109,6 +109,76 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       : ['filter']
     : TOOL_BAR_ITEMS;
 
+  const cryptoPriceRef = useRef({});
+  const intervalRef = useRef(null);
+
+  const fetchPrice = async () => {
+    // const ETH = await sheetEditorRef.current?.getCryptoPrice('ethereum', 'usd');
+    // const BTC = await sheetEditorRef.current?.getCryptoPrice('bitcoin', 'usd');
+    // const SOL = await sheetEditorRef.current?.getCryptoPrice('solana', 'usd');
+
+    const cryptoPrices = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd', {
+      headers: {
+        accept: 'application/json',
+        'x-cg-demo-api-key': 'CG-uwNr6AVqHrfcvCw84RUN4fb8',
+      }
+    });
+    const cryptoData = await cryptoPrices.json();
+    const ETH = cryptoData.ethereum.usd;
+    const BTC = cryptoData.bitcoin.usd;
+    const SOL = cryptoData.solana.usd;
+
+    cryptoPriceRef.current = {
+      ETH,
+      BTC,
+      SOL
+    }
+
+    refreshDenomination();
+
+  }
+
+  const refreshDenomination = () => {
+    if (!cryptoPriceRef.current.BTC) return;
+    const currentData = sheetEditorRef.current?.getSheet();
+    console.log("currentData", currentData);
+    const cellData = currentData.celldata;
+
+    for (let i = 0; i < cellData.length; i++) {
+      const cell = { ...cellData[i] } as any; cellData[i];
+
+      cell.v = typeof cell.v === 'string' ? cell.v : { ...cellData[i].v };
+
+      const value = cell.v.m?.toString();
+      if (value?.includes("BTC")) {
+        const decemialCount = cell.v.m.includes('.') ? cell.v.m.split(' ')[0].split('.')[1].length : 0;
+        console.log("BTC", cell.baseValue, cryptoPriceRef.current.BTC, cell.v.m.toString(), decemialCount, cell.v.m.split(' ')[0].split('.')[1].length);
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v.baseValue / cryptoPriceRef.current.BTC).toFixed(decemialCount).toString());
+      } else if (value?.includes("ETH")) {
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v.baseValue / cryptoPriceRef.current.ETH).toString());
+      } else if (value?.includes("SOL")) {
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v.baseValue / cryptoPriceRef.current.SOL).toString());
+      }
+
+      console.log("cell", cell);
+      sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
+
+    }
+  }
+
+  useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      fetchPrice();
+      console.log("hahahah", cryptoPriceRef.current);
+
+    }, 24000);
+
+    return () => {
+      clearInterval(intervalRef.current);
+    };
+
+  }, []);
+
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
     // Create a unique key to force re-render when needed
@@ -146,23 +216,32 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
+          afterActivateSheet: () => {
+            console.log('afterActivateSheet', currentDataRef.current, sheetEditorRef.current?.getAllSheets());
+            if (sheetEditorRef.current?.getAllSheets().length > 0) {
+              console.log('afterActivateSheet ==', sheetEditorRef.current?.getSheet());
+              refreshDenomination();
+
+            }
+
+          },
           afterUpdateCell: (
             row: number,
             column: number,
@@ -171,6 +250,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           ): void => {
             const refObj = { current: sheetEditorRef.current };
             afterUpdateCell({
+              oldValue: _oldValue,
               row,
               column,
               newValue,
