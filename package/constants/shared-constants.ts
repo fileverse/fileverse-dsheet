@@ -12,6 +12,7 @@ export const DEFAULT_SHEET_DATA = [
 export const TOOL_BAR_ITEMS = [
   'undo',
   'redo',
+  'format-painter',
   '|',
   'font',
   '|',
