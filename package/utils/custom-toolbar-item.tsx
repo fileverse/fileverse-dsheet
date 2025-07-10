@@ -89,21 +89,6 @@ export const getCustomToolbarItems = ({
     },
     {
       /*template-button is used in use xocument style */
-      key: 'ethereum',
-      tooltip: 'Crypto denominations: Coming soon',
-      icon: (
-        <IconButton
-          className="cursor-not-allowed !min-w-[30px] w-[30px] h-[30px] !px-0 rounded-lg bg-[#E8EBEC] hover:bg-[#E8EBEC]"
-          icon="Ethereum"
-          size="md"
-          variant="ghost"
-          color="blue"
-        />
-      ),
-      onClick: () => { },
-    },
-    {
-      /*template-button is used in use xocument style */
       key: 'fetch-url',
       tooltip: 'Fetch data: Coming soon',
       icon: (

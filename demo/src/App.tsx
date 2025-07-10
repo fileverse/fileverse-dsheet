@@ -18,7 +18,9 @@ function App() {
   const sheetEditorRef = useRef<WorkbookInstance>(null);
 
   // Use a stable dsheetId
-  const dsheetId = 'demo-dsheet-2';
+  const dsheetId = 'demo-dsheet-3';
+  // @ts-expect-error later
+  window.NEXT_PUBLIC_PROXY_BASE_URL = 'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
   const handleSheetChange = useCallback(() => { }, []);

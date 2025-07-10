@@ -33,6 +33,7 @@ export const TOOL_BAR_ITEMS = [
   'vertical-align',
   '|',
   'currency-format',
+  'currency',
   'percentage-format',
   'number-decrease',
   'number-increase',
