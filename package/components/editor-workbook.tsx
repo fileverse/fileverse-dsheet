@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
-import { Cell } from '@fileverse-dev/fortune-core';
+import { Cell } from '@fileverse-dev/fortune-react';
 
 import {
   DEFAULT_SHEET_DATA,
@@ -62,7 +62,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -110,7 +110,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       : ['filter']
     : TOOL_BAR_ITEMS;
 
-  const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef })
+  const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef });
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -149,25 +149,28 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-              setExportDropdownOpen,
-              handleCSVUpload,
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
+                setExportDropdownOpen,
+                handleCSVUpload,
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
             : []
         }
         hooks={{
           afterActivateSheet: () => {
-            if (sheetEditorRef.current && sheetEditorRef.current?.getAllSheets().length > 0) {
+            if (
+              sheetEditorRef.current &&
+              sheetEditorRef.current?.getAllSheets().length > 0
+            ) {
               refreshDenomination();
             }
           },

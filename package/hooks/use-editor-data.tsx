@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { CellWithRowAndCol } from '@fileverse-dev/fortune-core';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 
-import { DEFAULT_SHEET_DATA, CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
+import {
+  DEFAULT_SHEET_DATA,
+  CELL_COMMENT_DEFAULT_VALUE,
+} from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
 // import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
@@ -24,7 +26,9 @@ export const useEditorData = (
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
-  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
+  setDataBlockCalcFunction?: React.Dispatch<
+    React.SetStateAction<{ [key: string]: { [key: string]: any } }>
+  >,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -64,7 +68,6 @@ export const useEditorData = (
         const map = newDoc.getArray(dsheetId);
         const newSheetData = Array.from(map) as Sheet[];
 
-
         // Update the current data reference
         currentDataRef.current = newSheetData;
 
@@ -95,25 +98,25 @@ export const useEditorData = (
       if (currentData.length > 0 && commentData) {
         currentData.forEach((sheet, index) => {
           const sheetCellData = sheet.celldata;
-          sheetCellData?.forEach((cell: CellWithRowAndCol) => {
+          sheetCellData?.forEach((cell) => {
             // @ts-expect-error later
             const comment = commentData[`${index}_${cell.r}_${cell.c}`];
             if (comment) {
               if (cell.v) {
                 cell.v = {
                   ...cell.v,
-                  ps: CELL_COMMENT_DEFAULT_VALUE
-                }
+                  ps: CELL_COMMENT_DEFAULT_VALUE,
+                };
               }
             } else {
               if (cell.v) {
                 cell.v = {
                   ...cell.v,
-                  ps: undefined
-                }
+                  ps: undefined,
+                };
               }
             }
-          })
+          });
         });
       }
     } catch (error) {
@@ -221,18 +224,26 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       if (firstRender.current) {
-        let cachedDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
+        const cachedDataBlockCalcFunction: {
+          [key: string]: { [key: string]: any };
+        } = {};
         data.map((sheet) => {
           if (Array.isArray(sheet.dataBlockCalcFunction)) {
-            const newDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
+            const newDataBlockCalcFunction: {
+              [key: string]: { [key: string]: any };
+            } = {};
             sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
-              newDataBlockCalcFunction[dataBlockCalc.row + '_' + dataBlockCalc.column] = dataBlockCalc
-            })
-            cachedDataBlockCalcFunction[sheet.id as string] = { ...newDataBlockCalcFunction };
+              newDataBlockCalcFunction[
+                dataBlockCalc.row + '_' + dataBlockCalc.column
+              ] = dataBlockCalc;
+            });
+            cachedDataBlockCalcFunction[sheet.id as string] = {
+              ...newDataBlockCalcFunction,
+            };
           } else {
-            if (!sheet.dataBlockCalcFunction) return
+            if (!sheet.dataBlockCalcFunction) return;
             // @ts-expect-error later
-            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction
+            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction;
           }
         });
         setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
@@ -252,7 +263,13 @@ export const useEditorData = (
 
       // Set the flag to indicate we're in the process of updating YJS
       isUpdatingRef.current = true;
-      updateSheetData(ydocRef.current, dsheetId, data, sheetEditorRef.current, dataBlockCalcFunction);
+      updateSheetData(
+        ydocRef.current,
+        dsheetId,
+        data,
+        sheetEditorRef.current,
+        dataBlockCalcFunction,
+      );
 
       // Reset the flag after a short delay to allow the update to complete
       setTimeout(() => {
