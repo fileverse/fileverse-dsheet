@@ -17,7 +17,7 @@ import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
-import { useRefreshDenomination } from '../hooks/useRefreshDenomination';
+import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 
 // Use the types defined in types.ts
