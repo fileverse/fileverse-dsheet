@@ -18,7 +18,7 @@ function App() {
   const sheetEditorRef = useRef<WorkbookInstance>(null);
 
   // Use a stable dsheetId
-  const dsheetId = 'demo-dsheet-3';
+  const dsheetId = 'demo-dsheet-4';
   // @ts-expect-error later
   window.NEXT_PUBLIC_PROXY_BASE_URL = 'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
 
