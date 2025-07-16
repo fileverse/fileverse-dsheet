@@ -5,7 +5,10 @@ import { CellWithRowAndCol } from '@fileverse-dev/fortune-core';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 
-import { DEFAULT_SHEET_DATA, CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
+import {
+  DEFAULT_SHEET_DATA,
+  CELL_COMMENT_DEFAULT_VALUE,
+} from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
 // import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
@@ -24,7 +27,9 @@ export const useEditorData = (
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
-  setDataBlockCalcFunction?: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
+  setDataBlockCalcFunction?: React.Dispatch<
+    React.SetStateAction<{ [key: string]: { [key: string]: any } }>
+  >,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -54,16 +59,12 @@ export const useEditorData = (
       const decodedSheetData = Array.from(tempMap) as Sheet[];
 
       if (decodedSheetData.length > 0) {
-        // REPLACE instead of merge: Create a completely new document with portal content
-        const newDoc = new Y.Doc();
-        Y.applyUpdate(newDoc, uint8Array);
+        // Merge the portal content into the main YJS document
+        Y.applyUpdate(ydocRef.current, uint8Array);
 
-        // Replace the current document reference
-        ydocRef.current = newDoc;
+        const map = ydocRef.current.getArray(dsheetId);
 
-        const map = newDoc.getArray(dsheetId);
         const newSheetData = Array.from(map) as Sheet[];
-
 
         // Update the current data reference
         currentDataRef.current = newSheetData;
@@ -102,18 +103,18 @@ export const useEditorData = (
               if (cell.v) {
                 cell.v = {
                   ...cell.v,
-                  ps: CELL_COMMENT_DEFAULT_VALUE
-                }
+                  ps: CELL_COMMENT_DEFAULT_VALUE,
+                };
               }
             } else {
               if (cell.v) {
                 cell.v = {
                   ...cell.v,
-                  ps: undefined
-                }
+                  ps: undefined,
+                };
               }
             }
-          })
+          });
         });
       }
     } catch (error) {
@@ -221,18 +222,26 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       if (firstRender.current) {
-        let cachedDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
+        const cachedDataBlockCalcFunction: {
+          [key: string]: { [key: string]: any };
+        } = {};
         data.map((sheet) => {
           if (Array.isArray(sheet.dataBlockCalcFunction)) {
-            const newDataBlockCalcFunction: { [key: string]: { [key: string]: any } } = {}
+            const newDataBlockCalcFunction: {
+              [key: string]: { [key: string]: any };
+            } = {};
             sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
-              newDataBlockCalcFunction[dataBlockCalc.row + '_' + dataBlockCalc.column] = dataBlockCalc
-            })
-            cachedDataBlockCalcFunction[sheet.id as string] = { ...newDataBlockCalcFunction };
+              newDataBlockCalcFunction[
+                dataBlockCalc.row + '_' + dataBlockCalc.column
+              ] = dataBlockCalc;
+            });
+            cachedDataBlockCalcFunction[sheet.id as string] = {
+              ...newDataBlockCalcFunction,
+            };
           } else {
-            if (!sheet.dataBlockCalcFunction) return
+            if (!sheet.dataBlockCalcFunction) return;
             // @ts-expect-error later
-            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction
+            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction;
           }
         });
         setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
@@ -252,7 +261,13 @@ export const useEditorData = (
 
       // Set the flag to indicate we're in the process of updating YJS
       isUpdatingRef.current = true;
-      updateSheetData(ydocRef.current, dsheetId, data, sheetEditorRef.current, dataBlockCalcFunction);
+      updateSheetData(
+        ydocRef.current,
+        dsheetId,
+        data,
+        sheetEditorRef.current,
+        dataBlockCalcFunction,
+      );
 
       // Reset the flag after a short delay to allow the update to complete
       setTimeout(() => {
