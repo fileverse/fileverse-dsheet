@@ -209,6 +209,7 @@ const SpreadsheetEditor = ({
   onSheetCountChange,
   onDataBlockApiResponse,
   isAuthorized,
+  editorStateRef,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -225,6 +226,7 @@ const SpreadsheetEditor = ({
       isCollaborative={isCollaborative}
       commentData={commentData}
       isAuthorized={isAuthorized}
+      editorStateRef={editorStateRef}
     >
       <EditorContent
         commentData={commentData}
