@@ -6,7 +6,7 @@ export const useRefreshDenomination = ({
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>
 }) => {
-  const cryptoPriceRef = useRef<{ ETH: number | null, BTC: number | null, SOL: number | null }>({ BTC: null, ETH: 0, SOL: 0 });
+  const cryptoPriceRef = useRef<{ bitcoin: {}, ethereum: object, solana: object } | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPrice = async () => {
@@ -14,26 +14,18 @@ export const useRefreshDenomination = ({
     const cryptoPrices = await fetch(`${window.NEXT_PUBLIC_PROXY_BASE_URL}/proxy`, {
       headers:
       {
-        'target-url': 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd',
+        'target-url': 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd,aed,ars,aud,bdt,bhd,bmd,brl,cad,chf,clp,cny,czk,dkk,eur,gbp,gel,hkd,huf,idr,ils,inr,jpy,krw,kwd,lkr,mmk,mxn,myr,ngn,nok,nzd,php,pkr,pln,rub,sar,sek,sgd,thb,try,twd,uah,vef,vnd,zar',
         method: 'GET',
         'Content-Type': 'application/json'
       }
     });
     const cryptoData = await cryptoPrices.json();
-    const ETH = cryptoData.ethereum.usd;
-    const BTC = cryptoData.bitcoin.usd;
-    const SOL = cryptoData.solana.usd;
-    cryptoPriceRef.current = {
-      ETH,
-      BTC,
-      SOL
-    }
+    cryptoPriceRef.current = cryptoData;
     refreshDenomination();
   }
 
   const refreshDenomination = async () => {
-    const { ETH, BTC, SOL } = cryptoPriceRef.current;
-    if (BTC === null || ETH === null || SOL === null) return;
+    if (cryptoPriceRef.current === null) return;
     const currentData = sheetEditorRef.current?.getSheet();
     const cellData = currentData?.celldata;
     if (!cellData) return;
@@ -46,11 +38,14 @@ export const useRefreshDenomination = ({
       const value = cell.v?.m?.toString();
       const decemialCount = cell.v?.m?.includes('.') ? cell.v?.m?.split(' ')[0]?.split('.')[1]?.length : 0;
       if (value?.includes("BTC")) {
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / BTC).toFixed(decemialCount).toString());
+        // @ts-expect-error later
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / cryptoPriceRef.current.bitcoin?.[cell.v?.baseCurrency]).toFixed(decemialCount).toString());
       } else if (value?.includes("ETH")) {
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / ETH).toFixed(decemialCount).toString());
+        // @ts-expect-error later
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / cryptoPriceRef.current.ethereum?.[cell.v?.baseCurrency]).toFixed(decemialCount).toString());
       } else if (value?.includes("SOL")) {
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / SOL).toFixed(decemialCount).toString());
+        // @ts-expect-error later
+        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / cryptoPriceRef.current.solana?.[cell.v?.baseCurrency]).toFixed(decemialCount).toString());
       }
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
     }
