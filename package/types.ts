@@ -72,7 +72,7 @@ export interface DsheetProps {
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
-  editorStateRef: React.MutableRefObject<{
+  editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
 }

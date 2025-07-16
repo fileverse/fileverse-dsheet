@@ -71,7 +71,7 @@ interface EditorProviderProps {
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   isCollaborative?: boolean;
   commentData?: Object;
-  editorStateRef: React.MutableRefObject<{
+  editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
 }
