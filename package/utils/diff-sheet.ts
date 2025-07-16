@@ -1,4 +1,4 @@
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 
 /**
  * Compare two spreadsheets' cell data and images, checking if anything changed

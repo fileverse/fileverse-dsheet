@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import * as Y from 'yjs';
 import { fromUint8Array } from 'js-base64';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { SheetUpdateData } from '../types';
 
 interface YjsStruct {

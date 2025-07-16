@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { isSpreadsheetChanged } from './diff-sheet';
 
@@ -10,14 +10,15 @@ export const updateSheetData = (
   sheetEditor: WorkbookInstance | null,
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
 ) => {
-  const currentSheetId: string = sheetEditor?.getWorkbookContext()?.currentSheetId as string;
+  const currentSheetId: string = sheetEditor?.getWorkbookContext()
+    ?.currentSheetId as string;
   if (dataBlockCalcFunction?.[currentSheetId as string]) {
     data = (data as Sheet[]).map((sheet) => {
       return {
         ...sheet,
         dataBlockCalcFunction: dataBlockCalcFunction[sheet.id as string],
       };
-    })
+    });
   }
   if (!ydoc || !sheetEditor) {
     return;
