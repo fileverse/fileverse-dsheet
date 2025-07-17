@@ -77,20 +77,6 @@ const shouldApplyTextBlockFormatting = (newValue: Cell): boolean => {
   );
 };
 
-/**
- * Applies text block formatting to a cell
- */
-const applyTextBlockFormatting = (
-  newValue: Cell,
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-  row: number,
-  column: number,
-): void => {
-  sheetEditorRef.current?.setCellValue(row, column, {
-    ...newValue,
-    tb: '1',
-  });
-};
 type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
 
 /**
@@ -453,16 +439,6 @@ export const afterUpdateCell = async (
       m: `${(parseFloat(newValue?.v as string) / price).toFixed(decemialCount)} ${coin}`,
     }
     sheetEditorRef.current?.setCellValue(params.row, params.column, newCell);
-  }
-
-  // Apply text block formatting if needed
-  if (shouldApplyTextBlockFormatting(newValue)) {
-    applyTextBlockFormatting(
-      newValue,
-      sheetEditorRef,
-      params.row,
-      params.column,
-    );
   }
 
   // Adjust row height based on content

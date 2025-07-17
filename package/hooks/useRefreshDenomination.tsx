@@ -37,16 +37,7 @@ export const useRefreshDenomination = ({
 
       const value = cell.v?.m?.toString();
       const decemialCount = cell.v?.m?.includes('.') ? cell.v?.m?.split(' ')[0]?.split('.')[1]?.length : 0;
-      if (value?.includes("BTC")) {
-        // @ts-expect-error later
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / cryptoPriceRef.current.bitcoin?.[cell.v?.baseCurrency]).toFixed(decemialCount).toString());
-      } else if (value?.includes("ETH")) {
-        // @ts-expect-error later
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / cryptoPriceRef.current.ethereum?.[cell.v?.baseCurrency]).toFixed(decemialCount).toString());
-      } else if (value?.includes("SOL")) {
-        // @ts-expect-error later
-        cell.v.m = value.replace(/\d+(\.\d+)?/, (cell.v?.baseValue / cryptoPriceRef.current.solana?.[cell.v?.baseCurrency]).toFixed(decemialCount).toString());
-      }
+      cell.v.m = value.replace(/\d+(\.\d+)?/, (Number(cell.v?.v) / cell.v?.baseCurrencyPrice).toFixed(decemialCount).toString());
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
     }
     sheetEditorRef.current?.calculateFormula();
@@ -56,7 +47,7 @@ export const useRefreshDenomination = ({
     fetchPrice();
     intervalRef.current = setInterval(() => {
       fetchPrice();
-    }, 1 * 60 * 1000);
+    }, 20 * 60 * 1000);
 
     return () => {
       if (intervalRef.current)
