@@ -68,15 +68,6 @@ const isCellValueEmpty = (newValue: Cell): boolean => {
   return !newValue || (newValue?.v && !newValue.v);
 };
 
-/**
- * Checks if the cell value is a string that needs text block formatting
- */
-const shouldApplyTextBlockFormatting = (newValue: Cell): boolean => {
-  return (
-    typeof newValue.v === 'string' && newValue.v !== '#NAME?' && !newValue?.tb
-  );
-};
-
 type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
 
 /**
