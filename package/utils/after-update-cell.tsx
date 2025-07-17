@@ -446,7 +446,7 @@ export const afterUpdateCell = async (
     const decemialCount = params.oldValue.m?.toString().includes('.') ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length : 0;
     const separatedValue = parseFloat(params.oldValue.m.toString().split(" ")[0] as string);
     const coin = params.oldValue?.m?.toString().split(" ")[1]
-    const price = parseFloat(params.oldValue.v as string) / separatedValue;
+    const price = Math.round(parseFloat(params.oldValue.v as string) / separatedValue);
     const newCell = {
       ...newValue,
       baseValue: parseFloat(newValue.v as string),
