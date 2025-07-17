@@ -49,13 +49,14 @@ export const useRefreshDenomination = ({
       }
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
     }
+    sheetEditorRef.current?.calculateFormula();
   }
 
   useEffect(() => {
     fetchPrice();
     intervalRef.current = setInterval(() => {
       fetchPrice();
-    }, 20 * 60 * 1000);
+    }, 1 * 60 * 1000);
 
     return () => {
       if (intervalRef.current)
