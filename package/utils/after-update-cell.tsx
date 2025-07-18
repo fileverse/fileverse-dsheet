@@ -142,6 +142,7 @@ const handlePromiseError = (
   sheetEditorRef.current?.setCellValue(row, column, {
     ...newValue,
     m: data,
+    isDataBlockFormula: true,
   });
 };
 
@@ -177,6 +178,7 @@ const handleStringResponse = (
   params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
     ...params.newValue,
     m: data,
+    isDataBlockFormula: true,
   });
 };
 
@@ -279,6 +281,7 @@ const processRegularPromise = async (
         params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
           ...params.newValue,
           m: 'No Data',
+          isDataBlockFormula: true,
         });
       } else {
         // @ts-ignore
@@ -418,7 +421,6 @@ export const afterUpdateCell = async (
     });
   }
 
-  // @ts-expect-error later
   if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue.m && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
     const decemialCount = params.oldValue.m?.toString().includes('.') ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length : 0;
     const separatedValue = parseFloat(params.oldValue.m.toString().split(" ")[0] as string);

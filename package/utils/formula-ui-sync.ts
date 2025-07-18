@@ -48,10 +48,10 @@ export const formulaResponseUiSync = ({
       column: [column, column + (headers.length - 1)],
     };
 
-    const headerData: Array<Record<string, string> | string> = [];
+    const headerData: Array<Record<string, string | boolean> | string> = [];
     headers.forEach((header, index) => {
       if (index === 0) {
-        headerData.push({ ...newValue, m: header, v: header });
+        headerData.push({ ...newValue, m: header, v: header, isDataBlockFormula: true });
       } else {
         headerData.push(header);
       }
@@ -64,6 +64,7 @@ export const formulaResponseUiSync = ({
         ct: { fa: string; t: string };
         m?: object;
         v: object;
+        isDataBlockFormula?: boolean;
       }[] = [];
       headers.forEach((header: string) => {
         // @ts-expect-error later
@@ -71,6 +72,7 @@ export const formulaResponseUiSync = ({
         tempData.push({
           ct: { fa: '@', t: 's' },
           v: cellValue,
+          isDataBlockFormula: true,
         });
       });
       data.push(tempData);
@@ -81,11 +83,12 @@ export const formulaResponseUiSync = ({
       row: [row, row + apiData.length - 1],
       column: [column, column + (apiData[0].length - 1)],
     };
-    const headerData: Array<Record<string, string> | string> = apiData[0];
+    const headerData: Array<Record<string, string | boolean> | string> = apiData[0];
     headerData[0] = {
       ...newValue,
       m: headerData[0] as string,
       v: headerData[0] as string,
+      isDataBlockFormula: true,
     };
 
     data.push(headerData);
@@ -94,12 +97,14 @@ export const formulaResponseUiSync = ({
         ct: { fa: string; t: string };
         m?: object;
         v: string;
+        isDataBlockFormula?: boolean;
       }[] = [];
       // @ts-expect-error later
       apiData[i].forEach((cellValue: string) => {
         tempData.push({
           ct: { fa: '@', t: 's' },
           v: cellValue,
+          isDataBlockFormula: true,
         });
       });
 
