@@ -68,29 +68,6 @@ const isCellValueEmpty = (newValue: Cell): boolean => {
   return !newValue || (newValue?.v && !newValue.v);
 };
 
-/**
- * Checks if the cell value is a string that needs text block formatting
- */
-const shouldApplyTextBlockFormatting = (newValue: Cell): boolean => {
-  return (
-    typeof newValue.v === 'string' && newValue.v !== '#NAME?' && !newValue?.tb
-  );
-};
-
-/**
- * Applies text block formatting to a cell
- */
-const applyTextBlockFormatting = (
-  newValue: Cell,
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-  row: number,
-  column: number,
-): void => {
-  sheetEditorRef.current?.setCellValue(row, column, {
-    ...newValue,
-    tb: '1',
-  });
-};
 type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
 
 /**
@@ -165,6 +142,7 @@ const handlePromiseError = (
   sheetEditorRef.current?.setCellValue(row, column, {
     ...newValue,
     m: data,
+    isDataBlockFormula: true,
   });
 };
 
@@ -200,6 +178,7 @@ const handleStringResponse = (
   params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
     ...params.newValue,
     m: data,
+    isDataBlockFormula: true,
   });
 };
 
@@ -302,6 +281,7 @@ const processRegularPromise = async (
         params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
           ...params.newValue,
           m: 'No Data',
+          isDataBlockFormula: true,
         });
       } else {
         // @ts-ignore
@@ -441,28 +421,17 @@ export const afterUpdateCell = async (
     });
   }
 
-  // @ts-expect-error later
   if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue.m && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
     const decemialCount = params.oldValue.m?.toString().includes('.') ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length : 0;
     const separatedValue = parseFloat(params.oldValue.m.toString().split(" ")[0] as string);
     const coin = params.oldValue?.m?.toString().split(" ")[1]
-    const price = parseFloat(params.oldValue.v as string) / separatedValue;
+    const price = Math.round(parseFloat(params.oldValue.v as string) / separatedValue);
     const newCell = {
       ...newValue,
       baseValue: parseFloat(newValue.v as string),
       m: `${(parseFloat(newValue?.v as string) / price).toFixed(decemialCount)} ${coin}`,
     }
     sheetEditorRef.current?.setCellValue(params.row, params.column, newCell);
-  }
-
-  // Apply text block formatting if needed
-  if (shouldApplyTextBlockFormatting(newValue)) {
-    applyTextBlockFormatting(
-      newValue,
-      sheetEditorRef,
-      params.row,
-      params.column,
-    );
   }
 
   // Adjust row height based on content
