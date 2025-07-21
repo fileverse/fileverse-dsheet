@@ -1,15 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
+const CRYPTO_MAP: Record<string, string> = {
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
+};
+
 export const useRefreshDenomination = ({
   sheetEditorRef,
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
 }) => {
   const cryptoPriceRef = useRef<{
-    bitcoin: {};
-    ethereum: object;
-    solana: object;
+    bitcoin: Record<string, number>;
+    ethereum: Record<string, number>;
+    solana: Record<string, number>;
   } | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -47,42 +53,17 @@ export const useRefreshDenomination = ({
       const decemialCount = cell.v?.m?.includes('.')
         ? cell.v?.m?.split(' ')[0]?.split('.')[1]?.length
         : 0;
-      if (value?.includes('BTC')) {
-        // @ts-expect-error later
-        cell.v.m = value.replace(
-          /\d+(\.\d+)?/,
-          (
-            cell.v?.baseValue /
-            cryptoPriceRef.current.bitcoin?.[cell.v?.baseCurrency]
-          )
-            .toFixed(decemialCount)
-            .toString(),
-        );
-      } else if (value?.includes('ETH')) {
-        // @ts-expect-error later
-        cell.v.m = value.replace(
-          /\d+(\.\d+)?/,
-          (
-            cell.v?.baseValue /
-            cryptoPriceRef.current.ethereum?.[cell.v?.baseCurrency]
-          )
-            .toFixed(decemialCount)
-            .toString(),
-        );
-      } else if (value?.includes('SOL')) {
-        // @ts-expect-error later
-        cell.v.m = value.replace(
-          /\d+(\.\d+)?/,
-          (
-            cell.v?.baseValue /
-            cryptoPriceRef.current.solana?.[cell.v?.baseCurrency]
-          )
-            .toFixed(decemialCount)
-            .toString(),
-        );
-      }
+      const coin = cell.v?.m?.split(' ')[1] as string;
+      const cryptoKey = CRYPTO_MAP[coin] as 'bitcoin' | 'ethereum' | 'solana';
+      const price = cryptoPriceRef.current[cryptoKey]?.[cell.v?.baseCurrency];
+      cell.v.m = value.replace(
+        /\d+(\.\d+)?/,
+        (Number(cell.v?.v) / price).toFixed(decemialCount).toString(),
+      );
+      cell.v.baseCurrencyPrice = price;
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
     }
+    sheetEditorRef.current?.calculateFormula();
   };
 
   useEffect(() => {
