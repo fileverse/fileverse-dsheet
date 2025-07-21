@@ -20,7 +20,9 @@ import { SheetUpdateData } from '../types';
 export interface EditorContextType {
   isAuthorized: boolean;
   dataBlockCalcFunction: { [key: string]: { [key: string]: any } };
-  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
+  setDataBlockCalcFunction: React.Dispatch<
+    React.SetStateAction<{ [key: string]: { [key: string]: any } }>
+  >;
   // Core refs
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
   ydocRef: React.MutableRefObject<Y.Doc | null>;
@@ -65,7 +67,7 @@ interface EditorProviderProps {
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   isCollaborative?: boolean;
-  commentData?: Object
+  commentData?: Object;
 }
 
 // Provider component that wraps the app
@@ -86,7 +88,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
   const sheetEditorRef = externalEditorRef || internalEditorRef;
-  const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{ [key: string]: { [key: string]: any } }>({});
+  const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{
+    [key: string]: { [key: string]: any };
+  }>({});
 
   // Initialize YJS document and persistence
   const { ydocRef, persistenceRef, syncStatus, isSyncedRef } = useEditorSync(
@@ -125,7 +129,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     commentData,
     dataBlockCalcFunction,
-    setDataBlockCalcFunction
+    setDataBlockCalcFunction,
   );
 
   // Initialize collaboration

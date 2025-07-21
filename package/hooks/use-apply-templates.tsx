@@ -19,7 +19,9 @@ export const useApplyTemplatesBtn = ({
   currentDataRef: React.MutableRefObject<object | null>;
   setForceSheetRender: Dispatch<SetStateAction<number>>;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
+  setDataBlockCalcFunction: React.Dispatch<
+    React.SetStateAction<{ [key: string]: { [key: string]: any } }>
+  >;
 }) => {
   useEffect(() => {
     if (!selectedTemplate) return;
@@ -29,7 +31,9 @@ export const useApplyTemplatesBtn = ({
       selectedTemplate as string
     ] as Sheet[];
     if (templateData) {
-      const newSheetId = sheetEditorRef.current?.getSettings().generateSheetId();
+      const newSheetId = sheetEditorRef.current
+        ?.getSettings()
+        .generateSheetId();
       const data = Array.from(sheetArray) as Sheet[];
       templateData[0].order = data.length;
       templateData[0].id = newSheetId;

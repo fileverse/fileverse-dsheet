@@ -53,9 +53,13 @@ export const handleCSVUpload = (
           // Add header row
           const headerRow = headers.map((headerV, index) => {
             // @ts-expect-error later
-            const renamedHeadersKeys = results.meta.renamedHeaders ? Object.keys(results.meta.renamedHeaders) : [];
+            const renamedHeadersKeys = results.meta.renamedHeaders
+              ? Object.keys(results.meta.renamedHeaders)
+              : [];
             // @ts-expect-error later
-            const header = renamedHeadersKeys.includes(headerV) ? results.meta.renamedHeaders[headerV] : headerV;
+            const header = renamedHeadersKeys.includes(headerV)
+              ? results.meta.renamedHeaders[headerV]
+              : headerV;
             return {
               r: 0,
               c: index,
@@ -67,7 +71,7 @@ export const handleCSVUpload = (
                 },
                 v: header !== null ? header : null,
               },
-            }
+            };
           });
 
           headerRow.forEach((cell) => {
@@ -87,8 +91,8 @@ export const handleCSVUpload = (
                   m:
                     (row as Record<string, string | null>)[header] !== null
                       ? (row as Record<string, string | null>)[
-                        header
-                      ]?.toString()
+                          header
+                        ]?.toString()
                       : null,
                   ct: {
                     fa: 'General',
@@ -97,10 +101,10 @@ export const handleCSVUpload = (
                   // @ts-expect-error later
                   v:
                     (row as Record<string, string | number | null>)[header] !==
-                      null
+                    null
                       ? (row as Record<string, string | number | null>)[
-                        header
-                      ]?.toString()
+                          header
+                        ]?.toString()
                       : null,
                 },
               });

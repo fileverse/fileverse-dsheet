@@ -123,13 +123,19 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         // For example, if images have id: use image.id
         // If they have position: use `${image.x},${image.y}` or similar
         // @ts-ignore
-        const key = image.id || `${image.x || 0},${image.y || 0}` || JSON.stringify(image);
+        const key =
+          image.id ||
+          `${image.x || 0},${image.y || 0}` ||
+          JSON.stringify(image);
         oldImageMap.set(key, image);
       }
 
       for (const image of newImages) {
         // @ts-ignore
-        const key = image.id || `${image.x || 0},${image.y || 0}` || JSON.stringify(image);
+        const key =
+          image.id ||
+          `${image.x || 0},${image.y || 0}` ||
+          JSON.stringify(image);
         newImageMap.set(key, image);
       }
 
