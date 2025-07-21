@@ -41,8 +41,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -421,7 +421,6 @@ export const afterUpdateCell = async (
     });
   }
 
-
   // Adjust row height based on content
   adjustRowHeight({
     newValue,
@@ -439,7 +438,11 @@ export const afterUpdateCell = async (
     ?.currentSheetId as string;
 
   // Handle promise-based values
-  if (newValue.m === PROMISE_OBJECT_STRING || newValue.m === LOADING_MESSAGE || newValue.m === 'Loading') {
+  if (
+    newValue.m === PROMISE_OBJECT_STRING ||
+    newValue.m === LOADING_MESSAGE ||
+    newValue.m === 'Loading'
+  ) {
     await handlePromiseValue(newValue, updatedParams);
 
     // register dataBlockCalcFunction cell

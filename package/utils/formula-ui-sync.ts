@@ -51,7 +51,12 @@ export const formulaResponseUiSync = ({
     const headerData: Array<Record<string, string | boolean> | string> = [];
     headers.forEach((header, index) => {
       if (index === 0) {
-        headerData.push({ ...newValue, m: header, v: header, isDataBlockFormula: true });
+        headerData.push({
+          ...newValue,
+          m: header,
+          v: header,
+          isDataBlockFormula: true,
+        });
       } else {
         headerData.push(header);
       }
@@ -83,7 +88,8 @@ export const formulaResponseUiSync = ({
       row: [row, row + apiData.length - 1],
       column: [column, column + (apiData[0].length - 1)],
     };
-    const headerData: Array<Record<string, string | boolean> | string> = apiData[0];
+    const headerData: Array<Record<string, string | boolean> | string> =
+      apiData[0];
     headerData[0] = {
       ...newValue,
       m: headerData[0] as string,
