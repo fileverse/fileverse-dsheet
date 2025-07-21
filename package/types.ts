@@ -64,12 +64,17 @@ export interface DsheetProps {
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
   toggleTemplateSidebar?: () => void;
-  sheetEditorRef?: RefObject<WorkbookInstance>;
+  sheetEditorRef?: RefObject<
+    WorkbookInstance & { refreshIndexedDB: () => Promise<void> }
+  >;
   storeApiKey?: (apiKeyName: string) => void;
   allowComments?: boolean;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
+  editorStateRef?: React.MutableRefObject<{
+    refreshIndexedDB: () => Promise<void>;
+  } | null>;
 }
 export type BaseError = {
   message: string;

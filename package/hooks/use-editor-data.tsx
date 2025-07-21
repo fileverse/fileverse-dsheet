@@ -59,14 +59,11 @@ export const useEditorData = (
       const decodedSheetData = Array.from(tempMap) as Sheet[];
 
       if (decodedSheetData.length > 0) {
-        // REPLACE instead of merge: Create a completely new document with portal content
-        const newDoc = new Y.Doc();
-        Y.applyUpdate(newDoc, uint8Array);
+        // Merge the portal content into the main YJS document
+        Y.applyUpdate(ydocRef.current, uint8Array);
 
-        // Replace the current document reference
-        ydocRef.current = newDoc;
+        const map = ydocRef.current.getArray(dsheetId);
 
-        const map = newDoc.getArray(dsheetId);
         const newSheetData = Array.from(map) as Sheet[];
 
         // Update the current data reference
