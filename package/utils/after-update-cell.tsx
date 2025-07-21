@@ -33,7 +33,7 @@ const FLVURL_FUNCTIONS = ['FLVURL', 'flvurl'];
 interface AfterUpdateCellParams {
   row: number;
   column: number;
-  oldValue: Cell;
+  oldValue?: Cell;
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   onboardingComplete: boolean | undefined;
@@ -406,6 +406,7 @@ const adjustRowHeight = ({
 export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
+  console.log('afterUpdateCell', params);
   const { newValue, sheetEditorRef } = params;
 
   // Early return for empty values
@@ -421,18 +422,6 @@ export const afterUpdateCell = async (
     });
   }
 
-  if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue.m && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
-    const decemialCount = params.oldValue.m?.toString().includes('.') ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length : 0;
-    const separatedValue = parseFloat(params.oldValue.m.toString().split(" ")[0] as string);
-    const coin = params.oldValue?.m?.toString().split(" ")[1]
-    const price = Math.round(parseFloat(params.oldValue.v as string) / separatedValue);
-    const newCell = {
-      ...newValue,
-      baseValue: parseFloat(newValue.v as string),
-      m: `${(parseFloat(newValue?.v as string) / price).toFixed(decemialCount)} ${coin}`,
-    }
-    sheetEditorRef.current?.setCellValue(params.row, params.column, newCell);
-  }
 
   // Adjust row height based on content
   adjustRowHeight({
@@ -451,7 +440,7 @@ export const afterUpdateCell = async (
     ?.currentSheetId as string;
 
   // Handle promise-based values
-  if (newValue.m === PROMISE_OBJECT_STRING) {
+  if (newValue.m === PROMISE_OBJECT_STRING || newValue.m === LOADING_MESSAGE || newValue.m === 'Loading') {
     await handlePromiseValue(newValue, updatedParams);
 
     // register dataBlockCalcFunction cell
@@ -480,7 +469,8 @@ const updateDataCalcFunc = ({
   //return;
   try {
     params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
-      const formulaString = params.newValue.f?.split('=')[1];
+      console.log('dataBlockCalcFunction', params.newValue);
+      const formulaString = params.newValue?.f?.split('=')[1];
 
       const functionMatch = formulaString?.match(/^(\w+)\((.*)\)$/);
       if (!functionMatch) {
