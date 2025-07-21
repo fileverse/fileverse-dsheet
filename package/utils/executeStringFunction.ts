@@ -36,8 +36,9 @@ export const executeStringFunction = async (
       }
       if (isCellReference(arg)) {
         const cell = cellReferenceToRowCol(arg);
-        // @ts-expect-error later
+
         const value = sheetEditorRef?.current?.getCellValue(
+          // @ts-expect-error
           cell?.row,
           cell?.column,
         );

@@ -20,8 +20,8 @@ export const useRefreshDenomination = ({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchPrice = async () => {
-    // @ts-expect-error later
     const cryptoPrices = await fetch(
+      // @ts-expect-error
       `${window.NEXT_PUBLIC_PROXY_BASE_URL}/proxy`,
       {
         headers: {

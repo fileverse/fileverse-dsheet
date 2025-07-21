@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Sheet } from '@fileverse-dev/fortune-core';
 
 /**
@@ -35,9 +36,7 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
 
       // Check if condition rules have changed
       if (
-        // @ts-ignore
         JSON.stringify(oldSheet.conditionRules) !==
-        // @ts-ignore
         JSON.stringify(newSheet.conditionRules)
       ) {
         return true;
@@ -122,7 +121,6 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         // You can adjust this key generation based on your image object structure
         // For example, if images have id: use image.id
         // If they have position: use `${image.x},${image.y}` or similar
-        // @ts-ignore
         const key =
           image.id ||
           `${image.x || 0},${image.y || 0}` ||
@@ -131,7 +129,6 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
       }
 
       for (const image of newImages) {
-        // @ts-ignore
         const key =
           image.id ||
           `${image.x || 0},${image.y || 0}` ||

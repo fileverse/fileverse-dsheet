@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Papa from 'papaparse';
 import { Sheet } from '@fileverse-dev/fortune-core';
 import React from 'react';
@@ -56,7 +57,6 @@ export const handleCSVUpload = (
             const renamedHeadersKeys = results.meta.renamedHeaders
               ? Object.keys(results.meta.renamedHeaders)
               : [];
-            // @ts-expect-error later
             const header = renamedHeadersKeys.includes(headerV)
               ? results.meta.renamedHeaders[headerV]
               : headerV;

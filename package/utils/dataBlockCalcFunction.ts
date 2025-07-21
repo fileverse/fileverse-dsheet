@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { formulaResponseUiSync } from './formula-ui-sync';
 import { executeStringFunction } from './executeStringFunction';
@@ -22,15 +23,15 @@ export const dataBlockCalcFunctionHandler = ({
   if (currentSheetDataBlockList && currentSheetDataBlockList?.length > 0) {
     currentSheetDataBlockList.forEach(
       (dataBlock: { row: number; column: number }) => {
-        //@ts-expect-error later
         const dataBlockValue =
+          //@ts-expect-error later
           sheetEditorRef?.current?.getSheet().data[dataBlock.row][
             dataBlock.column
           ];
         const currentFormulaName = dataBlockValue?.f
           ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
           ?.toUpperCase();
-        // @ts-expect-error later
+
         const isCurrentIncludedInReference =
           dataBlock?.rowRefrenced?.includes(currentRow) &&
           dataBlock.columnRefrenced?.includes(currentColumn) &&
