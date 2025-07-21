@@ -41,8 +41,8 @@ interface AfterUpdateCellParams {
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -442,16 +442,27 @@ export const afterUpdateCell = async (
   }
 
   // @ts-expect-error later
-  if (newValue?.baseValue && params.oldValue?.baseValue && params.oldValue.m && params.oldValue?.v !== newValue?.v && newValue?.m && newValue?.v) {
-    const decemialCount = params.oldValue.m?.toString().includes('.') ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length : 0;
-    const separatedValue = parseFloat(params.oldValue.m.toString().split(" ")[0] as string);
-    const coin = params.oldValue?.m?.toString().split(" ")[1]
+  if (
+    newValue?.baseValue &&
+    params.oldValue?.baseValue &&
+    params.oldValue.m &&
+    params.oldValue?.v !== newValue?.v &&
+    newValue?.m &&
+    newValue?.v
+  ) {
+    const decemialCount = params.oldValue.m?.toString().includes('.')
+      ? params.oldValue.m?.toString().split(' ')[0].split('.')[1].length
+      : 0;
+    const separatedValue = parseFloat(
+      params.oldValue.m.toString().split(' ')[0] as string,
+    );
+    const coin = params.oldValue?.m?.toString().split(' ')[1];
     const price = parseFloat(params.oldValue.v as string) / separatedValue;
     const newCell = {
       ...newValue,
       baseValue: parseFloat(newValue.v as string),
       m: `${(parseFloat(newValue?.v as string) / price).toFixed(decemialCount)} ${coin}`,
-    }
+    };
     sheetEditorRef.current?.setCellValue(params.row, params.column, newCell);
   }
 

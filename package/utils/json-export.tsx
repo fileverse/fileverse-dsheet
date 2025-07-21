@@ -5,13 +5,13 @@ import { Sheet } from '@fileverse-dev/fortune-core';
 export const handleExportToJSON = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
   ydocRef: React.RefObject<Y.Doc | null>,
-  dsheetId: string
+  dsheetId: string,
 ) => {
   if (!sheetEditorRef.current || !ydocRef.current) return;
 
   try {
     const sheetArray = ydocRef.current?.getArray(dsheetId);
-    const allSheets = sheetArray ? Array.from(sheetArray) as Sheet[] : [];
+    const allSheets = sheetArray ? (Array.from(sheetArray) as Sheet[]) : [];
     const blob = new Blob([JSON.stringify(allSheets, null, 2)], {
       type: 'application/json',
     });
