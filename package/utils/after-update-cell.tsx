@@ -406,7 +406,6 @@ const adjustRowHeight = ({
 export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
-  console.log('afterUpdateCell', params);
   const { newValue, sheetEditorRef } = params;
 
   // Early return for empty values
@@ -469,7 +468,6 @@ const updateDataCalcFunc = ({
   //return;
   try {
     params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
-      console.log('dataBlockCalcFunction', params.newValue);
       const formulaString = params.newValue?.f?.split('=')[1];
 
       const functionMatch = formulaString?.match(/^(\w+)\((.*)\)$/);
