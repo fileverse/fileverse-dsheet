@@ -45,7 +45,7 @@ export const getCustomToolbarItems = ({
   handleExportToJSON: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
-    dsheetId: string
+    dsheetId: string,
   ) => void;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
@@ -54,76 +54,78 @@ export const getCustomToolbarItems = ({
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
   setShowFetchURLModal:
-  | React.Dispatch<React.SetStateAction<boolean>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<boolean>>
+    | undefined;
 }) => [
-    {
-      key: 'import-export',
-      tooltip: 'Import/Export',
-      onClick: () => {
-        setExportDropdownOpen((prev) => !prev);
-      },
-      icon: (
-        <CustomButton
-          setExportDropdownOpen={setExportDropdownOpen}
-          handleCSVUpload={(event) =>
-            handleCSVUpload(
-              event,
-              ydocRef.current,
-              setForceSheetRender,
-              dsheetId,
-              currentDataRef,
-              sheetEditorRef,
-            )
-          }
-          handleXLSXUpload={handleXLSXUpload}
-          handleExportToXLSX={() =>
-            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
-          }
-          handleExportToCSV={() =>
-            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
-          }
-          handleExportToJSON={() => handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)}
-        />
-      ),
+  {
+    key: 'import-export',
+    tooltip: 'Import/Export',
+    onClick: () => {
+      setExportDropdownOpen((prev) => !prev);
     },
-    {
-      /*template-button is used in use xocument style */
-      key: 'fetch-url',
-      tooltip: 'Fetch data: Coming soon',
-      icon: (
-        <IconButton
-          className="cursor-not-allowed fetch-url-button !min-w-[30px] w-[30px] h-[30px] !px-0 bg-[#1977E42E] hover:!bg-[#1977E42E] rounded-lg"
-          icon="FetchData"
-          size="md"
-          variant="ghost"
-          color="blue"
-        />
-      ),
-      onClick: () => {
-        return;
-        // const selection = sheetEditorRef.current?.getSelection();
-        // setShowFetchURLModal?.((prev) => {
-        //   if (selection && !prev) {
-        //     return true;
-        //   } else {
-        //     return false;
-        //   }
-        // });
-      },
+    icon: (
+      <CustomButton
+        setExportDropdownOpen={setExportDropdownOpen}
+        handleCSVUpload={(event) =>
+          handleCSVUpload(
+            event,
+            ydocRef.current,
+            setForceSheetRender,
+            dsheetId,
+            currentDataRef,
+            sheetEditorRef,
+          )
+        }
+        handleXLSXUpload={handleXLSXUpload}
+        handleExportToXLSX={() =>
+          handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+        }
+        handleExportToCSV={() =>
+          handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+        }
+        handleExportToJSON={() =>
+          handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)
+        }
+      />
+    ),
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'fetch-url',
+    tooltip: 'Fetch data: Coming soon',
+    icon: (
+      <IconButton
+        className="cursor-not-allowed fetch-url-button !min-w-[30px] w-[30px] h-[30px] !px-0 bg-[#1977E42E] hover:!bg-[#1977E42E] rounded-lg"
+        icon="FetchData"
+        size="md"
+        variant="ghost"
+        color="blue"
+      />
+    ),
+    onClick: () => {
+      return;
+      // const selection = sheetEditorRef.current?.getSelection();
+      // setShowFetchURLModal?.((prev) => {
+      //   if (selection && !prev) {
+      //     return true;
+      //   } else {
+      //     return false;
+      //   }
+      // });
     },
-    {
-      /*template-button is used in use xocument style */
-      key: 'templates',
-      tooltip: 'Templates',
-      icon: (
-        <IconButton
-          className="!min-w-[30px] w-[30px] h-[30px] !px-0 template-button text-[#CF1C82] bg-[#CF1C821F] rounded-lg hover:!bg-[#CF1C821F] "
-          icon="LayoutTemplate"
-          size="md"
-          variant="ghost"
-        />
-      ),
-      onClick: toggleTemplateSidebar,
-    },
-  ];
+  },
+  {
+    /*template-button is used in use xocument style */
+    key: 'templates',
+    tooltip: 'Templates',
+    icon: (
+      <IconButton
+        className="!min-w-[30px] w-[30px] h-[30px] !px-0 template-button text-[#CF1C82] bg-[#CF1C821F] rounded-lg hover:!bg-[#CF1C821F] "
+        icon="LayoutTemplate"
+        size="md"
+        variant="ghost"
+      />
+    ),
+    onClick: toggleTemplateSidebar,
+  },
+];
