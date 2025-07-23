@@ -209,12 +209,16 @@ const SpreadsheetEditor = ({
   onSheetCountChange,
   onDataBlockApiResponse,
   isAuthorized,
+  getDocumentTitle,
+  updateDocumentTitle,
   editorStateRef,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
   return (
     <EditorProvider
+      getDocumentTitle={getDocumentTitle}
+      updateDocumentTitle={updateDocumentTitle}
       dsheetId={dsheetId}
       username={username}
       portalContent={portalContent}

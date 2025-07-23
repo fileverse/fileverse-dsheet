@@ -38,6 +38,7 @@ export const useRefreshDenomination = ({
   };
 
   const refreshDenomination = async () => {
+    const currentSubSheetId = sheetEditorRef.current?.getSheet()?.id;
     if (cryptoPriceRef.current === null) return;
     const currentData = sheetEditorRef.current?.getSheet();
     const cellData = currentData?.celldata;
@@ -63,7 +64,8 @@ export const useRefreshDenomination = ({
       cell.v.baseCurrencyPrice = price;
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
     }
-    sheetEditorRef.current?.calculateFormula();
+    // @ts-expect-error later
+    sheetEditorRef.current?.calculateSubSheetFormula(currentSubSheetId);
   };
 
   useEffect(() => {
