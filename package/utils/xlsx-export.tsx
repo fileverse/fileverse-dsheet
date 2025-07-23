@@ -4,7 +4,7 @@ import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
 
-export const handleExportToXLSX = (
+export const handleExportToXLSX = async (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
   dsheetId: string,
@@ -79,8 +79,8 @@ export const handleExportToXLSX = (
           worksheet[cellRef] = newCell;
         }
       });
-      console.log(worksheet, "worksheet");
-      XLSXUtil.book_append_sheet(workbook, worksheet, sheet.name);
+      const subSheetName = sheet.name.length > 30 ? sheet.name.slice(0, 30) : sheet.name;
+      XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
     // Modify workbook properties to be more compatible with Google Sheets
@@ -91,11 +91,11 @@ export const handleExportToXLSX = (
       Manager: ""
     };
 
-    console.log(workbook, "workbook");
-
-
     // Write with enhanced options for better Google Sheets compatibility
-    const title = getDocumentTitle?.();
+    let title = await getDocumentTitle?.() as string || 'Sheet';
+    title.length > 30
+      ? title.slice(0, 30)
+      : title;
     XLSXWriteFile(workbook, `${title}.xlsx`, {
       bookType: 'xlsx',
       type: 'binary',
