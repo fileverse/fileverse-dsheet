@@ -4,6 +4,7 @@ import { Sheet } from '@fileverse-dev/fortune-core';
 import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { encode } from 'punycode';
 
 export const handleCSVUpload = (
   event: React.ChangeEvent<HTMLInputElement>,
@@ -12,6 +13,7 @@ export const handleCSVUpload = (
   dsheetId: string,
   currentDataRef: React.MutableRefObject<object | null>,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+  updateDocumentTitle?: (title: string) => void
 ) => {
   const input = event.target;
   if (!input.files?.length) {
@@ -19,7 +21,7 @@ export const handleCSVUpload = (
   }
   const file = input.files[0];
 
-  const reader = new FileReader();
+  const reader = new FileReader({ encoded: 'UTF-8' });
   reader.onload = (e) => {
     if (!e.target) {
       console.error('FileReader event target is null');
@@ -91,8 +93,8 @@ export const handleCSVUpload = (
                   m:
                     (row as Record<string, string | null>)[header] !== null
                       ? (row as Record<string, string | null>)[
-                          header
-                        ]?.toString()
+                        header
+                      ]?.toString()
                       : null,
                   ct: {
                     fa: 'General',
@@ -101,10 +103,10 @@ export const handleCSVUpload = (
                   // @ts-expect-error later
                   v:
                     (row as Record<string, string | number | null>)[header] !==
-                    null
+                      null
                       ? (row as Record<string, string | number | null>)[
-                          header
-                        ]?.toString()
+                        header
+                      ]?.toString()
                       : null,
                 },
               });
@@ -137,6 +139,7 @@ export const handleCSVUpload = (
             },
           };
 
+          updateDocumentTitle?.(file.name);
           const finalData = [...data, sheetObject as Sheet];
           ydoc.transact(() => {
             sheetArray.delete(0, sheetArray.length);

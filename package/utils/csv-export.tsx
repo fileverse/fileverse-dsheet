@@ -1,4 +1,3 @@
-import { Sheet } from '@fileverse-dev/fortune-core';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
@@ -6,18 +5,11 @@ import { MutableRefObject } from 'react';
 export const handleExportToCSV = (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
-  dsheetId: string,
 ) => {
   if (!workbookRef.current || !ydocRef.current) return;
 
   try {
-    const ydoc = ydocRef.current;
-    const sheetArray = ydoc.getArray(dsheetId);
-    const preSheetArray = Array.from(sheetArray) as Sheet[];
-    const sheetData = preSheetArray;
-
-    const activeSheet =
-      sheetData.find((sheet) => sheet.status === 1) || sheetData[0];
+    const activeSheet = workbookRef.current.getSheet();
 
     if (
       !activeSheet ||
@@ -77,7 +69,7 @@ export const handleExportToCSV = (
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${activeSheet.name || 'flvSheet'}.csv`);
+    link.setAttribute('download', `${activeSheet.name}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

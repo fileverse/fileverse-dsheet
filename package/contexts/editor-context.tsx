@@ -20,6 +20,8 @@ import { SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   dataBlockCalcFunction: { [key: string]: { [key: string]: any } };
   setDataBlockCalcFunction: React.Dispatch<
@@ -59,6 +61,8 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   children: React.ReactNode;
   dsheetId: string;
@@ -78,6 +82,8 @@ interface EditorProviderProps {
 
 // Provider component that wraps the app
 export const EditorProvider: React.FC<EditorProviderProps> = ({
+  getDocumentTitle,
+  updateDocumentTitle,
   children,
   dsheetId,
   username = 'Anonymous',
@@ -176,6 +182,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Create the context value
   const contextValue: EditorContextType = useMemo(() => {
     return {
+      getDocumentTitle,
+      updateDocumentTitle,
       dataBlockCalcFunction,
       setDataBlockCalcFunction,
       sheetEditorRef,
@@ -197,6 +205,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       refreshIndexedDB,
     };
   }, [
+    getDocumentTitle,
+    updateDocumentTitle,
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
     sheetEditorRef,

@@ -41,6 +41,8 @@ export type DataBlockApiKeyHandlerType = (params: {
 }) => void;
 
 export interface DsheetProps {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setFetchingURLData?: (fetching: boolean) => void;
