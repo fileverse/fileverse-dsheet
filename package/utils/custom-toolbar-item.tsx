@@ -4,6 +4,7 @@ import React, { ChangeEvent } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { CustomButton } from './../components/import-button-ui';
+import { SmartContractButton } from '../components/smart-contract';
 
 import { IconButton } from '@fileverse/ui';
 
@@ -96,6 +97,23 @@ export const getCustomToolbarItems = ({
           }
         />
       ),
+    },
+    {
+      /*template-button is used in use xocument style */
+      key: 'Smart Contract',
+      tooltip: 'Smart Contract',
+      icon: (
+        <SmartContractButton
+          // setSmartContractDropdownOpen={setExportDropdownOpen}
+          handleImportSmartContract={() =>
+            console.log('Import Smart Contract')
+          }
+          handleViewSmartContract={() =>
+            console.log('View Smart Contract')
+          }
+        />
+      ),
+      onClick: toggleTemplateSidebar,
     },
     {
       /*template-button is used in use xocument style */
