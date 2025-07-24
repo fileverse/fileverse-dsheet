@@ -126,7 +126,6 @@ body {
 
 /* style for scrollbar zindex */
 .luckysheet-scrollbar-y,
-.luckysheet-scrollbar-x,
 .luckysheet-bottom-controll-row {
   z-index: 1 !important;
 }
