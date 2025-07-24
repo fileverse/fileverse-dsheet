@@ -3,6 +3,7 @@ import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { useEditor } from '../contexts/editor-context';
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 
@@ -19,6 +20,7 @@ export const useXLSXImport = ({
   dsheetId: string;
   currentDataRef: React.MutableRefObject<object | null>;
 }) => {
+  const { updateDocumentTitle } = useEditor();
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<
     string,
@@ -114,7 +116,7 @@ export const useXLSXImport = ({
           file,
           // luckysheetfile: object
           function (exportJson: { sheets: Sheet[] }) {
-            const sheets = exportJson.sheets;
+            let sheets = exportJson.sheets;
             for (const sheet of sheets) {
               if (dropdownInfo && Object.keys(dropdownInfo).length > 0) {
                 const dataVerification: Record<string, object> = {};
@@ -143,17 +145,43 @@ export const useXLSXImport = ({
                 sheet.dataVerification = dataVerification;
               }
             }
-            setSheetData(sheets);
 
             if (!ydocRef.current) {
               console.error('ydocRef.current is null');
               return;
             }
             const sheetArray = ydocRef.current.getArray(dsheetId);
+            const localSheetsArray = Array.from(sheetArray) as Sheet[];
+            sheets = sheets.map((sheet) => {
+              if (!sheet.id) {
+                sheet.id = sheetEditorRef.current?.getSettings().generateSheetId();
+              }
+              if (sheet.calcChain) {
+                sheet.calcChain = sheet.calcChain.map((chain) => {
+                  delete chain.id
+                  delete chain.index
+                  chain.id = sheet.id
+                  return chain
+                })
+              }
+              return sheet
+            })
+
+            let combinedSheets = [...localSheetsArray, ...sheets]
+
+            combinedSheets = combinedSheets.map((sheet, index) => {
+              sheet.order = index;
+              return sheet
+            })
+
+            setSheetData(combinedSheets);
             ydocRef.current.transact(() => {
-              sheetArray.insert(0, sheets);
-              currentDataRef.current = sheets;
+              sheetArray.delete(0, sheetArray.length);
+              sheetArray.insert(0, combinedSheets);
+              currentDataRef.current = combinedSheets;
             });
+            // @ts-expect-error later
+            updateDocumentTitle?.(exportJson.info?.name);
             setForceSheetRender((prev: number) => prev + 1);
           },
         );

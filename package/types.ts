@@ -40,6 +40,8 @@ export type DataBlockApiKeyHandlerType = (params: {
 }) => void;
 
 export interface DsheetProps {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setFetchingURLData?: (fetching: boolean) => void;
@@ -63,12 +65,17 @@ export interface DsheetProps {
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
   toggleTemplateSidebar?: () => void;
-  sheetEditorRef?: RefObject<WorkbookInstance>;
+  sheetEditorRef?: RefObject<
+    WorkbookInstance & { refreshIndexedDB: () => Promise<void> }
+  >;
   storeApiKey?: (apiKeyName: string) => void;
   allowComments?: boolean;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
+  editorStateRef?: React.MutableRefObject<{
+    refreshIndexedDB: () => Promise<void>;
+  } | null>;
 }
 export type BaseError = {
   message: string;

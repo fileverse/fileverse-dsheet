@@ -4,6 +4,8 @@ import React, {
   useRef,
   useState,
   useEffect,
+  useMemo,
+  useCallback,
 } from 'react';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
@@ -18,9 +20,14 @@ import { SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   dataBlockCalcFunction: { [key: string]: { [key: string]: any } };
-  setDataBlockCalcFunction: React.Dispatch<React.SetStateAction<{ [key: string]: { [key: string]: any } }>>
+  setDataBlockCalcFunction: React.Dispatch<
+    React.SetStateAction<{ [key: string]: { [key: string]: any } }>
+  >;
+  refreshIndexedDB: () => Promise<void>;
   // Core refs
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
   ydocRef: React.MutableRefObject<Y.Doc | null>;
@@ -54,6 +61,8 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   children: React.ReactNode;
   dsheetId: string;
@@ -65,11 +74,16 @@ interface EditorProviderProps {
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   isCollaborative?: boolean;
-  commentData?: Object
+  commentData?: Object;
+  editorStateRef?: React.MutableRefObject<{
+    refreshIndexedDB: () => Promise<void>;
+  } | null>;
 }
 
 // Provider component that wraps the app
 export const EditorProvider: React.FC<EditorProviderProps> = ({
+  getDocumentTitle,
+  updateDocumentTitle,
   children,
   dsheetId,
   username = 'Anonymous',
@@ -82,29 +96,40 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   isCollaborative = false,
   commentData,
   isAuthorized,
+  editorStateRef,
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
   const sheetEditorRef = externalEditorRef || internalEditorRef;
-  const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{ [key: string]: { [key: string]: any } }>({});
+  const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{
+    [key: string]: { [key: string]: any };
+  }>({});
 
   // Initialize YJS document and persistence
-  const { ydocRef, persistenceRef, syncStatus, isSyncedRef } = useEditorSync(
-    dsheetId,
-    enableIndexeddbSync,
-    isReadOnly,
-  );
+  const { ydocRef, persistenceRef, syncStatus, isSyncedRef, refreshIndexedDB } =
+    useEditorSync(dsheetId, enableIndexeddbSync, isReadOnly);
+
+  useMemo(() => {
+    if (!editorStateRef) return;
+    editorStateRef.current = {
+      ...editorStateRef.current,
+      refreshIndexedDB,
+    };
+  }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChange = (data: Sheet[]) => {
-    if (onChange && ydocRef.current) {
-      // Encode the YJS document state to pass as second parameter
-      const encodedUpdate = fromUint8Array(
-        Y.encodeStateAsUpdate(ydocRef.current),
-      );
-      onChange({ data }, encodedUpdate);
-    }
-  };
+  const handleOnChange = useCallback(
+    (data: Sheet[]) => {
+      if (onChange && ydocRef.current) {
+        // Encode the YJS document state to pass as second parameter
+        const encodedUpdate = fromUint8Array(
+          Y.encodeStateAsUpdate(ydocRef.current),
+        );
+        onChange({ data }, encodedUpdate);
+      }
+    },
+    [onChange, ydocRef],
+  );
 
   // Initialize sheet data
   const {
@@ -125,7 +150,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     commentData,
     dataBlockCalcFunction,
-    setDataBlockCalcFunction
+    setDataBlockCalcFunction,
   );
 
   // Initialize collaboration
@@ -155,7 +180,33 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       (!currentDataRef.current || currentDataRef.current.length === 0));
 
   // Create the context value
-  const contextValue: EditorContextType = {
+  const contextValue: EditorContextType = useMemo(() => {
+    return {
+      getDocumentTitle,
+      updateDocumentTitle,
+      dataBlockCalcFunction,
+      setDataBlockCalcFunction,
+      sheetEditorRef,
+      ydocRef,
+      persistenceRef,
+      sheetData,
+      setSheetData,
+      currentDataRef,
+      remoteUpdateRef,
+      handleChange,
+      loading,
+      forceSheetRender,
+      setForceSheetRender,
+      activeUsers,
+      collaborationStatus,
+      syncStatus,
+      isCollaborative,
+      isAuthorized,
+      refreshIndexedDB,
+    };
+  }, [
+    getDocumentTitle,
+    updateDocumentTitle,
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
     sheetEditorRef,
@@ -174,7 +225,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     isCollaborative,
     isAuthorized,
-  };
+  ]);
 
   return (
     <EditorContext.Provider value={contextValue}>

@@ -20,8 +20,13 @@ export const getCustomToolbarItems = ({
   currentDataRef,
   setForceSheetRender,
   toggleTemplateSidebar,
+  getDocumentTitle,
+  updateDocumentTitle,
   // setShowFetchURLModal,
 }: {
+  getDocumentTitle?: () => string;
+  updateDocumentTitle?: (title: string) => void;
+  // setShowFetchURLModal: React.Dispatch<React.SetStateAction<boolean>>;
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleCSVUpload: (
     event: ChangeEvent<HTMLInputElement>,
@@ -30,12 +35,14 @@ export const getCustomToolbarItems = ({
     dsheetId: string,
     currentDataRef: React.MutableRefObject<object | null>,
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+    updateDocumentTitle?: (title: string) => void
   ) => void;
   handleXLSXUpload: React.ChangeEventHandler<HTMLInputElement>;
   handleExportToXLSX: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
     dsheetId: string,
+    getDocumentTitle?: () => string,
   ) => void;
   handleExportToCSV: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
@@ -45,7 +52,7 @@ export const getCustomToolbarItems = ({
   handleExportToJSON: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
-    dsheetId: string
+    dsheetId: string,
   ) => void;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
@@ -74,16 +81,19 @@ export const getCustomToolbarItems = ({
               dsheetId,
               currentDataRef,
               sheetEditorRef,
+              updateDocumentTitle,
             )
           }
           handleXLSXUpload={handleXLSXUpload}
           handleExportToXLSX={() =>
-            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId)
+            handleExportToXLSX(sheetEditorRef, ydocRef, dsheetId, getDocumentTitle)
           }
           handleExportToCSV={() =>
             handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
           }
-          handleExportToJSON={() => handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)}
+          handleExportToJSON={() =>
+            handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)
+          }
         />
       ),
     },

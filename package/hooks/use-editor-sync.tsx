@@ -19,6 +19,32 @@ export const useEditorSync = (
   >('initializing');
   const isSyncedRef = useRef<boolean>(false);
 
+  const initialiseEditorIndexedDB = async () => {
+    if (!ydocRef.current) {
+      return;
+    }
+    if (persistenceRef.current) {
+      // If persistence already
+      await persistenceRef.current.destroy();
+    }
+    persistenceRef.current = new IndexeddbPersistence(
+      dsheetId,
+      ydocRef.current,
+    );
+
+    // Listen for sync events
+    persistenceRef.current.once('synced', () => {
+      setSyncStatus('synced');
+      isSyncedRef.current = true;
+    });
+
+    // Handle sync errors
+    persistenceRef.current.on('error', (err: Error) => {
+      console.error('[DSheet] IndexedDB persistence error:', err);
+      setSyncStatus('error');
+    });
+  };
+
   // Initialize YJS document and persistence
   useEffect(() => {
     // Create new YJS document if it doesn't exist yet
@@ -30,21 +56,7 @@ export const useEditorSync = (
     if (enableIndexeddbSync && dsheetId) {
       setSyncStatus('syncing');
       try {
-        // Create persistence provider using the dsheetId as the database name
-        const persistence = new IndexeddbPersistence(dsheetId, ydocRef.current);
-        persistenceRef.current = persistence;
-
-        // Listen for sync events
-        persistence.once('synced', () => {
-          setSyncStatus('synced');
-          isSyncedRef.current = true;
-        });
-
-        // Handle sync errors
-        persistence.on('error', (err: Error) => {
-          console.error('[DSheet] IndexedDB persistence error:', err);
-          setSyncStatus('error');
-        });
+        initialiseEditorIndexedDB();
       } catch (error) {
         console.error(
           '[DSheet] Error setting up IndexedDB persistence:',
@@ -71,5 +83,11 @@ export const useEditorSync = (
     };
   }, [dsheetId, enableIndexeddbSync, isReadOnly]);
 
-  return { ydocRef, persistenceRef, syncStatus, isSyncedRef };
+  return {
+    ydocRef,
+    persistenceRef,
+    syncStatus,
+    isSyncedRef,
+    refreshIndexedDB: initialiseEditorIndexedDB,
+  };
 };

@@ -1,8 +1,10 @@
+// @ts-nocheck
 import Papa from 'papaparse';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { encode } from 'punycode';
 
 export const handleCSVUpload = (
   event: React.ChangeEvent<HTMLInputElement>,
@@ -11,6 +13,7 @@ export const handleCSVUpload = (
   dsheetId: string,
   currentDataRef: React.MutableRefObject<object | null>,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+  updateDocumentTitle?: (title: string) => void
 ) => {
   const input = event.target;
   if (!input.files?.length) {
@@ -18,7 +21,7 @@ export const handleCSVUpload = (
   }
   const file = input.files[0];
 
-  const reader = new FileReader();
+  const reader = new FileReader({ encoded: 'UTF-8' });
   reader.onload = (e) => {
     if (!e.target) {
       console.error('FileReader event target is null');
@@ -53,9 +56,12 @@ export const handleCSVUpload = (
           // Add header row
           const headerRow = headers.map((headerV, index) => {
             // @ts-expect-error later
-            const renamedHeadersKeys = results.meta.renamedHeaders ? Object.keys(results.meta.renamedHeaders) : [];
-            // @ts-expect-error later
-            const header = renamedHeadersKeys.includes(headerV) ? results.meta.renamedHeaders[headerV] : headerV;
+            const renamedHeadersKeys = results.meta.renamedHeaders
+              ? Object.keys(results.meta.renamedHeaders)
+              : [];
+            const header = renamedHeadersKeys.includes(headerV)
+              ? results.meta.renamedHeaders[headerV]
+              : headerV;
             return {
               r: 0,
               c: index,
@@ -67,7 +73,7 @@ export const handleCSVUpload = (
                 },
                 v: header !== null ? header : null,
               },
-            }
+            };
           });
 
           headerRow.forEach((cell) => {
@@ -133,6 +139,7 @@ export const handleCSVUpload = (
             },
           };
 
+          updateDocumentTitle?.(file.name);
           const finalData = [...data, sheetObject as Sheet];
           ydoc.transact(() => {
             sheetArray.delete(0, sheetArray.length);

@@ -80,6 +80,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
     isAuthorized,
+    getDocumentTitle,
+    updateDocumentTitle,
   } = useEditor();
 
   useEffect(() => {
@@ -149,20 +151,22 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              getDocumentTitle,
+              updateDocumentTitle,
+              setExportDropdownOpen,
+              handleCSVUpload,
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{

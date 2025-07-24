@@ -31,21 +31,23 @@ export const executeStringFunction = async (
         const cells = cellRangeToRowCol(arg);
         const values = cells?.map((cell) => {
           return sheetEditorRef?.current?.getCellValue(cell?.row, cell?.column);
-        })
+        });
         return values;
       }
       if (isCellReference(arg)) {
         const cell = cellReferenceToRowCol(arg);
-        // @ts-expect-error later
-        const value = sheetEditorRef?.current?.getCellValue(cell?.row, cell?.column);
+
+        const value = sheetEditorRef?.current?.getCellValue(
+          // @ts-expect-error
+          cell?.row,
+          cell?.column,
+        );
         return value;
       }
       return arg;
     });
 
     console.log('args in util exce', args);
-
-
 
     // Check if the function exists in the imported module
     // @ts-expect-error later
@@ -61,7 +63,7 @@ export const executeStringFunction = async (
     console.error('Error:', error);
     throw error;
   }
-}
+};
 
 /**
  * Parses a complex argument string into an array of properly typed arguments
@@ -189,9 +191,6 @@ function evaluateArg(
   return arg;
 }
 
-
-
-
 /**
  * Checks if a string is a valid cell reference (e.g., A1, B2, AA10, etc.)
  * @param {string} str - The string to check
@@ -262,7 +261,7 @@ export function cellReferenceToRowCol(cellRef: string) {
 
   return {
     row: row,
-    column: column
+    column: column,
   };
 }
 
@@ -300,4 +299,3 @@ export function cellRangeToRowCol(rangeRef: string) {
 
   return cells;
 }
-
