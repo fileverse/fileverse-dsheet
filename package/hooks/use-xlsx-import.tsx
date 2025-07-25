@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { useEditor } from '../contexts/editor-context';
 // @ts-expect-error, type is not available from package

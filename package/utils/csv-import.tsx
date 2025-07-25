@@ -1,6 +1,6 @@
 // @ts-nocheck
 import Papa from 'papaparse';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';

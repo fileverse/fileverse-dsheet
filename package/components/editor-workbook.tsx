@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
-import { Cell } from '@fileverse-dev/fortune-core';
+import { Cell } from '@fileverse-dev/fortune-react';
 
 import {
   DEFAULT_SHEET_DATA,
@@ -17,7 +17,7 @@ import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
-import { useRefreshDenomination } from '../hooks/useRefreshDenomination';
+import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 
 // Use the types defined in types.ts
@@ -62,7 +62,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,

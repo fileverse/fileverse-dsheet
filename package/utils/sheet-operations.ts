@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { isSpreadsheetChanged } from './diff-sheet';
 
