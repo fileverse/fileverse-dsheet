@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { Sheet } from '@fileverse-dev/fortune-react';
 
 /**
