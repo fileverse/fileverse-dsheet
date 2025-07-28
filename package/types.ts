@@ -4,6 +4,7 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { Cell } from '@fileverse-dev/fortune-react';
 import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
+import { SmartContractQueryHandler } from './utils/after-update-cell';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -76,6 +77,7 @@ export interface DsheetProps {
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
+  handleSmartContractQuery?: SmartContractQueryHandler;
 }
 export type BaseError = {
   message: string;

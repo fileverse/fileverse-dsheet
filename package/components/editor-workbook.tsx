@@ -11,7 +11,10 @@ import {
 } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
-import { afterUpdateCell } from '../utils/after-update-cell';
+import {
+  afterUpdateCell,
+  SmartContractQueryHandler,
+} from '../utils/after-update-cell';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
@@ -44,6 +47,7 @@ interface EditorWorkbookProps {
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
+  handleSmartContractQuery?: SmartContractQueryHandler;
 }
 
 /**
@@ -68,6 +72,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   onDataBlockApiResponse,
   onDuneChartEmbed,
   onSheetCountChange,
+  handleSmartContractQuery,
 }) => {
   const {
     sheetEditorRef,
@@ -151,22 +156,22 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-              getDocumentTitle,
-              updateDocumentTitle,
-              setExportDropdownOpen,
-              handleCSVUpload,
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
+                getDocumentTitle,
+                updateDocumentTitle,
+                setExportDropdownOpen,
+                handleCSVUpload,
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
             : []
         }
         hooks={{
@@ -201,6 +206,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               onDataBlockApiResponse,
               setDataBlockCalcFunction,
               dataBlockCalcFunction,
+              handleSmartContractQuery,
             });
           },
         }}
