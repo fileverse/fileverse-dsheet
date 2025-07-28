@@ -9,6 +9,7 @@ import { SmartContractButton } from '../components/smart-contract';
 import { IconButton } from '@fileverse/ui';
 
 export const getCustomToolbarItems = ({
+  setShowSmartContractModal,
   setExportDropdownOpen,
   handleCSVUpload,
   handleXLSXUpload,
@@ -25,6 +26,7 @@ export const getCustomToolbarItems = ({
   updateDocumentTitle,
   // setShowFetchURLModal,
 }: {
+  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
   // setShowFetchURLModal: React.Dispatch<React.SetStateAction<boolean>>;
@@ -108,12 +110,16 @@ export const getCustomToolbarItems = ({
           handleImportSmartContract={() =>
             console.log('Import Smart Contract')
           }
-          handleViewSmartContract={() =>
-            console.log('View Smart Contract')
+          handleViewSmartContract={() => {
+            console.log('View Smart Contract', setShowSmartContractModal)
+            setShowSmartContractModal?.((prev: boolean) => {
+              return !prev
+            })
+          }
           }
         />
       ),
-      onClick: toggleTemplateSidebar,
+      //onClick: toggleTemplateSidebar,
     },
     {
       /*template-button is used in use xocument style */

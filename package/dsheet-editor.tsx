@@ -211,12 +211,14 @@ const SpreadsheetEditor = ({
   isAuthorized,
   getDocumentTitle,
   updateDocumentTitle,
+  setShowSmartContractModal,
   editorStateRef,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
   return (
     <EditorProvider
+      setShowSmartContractModal={setShowSmartContractModal}
       getDocumentTitle={getDocumentTitle}
       updateDocumentTitle={updateDocumentTitle}
       dsheetId={dsheetId}

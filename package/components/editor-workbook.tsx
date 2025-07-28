@@ -25,6 +25,7 @@ type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 interface EditorWorkbookProps {
+  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setFetchingURLData?: (fetching: boolean) => void;
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
@@ -70,6 +71,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   onSheetCountChange,
 }) => {
   const {
+    setShowSmartContractModal,
     sheetEditorRef,
     ydocRef,
     currentDataRef,
@@ -151,6 +153,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
+              setShowSmartContractModal,
               getDocumentTitle,
               updateDocumentTitle,
               setExportDropdownOpen,
