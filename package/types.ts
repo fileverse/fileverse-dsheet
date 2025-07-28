@@ -1,10 +1,9 @@
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { RefObject } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
-import { Cell } from '@fileverse-dev/fortune-core';
-// @ts-ignore
-import { ERROR_MESSAGES_FLAG } from '@fileverse-dev/formulajs/crypto-constants';
+import { Cell } from '@fileverse-dev/fortune-react';
+import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -81,7 +80,7 @@ export interface DsheetProps {
 export type BaseError = {
   message: string;
   functionName?: string;
-  type: `${ERROR_MESSAGES_FLAG}`;
+  type: (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
 };
 
 export type CustomError = BaseError & {

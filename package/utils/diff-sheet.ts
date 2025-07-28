@@ -1,5 +1,5 @@
-// @ts-nocheck
-import { Sheet } from '@fileverse-dev/fortune-core';
+//@ts-nocheck
+import { Sheet } from '@fileverse-dev/fortune-react';
 
 /**
  * Compare two spreadsheets' cell data and images, checking if anything changed

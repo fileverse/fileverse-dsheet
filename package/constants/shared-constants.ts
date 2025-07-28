@@ -1,3 +1,23 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/**
+ * Temporary workaround to safely re-export constants with types from `@fileverse-dev/fortune-react`.
+ */
+import type {
+  //@ts-ignore
+  ERROR_MESSAGES_FLAG as ErrorMessagesFlagType,
+  //@ts-ignore
+  SERVICES_API_KEY as ServicesApiKeyType,
+} from '@fileverse-dev/fortune-react';
+import {
+  //@ts-ignore
+  ERROR_MESSAGES_FLAG as RawErrorMessagesFlag,
+  //@ts-ignore
+  SERVICES_API_KEY as RawServicesApiKey,
+} from '@fileverse-dev/fortune-react';
+
+export const ERROR_MESSAGES_FLAG: ErrorMessagesFlagType = RawErrorMessagesFlag;
+export const SERVICES_API_KEY: ServicesApiKeyType = RawServicesApiKey;
+
 export const DEFAULT_SHEET_DATA = [
   {
     name: 'Sheet1',

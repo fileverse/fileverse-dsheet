@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Sheet } from '@fileverse-dev/fortune-core';
+import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { CellWithRowAndCol } from '@fileverse-dev/fortune-core';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 
@@ -96,7 +95,7 @@ export const useEditorData = (
       if (currentData.length > 0 && commentData) {
         currentData.forEach((sheet, index) => {
           const sheetCellData = sheet.celldata;
-          sheetCellData?.forEach((cell: CellWithRowAndCol) => {
+          sheetCellData?.forEach((cell) => {
             // @ts-expect-error later
             const comment = commentData[`${index}_${cell.r}_${cell.c}`];
             if (comment) {

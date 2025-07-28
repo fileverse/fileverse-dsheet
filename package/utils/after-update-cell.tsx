@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { Cell } from '@fileverse-dev/fortune-core';
+import { Cell } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import {
   OnboardingHandlerType,
@@ -16,8 +16,7 @@ import {
   cellReferenceToRowCol,
 } from './executeStringFunction';
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
-//@ts-ignore
-import { ERROR_MESSAGES_FLAG } from '@fileverse-dev/formulajs/crypto-constants';
+import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
