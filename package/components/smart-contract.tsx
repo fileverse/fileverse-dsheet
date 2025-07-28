@@ -1,39 +1,33 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
-import { LucideIcon, IconButton } from '@fileverse/ui';
+import { LucideIcon } from '@fileverse/ui';
 
 import './import-button.scss';
 
 export const SmartContractButton = ({
-  // setSmartContractDropdownOpen,
   handleImportSmartContract,
   handleViewSmartContract,
 }: {
-  // setSmartContractDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   handleImportSmartContract: () => void;
   handleViewSmartContract: () => void;
 }) => {
   return (
-    <Popover
-    // onOpenChange={(open) => {
-    //   setSmartContractDropdownOpen(open);
-    // }}
-    >
+    <Popover>
       <PopoverTrigger
         className="hover:bg-red"
         style={{ backgroundColor: 'red!important' }}
       >
-        {/* export-button is used in use xocument style */}
-        <IconButton
-          className="export-button hover:bg-red"
-          icon="FileExport"
-          variant="ghost"
-          size="md"
-        />
+        <div role="button" className="p-2 rounded-md hover:bg-[#fef2ef]">
+          <LucideIcon
+            name="FileExport"
+            size="md"
+            className={'cursor-pointer text-[#F95738]'}
+          />
+        </div>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
+        align="end"
         alignOffset={0}
-        className="w-72 export-content"
+        className="!w-[220px] export-content"
         elevation={2}
         side="bottom"
         sideOffset={4}
