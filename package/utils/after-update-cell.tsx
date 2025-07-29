@@ -28,9 +28,7 @@ const FETCH_URL_MODAL_ID = 'fetch-url-modal';
 const FLVURL_FUNCTIONS = ['FLVURL', 'flvurl'];
 
 export type SmartContractResponse = {
-  contractName: string;
-  functionName: string;
-  args: any[];
+  callSignature: unknown[];
 };
 
 export type SheetSmartContractApi = {
@@ -43,11 +41,7 @@ export type SheetSmartContractApi = {
 
 export type SmartContractQueryHandler = (
   sheetApi: SheetSmartContractApi,
-) => (
-  contractName: string,
-  functionName: string,
-  ...args: any
-) => Promise<void>;
+) => (callSignature: unknown[]) => Promise<void>;
 
 /**
  * Parameters for the afterUpdateCell function
@@ -323,11 +317,10 @@ const processRegularPromise = async (
         formulaResponseUiSync,
       };
 
-      const { contractName, functionName, args } =
-        data as SmartContractResponse;
+      const { callSignature } = data as SmartContractResponse;
 
       const smartContractHandler = params.handleSmartContractQuery(api);
-      await smartContractHandler(contractName, functionName, args);
+      await smartContractHandler(callSignature);
       return;
     }
 
