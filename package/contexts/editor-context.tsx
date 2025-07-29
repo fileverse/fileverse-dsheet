@@ -20,6 +20,7 @@ import { SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
@@ -61,6 +62,7 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
+  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
@@ -82,6 +84,7 @@ interface EditorProviderProps {
 
 // Provider component that wraps the app
 export const EditorProvider: React.FC<EditorProviderProps> = ({
+  setShowSmartContractModal,
   getDocumentTitle,
   updateDocumentTitle,
   children,
@@ -182,6 +185,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Create the context value
   const contextValue: EditorContextType = useMemo(() => {
     return {
+      setShowSmartContractModal,
       getDocumentTitle,
       updateDocumentTitle,
       dataBlockCalcFunction,
@@ -205,6 +209,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       refreshIndexedDB,
     };
   }, [
+    setShowSmartContractModal,
     getDocumentTitle,
     updateDocumentTitle,
     dataBlockCalcFunction,

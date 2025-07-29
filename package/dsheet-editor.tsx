@@ -215,6 +215,7 @@ const SpreadsheetEditor = ({
   isAuthorized,
   getDocumentTitle,
   updateDocumentTitle,
+  setShowSmartContractModal,
   editorStateRef,
   handleSmartContractQuery,
 }: DsheetProps): JSX.Element => {
@@ -222,6 +223,7 @@ const SpreadsheetEditor = ({
 
   return (
     <EditorProvider
+      setShowSmartContractModal={setShowSmartContractModal}
       getDocumentTitle={getDocumentTitle}
       updateDocumentTitle={updateDocumentTitle}
       dsheetId={dsheetId}

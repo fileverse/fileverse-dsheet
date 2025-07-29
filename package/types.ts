@@ -41,6 +41,7 @@ export type DataBlockApiKeyHandlerType = (params: {
 }) => void;
 
 export interface DsheetProps {
+  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
