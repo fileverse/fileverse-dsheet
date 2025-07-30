@@ -50,8 +50,8 @@ export const SmartContractButton = ({
                 dSheets account required
               </p>
               <p className="text-helper-text-sm mt-1 color-text-secondary">
-                <a className=" inline color-text-link ">Signup/Login </a> to use
-                smart contracts lore ipsum dolor sit amet
+                <a className=" inline color-text-link ">Signup/Login </a> to be
+                able to access smart contracts.
               </p>
             </div>
           )}
