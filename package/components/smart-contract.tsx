@@ -18,7 +18,7 @@ export const SmartContractButton = ({
         className="hover:bg-red"
         style={{ backgroundColor: 'red!important' }}
       >
-        <div role="button" className="p-2 rounded-md hover:bg-[#fef2ef]">
+        <div role="button" className="p-2 rounded-lg bg-[#fef2ef]">
           <LucideIcon
             name="FileExport"
             size="md"
@@ -44,9 +44,9 @@ export const SmartContractButton = ({
                 window.history.replaceState({}, '', url.toString());
               }}
               style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
-              className="w-full flex cursor-pointer flex-col p-2 gap-1"
+              className="w-full flex cursor-pointer rounded-md flex-col p-2 gap-2"
             >
-              <p className="text-helper-text-sm-bold color-text-default">
+              <p className=" font-size-2xsm font-medium leading-[16px] color-text-default">
                 dSheets account required
               </p>
               <p className="text-helper-text-sm color-text-secondary">
