@@ -44,12 +44,12 @@ export const SmartContractButton = ({
                 window.history.replaceState({}, '', url.toString());
               }}
               style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
-              className="w-full flex cursor-pointer rounded-md flex-col p-2 gap-2"
+              className="w-full flex cursor-pointer rounded-md flex-col p-2"
             >
-              <p className=" font-size-2xsm font-medium leading-[16px] color-text-default">
+              <p className=" font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default">
                 dSheets account required
               </p>
-              <p className="text-helper-text-sm color-text-secondary">
+              <p className="text-helper-text-sm mt-1 color-text-secondary">
                 <a className=" inline color-text-link ">Signup/Login </a> to use
                 smart contracts lore ipsum dolor sit amet
               </p>
