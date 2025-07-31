@@ -21,6 +21,7 @@ import { PermissionChip } from './components/permission-chip';
 
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
+import { SmartContractQueryHandler } from './utils/after-update-cell';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -52,6 +53,7 @@ const EditorContent = ({
   onDataBlockApiResponse,
   onDuneChartEmbed,
   onSheetCountChange,
+  handleSmartContractQuery,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -77,6 +79,7 @@ const EditorContent = ({
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
+  handleSmartContractQuery?: SmartContractQueryHandler;
 }) => {
   const {
     loading,
@@ -167,6 +170,7 @@ const EditorContent = ({
             onDataBlockApiResponse={onDataBlockApiResponse}
             onDuneChartEmbed={onDuneChartEmbed}
             onSheetCountChange={onSheetCountChange}
+            handleSmartContractQuery={handleSmartContractQuery}
           />
         </TransitionWrapper>
       </div>
@@ -211,12 +215,15 @@ const SpreadsheetEditor = ({
   isAuthorized,
   getDocumentTitle,
   updateDocumentTitle,
+  setShowSmartContractModal,
   editorStateRef,
+  handleSmartContractQuery,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
   return (
     <EditorProvider
+      setShowSmartContractModal={setShowSmartContractModal}
       getDocumentTitle={getDocumentTitle}
       updateDocumentTitle={updateDocumentTitle}
       dsheetId={dsheetId}
@@ -256,6 +263,7 @@ const SpreadsheetEditor = ({
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
         onDataBlockApiResponse={onDataBlockApiResponse}
+        handleSmartContractQuery={handleSmartContractQuery}
       />
     </EditorProvider>
   );

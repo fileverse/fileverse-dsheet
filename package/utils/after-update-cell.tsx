@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Cell } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
@@ -26,6 +27,22 @@ const LOADING_MESSAGE = 'Loading...';
 const FETCH_URL_MODAL_ID = 'fetch-url-modal';
 const FLVURL_FUNCTIONS = ['FLVURL', 'flvurl'];
 
+export type SmartContractResponse = {
+  callSignature: unknown[];
+};
+
+export type SheetSmartContractApi = {
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  formulaResponseUiSync: Function;
+  row: number;
+  column: number;
+  newValue: Cell;
+};
+
+export type SmartContractQueryHandler = (
+  sheetApi: SheetSmartContractApi,
+) => (callSignature: unknown[]) => Promise<void>;
+
 /**
  * Parameters for the afterUpdateCell function
  */
@@ -39,6 +56,7 @@ interface AfterUpdateCellParams {
   setFetchingURLData: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
+  handleSmartContractQuery: SmartContractQueryHandler | undefined;
   setInputFetchURLDataBlock:
     | React.Dispatch<React.SetStateAction<string>>
     | undefined;
@@ -74,7 +92,9 @@ type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
  */
 function containsErrorFlag(msg: string): boolean {
   const flags = Object.values(ERROR_MESSAGES_FLAG) as ErrorFlag[];
-  return flags.some((flag) => msg.includes(flag)) || msg.includes('Error');
+  return (
+    (msg && flags.some((flag) => msg.includes(flag))) || msg?.includes('Error')
+  );
 }
 
 /**
@@ -243,12 +263,21 @@ const isDatablockError = (value: any) => {
     value !== null && typeof value === 'object' && !Array.isArray(value);
   return isObject && containsErrorFlag(value.type);
 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isSmartContractResponse = (value: any) => {
+  const isObject =
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+
+  return isObject && value?.responseType === 'smart-contract';
+};
 
 /**
  * Processes promise resolution for regular formulas
  */
 const processRegularPromise = async (
-  promise: Promise<unknown[] | ErrorMessageHandlerReturnType | string>,
+  promise: Promise<
+    unknown[] | ErrorMessageHandlerReturnType | string | SmartContractResponse
+  >,
   params: Pick<
     AfterUpdateCellParams,
     | 'row'
@@ -258,6 +287,7 @@ const processRegularPromise = async (
     | 'dataBlockApiKeyHandler'
     | 'storeApiKey'
     | 'onDataBlockApiResponse'
+    | 'handleSmartContractQuery'
   >,
 ): Promise<void> => {
   try {
@@ -271,6 +301,26 @@ const processRegularPromise = async (
       }
       const _data = data as ErrorMessageHandlerReturnType;
       handleDatablockErroMessage(_data, params.dataBlockApiKeyHandler, params);
+      return;
+    }
+
+    if (isSmartContractResponse(data)) {
+      if (!params.handleSmartContractQuery) {
+        throw new Error('Smart contract handler is missing');
+      }
+
+      const api: SheetSmartContractApi = {
+        sheetEditorRef: params.sheetEditorRef,
+        row: params.row,
+        column: params.column,
+        newValue: params.newValue,
+        formulaResponseUiSync,
+      };
+
+      const { callSignature } = data as SmartContractResponse;
+
+      const smartContractHandler = params.handleSmartContractQuery(api);
+      await smartContractHandler(callSignature);
       return;
     }
 
@@ -406,7 +456,6 @@ export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
   const { newValue, sheetEditorRef } = params;
-
   // Early return for empty values
   if (isCellValueEmpty(newValue)) {
     return;
