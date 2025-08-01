@@ -3,6 +3,7 @@ import { LucideIcon } from '@fileverse/ui';
 
 import './import-button.scss';
 import { useEditor } from '../contexts/editor-context';
+import { useState } from 'react';
 
 export const SmartContractButton = ({
   handleImportSmartContract,
@@ -12,12 +13,11 @@ export const SmartContractButton = ({
   handleViewSmartContract: () => void;
 }) => {
   const { isAuthorized } = useEditor();
+  const [open, setOpen] = useState(false);
+
   return (
-    <Popover>
-      <PopoverTrigger
-        className="hover:bg-red"
-        style={{ backgroundColor: 'red!important' }}
-      >
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger>
         <div role="button" className="p-2 rounded-lg bg-[#fef2ef]">
           <LucideIcon
             name="FileExport"
@@ -42,21 +42,28 @@ export const SmartContractButton = ({
                 const url = new URL(window.location.href);
                 url.searchParams.set('sc', 'true');
                 window.history.replaceState({}, '', url.toString());
+                setOpen(false);
               }}
-              style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
               className="w-full flex cursor-pointer rounded-md flex-col p-2"
+              style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
             >
-              <p className=" font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default">
+              <p className="font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default">
                 dSheets account required
               </p>
               <p className="text-helper-text-sm mt-1 color-text-secondary">
-                <a className=" inline color-text-link ">Signup/Login </a> to be
+                <a className="inline color-text-link">Signup/Login </a> to be
                 able to access smart contracts.
               </p>
             </div>
           )}
+
           <button
-            onClick={() => isAuthorized && handleImportSmartContract()}
+            onClick={() => {
+              if (isAuthorized) {
+                handleImportSmartContract();
+                setOpen(false);
+              }
+            }}
             className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
           >
             <LucideIcon
@@ -71,7 +78,12 @@ export const SmartContractButton = ({
           </button>
 
           <button
-            onClick={() => isAuthorized && handleViewSmartContract()}
+            onClick={() => {
+              if (isAuthorized) {
+                handleViewSmartContract();
+                setOpen(false);
+              }
+            }}
             className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
           >
             <LucideIcon
