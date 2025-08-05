@@ -64,13 +64,15 @@ export const useXLSXImport = ({
   }, [mergeInfo]);
 
   const handleFileUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement> | undefined,
+    fileArg: File,
   ) => {
-    const input = event.target;
-    if (!input.files?.length) {
+    console.log('handleFileUpload', event, fileArg);
+    const input = event?.target;
+    if (!input?.files?.length && !fileArg) {
       return;
     }
-    const file = input.files[0];
+    const file = input?.files?.[0] || fileArg;
     let dropdownInfo: Record<
       string,
       {

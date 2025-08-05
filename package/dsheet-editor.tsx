@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import cn from 'classnames';
 
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
@@ -218,8 +218,19 @@ const SpreadsheetEditor = ({
   setShowSmartContractModal,
   editorStateRef,
   handleSmartContractQuery,
+  setSelectedTemplate,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const templateSlug = params.get("template");
+    if (templateSlug) {
+      setSelectedTemplate?.(templateSlug);
+      params.delete("template");
+      window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
+    }
+  }, []);
 
   return (
     <EditorProvider

@@ -67,7 +67,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -106,6 +106,50 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     dsheetId,
     currentDataRef,
   });
+
+
+  useEffect(() => {
+    console.log('EditorWorkbook: useEffect');
+    const params = new URLSearchParams(window.location.search);
+    const fileUrl = params.get("xlsx");
+
+    if (fileUrl) {
+      fetch(fileUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const file = new File([blob], "import.xlsx");
+          if (file) {
+            handleXLSXUpload(undefined, file);
+          }
+          // Call handler with file
+        })
+        .finally(() => {
+          // Remove 'file' param from the URL without reloading
+          params.delete("xlsx");
+          window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
+        });
+    }
+
+    const csvFileUrl = params.get("csv");
+
+    if (csvFileUrl) {
+      fetch(csvFileUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const file = new File([blob], "import.xlsx");
+          if (file) {
+            handleCSVUpload(undefined, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef, sheetEditorRef, updateDocumentTitle, file);
+          }
+          // Call handler with file
+        })
+        .finally(() => {
+          // Remove 'file' param from the URL without reloading
+          params.delete("csv");
+          window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
+        });
+    }
+
+  }, []);
 
   const cellContextMenu = isReadOnly
     ? allowComments
@@ -158,23 +202,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setShowSmartContractModal,
-                getDocumentTitle,
-                updateDocumentTitle,
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setShowSmartContractModal,
+              getDocumentTitle,
+              updateDocumentTitle,
+              setExportDropdownOpen,
+              handleCSVUpload,
+              // @ts-ignore
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
