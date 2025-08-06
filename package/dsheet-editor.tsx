@@ -224,6 +224,7 @@ const SpreadsheetEditor = ({
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    console.log(params, "params===");
     const templateSlug = params.get("template");
     if (templateSlug) {
       setSelectedTemplate?.(templateSlug);

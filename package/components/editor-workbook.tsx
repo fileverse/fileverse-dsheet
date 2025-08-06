@@ -136,7 +136,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       fetch(csvFileUrl)
         .then((res) => res.blob())
         .then((blob) => {
-          const file = new File([blob], "import.xlsx");
+          const file = new File([blob], "import.csv");
           if (file) {
             handleCSVUpload(undefined, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef, sheetEditorRef, updateDocumentTitle, file);
           }
