@@ -9,3 +9,4 @@ export {
   SERVICES_API_KEY,
 } from './package/constants/shared-constants';
 export { TEMPLATES } from '@fileverse-dev/dsheets-templates';
+export { isGnosisPayAccessExpired } from '@fileverse-dev/fortune-react';
