@@ -76,22 +76,22 @@ export const SkeletonToolbar = ({
   // Define different toolbar sections based on read-only mode
   const sections = isReadOnly
     ? [
-        { items: 1, gap: 0 }, // Filter icon
-        { items: 1, gap: 0 }, // Comment icon (if comment permissions)
-      ]
+      { items: 1, gap: 0 }, // Filter icon
+      { items: 1, gap: 0 }, // Comment icon (if comment permissions)
+    ]
     : [
-        { items: 1, gap: 0 }, // First group
-        { items: 1, gap: 0 }, // Second group
-        { items: 2, gap: 0 }, // Third group
-        { items: 3, gap: 0 }, // Fourth group
-        { items: 3, gap: 0 }, // Fifth group
-        { items: 3, gap: 0 }, // Sixth group
-        { items: 2, gap: 0 }, // Seventh group
-        { items: 3, gap: 0 }, // Eighth group
-        { items: 4, gap: 0 }, // Ninth group
-        { items: 3, gap: 0 }, // Tenth group
-        { items: 4, gap: 0 }, // Eleventh group
-      ];
+      { items: 1, gap: 0 }, // First group
+      { items: 1, gap: 0 }, // Second group
+      { items: 2, gap: 0 }, // Third group
+      { items: 3, gap: 0 }, // Fourth group
+      { items: 3, gap: 0 }, // Fifth group
+      { items: 3, gap: 0 }, // Sixth group
+      { items: 2, gap: 0 }, // Seventh group
+      { items: 3, gap: 0 }, // Eighth group
+      { items: 4, gap: 0 }, // Ninth group
+      { items: 3, gap: 0 }, // Tenth group
+      { items: 4, gap: 0 }, // Eleventh group
+    ];
 
   return (
     <div
