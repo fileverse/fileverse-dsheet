@@ -20,6 +20,8 @@ import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
+import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
+
 import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 
@@ -76,6 +78,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   handleSmartContractQuery,
 }) => {
   const {
+    setSelectedTemplate,
     setShowSmartContractModal,
     sheetEditorRef,
     ydocRef,
@@ -107,49 +110,17 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     currentDataRef,
   });
 
-
-  useEffect(() => {
-    console.log('EditorWorkbook: useEffect');
-    const params = new URLSearchParams(window.location.search);
-    const fileUrl = params.get("xlsx");
-
-    if (fileUrl) {
-      fetch(fileUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const file = new File([blob], "import.xlsx");
-          if (file) {
-            handleXLSXUpload(undefined, file);
-          }
-          // Call handler with file
-        })
-        .finally(() => {
-          // Remove 'file' param from the URL without reloading
-          params.delete("xlsx");
-          window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
-        });
-    }
-
-    const csvFileUrl = params.get("csv");
-
-    if (csvFileUrl) {
-      fetch(csvFileUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const file = new File([blob], "import.csv");
-          if (file) {
-            handleCSVUpload(undefined, ydocRef.current, setForceSheetRender, dsheetId, currentDataRef, sheetEditorRef, updateDocumentTitle, file);
-          }
-          // Call handler with file
-        })
-        .finally(() => {
-          // Remove 'file' param from the URL without reloading
-          params.delete("csv");
-          window.history.replaceState({}, "", `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ""}`);
-        });
-    }
-
-  }, []);
+  usehandleHomepageRedirect({
+    setSelectedTemplate,
+    handleXLSXUpload,
+    handleCSVUpload,
+    ydocRef,
+    dsheetId,
+    currentDataRef,
+    setForceSheetRender,
+    sheetEditorRef,
+    updateDocumentTitle
+  });
 
   const cellContextMenu = isReadOnly
     ? allowComments

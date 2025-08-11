@@ -467,8 +467,6 @@ export const afterUpdateCell = async (
     return;
   }
 
-  console.log('afterUpdateCell', newValue);
-
   if (!newValue?.m && !newValue?.v) {
     sheetEditorRef.current?.setCellValue(params.row, params.column, {
       ...newValue,
