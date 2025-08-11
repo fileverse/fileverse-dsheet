@@ -336,6 +336,12 @@ const processRegularPromise = async (
         // @ts-ignore
         handleArrayResponse(data, params);
       }
+    } else if (!data && typeof data !== 'boolean') {
+      params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
+        ...params.newValue,
+        m: 'No Data',
+        isDataBlockFormula: true,
+      });
     } else {
       handleStringResponse(data as string, params);
     }
