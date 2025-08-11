@@ -67,7 +67,6 @@ export const useXLSXImport = ({
     event: React.ChangeEvent<HTMLInputElement> | undefined,
     fileArg: File,
   ) => {
-    console.log('handleFileUpload', event, fileArg);
     const input = event?.target;
     if (!input?.files?.length && !fileArg) {
       return;
