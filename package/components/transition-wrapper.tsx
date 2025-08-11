@@ -50,13 +50,14 @@ export const TransitionWrapper = ({
     <div
       className={cn(
         'absolute inset-0 transition-opacity ease-in-out',
-        `duration-${duration}`,
         isVisible ? 'opacity-100' : 'opacity-0',
         transitionClasses,
       )}
       style={{
         willChange: 'opacity',
         pointerEvents: isVisible ? 'auto' : 'none',
+        transitionDuration: `${duration}ms`,
+        transitionProperty: 'opacity, transform',
       }}
     >
       {children}
