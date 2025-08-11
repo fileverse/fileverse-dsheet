@@ -7,19 +7,20 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { encode } from 'punycode';
 
 export const handleCSVUpload = (
-  event: React.ChangeEvent<HTMLInputElement>,
+  event: React.ChangeEvent<HTMLInputElement> | undefined,
   ydoc: Y.Doc | null,
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>,
   dsheetId: string,
   currentDataRef: React.MutableRefObject<object | null>,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
-  updateDocumentTitle?: (title: string) => void
+  updateDocumentTitle?: (title: string) => void,
+  fileArg?: File
 ) => {
-  const input = event.target;
-  if (!input.files?.length) {
+  const input = event?.target;
+  if (!input?.files?.length && !fileArg) {
     return;
   }
-  const file = input.files[0];
+  const file = input?.files[0] || fileArg;
 
   const reader = new FileReader({ encoded: 'UTF-8' });
   reader.onload = (e) => {

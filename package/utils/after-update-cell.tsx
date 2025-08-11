@@ -58,8 +58,8 @@ interface AfterUpdateCellParams {
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
   handleSmartContractQuery: SmartContractQueryHandler | undefined;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<

@@ -139,11 +139,11 @@ const EditorContent = ({
       )}
 
       <div className="relative overflow-hidden h-[94dvh] md:!h-[calc(100vh-44px)] mt-[44px]">
-        <TransitionWrapper show={loading}>
+        <TransitionWrapper show={true}>
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
 
-        <TransitionWrapper show={!loading}>
+        <TransitionWrapper show={!loading} duration={1000}>
           {/* Permission chip - only visible with real content */}
           {isReadOnly && (
             <div className="absolute top-2 right-4 z-20">
@@ -218,11 +218,13 @@ const SpreadsheetEditor = ({
   setShowSmartContractModal,
   editorStateRef,
   handleSmartContractQuery,
+  setSelectedTemplate,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
   return (
     <EditorProvider
+      setSelectedTemplate={setSelectedTemplate}
       setShowSmartContractModal={setShowSmartContractModal}
       getDocumentTitle={getDocumentTitle}
       updateDocumentTitle={updateDocumentTitle}

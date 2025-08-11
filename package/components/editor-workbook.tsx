@@ -20,6 +20,8 @@ import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
+import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
+
 import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 
@@ -67,7 +69,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -76,6 +78,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   handleSmartContractQuery,
 }) => {
   const {
+    setSelectedTemplate,
     setShowSmartContractModal,
     sheetEditorRef,
     ydocRef,
@@ -105,6 +108,18 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     setForceSheetRender,
     dsheetId,
     currentDataRef,
+  });
+
+  usehandleHomepageRedirect({
+    setSelectedTemplate,
+    handleXLSXUpload,
+    handleCSVUpload,
+    ydocRef,
+    dsheetId,
+    currentDataRef,
+    setForceSheetRender,
+    sheetEditorRef,
+    updateDocumentTitle
   });
 
   const cellContextMenu = isReadOnly
@@ -158,23 +173,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                setShowSmartContractModal,
-                getDocumentTitle,
-                updateDocumentTitle,
-                setExportDropdownOpen,
-                handleCSVUpload,
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              setShowSmartContractModal,
+              getDocumentTitle,
+              updateDocumentTitle,
+              setExportDropdownOpen,
+              handleCSVUpload,
+              // @ts-ignore
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{

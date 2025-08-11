@@ -20,6 +20,7 @@ import { SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
@@ -62,6 +63,7 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
+  setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
@@ -84,6 +86,7 @@ interface EditorProviderProps {
 
 // Provider component that wraps the app
 export const EditorProvider: React.FC<EditorProviderProps> = ({
+  setSelectedTemplate,
   setShowSmartContractModal,
   getDocumentTitle,
   updateDocumentTitle,
@@ -185,6 +188,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Create the context value
   const contextValue: EditorContextType = useMemo(() => {
     return {
+      setSelectedTemplate,
       setShowSmartContractModal,
       getDocumentTitle,
       updateDocumentTitle,
