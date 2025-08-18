@@ -467,7 +467,7 @@ export const afterUpdateCell = async (
     return;
   }
 
-  if (!newValue?.m && !newValue?.v) {
+  if (!newValue?.m && !newValue?.v && newValue?.baseValue) {
     sheetEditorRef.current?.setCellValue(params.row, params.column, {
       ...newValue,
       baseValue: undefined,
