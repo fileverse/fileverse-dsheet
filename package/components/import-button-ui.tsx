@@ -1,5 +1,5 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
-import { ChangeEventHandler } from 'react';
+import { ChangeEventHandler, useState } from 'react';
 import { LucideIcon, IconButton } from '@fileverse/ui';
 
 import './import-button.scss';
@@ -19,9 +19,12 @@ export const CustomButton = ({
   handleExportToCSV: () => void;
   handleExportToJSON: () => void;
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
   return (
     <Popover
+      open={isOpen}
       onOpenChange={(open) => {
+        setIsOpen(open);
         setExportDropdownOpen(open);
       }}
     >
@@ -45,7 +48,10 @@ export const CustomButton = ({
         side="bottom"
         sideOffset={4}
       >
-        <div className="p-2 color-text-default">
+        <div
+          onClick={() => setIsOpen(false)}
+          className="p-2 color-text-default"
+        >
           <h1 className="text-helper-text-sm color-text-secondary pl-2">
             Export
           </h1>
@@ -73,7 +79,10 @@ export const CustomButton = ({
             <span className="text-body-sm">Export to .csv</span>
           </button>
         </div>
-        <div className="p-2 color-text-default">
+        <div
+          onClick={() => setIsOpen(false)}
+          className="p-2 color-text-default"
+        >
           <h1 className="text-helper-text-sm color-text-secondary pl-2">
             Import
           </h1>
