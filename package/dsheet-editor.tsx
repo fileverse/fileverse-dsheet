@@ -127,7 +127,7 @@ const EditorContent = ({
           className={cn(
             `h-[44px] color-bg-default px-4 flex gap-2 items-center
              justify-between w-screen fixed left-0 top-0 border-b
-             color-border-default z-50 transition-transform duration-300`,
+             color-border-default z-10 transition-transform duration-300`,
             {
               'translate-y-0': true,
               'translate-y-[-100%]': false,
