@@ -52,7 +52,6 @@ export const TOOL_BAR_ITEMS = [
   'text-wrap',
   'vertical-align',
   '|',
-  'currency-format',
   'currency',
   'percentage-format',
   'number-decrease',
