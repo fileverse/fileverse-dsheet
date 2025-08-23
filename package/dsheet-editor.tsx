@@ -54,6 +54,7 @@ const EditorContent = ({
   onDuneChartEmbed,
   onSheetCountChange,
   handleSmartContractQuery,
+  isNewSheet,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -66,6 +67,7 @@ const EditorContent = ({
   | 'setShowFetchURLModal'
   | 'setInputFetchURLDataBlock'
   | 'storeApiKey'
+  | 'isNewSheet'
 > & {
   commentData?: object;
   getCommentCellUI?: (row: number, column: number) => void;
@@ -115,6 +117,7 @@ const EditorContent = ({
     currentDataRef,
     ydocRef,
   };
+  const shouldRenderSheet = currentDataRef.current.length > 0 || isNewSheet;
 
   return (
     <div
@@ -143,7 +146,7 @@ const EditorContent = ({
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
 
-        <TransitionWrapper show={!loading} duration={1000}>
+        <TransitionWrapper show={!loading && shouldRenderSheet} duration={1000}>
           {/* Permission chip - only visible with real content */}
           {isReadOnly && (
             <div className="absolute top-2 right-4 z-20">
@@ -219,6 +222,7 @@ const SpreadsheetEditor = ({
   editorStateRef,
   handleSmartContractQuery,
   setSelectedTemplate,
+  isNewSheet,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -246,6 +250,7 @@ const SpreadsheetEditor = ({
         getCommentCellUI={getCommentCellUI}
         renderNavbar={renderNavbar}
         setFetchingURLData={setFetchingURLData}
+        isNewSheet={isNewSheet}
         setShowFetchURLModal={setShowFetchURLModal}
         setInputFetchURLDataBlock={setInputFetchURLDataBlock}
         isReadOnly={isReadOnly}
