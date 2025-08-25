@@ -4,10 +4,7 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 
-import {
-  DEFAULT_SHEET_DATA,
-  CELL_COMMENT_DEFAULT_VALUE,
-} from '../constants/shared-constants';
+import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
 // import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
@@ -137,38 +134,7 @@ export const useEditorData = (
 
         const sheetArray = ydocRef.current?.getArray(dsheetId);
         const currentData = Array.from(sheetArray || []) as Sheet[];
-
-        // In read-only mode with no existing data and no portal content, we still need some data
-        // to render something, but we'll just set the current ref without modifying YJS
-        if (currentData.length === 0) {
-          if (isReadOnly) {
-            // In read-only mode, we'll still mark as loaded without creating data in YJS
-            setIsDataLoaded(true);
-
-            // For read-only mode, we'll let the EditorWorkbook component handle rendering a temp sheet
-            // Don't set currentDataRef to an empty array as it could cause rendering issues
-            if (!portalContentProcessed.current) {
-              // Keep currentDataRef as is, EditorWorkbook will handle empty data
-            }
-          } else {
-            // No data in YJS storage, use default data
-            const dataToUse = DEFAULT_SHEET_DATA;
-
-            ydocRef.current?.transact(() => {
-              sheetArray?.delete(0, sheetArray.length);
-              sheetArray?.insert(0, dataToUse);
-            });
-
-            currentDataRef.current = dataToUse;
-          }
-        } else {
-          currentDataRef.current = currentData;
-
-          if (setForceSheetRender) {
-            setForceSheetRender((prev) => prev + 1);
-          }
-        }
-
+        currentDataRef.current = currentData;
         dataInitialized.current = true;
         setIsDataLoaded(true);
       };
