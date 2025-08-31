@@ -81,6 +81,8 @@ export interface DsheetProps {
     refreshIndexedDB: () => Promise<void>;
   } | null>;
   handleSmartContractQuery?: SmartContractQueryHandler;
+  enableLiveQuery?: boolean;
+  isDevMode?: boolean;
 }
 export type BaseError = {
   message: string;

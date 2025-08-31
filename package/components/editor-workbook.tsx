@@ -4,10 +4,10 @@ import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-react';
 
 import {
-  DEFAULT_SHEET_DATA,
   TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
   HEADER_CONTEXT_MENU_ITEMS,
+  DEFAULT_SHEET_DATA,
 } from '../constants/shared-constants';
 import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
@@ -69,7 +69,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -92,6 +92,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     isAuthorized,
     getDocumentTitle,
     updateDocumentTitle,
+    handleLiveQuery,
   } = useEditor();
 
   useEffect(() => {
@@ -119,7 +120,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     currentDataRef,
     setForceSheetRender,
     sheetEditorRef,
-    updateDocumentTitle
+    updateDocumentTitle,
   });
 
   const cellContextMenu = isReadOnly
@@ -173,24 +174,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-              setShowSmartContractModal,
-              getDocumentTitle,
-              updateDocumentTitle,
-              setExportDropdownOpen,
-              handleCSVUpload,
-              // @ts-ignore
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
+                setShowSmartContractModal,
+                getDocumentTitle,
+                updateDocumentTitle,
+                setExportDropdownOpen,
+                handleCSVUpload,
+                // @ts-ignore
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
             : []
         }
         hooks={{
@@ -226,6 +227,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               setDataBlockCalcFunction,
               dataBlockCalcFunction,
               handleSmartContractQuery,
+              handleLiveQueryData: handleLiveQuery,
             });
           },
         }}

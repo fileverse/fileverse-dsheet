@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
+import { useLiveQuery } from './live-query/use-live-query';
 // import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
 /**
@@ -26,6 +27,8 @@ export const useEditorData = (
   setDataBlockCalcFunction?: React.Dispatch<
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >,
+  enableLiveQuery = false,
+  isDevMode = false,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -36,6 +39,12 @@ export const useEditorData = (
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
+
+  const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
+    sheetEditorRef,
+    enableLiveQuery,
+    isDevMode,
+  );
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
@@ -64,6 +73,7 @@ export const useEditorData = (
 
         // Update the current data reference
         currentDataRef.current = newSheetData;
+        initialiseLiveQueryData(newSheetData);
 
         // Always mark portal content as processed
         portalContentProcessed.current = true;
@@ -135,6 +145,8 @@ export const useEditorData = (
         const sheetArray = ydocRef.current?.getArray(dsheetId);
         const currentData = Array.from(sheetArray || []) as Sheet[];
         currentDataRef.current = currentData;
+        initialiseLiveQueryData(currentData);
+
         dataInitialized.current = true;
         setIsDataLoaded(true);
       };
@@ -254,5 +266,6 @@ export const useEditorData = (
     remoteUpdateRef,
     isDataLoaded,
     handleChange,
+    handleLiveQuery,
   };
 };

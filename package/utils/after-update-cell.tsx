@@ -18,6 +18,7 @@ import {
 } from './executeStringFunction';
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
+import { getSheetIndex, LiveQueryData } from '@fileverse-dev/fortune-core';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -56,10 +57,14 @@ interface AfterUpdateCellParams {
   setFetchingURLData: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
   dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
-  handleSmartContractQuery: SmartContractQueryHandler | undefined;
+  handleSmartContractQuery?: SmartContractQueryHandler | undefined;
+  handleLiveQueryData?: (
+    subsheetIndex: number,
+    queryData: LiveQueryData,
+  ) => void;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -288,6 +293,7 @@ const processRegularPromise = async (
     | 'storeApiKey'
     | 'onDataBlockApiResponse'
     | 'handleSmartContractQuery'
+    | 'handleLiveQueryData'
   >,
 ): Promise<void> => {
   try {
@@ -322,6 +328,30 @@ const processRegularPromise = async (
       const smartContractHandler = params.handleSmartContractQuery(api);
       await smartContractHandler(callSignature);
       return;
+    }
+    const context = params.sheetEditorRef.current?.getWorkbookContext();
+
+    if (
+      context &&
+      context.currentSheetId.toString() &&
+      params.handleLiveQueryData
+    ) {
+      const subsheetIndex = getSheetIndex(context, context.currentSheetId);
+      if (subsheetIndex?.toString()) {
+        const liveQueryData: LiveQueryData = {
+          data: {
+            row: params.row,
+            column: params.column,
+            name: formulaName || '',
+            value: data as any,
+            id: `${params.row}_${params.column}`,
+            function: params.newValue.f as string,
+            subSheetId: context.currentSheetId,
+          },
+          cellData: params.newValue,
+        };
+        params.handleLiveQueryData(subsheetIndex, liveQueryData);
+      }
     }
 
     if (Array.isArray(data)) {
