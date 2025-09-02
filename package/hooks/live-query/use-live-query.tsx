@@ -2,13 +2,13 @@
 import { SUPPORTED_LIVE_QUERY_FUNCTIONS } from './constants';
 import { useEffect, useRef } from 'react';
 import {
-  executeStringFunction,
-  formulaResponseUiSync,
-  getSheetIndex,
+  LiveQueryData,
+  Sheet,
   WorkbookInstance,
-} from '@fileverse-dev/dsheet';
-import { LiveQueryData, Sheet } from '@fileverse-dev/fortune-react';
-import { getFlowdata } from '@fileverse-dev/fortune-core';
+} from '@fileverse-dev/fortune-react';
+import { getFlowdata, getSheetIndex } from '@fileverse-dev/fortune-core';
+import { executeStringFunction } from '../../utils/executeStringFunction';
+import { formulaResponseUiSync } from '../../utils/formula-ui-sync';
 
 export const useLiveQuery = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
