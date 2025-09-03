@@ -95,7 +95,7 @@ export const useLiveQuery = (
           sheetEditorRef,
         });
         if (subSheetIndex?.toString()) {
-          // update live query data value to updated value
+          // update live query data value with newPriceDataResponse
           const newQueryData = {
             ...functionRecord,
             data: { ...data, value: newPriceDataResponse },
