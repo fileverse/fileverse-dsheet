@@ -47,8 +47,6 @@ export const executeStringFunction = async (
       return arg;
     });
 
-    console.log('args in util exce', args);
-
     // Check if the function exists in the imported module
     // @ts-expect-error later
     if (typeof module[functionName] === 'function') {
