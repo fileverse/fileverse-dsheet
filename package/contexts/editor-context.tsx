@@ -85,7 +85,7 @@ interface EditorProviderProps {
     refreshIndexedDB: () => Promise<void>;
   } | null>;
   enableLiveQuery?: boolean;
-  isDevMode?: boolean;
+  liveQueryRefreshRate?: number;
 }
 
 // Provider component that wraps the app
@@ -108,7 +108,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   isAuthorized,
   editorStateRef,
   enableLiveQuery,
-  isDevMode,
+  liveQueryRefreshRate,
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
@@ -165,7 +165,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
     enableLiveQuery,
-    isDevMode,
+    liveQueryRefreshRate,
   );
 
   // Initialize collaboration

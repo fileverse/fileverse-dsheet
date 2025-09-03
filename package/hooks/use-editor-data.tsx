@@ -28,7 +28,7 @@ export const useEditorData = (
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >,
   enableLiveQuery = false,
-  isDevMode = false,
+  liveQueryRefreshRate?: number,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -43,7 +43,7 @@ export const useEditorData = (
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
     enableLiveQuery,
-    isDevMode,
+    liveQueryRefreshRate,
   );
 
   // Apply portal content if provided (do this before any other initialization)

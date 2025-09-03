@@ -82,7 +82,7 @@ export interface DsheetProps {
   } | null>;
   handleSmartContractQuery?: SmartContractQueryHandler;
   enableLiveQuery?: boolean;
-  isDevMode?: boolean;
+  liveQueryRefreshRate?: number;
 }
 export type BaseError = {
   message: string;

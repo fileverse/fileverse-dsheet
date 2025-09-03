@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { SUPPORTED_LIVE_QUERY_FUNCTIONS } from './constants';
 import { useEffect, useRef } from 'react';
 import {
+  animateChangedCell,
   LiveQueryData,
   Sheet,
   WorkbookInstance,
@@ -9,17 +9,15 @@ import {
 import { getFlowdata, getSheetIndex } from '@fileverse-dev/fortune-core';
 import { executeStringFunction } from '../../utils/executeStringFunction';
 import { formulaResponseUiSync } from '../../utils/formula-ui-sync';
+import { isSupported } from './helpers';
 
 export const useLiveQuery = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
   enableLiveQuery = false,
-  isDevMode?: boolean,
-  refreshRate = 5000,
+  refreshRate = 20000,
 ) => {
   const liveQueryRef = useRef<Record<string, Map<string, LiveQueryData>>>({});
-  const isSupported = (functionName: string) => {
-    return SUPPORTED_LIVE_QUERY_FUNCTIONS.includes(functionName.toLowerCase());
-  };
+
   const registerLiveQueryData = (
     subsheetIndex: number,
     queryData: LiveQueryData,
@@ -36,8 +34,7 @@ export const useLiveQuery = (
   const handleLiveQuery = (subsheetIndex: number, queryData: LiveQueryData) => {
     const { data } = queryData;
     const functionName = data.name;
-
-    if (!isSupported(functionName)) return;
+    if (!isSupported(functionName, data.function)) return;
     registerLiveQueryData(subsheetIndex, queryData);
   };
 
@@ -62,13 +59,13 @@ export const useLiveQuery = (
     const functionToExec = functionRecord.data.function.split('=')[1];
     switch (functionRecord.data.name.toLowerCase()) {
       case 'coingecko': {
-        const { cellData, data } = functionRecord;
+        const { cellData: cachedCellData, data } = functionRecord;
         const { row, column } = data;
         const context = sheetEditorRef.current?.getWorkbookContext();
-        const cell = getFlowdata(context)?.[row]?.[column];
+        const latestCellData = getFlowdata(context)?.[row]?.[column];
         const subSheetIndex = getSheetIndex(context!, data.subSheetId);
 
-        if (!cell?.f || cell?.f !== cellData.f) {
+        if (!latestCellData?.f || latestCellData?.f !== cachedCellData.f) {
           // do not execute function if function in cell already changed
           if (subSheetIndex?.toString) {
             removeFromLiveQueryList(subSheetIndex, data.id);
@@ -78,33 +75,41 @@ export const useLiveQuery = (
         const oldPriceDataValue = functionRecord.data.value as any;
         const oldPriceData = oldPriceDataValue[0];
         const [oldPriceCurrency, oldPrice] = Object.entries(oldPriceData)[0];
-        let apiData = [] as any;
-        if (isDevMode) {
-          const randomPriceData = [
-            { [oldPriceCurrency]: Math.floor(Math.random() * 28848) },
-          ];
-          apiData = randomPriceData;
-        } else {
-          const result = await executeStringFunction(functionToExec);
-          const newPriceDataResponse = result as Array<Record<string, number>>;
-          const newPriceData = newPriceDataResponse[0];
-          const [newPriceCurrency, newPrice] = Object.entries(newPriceData)[0];
-          const isPriceUpdated =
-            newPriceCurrency !== oldPriceCurrency || newPrice !== oldPrice;
-          if (isPriceUpdated) {
-            apiData = newPriceDataResponse;
-          }
+        const result = await executeStringFunction(
+          functionToExec,
+          sheetEditorRef,
+        );
+        const newPriceDataResponse = result as Array<Record<string, number>>;
+        const newPriceData = newPriceDataResponse[0];
+        const [newPriceCurrency, newPrice] = Object.entries(newPriceData)[0];
+        const isPriceUpdated =
+          newPriceCurrency !== oldPriceCurrency || newPrice !== oldPrice;
+        if (!isPriceUpdated) {
+          return;
         }
-        if (!apiData.length) return;
-
         formulaResponseUiSync({
           row,
           column,
-          newValue: cellData as Record<string, string>,
-          apiData,
+          newValue: cachedCellData as Record<string, string>,
+          apiData: newPriceDataResponse as any,
           sheetEditorRef,
         });
-
+        if (subSheetIndex?.toString()) {
+          // update live query data value to updated value
+          const newQueryData = {
+            ...functionRecord,
+            data: { ...data, value: newPriceDataResponse },
+          };
+          liveQueryRef.current[subSheetIndex].set(
+            newQueryData.data.id,
+            newQueryData,
+          );
+          sheetEditorRef.current?.updateSheetLiveQueryList(
+            subSheetIndex!,
+            newQueryData,
+          );
+        }
+        animateChangedCell(context!.currentSheetId, row + 1, column);
         return;
       }
     }
@@ -131,6 +136,6 @@ export const useLiveQuery = (
     }, refreshRate);
 
     return () => clearInterval(interval);
-  }, [enableLiveQuery]);
+  }, [enableLiveQuery, refreshRate]);
   return { handleLiveQuery, initialiseLiveQueryData };
 };
