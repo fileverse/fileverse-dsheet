@@ -43,7 +43,7 @@ export const CustomButton = ({
       <PopoverContent
         align="start"
         alignOffset={0}
-        className="w-72 export-content"
+        className="w-72 export-content-popover"
         elevation={2}
         side="bottom"
         sideOffset={4}
