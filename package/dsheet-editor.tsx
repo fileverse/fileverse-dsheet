@@ -223,6 +223,8 @@ const SpreadsheetEditor = ({
   handleSmartContractQuery,
   setSelectedTemplate,
   isNewSheet,
+  liveQueryRefreshRate,
+  enableLiveQuery,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -244,6 +246,8 @@ const SpreadsheetEditor = ({
       commentData={commentData}
       isAuthorized={isAuthorized}
       editorStateRef={editorStateRef}
+      liveQueryRefreshRate={liveQueryRefreshRate}
+      enableLiveQuery={enableLiveQuery}
     >
       <EditorContent
         commentData={commentData}

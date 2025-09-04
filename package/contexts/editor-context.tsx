@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
-import { Sheet } from '@fileverse-dev/fortune-react';
+import { LiveQueryData, Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
@@ -56,6 +56,8 @@ export interface EditorContextType {
 
   // For compatibility with types
   isCollaborative?: boolean;
+
+  handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
 }
 
 // Create the context with a default value
@@ -82,6 +84,8 @@ interface EditorProviderProps {
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
+  enableLiveQuery?: boolean;
+  liveQueryRefreshRate?: number;
 }
 
 // Provider component that wraps the app
@@ -103,6 +107,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   commentData,
   isAuthorized,
   editorStateRef,
+  enableLiveQuery,
+  liveQueryRefreshRate,
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
@@ -145,6 +151,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     remoteUpdateRef,
     isDataLoaded,
     handleChange,
+    handleLiveQuery,
   } = useEditorData(
     ydocRef,
     dsheetId,
@@ -157,6 +164,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     commentData,
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
+    enableLiveQuery,
+    liveQueryRefreshRate,
   );
 
   // Initialize collaboration
@@ -211,6 +220,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       isCollaborative,
       isAuthorized,
       refreshIndexedDB,
+      handleLiveQuery,
     };
   }, [
     setShowSmartContractModal,
@@ -234,6 +244,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     isCollaborative,
     isAuthorized,
+    handleLiveQuery,
   ]);
 
   return (
