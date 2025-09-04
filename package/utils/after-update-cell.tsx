@@ -19,6 +19,8 @@ import {
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
 import { getSheetIndex, LiveQueryData } from '@fileverse-dev/fortune-core';
+import { isHexValue } from './generic';
+
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -63,8 +65,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -404,11 +406,6 @@ const processRegularPromise = async (
     }
   }
 };
-
-function isHexValue(str: string): boolean {
-  // Accepts with or without 0x prefix
-  return /^0x?[a-fA-F0-9]+$/.test(str);
-}
 
 /**
  * Handles promise-based cell values

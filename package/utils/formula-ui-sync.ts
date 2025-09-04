@@ -1,4 +1,5 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { isNumericOnly, isHexValue } from './generic';
 
 export type FormulaSyncType = {
   row: number;
@@ -68,14 +69,15 @@ export const formulaResponseUiSync = ({
       const tempData: {
         ct: { fa: string; t: string };
         m?: object;
-        v: object;
+        v: object | string | number | boolean;
         isDataBlockFormula?: boolean;
       }[] = [];
       headers.forEach((header: string) => {
         // @ts-expect-error later
         const cellValue = apiData[i][header];
+        const ctValue = (isNumericOnly(cellValue) && !isHexValue(cellValue)) ? { fa: 'General', t: 'n' } : { fa: '@', t: 's' };
         tempData.push({
-          ct: { fa: '@', t: 's' },
+          ct: ctValue,
           v: cellValue,
           isDataBlockFormula: true,
         });
@@ -107,8 +109,9 @@ export const formulaResponseUiSync = ({
       }[] = [];
       // @ts-expect-error later
       apiData[i].forEach((cellValue: string) => {
+        const ctValue = (isNumericOnly(cellValue) && !isHexValue(cellValue)) ? { fa: 'General', t: 'n' } : { fa: '@', t: 's' };
         tempData.push({
-          ct: { fa: '@', t: 's' },
+          ct: ctValue,
           v: cellValue,
           isDataBlockFormula: true,
         });
