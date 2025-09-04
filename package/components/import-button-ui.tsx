@@ -100,7 +100,6 @@ export const CustomButton = ({
               accept=".xlsx"
               id="xlsx-upload"
               onChange={(e) => {
-                console.log('handleXLSXUpload');
                 handleXLSXUpload(e);
                 setIsOpen(false);
               }}
@@ -113,7 +112,6 @@ export const CustomButton = ({
               accept=".csv"
               id="csv-upload"
               onChange={(e) => {
-                console.log('handleCSVUpload');
                 handleCSVUpload(e);
                 setIsOpen(false);
               }}
