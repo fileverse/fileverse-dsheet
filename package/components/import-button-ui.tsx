@@ -80,7 +80,6 @@ export const CustomButton = ({
           </button>
         </div>
         <div
-          onClick={() => setIsOpen(false)}
           className="p-2 color-text-default"
         >
           <h1 className="text-helper-text-sm color-text-secondary pl-2">
@@ -103,6 +102,7 @@ export const CustomButton = ({
               onChange={(e) => {
                 console.log('handleXLSXUpload');
                 handleXLSXUpload(e);
+                setIsOpen(false);
               }}
               style={{ display: 'none' }}
             />
@@ -112,7 +112,11 @@ export const CustomButton = ({
               type="file"
               accept=".csv"
               id="csv-upload"
-              onChange={handleCSVUpload}
+              onChange={(e) => {
+                console.log('handleCSVUpload');
+                handleCSVUpload(e);
+                setIsOpen(false);
+              }}
               style={{ display: 'none' }}
             />
             <button className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition">
