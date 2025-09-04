@@ -405,6 +405,11 @@ const processRegularPromise = async (
   }
 };
 
+function isHexValue(str: string): boolean {
+  // Accepts with or without 0x prefix
+  return /^0x?[a-fA-F0-9]+$/.test(str);
+}
+
 /**
  * Handles promise-based cell values
  */
@@ -511,6 +516,14 @@ export const afterUpdateCell = async (
     sheetEditorRef,
     row: params.row,
   });
+
+  if (isHexValue(newValue.v as string)) {
+    sheetEditorRef.current?.setCellValue(params.row, params.column, {
+      ...newValue,
+      m: newValue.v,
+      ct: { fa: '@', t: 's' },
+    });
+  }
 
   // Handle onboarding if needed
   const { row, column } = handleOnboarding(params);

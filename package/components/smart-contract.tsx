@@ -29,7 +29,7 @@ export const SmartContractButton = ({
       <PopoverContent
         align="end"
         alignOffset={0}
-        className="export-content !w-[235px]"
+        className="export-content-popover !w-[235px]"
         elevation={2}
         side="bottom"
         sideOffset={4}
