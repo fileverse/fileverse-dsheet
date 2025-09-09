@@ -248,6 +248,7 @@ const SpreadsheetEditor = ({
       editorStateRef={editorStateRef}
       liveQueryRefreshRate={liveQueryRefreshRate}
       enableLiveQuery={enableLiveQuery}
+      dataBlockApiKeyHandler={dataBlockApiKeyHandler}
     >
       <EditorContent
         commentData={commentData}

@@ -10,9 +10,14 @@ import { getFlowdata, getSheetIndex } from '@fileverse-dev/fortune-core';
 import { executeStringFunction } from '../../utils/executeStringFunction';
 import { formulaResponseUiSync } from '../../utils/formula-ui-sync';
 import { isSupported } from './helpers';
+import {
+  DataBlockApiKeyHandlerType,
+  ErrorMessageHandlerReturnType,
+} from '../../types';
 
 export const useLiveQuery = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
+  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   enableLiveQuery = false,
   refreshRate = 20000,
 ) => {
@@ -124,20 +129,31 @@ export const useLiveQuery = (
   useEffect(() => {
     if (!enableLiveQuery || !sheetEditorRef) return;
     const interval = setInterval(() => {
-      const context = sheetEditorRef.current?.getWorkbookContext();
-      if (!context) return;
-      const activeSubsheetId = context.currentSheetId;
-      const activeSheetIndex = getSheetIndex(context, activeSubsheetId);
-      if (
-        !activeSheetIndex?.toString() ||
-        !liveQueryRef.current[activeSheetIndex]
-      )
-        return;
-      for (const [, liveQueryRecord] of Array.from(
-        liveQueryRef.current[activeSheetIndex],
-      )) {
-        // only execute live query on active subsheet
-        handleQuery(liveQueryRecord);
+      try {
+        const context = sheetEditorRef.current?.getWorkbookContext();
+        if (!context) return;
+        const activeSubsheetId = context.currentSheetId;
+        const activeSheetIndex = getSheetIndex(context, activeSubsheetId);
+        if (
+          !activeSheetIndex?.toString() ||
+          !liveQueryRef.current[activeSheetIndex]
+        )
+          return;
+        for (const [, liveQueryRecord] of Array.from(
+          liveQueryRef.current[activeSheetIndex],
+        )) {
+          // only execute live query on active subsheet
+          handleQuery(liveQueryRecord);
+        }
+      } catch (error: any) {
+        const data: ErrorMessageHandlerReturnType = {
+          message: error?.message || 'Live query failed',
+          functionName: 'COINGECKO',
+          type: 'LIVE_QUERY_ERROR',
+        };
+        dataBlockApiKeyHandler?.({
+          data,
+        } as any);
       }
     }, refreshRate);
 

@@ -5,7 +5,6 @@ import React, {
   useState,
   useEffect,
   useMemo,
-  useCallback,
 } from 'react';
 import { LiveQueryData, Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
@@ -16,7 +15,7 @@ import { fromUint8Array } from 'js-base64';
 import { useEditorSync } from '../hooks/use-editor-sync';
 import { useEditorData } from '../hooks/use-editor-data';
 import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
-import { SheetUpdateData } from '../types';
+import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
@@ -86,6 +85,7 @@ interface EditorProviderProps {
   } | null>;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
+  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
 }
 
 // Provider component that wraps the app
@@ -109,6 +109,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   editorStateRef,
   enableLiveQuery,
   liveQueryRefreshRate,
+  dataBlockApiKeyHandler,
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
@@ -130,18 +131,15 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChange = useCallback(
-    (data: Sheet[]) => {
-      if (onChange && ydocRef.current) {
-        // Encode the YJS document state to pass as second parameter
-        const encodedUpdate = fromUint8Array(
-          Y.encodeStateAsUpdate(ydocRef.current),
-        );
-        onChange({ data }, encodedUpdate);
-      }
-    },
-    [onChange, ydocRef],
-  );
+  const handleOnChange = (data: Sheet[]) => {
+    if (onChange && ydocRef.current) {
+      // Encode the YJS document state to pass as second parameter
+      const encodedUpdate = fromUint8Array(
+        Y.encodeStateAsUpdate(ydocRef.current),
+      );
+      onChange({ data }, encodedUpdate);
+    }
+  };
 
   // Initialize sheet data
   const {
@@ -166,6 +164,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setDataBlockCalcFunction,
     enableLiveQuery,
     liveQueryRefreshRate,
+    dataBlockApiKeyHandler,
   );
 
   // Initialize collaboration

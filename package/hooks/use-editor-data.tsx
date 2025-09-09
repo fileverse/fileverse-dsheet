@@ -7,6 +7,7 @@ import * as Y from 'yjs';
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
+import { DataBlockApiKeyHandlerType } from '../types';
 // import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
 /**
@@ -29,6 +30,7 @@ export const useEditorData = (
   >,
   enableLiveQuery = false,
   liveQueryRefreshRate?: number,
+  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -42,6 +44,7 @@ export const useEditorData = (
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
+    dataBlockApiKeyHandler,
     enableLiveQuery,
     liveQueryRefreshRate,
   );
