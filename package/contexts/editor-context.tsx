@@ -5,6 +5,7 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  useCallback,
 } from 'react';
 import { LiveQueryData, Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
@@ -131,15 +132,18 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChange = (data: Sheet[]) => {
-    if (onChange && ydocRef.current) {
-      // Encode the YJS document state to pass as second parameter
-      const encodedUpdate = fromUint8Array(
-        Y.encodeStateAsUpdate(ydocRef.current),
-      );
-      onChange({ data }, encodedUpdate);
-    }
-  };
+  const handleOnChange = useCallback(
+    (data: Sheet[]) => {
+      if (onChange && ydocRef.current) {
+        // Encode the YJS document state to pass as second parameter
+        const encodedUpdate = fromUint8Array(
+          Y.encodeStateAsUpdate(ydocRef.current),
+        );
+        onChange({ data }, encodedUpdate);
+      }
+    },
+    [onChange, ydocRef],
+  );
 
   // Initialize sheet data
   const {

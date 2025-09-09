@@ -21,7 +21,6 @@ import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
 import { getSheetIndex, LiveQueryData } from '@fileverse-dev/fortune-core';
 import { isHexValue } from './generic';
 
-
 // Constants
 const DEFAULT_FONT_SIZE = 10;
 const LINE_HEIGHT_MULTIPLIER = 1.5;
@@ -65,8 +64,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -265,7 +264,7 @@ const handleDatablockErroMessage = (
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isDatablockError = (value: any) => {
+export const isDatablockError = (value: any) => {
   const isObject =
     value !== null && typeof value === 'object' && !Array.isArray(value);
   return isObject && containsErrorFlag(value.type);
