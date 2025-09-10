@@ -10,9 +10,14 @@ import { getFlowdata, getSheetIndex } from '@fileverse-dev/fortune-core';
 import { executeStringFunction } from '../../utils/executeStringFunction';
 import { formulaResponseUiSync } from '../../utils/formula-ui-sync';
 import { isSupported } from './helpers';
+import { DataBlockApiKeyHandlerType } from '../../types';
+import { isDatablockError } from '../../utils/after-update-cell';
+
+export const LIVE_QUERY_ERROR = 'LIVE_QUERY_ERROR';
 
 export const useLiveQuery = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
+  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   enableLiveQuery = false,
   refreshRate = 20000,
 ) => {
@@ -57,73 +62,98 @@ export const useLiveQuery = (
 
   const handleQuery = async (functionRecord: LiveQueryData) => {
     const functionToExec = functionRecord.data.function.split('=')[1];
-    switch (functionRecord.data.name.toLowerCase()) {
-      case 'coingecko': {
-        const { cellData: cachedCellData, data } = functionRecord;
-        const { row, column } = data;
-        const context = sheetEditorRef.current?.getWorkbookContext();
-        const latestCellData = getFlowdata(context)?.[row]?.[column];
-        const subSheetIndex = getSheetIndex(context!, data.subSheetId);
+    try {
+      switch (functionRecord.data.name.toLowerCase()) {
+        case 'coingecko': {
+          const { cellData: cachedCellData, data } = functionRecord;
+          const { row, column } = data;
+          const context = sheetEditorRef.current?.getWorkbookContext();
+          const latestCellData = getFlowdata(context)?.[row]?.[column];
+          const subSheetIndex = getSheetIndex(context!, data.subSheetId);
 
-        if (!latestCellData?.f || latestCellData?.f !== cachedCellData.f) {
-          // do not execute function if function in cell already changed
-          if (subSheetIndex?.toString) {
-            removeFromLiveQueryList(subSheetIndex, data.id);
+          if (!latestCellData?.f || latestCellData?.f !== cachedCellData.f) {
+            // do not execute function if function in cell already changed
+            if (subSheetIndex?.toString) {
+              removeFromLiveQueryList(subSheetIndex, data.id);
+            }
+            return;
           }
+          const result: any = await executeStringFunction(
+            functionToExec,
+            sheetEditorRef,
+          );
+          if (isDatablockError(result)) {
+            result.type = LIVE_QUERY_ERROR;
+            dataBlockApiKeyHandler?.({ data: result } as any);
+            return;
+          }
+          const newPriceDataResponse = result as Array<Record<string, number>>;
+          const newPriceData = newPriceDataResponse[0];
+          if (!newPriceData) return;
+          const [newPriceCurrency, newPrice] = Object.entries(newPriceData)[0];
+          const oldPriceDataValue = functionRecord.data.value as any;
+          const oldPriceData = oldPriceDataValue[0];
+
+          if (oldPriceData) {
+            const [oldPriceCurrency, oldPrice] =
+              Object.entries(oldPriceData)[0];
+            const isPriceUpdated =
+              newPriceCurrency !== oldPriceCurrency || newPrice !== oldPrice;
+            if (!isPriceUpdated) {
+              return;
+            }
+          }
+
+          formulaResponseUiSync({
+            row,
+            column,
+            newValue: cachedCellData as Record<string, string>,
+            apiData: newPriceDataResponse as any,
+            sheetEditorRef,
+          });
+          if (subSheetIndex?.toString()) {
+            // update live query data value with newPriceDataResponse
+            const newQueryData = {
+              ...functionRecord,
+              data: { ...data, value: newPriceDataResponse },
+            };
+            liveQueryRef.current[subSheetIndex].set(
+              newQueryData.data.id,
+              newQueryData,
+            );
+            sheetEditorRef.current?.updateSheetLiveQueryList(
+              subSheetIndex!,
+              newQueryData,
+            );
+          }
+          animateChangedCell(context!.currentSheetId, row + 1, column);
+          // TODO: see a way to improve this
+          sheetEditorRef.current?.calculateSubSheetFormula(
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            sheetEditorRef.current?.getSheet()?.id,
+          );
           return;
         }
-        const oldPriceDataValue = functionRecord.data.value as any;
-        const oldPriceData = oldPriceDataValue[0];
-        const [oldPriceCurrency, oldPrice] = Object.entries(oldPriceData)[0];
-        const result = await executeStringFunction(
-          functionToExec,
-          sheetEditorRef,
-        );
-        const newPriceDataResponse = result as Array<Record<string, number>>;
-        const newPriceData = newPriceDataResponse[0];
-        const [newPriceCurrency, newPrice] = Object.entries(newPriceData)[0];
-        const isPriceUpdated =
-          newPriceCurrency !== oldPriceCurrency || newPrice !== oldPrice;
-        if (!isPriceUpdated) {
-          return;
-        }
-        formulaResponseUiSync({
-          row,
-          column,
-          newValue: cachedCellData as Record<string, string>,
-          apiData: newPriceDataResponse as any,
-          sheetEditorRef,
-        });
-        if (subSheetIndex?.toString()) {
-          // update live query data value with newPriceDataResponse
-          const newQueryData = {
-            ...functionRecord,
-            data: { ...data, value: newPriceDataResponse },
-          };
-          liveQueryRef.current[subSheetIndex].set(
-            newQueryData.data.id,
-            newQueryData,
-          );
-          sheetEditorRef.current?.updateSheetLiveQueryList(
-            subSheetIndex!,
-            newQueryData,
-          );
-        }
-        animateChangedCell(context!.currentSheetId, row + 1, column);
-        // TODO: see a way to improve this
-        sheetEditorRef.current?.calculateSubSheetFormula(
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-expect-error
-          sheetEditorRef.current?.getSheet()?.id,
-        );
-        return;
       }
+    } catch (error: any) {
+      const data = {
+        data: {
+          message: error?.message || 'Live query failed',
+          functionName: 'COINGECKO',
+          type: LIVE_QUERY_ERROR,
+        },
+      } as any;
+      dataBlockApiKeyHandler?.(data);
     }
   };
 
-  useEffect(() => {
-    if (!enableLiveQuery || !sheetEditorRef) return;
-    const interval = setInterval(() => {
+  const isLiveQueryIntervalRunningRef = useRef(false);
+
+  const handleLiveQueryInterval = async () => {
+    if (isLiveQueryIntervalRunningRef.current) return;
+    try {
+      isLiveQueryIntervalRunningRef.current = true;
       const context = sheetEditorRef.current?.getWorkbookContext();
       if (!context) return;
       const activeSubsheetId = context.currentSheetId;
@@ -133,12 +163,31 @@ export const useLiveQuery = (
         !liveQueryRef.current[activeSheetIndex]
       )
         return;
+
+      const queries: Promise<any>[] = [];
       for (const [, liveQueryRecord] of Array.from(
         liveQueryRef.current[activeSheetIndex],
       )) {
-        // only execute live query on active subsheet
-        handleQuery(liveQueryRecord);
+        queries.push(handleQuery(liveQueryRecord));
       }
+      await Promise.allSettled(queries);
+    } catch (error: any) {
+      dataBlockApiKeyHandler?.({
+        data: {
+          message: error?.message || 'Live query failed',
+          functionName: 'COINGECKO',
+          type: LIVE_QUERY_ERROR,
+        },
+      } as any);
+    } finally {
+      isLiveQueryIntervalRunningRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!enableLiveQuery || !sheetEditorRef) return;
+    const interval = setInterval(() => {
+      handleLiveQueryInterval();
     }, refreshRate);
 
     return () => clearInterval(interval);
