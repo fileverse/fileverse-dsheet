@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DSheetEditor from '../../package/dsheet-editor';
 import {
@@ -110,6 +110,12 @@ function App() {
     );
   };
 
+
+  const [isNewSheet, setIsNewSheet] = useState(false);
+
+
+  useEffect(() => {setTimeout(() => {setIsNewSheet(true)}, 5000)}, [])
+
   const EditorPage = () => (
     <div>
       <DSheetEditor
@@ -120,6 +126,7 @@ function App() {
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
         isAuthorized={false}
+        isNewSheet={isNewSheet}
       />
     </div>
   );
