@@ -94,7 +94,7 @@ export const formulaResponseUiSync = ({
           ct: buildCellFormat(cellValue, existing.ct),
           // if the value is numeric, skip "m" (FortuneSheet will render display text using v + ct/fa).
           // if it's text, explicitly set "m" to match the value so it displays correctly.
-          ...(isNum ? {} : { m: String(cellValue) }),
+          ...(isNum ? {} : { m: cellValue ? String(cellValue) : '' }),
         });
       });
       data.push(tempData);
@@ -146,7 +146,7 @@ export const formulaResponseUiSync = ({
           ct: buildCellFormat(cellValue, existing.ct),
           // if the value is numeric, skip "m" (FortuneSheet will render display text using v + ct/fa).
           // if it's text, explicitly set "m" to match the value so it displays correctly.
-          ...(isNum ? {} : { m: String(cellValue) }),
+          ...(isNum ? {} : { m: cellValue ? String(cellValue) : '' }),
         });
       });
       data.push(tempData);

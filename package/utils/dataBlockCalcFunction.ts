@@ -26,7 +26,7 @@ export const dataBlockCalcFunctionHandler = ({
         const dataBlockValue =
           //@ts-expect-error later
           sheetEditorRef?.current?.getSheet().data[dataBlock.row][
-            dataBlock.column
+          dataBlock.column
           ];
         const currentFormulaName = dataBlockValue?.f
           ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
