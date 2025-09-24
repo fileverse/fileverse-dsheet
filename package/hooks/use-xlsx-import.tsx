@@ -66,6 +66,7 @@ export const useXLSXImport = ({
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement> | undefined,
     fileArg: File,
+    importType?: 'new-dsheet' | 'merge-current-dsheet' | 'new-current-dsheet',
   ) => {
     const input = event?.target;
     if (!input?.files?.length && !fileArg) {
@@ -168,7 +169,13 @@ export const useXLSXImport = ({
               return sheet
             })
 
-            let combinedSheets = [...localSheetsArray, ...sheets]
+            let combinedSheets;
+
+            if (importType === 'merge-current-dsheet') {
+              combinedSheets = [...localSheetsArray, ...sheets]
+            } else {
+              combinedSheets = [...sheets]
+            }
 
             combinedSheets = combinedSheets.map((sheet, index) => {
               sheet.order = index;

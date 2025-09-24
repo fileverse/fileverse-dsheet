@@ -1,6 +1,6 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
 import { ChangeEventHandler, useState } from 'react';
-import { LucideIcon, IconButton } from '@fileverse/ui';
+import { LucideIcon, IconButton, DynamicModal, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fileverse/ui';
 
 import './import-button.scss';
 
@@ -13,13 +13,48 @@ export const CustomButton = ({
   handleExportToJSON,
 }: {
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  handleCSVUpload: ChangeEventHandler<HTMLInputElement>;
-  handleXLSXUpload: ChangeEventHandler<HTMLInputElement>;
+  handleCSVUpload:
+  (event: ChangeEventHandler<HTMLInputElement> | undefined, file: any, importType: string) => void;
+  handleXLSXUpload: (event: ChangeEventHandler<HTMLInputElement> | undefined, file: any, importType: string) => void;
   handleExportToXLSX: () => void;
   handleExportToCSV: () => void;
   handleExportToJSON: () => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openImportTypeModal, setOpenImportTypeModal] = useState(false);
+  const [importType, setImportType] = useState('new-dsheet');
+  const [file, setFile] = useState<any>(null);
+  const [extension, setExtension] = useState('');
+
+  const handleApplyData = () => {
+    if (extension === 'xlsx') {
+      if (file && importType === 'new-dsheet') {
+        const url = URL.createObjectURL(file);
+        setTimeout(() => {
+          window.open(
+            `/sheet/create?xlsx=${encodeURIComponent(url)}`,
+            '_blank'
+          );
+        }, 0);
+      } else {
+        handleXLSXUpload(undefined, file, importType);
+      }
+    } else {
+      if (file && importType === 'new-dsheet') {
+        const url = URL.createObjectURL(file);
+        setTimeout(() => {
+          window.open(
+            `/sheet/create?csv=${encodeURIComponent(url)}`,
+            '_blank'
+          );
+        }, 0);
+      } else {
+        handleCSVUpload(undefined, file, importType);
+      }
+    }
+    setOpenImportTypeModal(false);
+  }
+
   return (
     <Popover
       open={isOpen}
@@ -81,6 +116,7 @@ export const CustomButton = ({
         </div>
         <div
           className="p-2 color-text-default"
+        // onClick={() => setIsOpen(false)}
         >
           <h1 className="text-helper-text-sm color-text-secondary pl-2">
             Import
@@ -100,7 +136,9 @@ export const CustomButton = ({
               accept=".xlsx"
               id="xlsx-upload"
               onChange={(e) => {
-                handleXLSXUpload(e);
+                setExtension('xlsx');
+                setFile(e.target.files?.[0]);
+                setOpenImportTypeModal(true);
                 setIsOpen(false);
               }}
               style={{ display: 'none' }}
@@ -112,7 +150,9 @@ export const CustomButton = ({
               accept=".csv"
               id="csv-upload"
               onChange={(e) => {
-                handleCSVUpload(e);
+                setExtension('csv');
+                setFile(e.target.files?.[0]);
+                setOpenImportTypeModal(true);
                 setIsOpen(false);
               }}
               style={{ display: 'none' }}
@@ -129,6 +169,62 @@ export const CustomButton = ({
           </div>
         </div>
       </PopoverContent>
+      <DynamicModal
+        hasCloseIcon
+        open={openImportTypeModal}
+        onOpenChange={setOpenImportTypeModal}
+        className="rounded-lg max-w-[420px]"
+        contentClassName="!pt-4 px-6"
+        title={
+          <div className="font-medium text-lg leading-6">Import file</div>
+        }
+        content={
+          <div className="flex flex-col gap-4 font-normal text-sm leading-5">
+            <div>
+              <div className='text-heading-xsm mb-[4px]'>File name</div>
+              <div className='h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center'>
+                <p className='text-body-sm color-text-disabled'>{file?.name}</p>
+              </div>
+            </div>
+
+            <div>
+              <div className='text-heading-xsm mb-[4px]'>Import location</div>
+
+              <Select onValueChange={(value) => {
+                setImportType(value);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Create new dSheet" />
+                </SelectTrigger>
+                <SelectContent id="publish-category">
+                  {[{ id: 'new-dsheet', label: 'Create new dSheet' }, { id: 'merge-current-dsheet', label: 'Insert new sheet(s)' }, { id: 'new-current-dsheet', label: 'Replace sheet(s)' }].map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end items-center gap-2">
+              <Button
+                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 h-[36px] max-h-10 rounded"
+                size="md"
+                variant="secondary"
+                onClick={() => setOpenImportTypeModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
+                size="md"
+                onClick={handleApplyData}
+              >
+                Import data
+              </Button>
+            </div>
+          </div>
+        }
+      />
     </Popover>
   );
 };
