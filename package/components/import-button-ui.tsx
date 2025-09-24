@@ -25,6 +25,36 @@ export const CustomButton = ({
   const [importType, setImportType] = useState('new-dsheet');
   const [file, setFile] = useState<any>(null);
   const [extension, setExtension] = useState('');
+
+  const handleApplyData = () => {
+    if (extension === 'xlsx') {
+      if (file && importType === 'new-dsheet') {
+        const url = URL.createObjectURL(file);
+        setTimeout(() => {
+          window.open(
+            `/sheet/create?xlsx=${encodeURIComponent(url)}`,
+            '_blank'
+          );
+        }, 0);
+      } else {
+        handleXLSXUpload(undefined, file, importType);
+      }
+    } else {
+      if (file && importType === 'new-dsheet') {
+        const url = URL.createObjectURL(file);
+        setTimeout(() => {
+          window.open(
+            `/sheet/create?csv=${encodeURIComponent(url)}`,
+            '_blank'
+          );
+        }, 0);
+      } else {
+        handleCSVUpload(undefined, file, importType);
+      }
+    }
+    setOpenImportTypeModal(false);
+  }
+
   return (
     <Popover
       open={isOpen}
@@ -107,10 +137,7 @@ export const CustomButton = ({
               onChange={(e) => {
                 setExtension('xlsx');
                 setFile(e.target.files?.[0]);
-                console.log(file, e, e.target.files);
                 setOpenImportTypeModal(true);
-
-                //handleXLSXUpload(e);
                 setIsOpen(false);
               }}
               style={{ display: 'none' }}
@@ -124,9 +151,7 @@ export const CustomButton = ({
               onChange={(e) => {
                 setExtension('csv');
                 setFile(e.target.files?.[0]);
-                console.log(file, e, e.target.files);
                 setOpenImportTypeModal(true);
-                //handleCSVUpload(e);
                 setIsOpen(false);
               }}
               style={{ display: 'none' }}
@@ -186,36 +211,7 @@ export const CustomButton = ({
               <Button
                 className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 min-h-10 max-h-10 rounded"
                 size="lg"
-                onClick={() => {
-                  console.log(importType);
-                  if (extension === 'xlsx') {
-                    if (file && importType === 'new-dsheet') {
-                      const url = URL.createObjectURL(file);
-                      setTimeout(() => {
-                        window.open(
-                          `/sheet/create?xlsx=${encodeURIComponent(url)}`,
-                          '_blank'
-                        );
-                      }, 0);
-                    } else {
-                      handleXLSXUpload(undefined, file, importType);
-                    }
-                  } else {
-                    if (file && importType === 'new-dsheet') {
-                      const url = URL.createObjectURL(file);
-                      setTimeout(() => {
-                        window.open(
-                          `/sheet/create?csv=${encodeURIComponent(url)}`,
-                          '_blank'
-                        );
-                      }, 0);
-                    } else {
-                      handleCSVUpload(undefined, file, importType);
-                    }
-                  }
-                  setOpenImportTypeModal(false);
-                }
-                }
+                onClick={handleApplyData}
               >
                 Import data
               </Button>
