@@ -116,6 +116,7 @@ export const CustomButton = ({
         </div>
         <div
           className="p-2 color-text-default"
+        // onClick={() => setIsOpen(false)}
         >
           <h1 className="text-helper-text-sm color-text-secondary pl-2">
             Import
@@ -169,9 +170,10 @@ export const CustomButton = ({
         </div>
       </PopoverContent>
       <DynamicModal
+        hasCloseIcon
         open={openImportTypeModal}
         onOpenChange={setOpenImportTypeModal}
-        className="rounded-lg"
+        className="rounded-lg max-w-[420px]"
         contentClassName="!pt-4 px-6"
         title={
           <div className="font-medium text-lg leading-6">Import file</div>
@@ -181,36 +183,40 @@ export const CustomButton = ({
             <div>
               <div className='text-heading-xsm mb-[4px]'>File name</div>
               <div className='h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center'>
-                <p className='text-body-sm'>{file?.name}</p>
+                <p className='text-body-sm color-text-disabled'>{file?.name}</p>
               </div>
             </div>
 
-            <Select onValueChange={(value) => {
-              setImportType(value);
-            }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Create new dSheet" />
-              </SelectTrigger>
-              <SelectContent id="publish-category">
-                {[{ id: 'new-dsheet', label: 'Create new dSheet' }, { id: 'merge-current-dsheet', label: 'Insert new sheet(s)' }, { id: 'new-current-dsheet', label: 'Replace sheet(s)' }].map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <div className='text-heading-xsm mb-[4px]'>Import location</div>
+
+              <Select onValueChange={(value) => {
+                setImportType(value);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Create new dSheet" />
+                </SelectTrigger>
+                <SelectContent id="publish-category">
+                  {[{ id: 'new-dsheet', label: 'Create new dSheet' }, { id: 'merge-current-dsheet', label: 'Insert new sheet(s)' }, { id: 'new-current-dsheet', label: 'Replace sheet(s)' }].map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex justify-end items-center gap-2">
               <Button
-                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 min-h-10 max-h-10 rounded"
-                size="lg"
+                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 h-[36px] max-h-10 rounded"
+                size="md"
                 variant="secondary"
                 onClick={() => setOpenImportTypeModal(false)}
               >
                 Cancel
               </Button>
               <Button
-                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 min-h-10 max-h-10 rounded"
-                size="lg"
+                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
+                size="md"
                 onClick={handleApplyData}
               >
                 Import data
