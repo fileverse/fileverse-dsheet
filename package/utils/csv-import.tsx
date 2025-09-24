@@ -7,14 +7,15 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { encode } from 'punycode';
 
 export const handleCSVUpload = (
-  event: React.ChangeEvent<HTMLInputElement> | undefined,
+  event: React.ChangeEventHandler<HTMLInputElement> | undefined,
   ydoc: Y.Doc | null,
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>,
   dsheetId: string,
   currentDataRef: React.MutableRefObject<object | null>,
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   updateDocumentTitle?: (title: string) => void,
-  fileArg?: File
+  fileArg?: File,
+  importType?: string
 ) => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -141,7 +142,12 @@ export const handleCSVUpload = (
           };
 
           updateDocumentTitle?.(file.name);
-          const finalData = [...data, sheetObject as Sheet];
+          let finalData;
+          if (importType === 'merge-current-dsheet') {
+            finalData = [...data, sheetObject as Sheet];
+          } else {
+            finalData = [sheetObject as Sheet];
+          }
           ydoc.transact(() => {
             sheetArray.delete(0, sheetArray.length);
             sheetArray.insert(0, finalData);
