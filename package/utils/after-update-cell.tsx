@@ -304,9 +304,13 @@ const processRegularPromise = async (
       ?.toUpperCase();
     if (isDatablockError(data)) {
       const _data = data as ErrorMessageHandlerReturnType;
+      const message =
+        _data.message === 'Required'
+          ? 'Required parameter was not provided'
+          : _data.message;
       params.sheetEditorRef.current?.setCellError(params.row, params.column, {
         title: _data.type,
-        message: _data.message,
+        message,
       });
       if (!params.dataBlockApiKeyHandler) {
         throw new Error('dataBlockApiKeyHandler missing');
