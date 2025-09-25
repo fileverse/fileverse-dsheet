@@ -64,8 +64,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -303,10 +303,15 @@ const processRegularPromise = async (
       ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
       ?.toUpperCase();
     if (isDatablockError(data)) {
+      const _data = data as ErrorMessageHandlerReturnType;
+      params.sheetEditorRef.current?.setCellError(params.row, params.column, {
+        title: _data.type,
+        message: _data.message,
+      });
       if (!params.dataBlockApiKeyHandler) {
         throw new Error('dataBlockApiKeyHandler missing');
       }
-      const _data = data as ErrorMessageHandlerReturnType;
+
       handleDatablockErroMessage(_data, params.dataBlockApiKeyHandler, params);
       return;
     }
