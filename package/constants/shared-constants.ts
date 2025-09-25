@@ -99,6 +99,8 @@ export const CELL_CONTEXT_MENU_ITEMS = [
   'cell-format',
   'comment',
   'freeze-row',
+  '|',
+  'clear-format',
 ];
 
 export const HEADER_CONTEXT_MENU_ITEMS = [
@@ -133,6 +135,8 @@ export const HEADER_CONTEXT_MENU_ITEMS = [
   'split-text',
   'freeze-row',
   'freeze-column',
+  '|',
+  'clear-format',
 ];
 
 export const CELL_COMMENT_DEFAULT_VALUE = {
