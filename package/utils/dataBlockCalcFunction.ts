@@ -39,6 +39,15 @@ export const dataBlockCalcFunctionHandler = ({
         if (!isCurrentIncludedInReference) return;
         if (!dataBlockValue || dataBlockValue?.v === '') return;
         const funcString = dataBlockValue?.f?.split('=')[1] as string;
+        const cellValue = sheetEditorRef?.current?.getCellValue(
+          dataBlock.row,
+          dataBlock.column,
+        )
+        sheetEditorRef.current?.setCellValue(dataBlock.row, dataBlock.column, {
+          ...dataBlockValue,
+          m: "Updating...",
+          v: "Updating...",
+        });
         executeStringFunction(funcString, sheetEditorRef).then((result) => {
           formulaResponseUiSync({
             row: dataBlock.row,
