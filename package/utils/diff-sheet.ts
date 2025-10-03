@@ -8,6 +8,7 @@ import { Sheet } from '@fileverse-dev/fortune-react';
  * @returns {boolean} - true if any cell data or images changed, false if identical
  */
 export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
+  console.log('isSpreadsheetChanged', oldSheets, newSheets);
   if (!oldSheets || !newSheets || oldSheets.length !== newSheets.length) {
     return true;
   }
@@ -19,6 +20,11 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
 
       // Check if sheet name has changed
       if (oldSheet.name !== newSheet.name) {
+        return true;
+      }
+
+      // Check if sheet color has changed
+      if (oldSheet.color !== newSheet.color) {
         return true;
       }
 
