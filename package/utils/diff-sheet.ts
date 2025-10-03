@@ -22,6 +22,11 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         return true;
       }
 
+      // Check if sheet color has changed
+      if (oldSheet.color !== newSheet.color) {
+        return true;
+      }
+
       if (JSON.stringify(oldSheet.config) !== JSON.stringify(newSheet.config)) {
         return true;
       }
