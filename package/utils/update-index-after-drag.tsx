@@ -16,11 +16,9 @@ export function updateRowIndices(
   targetIndex: number
 ): FormulaCells {
   const updatedData: FormulaCells = {};
-  console.log('Updating row indices:', data);
 
   for (const key in data) {
     const cell = data[key];
-    console.log('Updating cell:', cell);
     const updatedCell: FormulaCell = {
       ...cell,
       row: updateSingleRow(cell.row, sourceIndex, targetIndex),
