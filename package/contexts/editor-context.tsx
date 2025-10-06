@@ -14,6 +14,7 @@ import { fromUint8Array } from 'js-base64';
 
 import { useEditorSync } from '../hooks/use-editor-sync';
 import { useEditorData } from '../hooks/use-editor-data';
+import { updateRowIndices, updateColumnIndices } from '../utils/update-index-after-drag';
 import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
@@ -117,6 +118,40 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{
     [key: string]: { [key: string]: any };
   }>({});
+
+  const updateDataBlockCalcFunctionAfterRowDrag = (
+    sourceIndex: number,
+    targetIndex: number,
+    type: string,
+    sheetId: string
+  ) => {
+    const cloneDataBlockCalcFunction = { ...dataBlockCalcFunction };
+    const sheetData = cloneDataBlockCalcFunction?.[sheetId];
+
+    let result;
+    if (type === 'row') {
+      result = updateRowIndices(sheetData, sourceIndex, targetIndex);
+    } else {
+      result = updateColumnIndices(sheetData, sourceIndex, targetIndex);
+    }
+
+    if (result !== sheetData) {
+      cloneDataBlockCalcFunction[sheetId] = result;
+    }
+
+    if (JSON.stringify(cloneDataBlockCalcFunction) !== JSON.stringify(dataBlockCalcFunction)) {
+      setDataBlockCalcFunction(cloneDataBlockCalcFunction);
+    }
+  }
+
+  useEffect(() => {
+    //@ts-ignore
+    window.updateDataBlockCalcFunctionAfterRowDrag = updateDataBlockCalcFunctionAfterRowDrag;
+    return () => {
+      //@ts-ignore
+      delete window.updateDataBlockCalcFunctionAfterRowDrag;
+    };
+  }, [updateDataBlockCalcFunctionAfterRowDrag]);
 
   // Initialize YJS document and persistence
   const { ydocRef, persistenceRef, syncStatus, isSyncedRef, refreshIndexedDB } =
