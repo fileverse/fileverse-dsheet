@@ -41,13 +41,8 @@ function updateSingleRow(
   targetIndex: number
 ): number {
   if (row === sourceIndex) {
-    // Moving down (sourceIndex < targetIndex): row becomes targetIndex
-    // Moving up (sourceIndex > targetIndex): row becomes targetIndex
-    if (sourceIndex < targetIndex) {
-      return row + 1;
-    } else if (sourceIndex > targetIndex) {
-      return row - 1;
-    }
+    // The dragged row always moves to targetIndex
+    return targetIndex;  // ✓ FIXED: Should be targetIndex, not row +/- 1
   } else if (row > sourceIndex && row <= targetIndex) {
     // Rows between source and target (when moving down) shift up by 1
     return row - 1;

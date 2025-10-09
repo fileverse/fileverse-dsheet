@@ -114,7 +114,7 @@ function App() {
   const [isNewSheet, setIsNewSheet] = useState(false);
 
 
-  useEffect(() => {setTimeout(() => {setIsNewSheet(true)}, 5000)}, [])
+  useEffect(() => { setTimeout(() => { setIsNewSheet(true) }, 5000) }, [])
 
   const EditorPage = () => (
     <div>
