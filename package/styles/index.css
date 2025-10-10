@@ -81,15 +81,6 @@ body {
   border-radius: 4px;
 }
 
-.luckysheet-cell-selected {
-  border: 2.5px solid #efc703 !important;
-  background-color: #ffdf0a1a;
-}
-
-.luckysheet-cell-selected-focus {
-  background-color: #ffdf0a1a;
-}
-
 .luckysheet-cs-fillhandle {
   background-color: #efc703 !important;
   border-radius: 50%;
