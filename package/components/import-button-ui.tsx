@@ -183,7 +183,7 @@ export const CustomButton = ({
             <div>
               <div className='text-heading-xsm mb-[4px]'>File name</div>
               <div className='h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center'>
-                <p className='text-body-sm color-text-disabled'>{file?.name}</p>
+                <p className='text-body-sm color-text-disabled truncate-text'>{file?.name}</p>
               </div>
             </div>
 
