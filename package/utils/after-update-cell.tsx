@@ -202,7 +202,7 @@ const handleStringResponse = (
 ): void => {
   params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
     ...params.newValue,
-    m: data,
+    m: String(data),
     isDataBlockFormula: true,
   });
 };
