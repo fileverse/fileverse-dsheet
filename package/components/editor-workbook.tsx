@@ -100,6 +100,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     window.editorRef = sheetEditorRef.current;
     // @ts-ignore
     window.ydocRef = ydocRef.current;
+    // @ts-ignore move this to firward ref
+    window.setForceRenderEditor = setForceSheetRender;
+    // @ts-ignore
+    window.currentDataRef = currentDataRef;
   }, [isReadOnly]);
 
   // Initialize XLSX import functionality
@@ -109,6 +113,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     setForceSheetRender,
     dsheetId,
     currentDataRef,
+    updateDocumentTitle,
   });
 
   usehandleHomepageRedirect({
