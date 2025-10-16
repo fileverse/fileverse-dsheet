@@ -174,8 +174,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         lang={'en'}
         rowHeaderWidth={60}
         columnHeaderHeight={24}
-        defaultColWidth={100}
-        defaultRowHeight={21}
+        defaultColWidth={104}
+        defaultRowHeight={23}
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
