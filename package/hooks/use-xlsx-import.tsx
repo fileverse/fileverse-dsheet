@@ -3,7 +3,6 @@ import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { useEditor } from '../contexts/editor-context';
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 
@@ -13,14 +12,15 @@ export const useXLSXImport = ({
   setForceSheetRender,
   dsheetId,
   currentDataRef,
+  updateDocumentTitle,
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   dsheetId: string;
   currentDataRef: React.MutableRefObject<object | null>;
+  updateDocumentTitle?: (title: string) => void;
 }) => {
-  const { updateDocumentTitle } = useEditor();
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<
     string,

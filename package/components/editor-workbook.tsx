@@ -100,6 +100,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     window.editorRef = sheetEditorRef.current;
     // @ts-ignore
     window.ydocRef = ydocRef.current;
+    // @ts-ignore move this to firward ref
+    window.setForceRenderEditor = setForceSheetRender;
+    // @ts-ignore
+    window.currentDataRef = currentDataRef;
   }, [isReadOnly]);
 
   // Initialize XLSX import functionality
@@ -109,6 +113,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     setForceSheetRender,
     dsheetId,
     currentDataRef,
+    updateDocumentTitle,
   });
 
   usehandleHomepageRedirect({
@@ -169,8 +174,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         lang={'en'}
         rowHeaderWidth={60}
         columnHeaderHeight={24}
-        defaultColWidth={100}
-        defaultRowHeight={21}
+        defaultColWidth={104}
+        defaultRowHeight={23}
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({

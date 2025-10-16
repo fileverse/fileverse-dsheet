@@ -9,3 +9,9 @@ export {
   SERVICES_API_KEY,
 } from './package/constants/shared-constants';
 export { TEMPLATES } from '@fileverse-dev/dsheets-templates';
+export { handleCSVUpload } from './package/utils/csv-import';
+export { handleExportToXLSX } from './package/utils/xlsx-export';
+export { handleExportToCSV } from './package/utils/csv-export';
+export { handleExportToJSON } from './package/utils/json-export';
+export { useXLSXImport } from './package/hooks/use-xlsx-import';
+export * as FortuneCore from '@fileverse-dev/fortune-core'
