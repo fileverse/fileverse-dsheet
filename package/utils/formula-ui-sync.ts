@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Cell, WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { isNumericOnly, isHexValue } from './generic';
+import { update } from '@fileverse-dev/fortune-core';
 
 export type FormulaSyncType = {
   row: number;
@@ -10,6 +11,15 @@ export type FormulaSyncType = {
   apiData: Array<Record<string, object>> | Array<Array<string>>;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
 };
+
+export function isUsdValue(str: string) {
+  if (typeof str !== 'string') return false;
+
+  const allowed = ['price', 'fully_diluted_value'];
+  return allowed.includes(str) || str.toLowerCase().includes('usd');
+}
+export const USD_FA = `$ #,##0.${'0'.repeat(2)}`;
+
 export const formulaResponseUiSync = ({
   row,
   column,
@@ -87,14 +97,21 @@ export const formulaResponseUiSync = ({
         const { m: _dropM, ct: _dropCt, ...existingData } = existing || {};
         const isNum = isNumValue(cellValue);
 
+        const extraProperties = {} as any;
+
+        if (isNum && isUsdValue(header)) {
+          extraProperties.m = update(USD_FA, cellValue);
+          extraProperties.ht = 2;
+        } else if (cellValue) {
+          extraProperties.m = String(cellValue);
+        }
+
         tempData.push({
           ...existingData,
           ...preserveTextColorFromInlineStyle(existing, isNum), // move color from styles to cell-level 'fc' when becoming numeric
           v: cellValue,
-          ct: buildCellFormat(cellValue, existing.ct),
-          // if the value is numeric, skip "m" (FortuneSheet will render display text using v + ct/fa).
-          // if it's text, explicitly set "m" to match the value so it displays correctly.
-          ...(isNum ? {} : { m: cellValue ? String(cellValue) : '' }),
+          ct: buildCellFormat(cellValue, existing.ct, header),
+          ...extraProperties,
         });
       });
       data.push(tempData);
@@ -173,8 +190,16 @@ export const isNumValue = (v: any) => isNumericOnly(v) && !isHexValue(v);
 export const cloneInlineStyles = (styles: any) =>
   Array.isArray(styles) ? styles.map((style) => ({ ...style })) : styles;
 
-export const buildCellFormat = (value: any, existingCt: Cell['ct']) => {
+export const buildCellFormat = (
+  value: any,
+  existingCt: Cell['ct'],
+  header?: string,
+) => {
   const isNum = isNumValue(value);
+  if (header && isNum && isUsdValue(header)) {
+    const { s: _dropS, ...restCt } = existingCt || {};
+    return { ...restCt, t: 'n', fa: USD_FA, ht: 2 };
+  }
   if (!existingCt) {
     return isNum ? { t: 'n', fa: 'General' } : { t: 's', fa: '@' };
   }
