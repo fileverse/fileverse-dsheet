@@ -7,7 +7,7 @@ import {
   DataBlockApiKeyHandlerType,
   ErrorMessageHandlerReturnType,
 } from '../types';
-import { formulaResponseUiSync } from './formula-ui-sync';
+import { formulaResponseUiSync, USD_FA } from './formula-ui-sync';
 import {
   executeStringFunction,
   parseArguments,
@@ -18,7 +18,11 @@ import {
 } from './executeStringFunction';
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
-import { getSheetIndex, LiveQueryData } from '@fileverse-dev/fortune-core';
+import {
+  getSheetIndex,
+  LiveQueryData,
+  update,
+} from '@fileverse-dev/fortune-core';
 import { isHexValue } from './generic';
 
 // Constants
@@ -199,10 +203,19 @@ const handleStringResponse = (
     AfterUpdateCellParams,
     'sheetEditorRef' | 'row' | 'column' | 'newValue'
   >,
+  formulaName?: string,
 ): void => {
+  const extraProperties = {} as any;
+
+  if (formulaName && formulaName === 'PRICE') {
+    extraProperties.m = update(USD_FA, data);
+    extraProperties.ht = 2;
+  } else {
+    extraProperties.m = String(data);
+  }
   params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
     ...params.newValue,
-    m: String(data),
+    ...extraProperties,
     isDataBlockFormula: true,
   });
 };
@@ -383,7 +396,7 @@ const processRegularPromise = async (
         isDataBlockFormula: true,
       });
     } else {
-      handleStringResponse(data as string, params);
+      handleStringResponse(data as string, params, formulaName);
     }
     params.onDataBlockApiResponse?.(formulaName as string);
     const workbookContext = params.sheetEditorRef.current?.getWorkbookContext();
