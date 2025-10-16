@@ -18,7 +18,7 @@ export function isUsdValue(str: string) {
   const allowed = ['price', 'fully_diluted_value'];
   return allowed.includes(str) || str.toLowerCase().includes('usd');
 }
-export const USD_FA = `$ #,##0.${'0'.repeat(2)}`;
+export const USD_FA = `$#,##0.${'0'.repeat(2)}`;
 
 export const formulaResponseUiSync = ({
   row,
