@@ -68,8 +68,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -210,6 +210,8 @@ const handleStringResponse = (
   if (formulaName && formulaName === 'PRICE') {
     extraProperties.m = update(USD_FA, data);
     extraProperties.ht = 2;
+    extraProperties.v = data;
+    extraProperties.ct = { fa: USD_FA, t: 'n' };
   } else {
     extraProperties.m = String(data);
   }
