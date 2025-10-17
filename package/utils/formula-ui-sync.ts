@@ -16,7 +16,11 @@ export function isUsdValue(str: string) {
   if (typeof str !== 'string') return false;
 
   const allowed = ['price', 'fully_diluted_value'];
-  return allowed.includes(str) || str.toLowerCase().includes('usd');
+  return (
+    allowed.includes(str) ||
+    str.toLowerCase().includes('usd') ||
+    str.toLowerCase().includes('price_in')
+  );
 }
 export const USD_FA = `$#,##0.${'0'.repeat(2)}`;
 
