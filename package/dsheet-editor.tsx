@@ -90,6 +90,7 @@ const EditorContent = ({
     ydocRef,
     setForceSheetRender,
     setDataBlockCalcFunction,
+    initialiseLiveQueryData,
   } = useEditor();
 
   // Initialize template button functionality
@@ -101,6 +102,7 @@ const EditorContent = ({
     setForceSheetRender,
     sheetEditorRef,
     setDataBlockCalcFunction,
+    initialiseLiveQueryData,
   });
 
   // Apply custom styling based on dropdown and template states

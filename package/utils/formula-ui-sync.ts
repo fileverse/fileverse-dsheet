@@ -10,6 +10,7 @@ export type FormulaSyncType = {
   newValue: Record<string, string>;
   apiData: Array<Record<string, object>> | Array<Array<string>>;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  shouldIgnoreUsdValue?: boolean;
 };
 
 export function isUsdValue(str: string) {
@@ -30,6 +31,7 @@ export const formulaResponseUiSync = ({
   newValue,
   apiData,
   sheetEditorRef,
+  shouldIgnoreUsdValue,
 }: FormulaSyncType): void => {
   const headers: string[] = Array.isArray(apiData[0])
     ? apiData[0]
@@ -103,7 +105,7 @@ export const formulaResponseUiSync = ({
 
         const extraProperties = {} as any;
 
-        if (isNum && isUsdValue(header)) {
+        if (isNum && isUsdValue(header) && !shouldIgnoreUsdValue) {
           extraProperties.m = update(USD_FA, cellValue);
           extraProperties.ht = 2;
         } else if (cellValue) {

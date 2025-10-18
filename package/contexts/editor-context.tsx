@@ -14,7 +14,10 @@ import { fromUint8Array } from 'js-base64';
 
 import { useEditorSync } from '../hooks/use-editor-sync';
 import { useEditorData } from '../hooks/use-editor-data';
-import { updateRowIndices, updateColumnIndices } from '../utils/update-index-after-drag';
+import {
+  updateRowIndices,
+  updateColumnIndices,
+} from '../utils/update-index-after-drag';
 import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
@@ -41,6 +44,7 @@ export interface EditorContextType {
   currentDataRef: React.MutableRefObject<Sheet[]>;
   remoteUpdateRef: React.MutableRefObject<boolean>;
   handleChange: (data: Sheet[]) => void;
+  initialiseLiveQueryData: (data: Sheet[]) => void;
 
   // UI states
   loading: boolean;
@@ -123,7 +127,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     sourceIndex: number,
     targetIndex: number,
     type: string,
-    sheetId: string
+    sheetId: string,
   ) => {
     const cloneDataBlockCalcFunction = { ...dataBlockCalcFunction };
     const sheetData = cloneDataBlockCalcFunction?.[sheetId];
@@ -139,14 +143,18 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       cloneDataBlockCalcFunction[sheetId] = result;
     }
 
-    if (JSON.stringify(cloneDataBlockCalcFunction) !== JSON.stringify(dataBlockCalcFunction)) {
+    if (
+      JSON.stringify(cloneDataBlockCalcFunction) !==
+      JSON.stringify(dataBlockCalcFunction)
+    ) {
       setDataBlockCalcFunction(cloneDataBlockCalcFunction);
     }
-  }
+  };
 
   useEffect(() => {
     //@ts-ignore
-    window.updateDataBlockCalcFunctionAfterRowDrag = updateDataBlockCalcFunctionAfterRowDrag;
+    window.updateDataBlockCalcFunctionAfterRowDrag =
+      updateDataBlockCalcFunctionAfterRowDrag;
     return () => {
       //@ts-ignore
       delete window.updateDataBlockCalcFunctionAfterRowDrag;
@@ -166,16 +174,15 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChange =
-    (data: Sheet[]) => {
-      if (onChange && ydocRef.current) {
-        // Encode the YJS document state to pass as second parameter
-        const encodedUpdate = fromUint8Array(
-          Y.encodeStateAsUpdate(ydocRef.current),
-        );
-        onChange({ data }, encodedUpdate);
-      }
+  const handleOnChange = (data: Sheet[]) => {
+    if (onChange && ydocRef.current) {
+      // Encode the YJS document state to pass as second parameter
+      const encodedUpdate = fromUint8Array(
+        Y.encodeStateAsUpdate(ydocRef.current),
+      );
+      onChange({ data }, encodedUpdate);
     }
+  };
 
   // Initialize sheet data
   const {
@@ -186,6 +193,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isDataLoaded,
     handleChange,
     handleLiveQuery,
+    initialiseLiveQueryData,
   } = useEditorData(
     ydocRef,
     dsheetId,
@@ -256,6 +264,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       isAuthorized,
       refreshIndexedDB,
       handleLiveQuery,
+      initialiseLiveQueryData,
     };
   }, [
     setShowSmartContractModal,
@@ -280,6 +289,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isCollaborative,
     isAuthorized,
     handleLiveQuery,
+    initialiseLiveQueryData,
   ]);
 
   return (

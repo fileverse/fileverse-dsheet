@@ -270,5 +270,6 @@ export const useEditorData = (
     isDataLoaded,
     handleChange,
     handleLiveQuery,
+    initialiseLiveQueryData,
   };
 };
