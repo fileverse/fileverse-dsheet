@@ -118,6 +118,7 @@ export const useLiveQuery = (
             newValue: cachedCellData as Record<string, string>,
             apiData: newPriceDataResponse as any,
             sheetEditorRef,
+            shouldIgnoreUsdValue: true,
           });
           if (subSheetIndex?.toString()) {
             // update live query data value with newPriceDataResponse
