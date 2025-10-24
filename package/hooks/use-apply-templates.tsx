@@ -12,6 +12,7 @@ export const useApplyTemplatesBtn = ({
   setForceSheetRender,
   sheetEditorRef,
   setDataBlockCalcFunction,
+  initialiseLiveQueryData,
 }: {
   selectedTemplate: string | undefined;
   ydocRef: React.RefObject<Y.Doc | null>;
@@ -22,6 +23,7 @@ export const useApplyTemplatesBtn = ({
   setDataBlockCalcFunction: React.Dispatch<
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >;
+  initialiseLiveQueryData: (sheets: Sheet[]) => void;
 }) => {
   useEffect(() => {
     if (!selectedTemplate) return;
@@ -36,13 +38,16 @@ export const useApplyTemplatesBtn = ({
         .generateSheetId();
       const data = Array.from(sheetArray) as Sheet[];
       templateData[0].order = data.length;
-      templateData[0].id = newSheetId;
+      if (!templateData[0].id) {
+        templateData[0].id = newSheetId;
+      }
       const finalData = [...data, ...templateData];
       ydocRef.current.transact(() => {
         sheetArray.delete(0, sheetArray.length);
         sheetArray.insert(0, finalData);
         currentDataRef.current = finalData;
       });
+      initialiseLiveQueryData(finalData);
       setForceSheetRender?.((prev: number) => prev + 1);
       setTimeout(() => {
         sheetEditorRef.current?.activateSheet({

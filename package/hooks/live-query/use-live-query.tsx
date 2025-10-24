@@ -71,7 +71,15 @@ export const useLiveQuery = (
           const latestCellData = getFlowdata(context)?.[row]?.[column];
           const subSheetIndex = getSheetIndex(context!, data.subSheetId);
 
-          if (!latestCellData?.f || latestCellData?.f !== cachedCellData.f) {
+          const normalize = (s: string | undefined) => {
+            if (!s) return s;
+            s.replace(/\\"/g, '"');
+          };
+
+          if (
+            !latestCellData?.f ||
+            normalize(latestCellData?.f) !== normalize(cachedCellData.f)
+          ) {
             // do not execute function if function in cell already changed
             if (subSheetIndex?.toString) {
               removeFromLiveQueryList(subSheetIndex, data.id);
@@ -110,6 +118,7 @@ export const useLiveQuery = (
             newValue: cachedCellData as Record<string, string>,
             apiData: newPriceDataResponse as any,
             sheetEditorRef,
+            shouldIgnoreUsdValue: true,
           });
           if (subSheetIndex?.toString()) {
             // update live query data value with newPriceDataResponse

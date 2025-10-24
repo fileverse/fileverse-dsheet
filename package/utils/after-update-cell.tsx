@@ -68,8 +68,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -184,6 +184,7 @@ const handleArrayResponse = (
     AfterUpdateCellParams,
     'row' | 'column' | 'newValue' | 'sheetEditorRef'
   >,
+  formulaName?: string,
 ): void => {
   formulaResponseUiSync({
     row: params.row,
@@ -191,6 +192,7 @@ const handleArrayResponse = (
     newValue: params.newValue as Record<string, string>,
     apiData: data,
     sheetEditorRef: params.sheetEditorRef,
+    shouldIgnoreUsdValue: formulaName === 'COINGECKO',
   });
 };
 
@@ -389,7 +391,7 @@ const processRegularPromise = async (
         });
       } else {
         // @ts-ignore
-        handleArrayResponse(data, params);
+        handleArrayResponse(data, params, formulaName);
       }
     } else if (!data && typeof data !== 'boolean') {
       params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
