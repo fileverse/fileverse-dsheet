@@ -3,12 +3,14 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { isSpreadsheetChanged } from './diff-sheet';
 
+
 export const updateSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
   data: Sheet[],
   sheetEditor: WorkbookInstance | null,
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
+  isReadOnly?: boolean
 ) => {
   const currentSheetId: string = sheetEditor?.getWorkbookContext()
     ?.currentSheetId as string;
@@ -30,7 +32,7 @@ export const updateSheetData = (
   const formattedData = formatSheetData(data, preSheetArray, sheetEditor);
 
   // Only update YJS if there's an actual change
-  if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], formattedData)) {
+  if (isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], formattedData) && !isReadOnly) {
     // Perform the update in a transaction
     ydoc.transact(() => {
       sheetArray.delete(0, preSheetArray.length);

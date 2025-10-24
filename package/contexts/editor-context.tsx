@@ -265,6 +265,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       refreshIndexedDB,
       handleLiveQuery,
       initialiseLiveQueryData,
+      isReadOnly
     };
   }, [
     setShowSmartContractModal,
@@ -290,6 +291,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isAuthorized,
     handleLiveQuery,
     initialiseLiveQueryData,
+    isReadOnly
   ]);
 
   return (

@@ -247,6 +247,7 @@ export const useEditorData = (
         data,
         sheetEditorRef.current,
         dataBlockCalcFunction,
+        isReadOnly,
       );
 
       // Reset the flag after a short delay to allow the update to complete
