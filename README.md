@@ -99,7 +99,7 @@ function App() {
 | `renderNavbar` | `(editorValues?: EditorValues) => JSX.Element` | Custom navbar renderer |
 | `onboardingHandler` | `OnboardingHandlerType` | Custom onboarding logic |
 | `dataBlockApiKeyHandler` | `DataBlockApiKeyHandlerType` | API key handler for data blocks |
-| `getCommentCellUI` | `(row: number, column: number) => void` | Custom comment UI handler |
+| `getCommentCellUI` | `(row: number, column: number, dragHandler: CommentUIDragFn) => void` | Custom comment UI handler |
 | `commentData` | `Object` | Comment data for cells |
 | `toggleTemplateSidebar` | `() => void` | Template sidebar toggle handler |
 | `storeApiKey` | `(apiKeyName: string) => void` | API key storage handler |

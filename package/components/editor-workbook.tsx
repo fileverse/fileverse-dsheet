@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useEffect, useMemo } from 'react';
+import React, { ComponentProps, useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-react';
 
@@ -43,7 +43,7 @@ interface EditorWorkbookProps {
   exportDropdownOpen?: boolean;
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
-  getCommentCellUI?: (row: number, column: number) => void;
+  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
   storeApiKey?: (apiKeyName: string) => void;
@@ -69,7 +69,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -179,24 +179,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-              setShowSmartContractModal,
-              getDocumentTitle,
-              updateDocumentTitle,
-              setExportDropdownOpen,
-              handleCSVUpload,
-              // @ts-ignore
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
+                setShowSmartContractModal,
+                getDocumentTitle,
+                updateDocumentTitle,
+                setExportDropdownOpen,
+                handleCSVUpload,
+                // @ts-ignore
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
             : []
         }
         hooks={{

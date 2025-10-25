@@ -1,5 +1,5 @@
-import { Sheet } from '@fileverse-dev/fortune-react';
-import { RefObject } from 'react';
+import { Sheet, Workbook } from '@fileverse-dev/fortune-react';
+import { ComponentProps, RefObject } from 'react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { Cell } from '@fileverse-dev/fortune-react';
@@ -65,7 +65,7 @@ export interface DsheetProps {
   onboardingHandler?: OnboardingHandlerType;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
-  getCommentCellUI?: (row: number, column: number) => void;
+  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
   toggleTemplateSidebar?: () => void;
