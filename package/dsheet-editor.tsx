@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { ComponentProps, useState } from 'react';
 import cn from 'classnames';
 
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
@@ -22,6 +22,7 @@ import { PermissionChip } from './components/permission-chip';
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
+import { Workbook } from '@fileverse-dev/fortune-react';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -70,7 +71,7 @@ const EditorContent = ({
   | 'isNewSheet'
 > & {
   commentData?: object;
-  getCommentCellUI?: (row: number, column: number) => void;
+  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
