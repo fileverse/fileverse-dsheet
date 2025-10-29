@@ -1,6 +1,17 @@
 //@ts-nocheck
 import { Sheet } from '@fileverse-dev/fortune-react';
 
+const sheetOrderChanged = (
+  latestContent: Sheet[],
+  existingContent: Sheet[],
+) => {
+  for (const sheetIndex in latestContent) {
+    if (latestContent[sheetIndex].order !== existingContent[sheetIndex].order) {
+      return true;
+    }
+  }
+};
+
 /**
  * Compare two spreadsheets' cell data and images, checking if anything changed
  * @param {Array} oldSheets - Original sheets data
@@ -305,6 +316,10 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
         return true;
       }
     }
+  }
+
+  if (sheetOrderChanged(oldSheets, newSheets)) {
+    return true;
   }
 
   return false;
