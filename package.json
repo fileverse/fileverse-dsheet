@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.28",
-    "@fileverse-dev/formulajs": "^4.4.30",
+    "@fileverse-dev/formulajs": "^4.4.31",
     "@fileverse-dev/fortune-react": "^1.2.38",
     "@fileverse/ui": "^4.1.7-patch-40",
     "classnames": "^2.5.1",
