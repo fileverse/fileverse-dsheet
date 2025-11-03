@@ -29,16 +29,20 @@ export const updateSheetData = (
   const preSheetArray = Array.from(sheetArray) as Sheet[];
 
   const formattedData = formatSheetData(data, preSheetArray, sheetEditor);
-
+  const statusUpdatedFormattedData = formattedData.map((sheet: Sheet) => {
+    const sheetData = { ...sheet };
+    sheetData.status = sheetData.order === 0 ? 1 : 0;
+    return sheetData;
+  });
   // Only update YJS if there's an actual change
   if (
-    isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], formattedData) &&
+    isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], statusUpdatedFormattedData) &&
     !isReadOnly
   ) {
     // Perform the update in a transaction
     ydoc.transact(() => {
       sheetArray.delete(0, preSheetArray.length);
-      sheetArray.insert(0, formattedData);
+      sheetArray.insert(0, statusUpdatedFormattedData);
     });
   }
 };
