@@ -29,6 +29,7 @@ export const updateSheetData = (
   const preSheetArray = Array.from(sheetArray) as Sheet[];
 
   const formattedData = formatSheetData(data, preSheetArray, sheetEditor);
+  formattedData[0].status = 1;
 
   // Only update YJS if there's an actual change
   if (
