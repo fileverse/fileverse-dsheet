@@ -20,10 +20,11 @@ function App() {
   // Use a stable dsheetId
   const dsheetId = 'demo-dsheet-5';
   // @ts-expect-error later
-  window.NEXT_PUBLIC_PROXY_BASE_URL = 'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
+  window.NEXT_PUBLIC_PROXY_BASE_URL =
+    'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
-  const handleSheetChange = useCallback(() => { }, []);
+  const handleSheetChange = useCallback(() => {}, []);
 
   const renderNavbar = (): JSX.Element => {
     return (
@@ -73,7 +74,7 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    onClick={() => { }}
+                    onClick={() => {}}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
@@ -110,11 +111,13 @@ function App() {
     );
   };
 
-
   const [isNewSheet, setIsNewSheet] = useState(false);
 
-
-  useEffect(() => { setTimeout(() => { setIsNewSheet(true) }, 5000) }, [])
+  useEffect(() => {
+    setTimeout(() => {
+      setIsNewSheet(true);
+    }, 5000);
+  }, []);
 
   const EditorPage = () => (
     <div>
@@ -125,7 +128,7 @@ function App() {
         onChange={handleSheetChange}
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
-        isAuthorized={false}
+        isAuthorized={true}
         isNewSheet={isNewSheet}
       />
     </div>
