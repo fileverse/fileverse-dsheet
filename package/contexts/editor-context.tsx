@@ -124,19 +124,21 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }>({});
 
   const updateDataBlockCalcFunctionAfterRowDrag = (
-    sourceIndex: number,
-    targetIndex: number,
+    selectedSourceIndex: number[],
+    selectedTargetIndex: number[],
     type: string,
     sheetId: string,
+    sourceIndex: number,
+    targetIndex: number
   ) => {
     const cloneDataBlockCalcFunction = { ...dataBlockCalcFunction };
     const sheetData = cloneDataBlockCalcFunction?.[sheetId];
 
     let result;
     if (type === 'row') {
-      result = updateRowIndices(sheetData, sourceIndex, targetIndex);
+      result = updateRowIndices(sheetData, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex);
     } else {
-      result = updateColumnIndices(sheetData, sourceIndex, targetIndex);
+      result = updateColumnIndices(sheetData, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex);
     }
 
     if (result !== sheetData) {
