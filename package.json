@@ -34,8 +34,8 @@
   },
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.28",
-    "@fileverse-dev/formulajs": "^4.4.31-circles-patch-4",
-    "@fileverse-dev/fortune-react": "^1.2.43-circles-patch-4",
+    "@fileverse-dev/formulajs": "^4.4.31-circles-patch-5",
+    "@fileverse-dev/fortune-react": "^1.2.43-circles-patch-5",
     "@fileverse/ui": "^4.1.7-patch-40",
     "classnames": "^2.5.1",
     "exceljs": "^4.4.0",
