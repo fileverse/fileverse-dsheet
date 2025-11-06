@@ -12,6 +12,17 @@ const sheetOrderChanged = (
   }
 };
 
+const sheetShowGridLinesChanged = (
+  latestContent: Sheet[],
+  existingContent: Sheet[],
+) => {
+  for (const sheetIndex in latestContent) {
+    if (latestContent[sheetIndex].showGridLines !== existingContent[sheetIndex].showGridLines) {
+      return true;
+    }
+  }
+};
+
 /**
  * Compare two spreadsheets' cell data and images, checking if anything changed
  * @param {Array} oldSheets - Original sheets data
@@ -318,7 +329,7 @@ export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
     }
   }
 
-  if (sheetOrderChanged(oldSheets, newSheets)) {
+  if (sheetOrderChanged(oldSheets, newSheets) || sheetShowGridLinesChanged(oldSheets, newSheets)) {
     return true;
   }
 
