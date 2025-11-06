@@ -201,19 +201,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         }
         hooks={{
           afterActivateSheet: () => {
-            // console.log("afterActivateSheet haha", id);
-            // const setContext = sheetEditorRef.current?.getWorkbookSetContext();
-            // setContext?.((ctx) => {
-            //   //@ts-ignore
-            //   ctx.showGridLines = false;
-            //   console.log("afterActivateSheet", ctx.showGridLines);
-            //   // api.setRowHeight(
-            //   //   ctx,
-            //   //   { 1: 26 + 0.2 },
-            //   //   { id: ctx.currentSheetId }
-            //   // );
-            // });
-
             if (
               sheetEditorRef.current &&
               sheetEditorRef.current?.getAllSheets().length > 0
