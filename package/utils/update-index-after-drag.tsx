@@ -15,7 +15,7 @@ export function updateRowIndices(
   selectedSourceIndex: number[],
   selectedTargetIndex: number[],
   sourceIndex: number,
-  targetIndex: number
+  targetIndex: number,
 ): FormulaCells {
   const updatedData: FormulaCells = {};
 
@@ -23,10 +23,22 @@ export function updateRowIndices(
     const cell = data[key];
     const updatedCell: FormulaCell = {
       ...cell,
-      row: updateSingleRow(cell.row, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex),
-      rowRefrenced: cell.rowRefrenced.map(r =>
-        updateSingleRow(r, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex)
-      )
+      row: updateSingleRow(
+        cell.row,
+        selectedSourceIndex,
+        selectedTargetIndex,
+        sourceIndex,
+        targetIndex,
+      ),
+      rowRefrenced: cell.rowRefrenced.map((r) =>
+        updateSingleRow(
+          r,
+          selectedSourceIndex,
+          selectedTargetIndex,
+          sourceIndex,
+          targetIndex,
+        ),
+      ),
     };
 
     // Update the key if the row has changed
@@ -42,12 +54,12 @@ function updateSingleRow(
   selectedSourceIndex: number[],
   selectedTargetIndex: number[],
   sourceIndex: number,
-  targetIndex: number
+  targetIndex: number,
 ): number {
-  if (selectedSourceIndex.includes(row)) {
+  if (Array.isArray(selectedSourceIndex) && selectedSourceIndex.includes(row)) {
     const index = selectedSourceIndex.indexOf(row);
     // The dragged row always moves to targetIndex
-    return selectedTargetIndex[index];  // ✓ FIXED: Should be targetIndex, not row +/- 1
+    return selectedTargetIndex[index]; // ✓ FIXED: Should be targetIndex, not row +/- 1
   } else if (row > sourceIndex && row <= targetIndex) {
     // Rows between source and target (when moving down) shift up by 1
     return row - selectedSourceIndex.length;
@@ -66,13 +78,12 @@ interface FormulaCell {
   columnRefrenced: number[];
 }
 
-
 export function updateColumnIndices(
   data: FormulaCells,
   selectedSourceIndex: number[],
   selectedTargetIndex: number[],
   sourceIndex: number,
-  targetIndex: number
+  targetIndex: number,
 ): FormulaCells {
   const updatedData: FormulaCells = {};
 
@@ -80,10 +91,22 @@ export function updateColumnIndices(
     const cell = data[key];
     const updatedCell: FormulaCell = {
       ...cell,
-      column: updateSingleColumn(cell.column, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex),
-      columnRefrenced: cell.columnRefrenced.map(c =>
-        updateSingleColumn(c, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex)
-      )
+      column: updateSingleColumn(
+        cell.column,
+        selectedSourceIndex,
+        selectedTargetIndex,
+        sourceIndex,
+        targetIndex,
+      ),
+      columnRefrenced: cell.columnRefrenced.map((c) =>
+        updateSingleColumn(
+          c,
+          selectedSourceIndex,
+          selectedTargetIndex,
+          sourceIndex,
+          targetIndex,
+        ),
+      ),
     };
 
     // Update the key if the column has changed
@@ -99,9 +122,12 @@ function updateSingleColumn(
   selectedSourceIndex: number[],
   selectedTargetIndex: number[],
   sourceIndex: number,
-  targetIndex: number
+  targetIndex: number,
 ): number {
-  if (selectedSourceIndex.includes(column)) {
+  if (
+    Array.isArray(selectedSourceIndex) &&
+    selectedSourceIndex.includes(column)
+  ) {
     const index = selectedSourceIndex.indexOf(column);
     return selectedTargetIndex[index];
   } else if (column > sourceIndex && column < targetIndex) {
@@ -111,4 +137,3 @@ function updateSingleColumn(
   }
   return column;
 }
-
