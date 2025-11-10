@@ -71,6 +71,7 @@ const EditorContent = ({
   | 'isNewSheet'
 > & {
   commentData?: object;
+  //@ts-ignore
   getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;

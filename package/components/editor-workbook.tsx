@@ -43,6 +43,7 @@ interface EditorWorkbookProps {
   exportDropdownOpen?: boolean;
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
+  // @ts-ignore
   getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;

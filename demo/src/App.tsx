@@ -123,6 +123,7 @@ function App() {
         renderNavbar={renderNavbar}
         dsheetId={dsheetId}
         onChange={handleSheetChange}
+        //@ts-ignore
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
         isAuthorized={false}

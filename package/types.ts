@@ -65,6 +65,7 @@ export interface DsheetProps {
   onboardingHandler?: OnboardingHandlerType;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
+  //@ts-ignore
   getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;

@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+  preview: {
+    allowedHosts: ['4d8167243e8b.ngrok-free.app'],
+  },
   mode: process.env.NODE_ENV,
   build: {
     //Specifies that the output of the build will be a library.
