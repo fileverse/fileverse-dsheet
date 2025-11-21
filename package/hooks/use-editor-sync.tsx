@@ -52,6 +52,12 @@ export const useEditorSync = (
       ydocRef.current = new Y.Doc();
     }
 
+    if (isReadOnly) {
+      setSyncStatus('synced');
+      isSyncedRef.current = true;
+      return;
+    }
+
     // Set up IndexedDB persistence if enabled
     if (enableIndexeddbSync && dsheetId) {
       setSyncStatus('syncing');
