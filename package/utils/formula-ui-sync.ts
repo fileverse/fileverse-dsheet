@@ -63,6 +63,16 @@ export const formulaResponseUiSync = ({
   const data = [];
 
   if (!Array.isArray(apiData[0])) {
+    if (
+      tryInsertSingleValueIntoFormulaCell({
+        row,
+        column,
+        apiData,
+        sheetEditorRef,
+      })
+    ) {
+      return;
+    }
     range = {
       row: [row, row + apiData.length],
       column: [column, column + (headers.length - 1)],
@@ -236,4 +246,47 @@ export const cloneCellStyles = (cell: Cell) => {
   const ct = cell.ct;
   if (!ct || !Array.isArray(ct.s)) return { ...cell };
   return { ...cell, ct: { ...ct, s: cloneInlineStyles(ct.s) } };
+};
+
+const tryInsertSingleValueIntoFormulaCell = ({
+  row,
+  column,
+  apiData,
+  sheetEditorRef,
+}: {
+  row: number;
+  column: number;
+  apiData: any[];
+  sheetEditorRef: any;
+}): boolean => {
+  const isSingleValueObject =
+    apiData.length === 1 && Object.keys(apiData[0] || {}).length === 1;
+
+  if (!isSingleValueObject) return false;
+
+  const value = Object.values(apiData[0])[0];
+  if (
+    typeof value !== 'string' &&
+    typeof value !== 'number' &&
+    typeof value !== 'boolean' &&
+    typeof value !== 'undefined'
+  )
+    return false;
+
+  const existing = getCellClone(row, column, sheetEditorRef);
+  const { m: _dropM, ct: _dropCt, ...existingData } = existing || {};
+
+  const newCell: Cell = {
+    ...existingData,
+    v: value,
+    m: value != null ? String(value) : '',
+    ct: buildCellFormat(value, existing?.ct),
+  };
+
+  sheetEditorRef.current?.setCellValuesByRange([[newCell]], {
+    row: [row, row],
+    column: [column, column],
+  });
+
+  return true;
 };
