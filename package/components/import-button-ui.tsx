@@ -1,5 +1,5 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
-import { ChangeEventHandler, useEffect, useState } from 'react';
+import { ChangeEventHandler, useState } from 'react';
 import { LucideIcon, IconButton, DynamicModal, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fileverse/ui';
 
 import './import-button.scss';
@@ -25,9 +25,6 @@ export const CustomButton = ({
   const [openImportTypeModal, setOpenImportTypeModal] = useState(false);
   const [importType, setImportType] = useState('new-dsheet');
   const [file, setFile] = useState<any>(null);
-  useEffect(() => {
-    console.log(file);
-  }, [file])
   const [extension, setExtension] = useState('');
 
   const handleApplyData = () => {
