@@ -69,6 +69,7 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
+  allowComments?: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
@@ -106,6 +107,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   enableIndexeddbSync = true,
   enableWebrtc = true,
   isReadOnly = false,
+  allowComments = false,
   onChange,
   externalEditorRef,
   isCollaborative = false,
@@ -211,6 +213,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     enableLiveQuery,
     liveQueryRefreshRate,
     dataBlockApiKeyHandler,
+    allowComments,
   );
 
   // Initialize collaboration
