@@ -31,7 +31,9 @@ export const useEditorData = (
   enableLiveQuery = false,
   liveQueryRefreshRate?: number,
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
+  allowComments?: boolean
 ) => {
+
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
   const currentDataRef = useRef<Sheet[]>([]);
@@ -95,14 +97,14 @@ export const useEditorData = (
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
-    if (!commentData || !ydocRef.current || !dsheetId) {
+    if (!ydocRef.current || !dsheetId) {
       return;
     }
 
     try {
       const currentDocData = ydocRef.current.getArray(dsheetId);
       const currentData = Array.from(currentDocData) as Sheet[];
-      if (currentData.length > 0 && commentData) {
+      if (currentData.length > 0) {
         currentData.forEach((sheet, index) => {
           const sheetCellData = sheet.celldata;
           sheetCellData?.forEach((cell) => {
@@ -112,7 +114,7 @@ export const useEditorData = (
               if (cell.v) {
                 cell.v = {
                   ...cell.v,
-                  ps: CELL_COMMENT_DEFAULT_VALUE,
+                  ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
                 };
               }
             } else {
@@ -129,7 +131,7 @@ export const useEditorData = (
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
     }
-  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded]);
+  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {
