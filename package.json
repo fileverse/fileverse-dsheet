@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "1.2.59-patch-4",
+  "version": "1.2.59-patch-6",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -48,6 +48,7 @@
     "tailwindcss-animate": "^1.0.7",
     "vite-plugin-dts": "^3.6.3",
     "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
     "y-webrtc": "^10.3.0",

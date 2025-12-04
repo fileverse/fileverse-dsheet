@@ -37,7 +37,7 @@ export const handleCSVUpload = (
         dynamicTyping: true,
         skipEmptyLines: true,
         complete: (results) => {
-          if (results.errors.length > 0) {
+          if (results.errors.length > 0 && results.data.length === 0) {
             console.error('CSV Parsing errors:', results.errors);
             alert('Error parsing CSV file');
             return;
