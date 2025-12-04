@@ -1,14 +1,30 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import {
+  isSmartContractResponse,
+  SheetSmartContractApi,
+  SmartContractQueryHandler,
+  SmartContractResponse,
+} from './after-update-cell';
+import { formulaResponseUiSync } from './formula-ui-sync';
 /**
  * Dynamically executes a function from a string representation
  *
  * @param functionCallString - String representation of the function call
  * @returns {Promise<unknown>} - Result of the function execution
  */
-export const executeStringFunction = async (
-  functionCallString: string,
-  sheetEditorRef?: React.RefObject<WorkbookInstance | null>,
-): Promise<unknown> => {
+export const executeStringFunction = async ({
+  functionCallString,
+  sheetEditorRef,
+  dataBlockRow,
+  dataBlockColumn,
+  handleSmartContractQuery,
+}: {
+  functionCallString: string;
+  sheetEditorRef?: React.RefObject<WorkbookInstance | null>;
+  dataBlockRow?: number;
+  dataBlockColumn?: number;
+  handleSmartContractQuery?: SmartContractQueryHandler;
+}): Promise<unknown> => {
   try {
     // Dynamically import the module
     const module = await import('@fileverse-dev/formulajs');
@@ -24,7 +40,6 @@ export const executeStringFunction = async (
 
     // Parse the arguments, respecting nested structures
     const ar = parseArguments(argsString);
-
     //@ts-expect-error later
     const args = ar.map((arg: string) => {
       if (isCellRangeReference(arg)) {
@@ -53,6 +68,32 @@ export const executeStringFunction = async (
       // Call the function with the parsed arguments
       // @ts-expect-error later
       const result = await module[functionName](...args);
+      if (isSmartContractResponse(result)) {
+        if (!handleSmartContractQuery) {
+          throw new Error('Smart contract handler is missing');
+        }
+
+        const api: SheetSmartContractApi = {
+          sheetEditorRef:
+            sheetEditorRef as React.RefObject<WorkbookInstance | null>,
+          row: dataBlockRow as number,
+          column: dataBlockColumn as number,
+          newValue: sheetEditorRef?.current?.getCellValue(
+            dataBlockRow as number,
+            dataBlockColumn as number,
+          ),
+          formulaResponseUiSync: formulaResponseUiSync,
+        };
+
+        const { callSignature } = result as SmartContractResponse;
+
+        const smartContractHandler = handleSmartContractQuery(api);
+        await smartContractHandler(callSignature);
+        return;
+      }
+      if (result.type === 'INVALID_PARAM') {
+        throw new Error(result.message);
+      }
       return result;
     } else {
       throw new Error(`Function ${functionName} not found in module`);

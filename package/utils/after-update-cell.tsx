@@ -287,7 +287,7 @@ export const isDatablockError = (value: any) => {
   return isObject && containsErrorFlag(value.type);
 };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isSmartContractResponse = (value: any) => {
+export const isSmartContractResponse = (value: any) => {
   const isObject =
     value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -570,6 +570,7 @@ export const afterUpdateCell = async (
 
   const dataBlockCalcFunction = params?.dataBlockCalcFunction;
   dataBlockCalcFunctionHandler({
+    handleSmartContractQuery: params.handleSmartContractQuery,
     // @ts-expect-error later
     dataBlockCalcFunction,
     sheetEditorRef,

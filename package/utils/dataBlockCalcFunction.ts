@@ -2,16 +2,20 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { formulaResponseUiSync } from './formula-ui-sync';
 import { executeStringFunction } from './executeStringFunction';
+import { SmartContractQueryHandler } from './after-update-cell';
+
 export const dataBlockCalcFunctionHandler = ({
   dataBlockCalcFunction,
   sheetEditorRef,
   currentRow,
   currentColumn,
+  handleSmartContractQuery,
 }: {
   dataBlockCalcFunction: { [key: string]: { [key: string]: any } };
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   currentRow: number;
   currentColumn: number;
+  handleSmartContractQuery?: SmartContractQueryHandler;
 }) => {
   const currentSheetId =
     sheetEditorRef?.current?.getWorkbookContext()?.currentSheetId;
@@ -39,16 +43,18 @@ export const dataBlockCalcFunctionHandler = ({
         if (!isCurrentIncludedInReference) return;
         if (!dataBlockValue || dataBlockValue?.v === '') return;
         const funcString = dataBlockValue?.f?.split('=')[1] as string;
-        const cellValue = sheetEditorRef?.current?.getCellValue(
-          dataBlock.row,
-          dataBlock.column,
-        )
         sheetEditorRef.current?.setCellValue(dataBlock.row, dataBlock.column, {
           ...dataBlockValue,
-          m: "Updating...",
-          v: "Updating...",
+          m: 'Updating...',
+          v: 'Updating...',
         });
-        executeStringFunction(funcString, sheetEditorRef).then((result) => {
+        executeStringFunction({
+          functionCallString: funcString,
+          sheetEditorRef,
+          dataBlockRow: dataBlock.row,
+          dataBlockColumn: dataBlock.column,
+          handleSmartContractQuery,
+        }).then((result) => {
           formulaResponseUiSync({
             row: dataBlock.row,
             column: dataBlock.column,
