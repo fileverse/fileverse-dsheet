@@ -53,6 +53,7 @@ export const dataBlockCalcFunctionHandler = ({
           sheetEditorRef,
           dataBlockRow: dataBlock.row,
           dataBlockColumn: dataBlock.column,
+          newValue: dataBlockValue,
           handleSmartContractQuery,
         }).then((result) => {
           formulaResponseUiSync({

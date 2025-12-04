@@ -1,4 +1,4 @@
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { Cell, WorkbookInstance } from '@fileverse-dev/fortune-react';
 import {
   isSmartContractResponse,
   SheetSmartContractApi,
@@ -18,12 +18,14 @@ export const executeStringFunction = async ({
   dataBlockRow,
   dataBlockColumn,
   handleSmartContractQuery,
+  newValue,
 }: {
   functionCallString: string;
   sheetEditorRef?: React.RefObject<WorkbookInstance | null>;
   dataBlockRow?: number;
   dataBlockColumn?: number;
   handleSmartContractQuery?: SmartContractQueryHandler;
+  newValue?: Cell;
 }): Promise<unknown> => {
   try {
     // Dynamically import the module
@@ -78,10 +80,7 @@ export const executeStringFunction = async ({
             sheetEditorRef as React.RefObject<WorkbookInstance | null>,
           row: dataBlockRow as number,
           column: dataBlockColumn as number,
-          newValue: sheetEditorRef?.current?.getCellValue(
-            dataBlockRow as number,
-            dataBlockColumn as number,
-          ),
+          newValue: newValue as Cell,
           formulaResponseUiSync: formulaResponseUiSync,
         };
 
@@ -90,9 +89,6 @@ export const executeStringFunction = async ({
         const smartContractHandler = handleSmartContractQuery(api);
         await smartContractHandler(callSignature);
         return;
-      }
-      if (result.type === 'INVALID_PARAM') {
-        throw new Error(result.message);
       }
       return result;
     } else {
