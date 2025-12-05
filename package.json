@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "1.2.59-sm-fix-patch-4",
+  "version": "1.2.61",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
