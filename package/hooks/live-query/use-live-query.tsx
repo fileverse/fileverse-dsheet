@@ -86,10 +86,10 @@ export const useLiveQuery = (
             }
             return;
           }
-          const result: any = await executeStringFunction(
-            functionToExec,
+          const result: any = await executeStringFunction({
+            functionCallString: functionToExec,
             sheetEditorRef,
-          );
+          });
           if (isDatablockError(result)) {
             result.type = LIVE_QUERY_ERROR;
             dataBlockApiKeyHandler?.({ data: result } as any);
