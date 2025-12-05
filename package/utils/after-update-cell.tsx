@@ -24,6 +24,10 @@ import {
   update,
 } from '@fileverse-dev/fortune-core';
 import { isHexValue } from './generic';
+import {
+  isSmartContractResponse,
+  smartContractQueryHandlerFunction,
+} from './smart-contract-query-handler';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -286,13 +290,6 @@ export const isDatablockError = (value: any) => {
     value !== null && typeof value === 'object' && !Array.isArray(value);
   return isObject && containsErrorFlag(value.type);
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const isSmartContractResponse = (value: any) => {
-  const isObject =
-    value !== null && typeof value === 'object' && !Array.isArray(value);
-
-  return isObject && value?.responseType === 'smart-contract';
-};
 
 /**
  * Processes promise resolution for regular formulas
@@ -338,22 +335,14 @@ const processRegularPromise = async (
     }
 
     if (isSmartContractResponse(data)) {
-      if (!params.handleSmartContractQuery) {
-        throw new Error('Smart contract handler is missing');
-      }
-
-      const api: SheetSmartContractApi = {
+      smartContractQueryHandlerFunction({
+        result: data,
+        handleSmartContractQuery: params.handleSmartContractQuery!,
         sheetEditorRef: params.sheetEditorRef,
-        row: params.row,
-        column: params.column,
+        dataBlockRow: params.row,
+        dataBlockColumn: params.column,
         newValue: params.newValue,
-        formulaResponseUiSync,
-      };
-
-      const { callSignature } = data as SmartContractResponse;
-
-      const smartContractHandler = params.handleSmartContractQuery(api);
-      await smartContractHandler(callSignature);
+      });
       return;
     }
     const context = params.sheetEditorRef.current?.getWorkbookContext();

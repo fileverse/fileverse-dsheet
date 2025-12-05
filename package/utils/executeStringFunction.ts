@@ -1,11 +1,7 @@
 import { Cell, WorkbookInstance } from '@fileverse-dev/fortune-react';
-import {
-  isSmartContractResponse,
-  SheetSmartContractApi,
-  SmartContractQueryHandler,
-  SmartContractResponse,
-} from './after-update-cell';
-import { formulaResponseUiSync } from './formula-ui-sync';
+import { SmartContractQueryHandler } from './after-update-cell';
+import { isSmartContractResponse } from './smart-contract-query-handler';
+import { smartContractQueryHandlerFunction } from './smart-contract-query-handler';
 /**
  * Dynamically executes a function from a string representation
  *
@@ -71,23 +67,14 @@ export const executeStringFunction = async ({
       // @ts-expect-error later
       const result = await module[functionName](...args);
       if (isSmartContractResponse(result)) {
-        if (!handleSmartContractQuery) {
-          throw new Error('Smart contract handler is missing');
-        }
-
-        const api: SheetSmartContractApi = {
-          sheetEditorRef:
-            sheetEditorRef as React.RefObject<WorkbookInstance | null>,
-          row: dataBlockRow as number,
-          column: dataBlockColumn as number,
-          newValue: newValue as Cell,
-          formulaResponseUiSync: formulaResponseUiSync,
-        };
-
-        const { callSignature } = result as SmartContractResponse;
-
-        const smartContractHandler = handleSmartContractQuery(api);
-        await smartContractHandler(callSignature);
+        await smartContractQueryHandlerFunction({
+          result,
+          handleSmartContractQuery: handleSmartContractQuery!,
+          sheetEditorRef: sheetEditorRef!,
+          dataBlockRow: dataBlockRow!,
+          dataBlockColumn: dataBlockColumn!,
+          newValue: newValue!,
+        });
         return;
       }
       return result;
