@@ -72,8 +72,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -507,6 +507,7 @@ const adjustRowHeight = ({
 export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
+  console.log('afterUpdateCell', params);
   const { newValue, sheetEditorRef } = params;
   // Early return for empty values
   if (isCellValueEmpty(newValue)) {

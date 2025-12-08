@@ -243,6 +243,7 @@ const SpreadsheetEditor = ({
       enableIndexeddbSync={enableIndexeddbSync}
       enableWebrtc={enableWebrtc}
       isReadOnly={isReadOnly}
+      allowComments={allowComments}
       onChange={onChange}
       externalEditorRef={externalSheetEditorRef}
       isCollaborative={isCollaborative}
