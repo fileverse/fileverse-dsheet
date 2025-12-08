@@ -69,6 +69,7 @@ export const formulaResponseUiSync = ({
         column,
         apiData,
         sheetEditorRef,
+        newValue
       })
     ) {
       return;
@@ -253,11 +254,13 @@ const tryInsertSingleValueIntoFormulaCell = ({
   column,
   apiData,
   sheetEditorRef,
+  newValue
 }: {
   row: number;
   column: number;
   apiData: any[];
   sheetEditorRef: any;
+  newValue: Record<string, string>;
 }): boolean => {
   const isSingleValueObject =
     apiData.length === 1 && Object.keys(apiData[0] || {}).length === 1;
@@ -282,6 +285,10 @@ const tryInsertSingleValueIntoFormulaCell = ({
     m: value != null ? String(value) : '',
     ct: buildCellFormat(value, existing?.ct),
   };
+
+  if (newValue.f) {
+    newCell.f = newValue.f
+  }
 
   sheetEditorRef.current?.setCellValuesByRange([[newCell]], {
     row: [row, row],
