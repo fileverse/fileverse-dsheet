@@ -507,6 +507,7 @@ const adjustRowHeight = ({
 export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
+  console.log('afterUpdateCell', params);
   const { newValue, sheetEditorRef } = params;
   // Early return for empty values
   if (isCellValueEmpty(newValue)) {

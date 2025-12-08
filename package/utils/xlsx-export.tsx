@@ -167,16 +167,17 @@ export const handleExportToXLSX = async (
         };
 
         // ============ ALIGNMENT ============
-        const HA_MAP: any = { 0: "left", 1: "center", 2: "right" };
-        const VA_MAP: any = { 0: "top", 1: "center", 2: "bottom" };
+        const HT_MAP: any = { "0": "center", "1": "left", "2": "right" };
+        const VT_MAP: any = { "0": "center", "1": "top", "2": "bottom" };
 
         newCell.s.alignment = {
           ...(newCell.s.alignment || {}),
-          horizontal: v.ht !== undefined ? HA_MAP[v.ht] : undefined,
-          vertical: v.vt !== undefined ? VA_MAP[v.vt] : undefined,
           wrapText: v.tb === "1" || v.tb === "2" ? true : undefined,
           textRotation: v.tr !== undefined ? v.tr : undefined,
         };
+
+        newCell.s.alignment.horizontal = HT_MAP[v.ht] || undefined;
+        newCell.s.alignment.vertical = VT_MAP[v.vt] || undefined;
 
         if (v.tb !== undefined) {
           newCell.s.alignment = newCell.s.alignment || {};
