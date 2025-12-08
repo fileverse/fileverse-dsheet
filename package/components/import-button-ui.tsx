@@ -3,6 +3,7 @@ import { ChangeEventHandler, useState } from 'react';
 import { LucideIcon, IconButton, DynamicModal, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fileverse/ui';
 
 import './import-button.scss';
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
 export const CustomButton = ({
   setExportDropdownOpen,
@@ -185,6 +186,8 @@ export const CustomButton = ({
               <div className='h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center'>
                 <p className='text-body-sm color-text-disabled truncate-text'>{file?.name}</p>
               </div>
+              {file?.size > MAX_FILE_SIZE && <p className='text-[hsla(var(--color-text-danger))] font-[`Helvetica_Neue`] text-[14px] font-normal mt-[4px] leading-[20px]'
+              >Can't import this file right now. Try again later.</p>}
             </div>
 
             <div>
@@ -215,6 +218,7 @@ export const CustomButton = ({
                 Cancel
               </Button>
               <Button
+                disabled={!file || file?.size > MAX_FILE_SIZE}
                 className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
                 size="md"
                 onClick={handleApplyData}
