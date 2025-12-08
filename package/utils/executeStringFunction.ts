@@ -1,14 +1,28 @@
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { Cell, WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { SmartContractQueryHandler } from './after-update-cell';
+import { isSmartContractResponse } from './smart-contract-query-handler';
+import { smartContractQueryHandlerFunction } from './smart-contract-query-handler';
 /**
  * Dynamically executes a function from a string representation
  *
  * @param functionCallString - String representation of the function call
  * @returns {Promise<unknown>} - Result of the function execution
  */
-export const executeStringFunction = async (
-  functionCallString: string,
-  sheetEditorRef?: React.RefObject<WorkbookInstance | null>,
-): Promise<unknown> => {
+export const executeStringFunction = async ({
+  functionCallString,
+  sheetEditorRef,
+  dataBlockRow,
+  dataBlockColumn,
+  handleSmartContractQuery,
+  newValue,
+}: {
+  functionCallString: string;
+  sheetEditorRef?: React.RefObject<WorkbookInstance | null>;
+  dataBlockRow?: number;
+  dataBlockColumn?: number;
+  handleSmartContractQuery?: SmartContractQueryHandler;
+  newValue?: Cell;
+}): Promise<unknown> => {
   try {
     // Dynamically import the module
     const module = await import('@fileverse-dev/formulajs');
@@ -24,7 +38,6 @@ export const executeStringFunction = async (
 
     // Parse the arguments, respecting nested structures
     const ar = parseArguments(argsString);
-
     //@ts-expect-error later
     const args = ar.map((arg: string) => {
       if (isCellRangeReference(arg)) {
@@ -53,6 +66,17 @@ export const executeStringFunction = async (
       // Call the function with the parsed arguments
       // @ts-expect-error later
       const result = await module[functionName](...args);
+      if (isSmartContractResponse(result)) {
+        await smartContractQueryHandlerFunction({
+          result,
+          handleSmartContractQuery: handleSmartContractQuery!,
+          sheetEditorRef: sheetEditorRef!,
+          dataBlockRow: dataBlockRow!,
+          dataBlockColumn: dataBlockColumn!,
+          newValue: newValue!,
+        });
+        return;
+      }
       return result;
     } else {
       throw new Error(`Function ${functionName} not found in module`);

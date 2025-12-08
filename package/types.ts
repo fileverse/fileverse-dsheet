@@ -27,7 +27,19 @@ export type OnboardingHandlerType = (params: {
 export type DataBlockApiKeyHandlerType = (params: {
   data: ErrorMessageHandlerReturnType;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  executeStringFunction: (functionCallString: string) => Promise<unknown>;
+  executeStringFunction: ({
+    functionCallString,
+    sheetEditorRef,
+    dataBlockRow,
+    dataBlockColumn,
+    handleSmartContractQuery,
+  }: {
+    functionCallString: string;
+    sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+    dataBlockRow: number;
+    dataBlockColumn: number;
+    handleSmartContractQuery: SmartContractQueryHandler;
+  }) => Promise<unknown>;
   row: number;
   column: number;
   newValue: Cell;
