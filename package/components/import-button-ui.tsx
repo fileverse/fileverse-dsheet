@@ -141,6 +141,7 @@ export const CustomButton = ({
                 setFile(e.target.files?.[0]);
                 setOpenImportTypeModal(true);
                 setIsOpen(false);
+                e.target.value = '';
               }}
               style={{ display: 'none' }}
             />
@@ -155,6 +156,7 @@ export const CustomButton = ({
                 setFile(e.target.files?.[0]);
                 setOpenImportTypeModal(true);
                 setIsOpen(false);
+                e.target.value = '';
               }}
               style={{ display: 'none' }}
             />
