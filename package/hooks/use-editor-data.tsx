@@ -127,6 +127,11 @@ export const useEditorData = (
             }
           });
         });
+
+        currentDataRef.current = currentData;
+        if (setForceSheetRender) {
+          setForceSheetRender((prev) => prev + 1);
+        }
       }
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
