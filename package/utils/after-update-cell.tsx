@@ -583,7 +583,7 @@ const updateDataCalcFunc = ({
     params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
       const formulaString = params.newValue?.f?.split('=')[1];
 
-      const functionMatch = formulaString?.match(/^(\w+)\((.*)\)$/);
+      const functionMatch = formulaString?.match(/^=?(\w+)(?:\(([^)]*)\)?)?$/);
       if (!functionMatch) {
         throw new Error(`Invalid function call format: ${formulaString}`);
       }
