@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "1.2.68",
+  "version": "1.2.69",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -35,7 +35,7 @@
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.28",
     "@fileverse-dev/formulajs": "^4.4.36",
-    "@fileverse-dev/fortune-react": "1.2.64",
+    "@fileverse-dev/fortune-react": "^1.2.65",
     "@fileverse/ui": "^4.1.7-patch-40",
     "classnames": "^2.5.1",
     "exceljs": "^4.4.0",
