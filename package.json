@@ -33,7 +33,7 @@
     ]
   },
   "dependencies": {
-    "@fileverse-dev/dsheets-templates": "^0.0.28",
+    "@fileverse-dev/dsheets-templates": "^0.0.29",
     "@fileverse-dev/formulajs": "^4.4.36",
     "@fileverse-dev/fortune-react": "^1.2.67",
     "@fileverse/ui": "^4.1.7-patch-40",

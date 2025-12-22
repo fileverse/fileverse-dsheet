@@ -284,6 +284,7 @@ const tryInsertSingleValueIntoFormulaCell = ({
     v: value,
     m: value != null ? String(value) : '',
     ct: buildCellFormat(value, existing?.ct),
+    isDataBlockFormula: true,
   };
 
   if (newValue.f) {
