@@ -96,7 +96,7 @@ export const executeStringFunction = async ({
 export function parseArguments(
   argsString: string,
 ): (string | number | boolean | object | [] | null | undefined)[] {
-  if (!argsString.trim()) {
+  if (!argsString?.trim()) {
     return []; // No arguments
   }
 
