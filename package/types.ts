@@ -52,6 +52,15 @@ export type DataBlockApiKeyHandlerType = (params: {
   }) => void;
 }) => void;
 
+// Kirha search types
+export type KirhaToolUsage = Array<{ tool_name: string; credits?: number }>;
+export type OnKirhaToolUsageType = (toolUsage: KirhaToolUsage) => void;
+
+export interface KirhaResponse {
+  summary: string;
+  toolUsage: KirhaToolUsage;
+}
+
 export interface DsheetProps {
   isNewSheet: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
@@ -95,6 +104,7 @@ export interface DsheetProps {
   handleSmartContractQuery?: SmartContractQueryHandler;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
+  onKirhaToolUsage?: OnKirhaToolUsageType;
 }
 export type BaseError = {
   message: string;

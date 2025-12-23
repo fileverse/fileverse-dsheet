@@ -10,6 +10,7 @@ import {
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import type { KirhaToolUsage } from '../../index';
 
 function App() {
   const [title, setTitle] = useState('Untitled');
@@ -24,6 +25,37 @@ function App() {
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
   const handleSheetChange = useCallback(() => { }, []);
+
+  // Kirha integration state
+  const [showKirhaKeyModal, setShowKirhaKeyModal] = useState(false);
+  const [kirhaApiKey, setKirhaApiKey] = useState('');
+  const [kirhaToolUsageLog, setKirhaToolUsageLog] = useState<KirhaToolUsage | null>(null);
+
+  // Handle Kirha tool usage callback - logs what tools Kirha used
+  const handleKirhaToolUsage = useCallback((toolUsage: KirhaToolUsage) => {
+    console.log('[KIRHA] Tools used:', toolUsage);
+    setKirhaToolUsageLog(toolUsage);
+    // Auto-hide after 5 seconds
+    setTimeout(() => setKirhaToolUsageLog(null), 5000);
+  }, []);
+
+  // Handle data block API key requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDataBlockApiKey = useCallback(({ data }: { data: any }) => {
+    if (data.apiKeyName === 'KIRHA_API_KEY') {
+      setShowKirhaKeyModal(true);
+    }
+  }, []);
+
+  // Save Kirha API key
+  const saveKirhaApiKey = () => {
+    if (kirhaApiKey) {
+      // Store in localStorage for the formulajs library to access
+      localStorage.setItem('KIRHA_API_KEY', kirhaApiKey);
+      setShowKirhaKeyModal(false);
+      setKirhaApiKey('');
+    }
+  };
 
   const renderNavbar = (): JSX.Element => {
     return (
@@ -127,7 +159,55 @@ function App() {
         enableIndexeddbSync={true}
         isAuthorized={false}
         isNewSheet={isNewSheet}
+        dataBlockApiKeyHandler={handleDataBlockApiKey}
+        onKirhaToolUsage={handleKirhaToolUsage}
       />
+
+      {/* Kirha API Key Modal */}
+      {showKirhaKeyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-[400px] shadow-xl">
+            <h2 className="text-lg font-semibold mb-4">Enter Kirha API Key</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              To use the KIRHA function, please enter your Kirha API key.
+              Get one at <a href="https://kirha.ai" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">kirha.ai</a>
+            </p>
+            <input
+              type="password"
+              value={kirhaApiKey}
+              onChange={(e) => setKirhaApiKey(e.target.value)}
+              placeholder="Enter your Kirha API key"
+              className="w-full px-3 py-2 border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setShowKirhaKeyModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveKirhaApiKey}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kirha Tool Usage Toast */}
+      {kirhaToolUsageLog && (
+        <div className="fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg z-50 max-w-md">
+          <div className="flex items-center gap-2 mb-2">
+            <LucideIcon name="Sparkles" size="sm" />
+            <span className="font-medium">Kirha Tools Used</span>
+          </div>
+          <div className="text-sm text-gray-300">
+            {kirhaToolUsageLog.map((tool, i) => (
+              <div key={i} className="flex justify-between">
+                <span>{tool.tool_name}</span>
+                {tool.credits && <span className="text-gray-400">{tool.credits} credits</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 

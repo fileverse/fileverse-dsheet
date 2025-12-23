@@ -6,6 +6,8 @@ import {
   OnboardingHandlerType,
   DataBlockApiKeyHandlerType,
   ErrorMessageHandlerReturnType,
+  KirhaResponse,
+  OnKirhaToolUsageType,
 } from '../types';
 import { formulaResponseUiSync, USD_FA } from './formula-ui-sync';
 import {
@@ -80,6 +82,7 @@ interface AfterUpdateCellParams {
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >;
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } };
+  onKirhaToolUsage?: OnKirhaToolUsageType;
 }
 
 /**
@@ -292,11 +295,24 @@ export const isDatablockError = (value: any) => {
 };
 
 /**
+ * Checks if the value is a Kirha search response
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const isKirhaResponse = (value: any): value is KirhaResponse => {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'summary' in value &&
+    'toolUsage' in value
+  );
+};
+
+/**
  * Processes promise resolution for regular formulas
  */
 const processRegularPromise = async (
   promise: Promise<
-    unknown[] | ErrorMessageHandlerReturnType | string | SmartContractResponse
+    unknown[] | ErrorMessageHandlerReturnType | string | SmartContractResponse | KirhaResponse
   >,
   params: Pick<
     AfterUpdateCellParams,
@@ -309,6 +325,7 @@ const processRegularPromise = async (
     | 'onDataBlockApiResponse'
     | 'handleSmartContractQuery'
     | 'handleLiveQueryData'
+    | 'onKirhaToolUsage'
   >,
 ): Promise<void> => {
   try {
@@ -345,6 +362,23 @@ const processRegularPromise = async (
       });
       return;
     }
+
+    // Handle Kirha search response
+    if (isKirhaResponse(data)) {
+      // Log tool usage via callback
+      params.onKirhaToolUsage?.(data.toolUsage);
+
+      // Display summary in cell
+      params.sheetEditorRef.current?.setCellValue(params.row, params.column, {
+        ...params.newValue,
+        m: data.summary,
+        v: data.summary,
+        isDataBlockFormula: true,
+      });
+      params.onDataBlockApiResponse?.('KIRHA');
+      return;
+    }
+
     const context = params.sheetEditorRef.current?.getWorkbookContext();
 
     if (

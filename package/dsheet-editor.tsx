@@ -56,6 +56,7 @@ const EditorContent = ({
   onSheetCountChange,
   handleSmartContractQuery,
   isNewSheet,
+  onKirhaToolUsage,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -69,6 +70,7 @@ const EditorContent = ({
   | 'setInputFetchURLDataBlock'
   | 'storeApiKey'
   | 'isNewSheet'
+  | 'onKirhaToolUsage'
 > & {
   commentData?: object;
   getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
@@ -177,6 +179,7 @@ const EditorContent = ({
             onDuneChartEmbed={onDuneChartEmbed}
             onSheetCountChange={onSheetCountChange}
             handleSmartContractQuery={handleSmartContractQuery}
+            onKirhaToolUsage={onKirhaToolUsage}
           />
         </TransitionWrapper>
       </div>
@@ -228,6 +231,7 @@ const SpreadsheetEditor = ({
   isNewSheet,
   liveQueryRefreshRate,
   enableLiveQuery,
+  onKirhaToolUsage,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -280,6 +284,7 @@ const SpreadsheetEditor = ({
         onSheetCountChange={onSheetCountChange}
         onDataBlockApiResponse={onDataBlockApiResponse}
         handleSmartContractQuery={handleSmartContractQuery}
+        onKirhaToolUsage={onKirhaToolUsage}
       />
     </EditorProvider>
   );

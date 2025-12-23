@@ -23,7 +23,7 @@ import { useXLSXImport } from '../hooks/use-xlsx-import';
 import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
 
 import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
-import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import { OnboardingHandlerType, DataBlockApiKeyHandlerType, OnKirhaToolUsageType } from '../types';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -51,6 +51,7 @@ interface EditorWorkbookProps {
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
   handleSmartContractQuery?: SmartContractQueryHandler;
+  onKirhaToolUsage?: OnKirhaToolUsageType;
 }
 
 /**
@@ -76,6 +77,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   onDuneChartEmbed,
   onSheetCountChange,
   handleSmartContractQuery,
+  onKirhaToolUsage,
 }) => {
   const {
     setSelectedTemplate,
@@ -233,6 +235,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               dataBlockCalcFunction,
               handleSmartContractQuery,
               handleLiveQueryData: handleLiveQuery,
+              onKirhaToolUsage,
             });
           },
         }}
@@ -254,5 +257,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     syncStatus,
     currentDataRef.current,
     isAuthorized,
+    onKirhaToolUsage,
   ]);
 };

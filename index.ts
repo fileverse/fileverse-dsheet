@@ -1,8 +1,9 @@
 export { default as DsheetEditor } from './package/dsheet-editor';
 export { formulaResponseUiSync } from './package/utils/formula-ui-sync';
 export { executeStringFunction } from './package/utils/executeStringFunction';
+export { isKirhaResponse } from './package/utils/after-update-cell';
 export { FLVURL } from '@fileverse-dev/formulajs';
-export type { ErrorMessageHandlerReturnType } from './package/types';
+export type { ErrorMessageHandlerReturnType, KirhaToolUsage, OnKirhaToolUsageType, KirhaResponse } from './package/types';
 export type { WorkbookInstance } from '@fileverse-dev/fortune-react';
 export {
   ERROR_MESSAGES_FLAG,
