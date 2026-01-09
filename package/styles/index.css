@@ -94,7 +94,6 @@ body {
 
 .fortune-cell-selected-extend {
   border: 2px dashed #efc703 !important;
-  min-width: 102px !important;
 }
 
 .luckysheet-input-box-inner {
