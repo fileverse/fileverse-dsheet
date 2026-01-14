@@ -97,7 +97,7 @@ export const useEditorData = (
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
-    if (!ydocRef.current || !dsheetId) {
+    if (!ydocRef.current || !dsheetId || !sheetEditorRef.current) {
       return;
     }
 
@@ -110,54 +110,29 @@ export const useEditorData = (
           setContext?.((ctx: any) => {
             const files = ctx.luckysheetfile;
             files.forEach((file: any, fileIndex: number) => {
-              file.celldata?.forEach((cell: any) => {
-                // @ts-expect-error later
-                const comment = commentData[`${fileIndex}_${cell.r}_${cell.c}`];
-                if (comment) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
-                  };
-                } else {
-                  cell.v = {
-                    ...cell.v,
-                    ps: undefined,
-                  };
-                }
+              file.data?.forEach((row: any, rowIndex: number) => {
+                row.forEach((cell: any, colIndex: number) => {
+                  if (cell) {
+                    // @ts-expect-error later
+                    const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
+                    if (comment) {
+                      cell.ps = !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE;
+                    } else {
+                      cell.ps = undefined
+                    }
+                  }
+                })
               })
             })
-          })
-        } else {
-          currentData.forEach((sheet, index) => {
-            const sheetCellData = sheet.celldata;
-            sheetCellData?.forEach((cell) => {
-              // @ts-expect-error later
-              const comment = commentData[`${index}_${cell.r}_${cell.c}`];
-              if (comment) {
-                if (cell.v) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
-                  };
-                }
-              } else {
-                if (cell.v) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: undefined,
-                  };
-                }
-              }
-            });
           });
+          sheetEditorRef.current?.setRowHeight({ '0': 50 });
         }
-
         currentDataRef.current = currentData;
       }
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
     }
-  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments]);
+  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments, syncStatus]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {
