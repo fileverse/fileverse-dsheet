@@ -97,16 +97,15 @@ export const useEditorData = (
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
-    if (!ydocRef.current || !dsheetId || !sheetEditorRef.current) {
+    if (!ydocRef.current || !dsheetId) {
       return;
     }
-
     try {
       const currentDocData = ydocRef.current.getArray(dsheetId);
       const currentData = Array.from(currentDocData) as Sheet[];
-      if (currentData.length > 0) {
+      if (currentData.length > 0 && syncStatus === 'synced') {
         const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
-        if (setContext) {
+        if (sheetEditorRef.current !== null && setContext) {
           setContext?.((ctx: any) => {
             const files = ctx.luckysheetfile;
             files.forEach((file: any, fileIndex: number) => {
@@ -116,7 +115,7 @@ export const useEditorData = (
                     // @ts-expect-error later
                     const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
                     if (comment) {
-                      cell.ps = !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE;
+                      cell.ps = allowComments ? CELL_COMMENT_DEFAULT_VALUE : undefined;
                     } else {
                       cell.ps = undefined
                     }
@@ -125,7 +124,31 @@ export const useEditorData = (
               })
             })
           });
-          sheetEditorRef.current?.setRowHeight({ '0': 50 });
+        }
+        //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
+        if (sheetEditorRef.current === null && syncStatus === 'synced') {
+          currentData.forEach((sheet, index) => {
+            const sheetCellData = sheet.celldata;
+            sheetCellData?.forEach((cell) => {
+              // @ts-expect-error later
+              const comment = commentData[`${index}_${cell.r}_${cell.c}`];
+              if (comment) {
+                if (cell.v) {
+                  cell.v = {
+                    ...cell.v,
+                    ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
+                  };
+                }
+              } else {
+                if (cell.v) {
+                  cell.v = {
+                    ...cell.v,
+                    ps: undefined,
+                  };
+                }
+              }
+            });
+          });
         }
         currentDataRef.current = currentData;
       }
