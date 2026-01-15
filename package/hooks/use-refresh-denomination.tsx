@@ -7,6 +7,16 @@ const CRYPTO_MAP: Record<string, string> = {
   SOL: 'solana',
 };
 
+export function numberToColumn(colNumber: number) {
+  let colPart = "";
+  while (colNumber > 0) {
+    colNumber -= 1;
+    colPart = String.fromCharCode(65 + (colNumber % 26)) + colPart;
+    colNumber = Math.floor(colNumber / 26);
+  }
+  return colPart;
+}
+
 export const useRefreshDenomination = ({
   sheetEditorRef,
 }: {
@@ -43,6 +53,7 @@ export const useRefreshDenomination = ({
     const currentData = sheetEditorRef.current?.getSheet();
     const cellData = currentData?.celldata;
     if (!cellData) return;
+    const cellUpdated: any[] = [];
 
     for (let i = 0; i < cellData?.length; i++) {
       const cell = { ...cellData[i] } as any;
@@ -63,9 +74,13 @@ export const useRefreshDenomination = ({
       );
       cell.v.baseCurrencyPrice = price;
       sheetEditorRef.current?.setCellValue(cell.r, cell.c, cell.v);
+      const column = numberToColumn(cell.c + 1);
+      cellUpdated.push(`${column}${cell.r + 1}`);
     }
-    // @ts-expect-error later
-    sheetEditorRef.current?.calculateSubSheetFormula(currentSubSheetId);
+    if (cellUpdated.length > 0) {
+      //@ts-expect-error later
+      sheetEditorRef.current?.calculateCellReferencedSubSheetFormula(currentSubSheetId, cellUpdated);
+    }
   };
 
   useEffect(() => {
