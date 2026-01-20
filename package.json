@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "1.2.81-maitra-xl-1",
+  "version": "1.2.82",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
