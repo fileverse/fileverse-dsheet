@@ -25,6 +25,7 @@ export const useApplyTemplatesBtn = ({
   >;
   initialiseLiveQueryData: (sheets: Sheet[]) => void;
 }) => {
+  console.log('selectedTemplate ignore', currentDataRef);
   useEffect(() => {
     if (!selectedTemplate) return;
     if (!ydocRef.current) return;
@@ -45,7 +46,7 @@ export const useApplyTemplatesBtn = ({
       ydocRef.current.transact(() => {
         sheetArray.delete(0, sheetArray.length);
         sheetArray.insert(0, finalData);
-        currentDataRef.current = finalData;
+        //currentDataRef.current = finalData;
       });
       initialiseLiveQueryData(finalData);
       setForceSheetRender?.((prev: number) => prev + 1);

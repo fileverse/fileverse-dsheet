@@ -141,6 +141,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     : TOOL_BAR_ITEMS;
 
   const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef });
+  const {
+    handleChange: handleContentPortal
+  } = useEditor();
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -216,6 +219,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           ): void => {
             const refObj = { current: sheetEditorRef.current };
             afterUpdateCell({
+              handleContentPortal,
+              dsheetId,
+              ydocRef,
               oldValue: _oldValue,
               row,
               column,

@@ -152,7 +152,7 @@ export const handleCSVUpload = (
             sheetArray.delete(0, sheetArray.length);
             sheetArray.insert(0, finalData);
 
-            currentDataRef.current = finalData;
+            //currentDataRef.current = finalData;
           });
           setForceSheetRender((prev: number) => prev + 1);
           setTimeout(() => {

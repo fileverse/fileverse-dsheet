@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Cell } from '@fileverse-dev/fortune-react';
+import * as Y from 'yjs';
+import { fromUint8Array } from 'js-base64';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import {
   OnboardingHandlerType,
@@ -498,6 +500,116 @@ const adjustRowHeight = ({
   }
 };
 
+type SheetChangePath = {
+  sheetId: string;
+  path: string[];        // ['name'], ['config', 'merge'], ['celldata']
+  key?: string;          // 👈 only for celldata
+  value: any;
+};
+
+
+export const updateSheetData = (
+  ydoc: Y.Doc | null,
+  dsheetId: string,
+  sheetEditor: WorkbookInstance | null,
+  changes: SheetChangePath[],
+  handleContentPortal: any,
+  // isReadOnly?: boolean,
+) => {
+  if (!ydoc || !sheetEditor || !changes.length) {
+    return;
+  }
+
+  const sheetArray = ydoc.getArray<any>(dsheetId);
+  console.log('sheetArray', sheetArray.toArray());
+
+  ydoc.transact(() => {
+    /**
+     * STEP 1: MIGRATION (plain object → Y.Map)
+     */
+    // sheetArray.forEach((item, index) => {
+    //   if (item instanceof Y.Map) return;
+
+    //   const sheetMap = new Y.Map();
+
+    //   Object.entries(item).forEach(([key, value]) => {
+    //     if (key === 'celldata' && value && typeof value === 'object') {
+    //       const cellMap = new Y.Map();
+    //       Object.entries(value).forEach(([cellId, cell]) => {
+    //         cellMap.set(cellId, cell);
+    //       });
+    //       sheetMap.set('celldata', cellMap);
+    //     } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+    //       const yMap = new Y.Map();
+    //       Object.entries(value).forEach(([k, v]) => yMap.set(k, v));
+    //       sheetMap.set(key, yMap);
+    //     } else {
+    //       sheetMap.set(key, value);
+    //     }
+    //   });
+
+    //   sheetArray.delete(index, 1);
+    //   sheetArray.insert(index, [sheetMap]);
+    // });
+
+    /**
+     * STEP 2: APPLY CHANGES
+     */
+    changes.forEach(({ sheetId, path, key, value }) => {
+      //@ts-ignore
+      const sheet = sheetArray.toArray().find((s: Y.Map) => s.get('id') === sheetId) as Y.Map | undefined;
+
+      if (!sheet) return;
+
+      // SPECIAL CASE: celldata merge
+      if (path.length === 1 && path[0] === 'celldata' && key) {
+        let cellMap = sheet.get('celldata');
+
+        if (!(cellMap instanceof Y.Map)) {
+          cellMap = new Y.Map();
+          sheet.set('celldata', cellMap);
+        }
+
+        cellMap.set(key, value);
+        return;
+      }
+
+      // NORMAL PATH WALK (config, name, order, etc.)
+      let target: any = sheet;
+
+      for (let i = 0; i < path.length - 1; i++) {
+        const p = path[i];
+        let next = target.get(p);
+
+        if (!(next instanceof Y.Map)) {
+          next = new Y.Map();
+          target.set(p, next);
+        }
+
+        target = next;
+      }
+
+      target.set(path[path.length - 1], value);
+    });
+
+    /**
+     * STEP 3: status update
+     */
+    //@ts-ignore
+    sheetArray.forEach((sheet: Y.Map) => {
+      sheet.set(
+        'status',
+        sheet.get('order') === 0 ? 1 : 0,
+      );
+    });
+  });
+  const encodedUpdate = fromUint8Array(
+    Y.encodeStateAsUpdate(ydoc),
+  );
+  handleContentPortal({ data: sheetArray.toArray() }, encodedUpdate);
+};
+
+
 /**
  * Handles logic after a cell is updated, including processing formula results
  *
@@ -508,6 +620,26 @@ export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
   console.log('afterUpdateCell', params);
+  const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
+    ?.currentSheetId as string;
+  console.log('currentSheetId f7b72d1c-4c97-4c27-ab08-399624b5dd79', currentSheetId);
+  updateSheetData(
+    // @ts-ignore
+    params.ydocRef.current,
+    // @ts-ignore
+    params.dsheetId,
+    params.sheetEditorRef.current,
+    [{
+      sheetId: currentSheetId, path: ['celldata'], value: {
+        r: params.row,
+        c: params.column,
+        ...params.newValue
+      }, key: params.row + '_' + params.column
+    }],
+    // @ts-ignore
+    params.handleContentPortal,
+  );
+
   const { newValue, sheetEditorRef } = params;
   // Early return for empty values
   if (isCellValueEmpty(newValue)) {
@@ -543,8 +675,8 @@ export const afterUpdateCell = async (
   const formulaName = newValue.f
     ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
     ?.toUpperCase();
-  const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
-    ?.currentSheetId as string;
+  // const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
+  //   ?.currentSheetId as string;
 
   // Handle promise-based values
   if (

@@ -39,11 +39,13 @@ export const updateSheetData = (
     isSpreadsheetChanged(Array.from(sheetArray) as Sheet[], statusUpdatedFormattedData) &&
     !isReadOnly
   ) {
+    console.log('preSheetArray', preSheetArray);
+    console.log('statusUpdatedFormattedData', statusUpdatedFormattedData);
     // Perform the update in a transaction
-    ydoc.transact(() => {
-      sheetArray.delete(0, preSheetArray.length);
-      sheetArray.insert(0, statusUpdatedFormattedData);
-    });
+    // ydoc.transact(() => {
+    //   sheetArray.delete(0, preSheetArray.length);
+    //   sheetArray.insert(0, statusUpdatedFormattedData);
+    // });
   }
 };
 

@@ -1,6 +1,7 @@
-import React, { ComponentProps, useState } from 'react';
+import React, { ComponentProps, useEffect, useState } from 'react';
 import cn from 'classnames';
-
+import * as Y from 'yjs';
+import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import {
   DsheetProps,
@@ -121,6 +122,49 @@ const EditorContent = ({
     ydocRef,
   };
   const shouldRenderSheet = currentDataRef.current.length > 0 || isNewSheet;
+
+  const cellArrayToYMap = (celldata: any[] = []) => {
+    const yCellMap = new Y.Map();
+
+    celldata.forEach((cell) => {
+      yCellMap.set(`${cell.r}_${cell.c}`, cell);
+    });
+
+    return yCellMap;
+  };
+
+  const plainSheetToYMap = (sheet: any, index = 0) => {
+    const ySheet = new Y.Map();
+
+    ySheet.set('id', sheet.id ?? crypto.randomUUID());
+    ySheet.set('name', sheet.name ?? `Sheet${index + 1}`);
+    ySheet.set('order', sheet.order ?? index);
+    ySheet.set('row', sheet.row ?? 500);
+    ySheet.set('column', sheet.column ?? 36);
+    ySheet.set('status', sheet.status ?? (index === 0 ? 1 : 0));
+    ySheet.set('config', sheet.config ?? {});
+    ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
+
+    return ySheet;
+  };
+
+  useEffect(() => {
+    console.log('is new shouldRenderSheet kk', shouldRenderSheet, isNewSheet, ydocRef.current);
+    if (isNewSheet) {
+      ydocRef.current?.transact(() => {
+        const sheetArray =
+          ydocRef.current?.getArray(dsheetId);
+        if (sheetArray?.toArray().length === 0) {
+          DEFAULT_SHEET_DATA.forEach((sheet, index) => {
+            console.log('sheet getting inti', sheet);
+            sheetArray?.push([
+              plainSheetToYMap(sheet, index),
+            ]);
+          });
+        }
+      });
+    }
+  }, [isNewSheet, shouldRenderSheet, loading]);
 
   return (
     <div

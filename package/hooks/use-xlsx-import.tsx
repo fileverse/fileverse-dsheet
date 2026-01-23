@@ -21,6 +21,7 @@ export const useXLSXImport = ({
   currentDataRef: React.MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
 }) => {
+  console.log('useXLSXImport ignore', currentDataRef);
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<
     string,
@@ -186,7 +187,7 @@ export const useXLSXImport = ({
             ydocRef.current.transact(() => {
               sheetArray.delete(0, sheetArray.length);
               sheetArray.insert(0, combinedSheets);
-              currentDataRef.current = combinedSheets;
+              //currentDataRef.current = combinedSheets;
             });
             // @ts-expect-error later
             updateDocumentTitle?.(exportJson.info?.name);

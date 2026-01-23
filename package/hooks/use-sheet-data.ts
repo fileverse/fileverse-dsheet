@@ -65,7 +65,7 @@ export const useSheetData = (
 
       if (newData) {
         remoteUpdateRef.current = true;
-        currentDataRef.current = newData;
+        //currentDataRef.current = newData;
         setSheetData(newData);
       }
     };
