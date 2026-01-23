@@ -135,7 +135,7 @@ export const useLiveQuery = (
               newQueryData,
             );
           }
-          animateChangedCell(context!.currentSheetId, row + 1, column);
+          animateChangedCell(context!.currentSheetId, row, column);
           // TODO: see a way to improve this
           sheetEditorRef.current?.calculateSubSheetFormula(
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
