@@ -144,6 +144,10 @@ const EditorContent = ({
     ySheet.set('status', sheet.status ?? (index === 0 ? 1 : 0));
     ySheet.set('config', sheet.config ?? {});
     ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
+    ySheet.set('calcChain', cellArrayToYMap(sheet.calcChain ?? []));
+    const yDataBlockList = new Y.Array();
+
+    ySheet.set('dataBlockCalcFunction', yDataBlockList);
 
     return ySheet;
   };

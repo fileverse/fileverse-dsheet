@@ -3,10 +3,14 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
-import { CELL_COMMENT_DEFAULT_VALUE, DEFAULT_SHEET_DATA } from '../constants/shared-constants';
+// import {
+//   CELL_COMMENT_DEFAULT_VALUE,
+//   // DEFAULT_SHEET_DATA 
+// } from '../constants/shared-constants';
 import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
 import { DataBlockApiKeyHandlerType } from '../types';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
 // import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
 /**
@@ -69,6 +73,20 @@ function migrateSheetArrayIfNeeded(
           sheetMap.set('celldata', cellMap);
           return;
         }
+        if (key === 'calcChain' && Array.isArray(value)) {
+          const calcChainMap = new Y.Map();
+          const normalized = normalizeCelldataArray(value);
+
+          Object.entries(normalized).forEach(
+            ([cellKey, cellValue]) => {
+              calcChainMap.set(cellKey, cellValue);
+            },
+          );
+
+          sheetMap.set('calcChain', calcChainMap);
+          return;
+        }
+
 
         // nested object → Y.Map
         if (
@@ -94,94 +112,6 @@ function migrateSheetArrayIfNeeded(
   });
 }
 
-// @ts-ignore
-// export function ySheetArrayToPlain(ySheetArray: Y.Array<Y.Map>): Sheet[] {
-//   return ySheetArray.map((sheet) => {
-//     let celldataArray: any[] = [];
-
-//     if (sheet.celldata) {
-//       // Case 1: Y.Map
-//       if (typeof sheet.celldata.forEach === 'function') {
-//         sheet.celldata.forEach((value: any) => {
-//           celldataArray.push(value);
-//         });
-//       }
-//       // Case 2: Object (migration-safe)
-//       else if (typeof sheet.celldata === 'object') {
-//         celldataArray = Object.values(sheet.celldata);
-//       }
-//     }
-
-//     return {
-//       ...sheet,
-//       celldata: celldataArray,
-//     };
-//   });
-// }
-
-function ySheetArrayToPlain(
-  // @ts-ignore
-  sheetArray: Y.Array<Y.Map>,
-): Sheet[] {
-  return sheetArray.toArray().map((sheetMap) => {
-    const obj: any = {};
-    console.log('sheetMap', sheetMap);
-    console.log('sheetMap.toJSON()', sheetMap.toJSON());
-    console.log('sheetMap.toJSON()', sheetMap.get('name'));
-
-    // @ts-ignore
-    sheetMap.forEach((value, key) => {
-      console.log('key', key, 'value', value);
-      // ✅ celldata: Y.Map → plain object
-      if (key === 'celldata' && value instanceof Y.Map) {
-        obj.celldata = value.toJSON();
-        return;
-      }
-
-      if (value instanceof Y.Map || value instanceof Y.Array) {
-        obj[key] = value.toJSON();
-      } else {
-        obj[key] = value;
-      }
-    });
-
-    let cellDataArray;
-    cellDataArray = Object.values(obj.celldata);
-    obj.celldata = cellDataArray;
-
-    return obj as Sheet;
-  });
-}
-
-
-
-const cellArrayToYMap = (celldata: any[] = []) => {
-  const yCellMap = new Y.Map();
-
-  celldata.forEach((cell) => {
-    yCellMap.set(`${cell.r}_${cell.c}`, cell);
-  });
-
-  return yCellMap;
-};
-
-const plainSheetToYMap = (sheet: any, index = 0) => {
-  const ySheet = new Y.Map();
-
-  ySheet.set('id', sheet.id ?? crypto.randomUUID());
-  ySheet.set('name', sheet.name ?? `Sheet${index + 1}`);
-  ySheet.set('order', sheet.order ?? index);
-  ySheet.set('row', sheet.row ?? 500);
-  ySheet.set('column', sheet.column ?? 36);
-  ySheet.set('status', sheet.status ?? (index === 0 ? 1 : 0));
-  ySheet.set('config', sheet.config ?? {});
-  ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
-
-  return ySheet;
-};
-
-
-
 export const useEditorData = (
   ydocRef: React.MutableRefObject<Y.Doc | null>,
   dsheetId: string,
@@ -201,7 +131,7 @@ export const useEditorData = (
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   allowComments?: boolean
 ) => {
-
+  console.log('useEditorData', commentData, allowComments);
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
   const currentDataRef = useRef<Sheet[]>([]);
@@ -220,63 +150,6 @@ export const useEditorData = (
   );
 
   // Apply portal content if provided (do this before any other initialization)
-  // useEffect(() => {
-  //   if (ydocRef.current) {
-  //     ydocRef.current.on('update', (update: Uint8Array) => {
-  //       console.log('Yjs update size:', update.byteLength);
-  //       console.log("store clients",
-  //         ydocRef.current?.store.clients
-  //       );
-  //       const sheetArray = ydocRef.current?.getArray(dsheetId);
-  //       const undoManager = new Y.UndoManager(sheetArray as Y.Array<any>);
-  //       console.log("undo stack length",
-  //         undoManager.undoStack.length
-  //       );
-
-  //     });
-  //   }
-  //   console.log('portalContent rr', portalContent, ydocRef.current, dsheetId);
-  //   if (!portalContent?.length || !ydocRef.current || !dsheetId) {
-  //     return;
-  //   }
-
-  //   try {
-  //     const uint8Array = toUint8Array(portalContent);
-
-  //     // Create a temporary doc to decode the update.
-  //     const tempDoc = new Y.Doc();
-  //     Y.applyUpdate(tempDoc, uint8Array);
-
-  //     // Get the sheet data from temp doc to extract metadata
-  //     // const tempMap = tempDoc.getArray(dsheetId);
-  //     // const decodedSheetData = Array.from(tempMap) as Sheet[];
-
-  //     // if (decodedSheetData.length > 0) {
-  //     // Merge the portal content into the main YJS document
-  //     Y.applyUpdate(ydocRef.current, uint8Array);
-
-  //     const map = ydocRef.current.getArray(dsheetId);
-
-  //     const newSheetData = Array.from(map) as Sheet[];
-
-  //     // Update the current data reference
-  //     currentDataRef.current = newSheetData;
-  //     initialiseLiveQueryData(newSheetData);
-
-  //     // Always mark portal content as processed
-  //     portalContentProcessed.current = true;
-
-  //     // Force a re-render with the portal content data
-  //     if (setForceSheetRender) {
-  //       setForceSheetRender((prev) => prev + 1);
-  //     }
-
-  //     tempDoc.destroy();
-  //   } catch (error) {
-  //     console.error('[DSheet] Error processing portal content:', error);
-  //   }
-  // }, [portalContent]);
-
   useEffect(() => {
     if (!portalContent?.length || !ydocRef.current || !dsheetId) {
       return;
@@ -294,16 +167,7 @@ export const useEditorData = (
       const sheetArray =
         ydocRef.current.getArray(dsheetId);
       console.log('sheetArray before calling migrate', sheetArray, Array.from(sheetArray), sheetArray.length);
-      // if (Array.from(sheetArray).length === 0) {
-      //   ydocRef.current.transact(() => {
-      //     DEFAULT_SHEET_DATA.forEach((sheet, index) => {
-      //       console.log('sheet getting inti', sheet);
-      //       sheetArray.push([
-      //         plainSheetToYMap(sheet, index),
-      //       ]);
-      //     });
-      //   });
-      // }
+
 
       // ✅ FULL migration (including celldata)
       migrateSheetArrayIfNeeded(
@@ -330,6 +194,18 @@ export const useEditorData = (
         setForceSheetRender((prev) => prev + 1);
       }
 
+      const dataBlockList: { [key: string]: any } = {};
+      newSheetData.forEach((sheet: Sheet) => {
+        if (sheet?.id && sheet?.dataBlockCalcFunction) {
+          dataBlockList[sheet.id] = {
+            ...sheet.dataBlockCalcFunction,
+          };
+        }
+      });
+      console.log('dataBlockList', dataBlockList);
+      //@ts-ignore
+      setDataBlockCalcFunction?.(dataBlockList);
+
       tempDoc.destroy();
     } catch (error) {
       console.error(
@@ -341,66 +217,66 @@ export const useEditorData = (
 
 
   // Apply comment data if provided (do this before any other initialization)
-  useEffect(() => {
-    if (!ydocRef.current || !dsheetId) {
-      return;
-    }
-    try {
-      const currentDocData = ydocRef.current.getArray(dsheetId);
-      const currentData = Array.from(currentDocData) as Sheet[];
-      if (currentData.length > 0 && syncStatus === 'synced') {
-        const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
-        if (sheetEditorRef.current !== null && setContext) {
-          setContext?.((ctx: any) => {
-            const files = ctx.luckysheetfile;
-            files.forEach((file: any, fileIndex: number) => {
-              file.data?.forEach((row: any, rowIndex: number) => {
-                row.forEach((cell: any, colIndex: number) => {
-                  if (cell) {
-                    // @ts-expect-error later
-                    const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
-                    if (comment) {
-                      cell.ps = allowComments ? CELL_COMMENT_DEFAULT_VALUE : undefined;
-                    } else {
-                      cell.ps = undefined
-                    }
-                  }
-                })
-              })
-            })
-          });
-        }
-        //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
-        if (sheetEditorRef.current === null && syncStatus === 'synced') {
-          currentData.forEach((sheet, index) => {
-            const sheetCellData = sheet.celldata;
-            sheetCellData?.forEach((cell) => {
-              // @ts-expect-error later
-              const comment = commentData[`${index}_${cell.r}_${cell.c}`];
-              if (comment) {
-                if (cell.v) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
-                  };
-                }
-              } else {
-                if (cell.v) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: undefined,
-                  };
-                }
-              }
-            });
-          });
-        }
-        //currentDataRef.current = currentData;
-      }
-    } catch (error) {
-      console.error('[DSheet] Error processing comment data:', error);
-    }
-  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments, syncStatus]);
+  // useEffect(() => {
+  //   if (!ydocRef.current || !dsheetId) {
+  //     return;
+  //   }
+  //   try {
+  //     const currentDocData = ydocRef.current.getArray(dsheetId);
+  //     const currentData = Array.from(currentDocData) as Sheet[];
+  //     if (currentData.length > 0 && syncStatus === 'synced') {
+  //       const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
+  //       if (sheetEditorRef.current !== null && setContext) {
+  //         setContext?.((ctx: any) => {
+  //           const files = ctx.luckysheetfile;
+  //           files.forEach((file: any, fileIndex: number) => {
+  //             file.data?.forEach((row: any, rowIndex: number) => {
+  //               row.forEach((cell: any, colIndex: number) => {
+  //                 if (cell) {
+  //                   // @ts-expect-error later
+  //                   const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
+  //                   if (comment) {
+  //                     cell.ps = allowComments ? CELL_COMMENT_DEFAULT_VALUE : undefined;
+  //                   } else {
+  //                     cell.ps = undefined
+  //                   }
+  //                 }
+  //               })
+  //             })
+  //           })
+  //         });
+  //       }
+  //       //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
+  //       if (sheetEditorRef.current === null && syncStatus === 'synced') {
+  //         currentData.forEach((sheet, index) => {
+  //           const sheetCellData = sheet.celldata;
+  //           sheetCellData?.forEach((cell) => {
+  //             // @ts-expect-error later
+  //             const comment = commentData[`${index}_${cell.r}_${cell.c}`];
+  //             if (comment) {
+  //               if (cell.v) {
+  //                 cell.v = {
+  //                   ...cell.v,
+  //                   ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
+  //                 };
+  //               }
+  //             } else {
+  //               if (cell.v) {
+  //                 cell.v = {
+  //                   ...cell.v,
+  //                   ps: undefined,
+  //                 };
+  //               }
+  //             }
+  //           });
+  //         });
+  //       }
+  //       //currentDataRef.current = currentData;
+  //     }
+  //   } catch (error) {
+  //     console.error('[DSheet] Error processing comment data:', error);
+  //   }
+  // }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments, syncStatus]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {
@@ -472,6 +348,7 @@ export const useEditorData = (
   // Handle changes to the sheet
   const handleChange = useCallback(
     (data: Sheet[]) => {
+      console.log('data whyyy', data);
       if (firstRender.current) {
         const cachedDataBlockCalcFunction: {
           [key: string]: { [key: string]: any };
@@ -519,6 +396,7 @@ export const useEditorData = (
         sheetEditorRef.current,
         dataBlockCalcFunction,
         isReadOnly,
+        onChange,
       );
 
       // Reset the flag after a short delay to allow the update to complete

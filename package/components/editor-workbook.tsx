@@ -2,6 +2,8 @@
 import React, { ComponentProps, useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-react';
+import * as Y from 'yjs';
+
 
 import {
   TOOL_BAR_ITEMS,
@@ -158,6 +160,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           ? []
           : DEFAULT_SHEET_DATA;
 
+    console.log('data vvvvvvv', data);
+
     return (
       // @ts-ignore
       <Workbook
@@ -241,6 +245,34 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleLiveQueryData: handleLiveQuery,
             });
           },
+          afterAddSheet(sheetD) {
+            const sheet = { ...sheetD }
+            console.log('afterAddSheet', sheet);
+            //const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+            const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+
+            const ySheet = new Y.Map<any>();
+
+            ySheet.set('id', sheet?.id);
+            ySheet.set('name', sheet?.name);
+            ySheet.set('order', sheet?.order);
+            ySheet.set('row', sheet?.row ?? 500);
+            ySheet.set('column', sheet?.column ?? 36);
+            ySheet.set('status', sheet?.status ?? 0);
+            ySheet.set('config', sheet?.config ?? {});
+            ySheet.set('celldata', new Y.Map());
+            ySheet.set('calcChain', new Y.Map());
+            ySheet.set('dataBlockCalcFunction', new Y.Array());
+
+            ydocRef?.current?.transact(() => {
+              sheetArray?.push([ySheet]);
+            });
+
+          },
+          afterDeleteSheet(sheet) {
+            console.log('afterDeleteSheet', sheet);
+            //const sheetArray = ydocRef.current?.getArray<Y.Map>(dsheetId);
+          }
         }}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}

@@ -33,6 +33,7 @@ export const formulaResponseUiSync = ({
   sheetEditorRef,
   shouldIgnoreUsdValue,
 }: FormulaSyncType): void => {
+  console.log('apiData', apiData);
   const headers: string[] = Array.isArray(apiData[0])
     ? apiData[0]
     : Object.keys(apiData[0]);
@@ -186,8 +187,10 @@ export const formulaResponseUiSync = ({
       data.push(tempData);
     }
   }
+  console.log('range yoo', range, 'data', data);
   if (range) {
-    sheetEditorRef.current?.setCellValuesByRange(data, range);
+    //@ts-ignore
+    sheetEditorRef.current?.setCellValuesByRange(data, range, {}, true);
   }
 };
 
@@ -291,10 +294,11 @@ const tryInsertSingleValueIntoFormulaCell = ({
     newCell.f = newValue.f
   }
 
+  console.log('newCell =====', newCell);
   sheetEditorRef.current?.setCellValuesByRange([[newCell]], {
     row: [row, row],
     column: [column, column],
-  });
+  }, {}, true);
 
   return true;
 };
