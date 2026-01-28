@@ -213,7 +213,6 @@ export function ySheetArrayToPlain(
         let calcChain = value.toJSON();
         console.log('calcChain in converter function', calcChain);
         if (Object.keys(calcChain).length === 0) return
-        calcChain = Object.keys(calcChain).length === 0 ? [] : calcChain;
         obj.calcChain = calcChain;
         return;
       }
@@ -221,7 +220,7 @@ export function ySheetArrayToPlain(
       if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Map) {
         let conditionRules = value.toJSON();
         console.log('conditionRules in converter function', conditionRules);
-        conditionRules = conditionRules.length === 0 ? [] : conditionRules;
+        if (conditionRules.length === 0) return
         obj.conditionRules = conditionRules;
         return;
       }
@@ -229,7 +228,7 @@ export function ySheetArrayToPlain(
       if (key === 'dataBlockCalcFunction' && value instanceof Y.Map) {
         let dataBlockCalcFunction = value.toJSON();
         console.log('dataBlockCalcFunction in converter function', dataBlockCalcFunction);
-        dataBlockCalcFunction = Object.keys(dataBlockCalcFunction).length === 0 ? {} : dataBlockCalcFunction;
+        if (Object.keys(dataBlockCalcFunction).length === 0) return
         obj.dataBlockCalcFunction = dataBlockCalcFunction;
         return;
       }
@@ -237,7 +236,7 @@ export function ySheetArrayToPlain(
       if (key === 'liveQueryList' && value instanceof Y.Map) {
         let liveQueryList = value.toJSON();
         console.log('liveQueryList in converter function', liveQueryList);
-        liveQueryList = Object.keys(liveQueryList).length === 0 ? {} : liveQueryList;
+        if (Object.keys(liveQueryList).length === 0) return
         obj.liveQueryList = liveQueryList;
         return;
       }
@@ -245,7 +244,7 @@ export function ySheetArrayToPlain(
       if (key === 'dataVerification' && value instanceof Y.Map) {
         let dataVerification = value.toJSON();
         console.log('dataVerification in converter function', dataVerification);
-        dataVerification = Object.keys(dataVerification).length === 0 ? {} : dataVerification;
+        if (Object.keys(dataVerification).length === 0) return
         obj.dataVerification = dataVerification;
         return;
       }
@@ -253,7 +252,7 @@ export function ySheetArrayToPlain(
       if (key === 'conditionRules' && value instanceof Y.Map) {
         let conditionRules = value.toJSON();
         console.log('conditionRules in converter function', conditionRules);
-        conditionRules = Object.keys(conditionRules).length === 0 ? {} : conditionRules;
+        if (Object.keys(conditionRules).length === 0) return
         obj.conditionRules = conditionRules;
         return;
       }
