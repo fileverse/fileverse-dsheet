@@ -245,36 +245,85 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleLiveQueryData: handleLiveQuery,
             });
           },
-          afterAddSheet(sheetD) {
-            // @ts-ignore
-            currentDataRef.current = sheetEditorRef.current?.getAllSheets();
-            sheetEditorRef.current?.activateSheet({
-              id: sheetD?.id
-            });
-            const sheet = { ...sheetD }
-            console.log('afterAddSheet', sheetD);
+          flvSheetLengthChange: () => {
+            console.log('flvSheetLengthChange');
             const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
-            sheetArray
+            console.log('sheetArray', sheetArray?.toArray());
+            console.log('currentDataRef.current', sheetEditorRef.current?.getAllSheets());
 
-            const ySheet = new Y.Map<any>();
+            const sheets = sheetEditorRef.current?.getAllSheets();
+            const docSheetLength = sheetArray?.toArray()?.length || 1;
+            const editorSheetLength = sheets?.length || 1;
 
-            ySheet.set('id', sheet?.id);
-            ySheet.set('name', sheet?.name);
-            ySheet.set('order', sheet?.order);
-            ySheet.set('row', sheet?.row ?? 500);
-            ySheet.set('column', sheet?.column ?? 36);
-            ySheet.set('status', 1);
-            ySheet.set('config', sheet?.config ?? {});
-            ySheet.set('celldata', new Y.Map());
-            ySheet.set('calcChain', new Y.Map());
-            ySheet.set('dataBlockCalcFunction', new Y.Array());
+            if (docSheetLength < editorSheetLength && editorSheetLength > 1 && docSheetLength > 0) {
+              // @ts-ignore
+              currentDataRef.current = sheetEditorRef.current?.getAllSheets();
 
-            ydocRef?.current?.transact(() => {
-              sheetArray?.push([ySheet]);
-            });
-            //return true;
+              setTimeout(() => {
+
+                const createdSheet = sheets?.[sheets.length - 1];
+                const sheet = { ...createdSheet };
+                const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+                const ySheet = new Y.Map<any>();
+
+                ySheet.set('id', sheet?.id);
+                ySheet.set('name', sheet?.name);
+                ySheet.set('order', sheet?.order);
+                ySheet.set('row', sheet?.row ?? 500);
+                ySheet.set('column', sheet?.column ?? 36);
+                ySheet.set('status', 1);
+                ySheet.set('config', sheet?.config ?? {});
+                ySheet.set('celldata', new Y.Map());
+                ySheet.set('calcChain', new Y.Map());
+                ySheet.set('dataBlockCalcFunction', new Y.Array());
+
+                ydocRef?.current?.transact(() => {
+                  sheetArray?.push([ySheet]);
+                });
+
+                sheetEditorRef.current?.activateSheet({
+                  id: sheets?.[sheets.length - 1]?.id
+                });
+
+              }, 50);
+              setTimeout(() => {
+                sheetEditorRef.current?.activateSheet({
+                  id: sheets?.[sheets.length - 1]?.id
+                });
+              }, 80)
+            }
 
           },
+          // afterAddSheet(sheetD) {
+          //   // @ts-ignore
+          //   currentDataRef.current = sheetEditorRef.current?.getAllSheets();
+          //   sheetEditorRef.current?.activateSheet({
+          //     id: sheetD?.id
+          //   });
+          //   const sheet = { ...sheetD }
+          //   console.log('afterAddSheet', sheetD);
+          //   const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+          //   sheetArray
+
+          //   const ySheet = new Y.Map<any>();
+
+          //   ySheet.set('id', sheet?.id);
+          //   ySheet.set('name', sheet?.name);
+          //   ySheet.set('order', sheet?.order);
+          //   ySheet.set('row', sheet?.row ?? 500);
+          //   ySheet.set('column', sheet?.column ?? 36);
+          //   ySheet.set('status', 1);
+          //   ySheet.set('config', sheet?.config ?? {});
+          //   ySheet.set('celldata', new Y.Map());
+          //   ySheet.set('calcChain', new Y.Map());
+          //   ySheet.set('dataBlockCalcFunction', new Y.Array());
+
+          //   ydocRef?.current?.transact(() => {
+          //     sheetArray?.push([ySheet]);
+          //   });
+          //   //return true;
+
+          // },
           afterDeleteSheet(id) {
             console.log('afterDeleteSheet', id);
 
