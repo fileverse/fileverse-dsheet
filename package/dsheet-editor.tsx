@@ -145,15 +145,25 @@ const EditorContent = ({
     ySheet.set('config', sheet.config ?? {});
     ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
     ySheet.set('calcChain', cellArrayToYMap(sheet.calcChain ?? []));
-    const yDataBlockList = new Y.Array();
-
+    ySheet.set('dataBlockCalcFunction', sheet.dataBlockCalcFunction ?? {});
+    const yDataBlockList = new Y.Map();
     ySheet.set('dataBlockCalcFunction', yDataBlockList);
+    const yLiveQueryList = new Y.Map();
+    ySheet.set('liveQueryList', yLiveQueryList);
+    const dataVerification = new Y.Map();
+    ySheet.set('dataVerification', dataVerification);
+    const conditionRules = new Y.Map();
+    ySheet.set('conditionRules', conditionRules);
+
+    const luckysheet_conditionformat_save = new Y.Array();
+    ySheet.set('luckysheet_conditionformat_save', luckysheet_conditionformat_save);
+
 
     return ySheet;
   };
 
   useEffect(() => {
-    console.log('is new shouldRenderSheet kk', shouldRenderSheet, isNewSheet, ydocRef.current);
+    console.log('is new shouldRenderSheet kk', shouldRenderSheet, isNewSheet, ydocRef.current, sheetEditorRef);
     if (isNewSheet) {
       ydocRef.current?.transact(() => {
         const sheetArray =

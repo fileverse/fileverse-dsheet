@@ -48,7 +48,7 @@ function migrateSheetArrayIfNeeded(
     }
   });
 
-  console.log('needsMigration', needsMigration);
+  console.log('needsMigration ****', needsMigration, sheetArray);
 
   if (!needsMigration) return;
 
@@ -59,6 +59,7 @@ function migrateSheetArrayIfNeeded(
       const sheetMap = new Y.Map();
 
       Object.entries(item).forEach(([key, value]) => {
+        console.log('key [[[[[[[[[[[[[[', key, 'value', value,);
         // ✅ SPECIAL: celldata array → Y.Map keyed by r_c
         if (key === 'celldata' && Array.isArray(value)) {
           const cellMap = new Y.Map();
@@ -87,6 +88,47 @@ function migrateSheetArrayIfNeeded(
           return;
         }
 
+        if (key === 'luckysheet_conditionformat_save' && Array.isArray(value)) {
+          const luckysheet_conditionformat_save = new Y.Array();
+          value.forEach((item) => {
+            luckysheet_conditionformat_save.push([item]); // 👈 wrap in array
+          });
+
+          sheetMap.set(
+            'luckysheet_conditionformat_save',
+            luckysheet_conditionformat_save
+          );
+          return;
+        }
+
+        if (key === 'dataBlockCalcFunction') {
+          const dataBlockCalcFunction = new Y.Map();
+          Object.entries(value as object).forEach(([k, v]) =>
+            dataBlockCalcFunction.set(k, v),
+          );
+          sheetMap.set('dataBlockCalcFunction', dataBlockCalcFunction);
+          return;
+        }
+
+        if (key === 'dataVerification') {
+          const dataVerification = new Y.Map();
+          const dV = value ? value : {};
+          Object.entries(dV as object).forEach(([k, v]) =>
+            dataVerification.set(k, v),
+          );
+          sheetMap.set('dataVerification', dataVerification);
+          return;
+        }
+
+        if (key === 'conditionRules') {
+          const conditionRules = new Y.Map();
+          const cR = value ? value : {};
+          Object.entries(cR as object).forEach(([k, v]) =>
+            conditionRules.set(k, v),
+          );
+          sheetMap.set('conditionRules', conditionRules);
+          return;
+        }
 
         // nested object → Y.Map
         if (
@@ -141,6 +183,10 @@ export const useEditorData = (
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
+  console.log('isReadOnly', currentDataRef, firstRender, sheetEditorRef.current?.getAllSheets());
+  // if (!firstRender.current) {
+  //   currentDataRef.current = sheetEditorRef.current?.getAllSheets() as Sheet[];
+  // }
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
@@ -349,39 +395,39 @@ export const useEditorData = (
   const handleChange = useCallback(
     (data: Sheet[]) => {
       console.log('data whyyy', data);
-      if (firstRender.current) {
-        const cachedDataBlockCalcFunction: {
-          [key: string]: { [key: string]: any };
-        } = {};
-        data.map((sheet) => {
-          if (Array.isArray(sheet.dataBlockCalcFunction)) {
-            const newDataBlockCalcFunction: {
-              [key: string]: { [key: string]: any };
-            } = {};
-            sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
-              newDataBlockCalcFunction[
-                dataBlockCalc.row + '_' + dataBlockCalc.column
-              ] = dataBlockCalc;
-            });
-            cachedDataBlockCalcFunction[sheet.id as string] = {
-              ...newDataBlockCalcFunction,
-            };
-          } else {
-            if (!sheet.dataBlockCalcFunction) return;
-            // @ts-expect-error later
-            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction;
-          }
-        });
-        setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
-        /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
-        // setTimeout(() => {
-        //   // @ts-expect-error later
-        //   dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
-        // }, 1000)
+      // if (firstRender.current) {
+      //   const cachedDataBlockCalcFunction: {
+      //     [key: string]: { [key: string]: any };
+      //   } = {};
+      //   data.map((sheet) => {
+      //     if (Array.isArray(sheet.dataBlockCalcFunction)) {
+      //       const newDataBlockCalcFunction: {
+      //         [key: string]: { [key: string]: any };
+      //       } = {};
+      //       sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
+      //         newDataBlockCalcFunction[
+      //           dataBlockCalc.row + '_' + dataBlockCalc.column
+      //         ] = dataBlockCalc;
+      //       });
+      //       cachedDataBlockCalcFunction[sheet.id as string] = {
+      //         ...newDataBlockCalcFunction,
+      //       };
+      //     } else {
+      //       if (!sheet.dataBlockCalcFunction) return;
+      //       // @ts-expect-error later
+      //       cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction;
+      //     }
+      //   });
+      //   setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
+      //   /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
+      //   // setTimeout(() => {
+      //   //   // @ts-expect-error later
+      //   //   dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
+      //   // }, 1000)
 
-        firstRender.current = false;
-        return;
-      }
+      //   firstRender.current = false;
+      //   return;
+      // }
       if (remoteUpdateRef.current) {
         remoteUpdateRef.current = false;
         return;

@@ -20,7 +20,7 @@ export const updateSheetData = (
   isReadOnly?: boolean,
   handleContentPortal?: any
 ) => {
-  console.log('dataBlockCalcFunction =====', dsheetId, isReadOnly, data);
+  console.log('dataBlockCalcFunction =====**', dsheetId, isReadOnly, data);
   if (data?.length > 0) {
     return
   }
@@ -73,9 +73,24 @@ export const updateSheetData = (
     });
   }
   d?.removed?.forEach((item) => {
-    console.log('removed', item);
+    updateYdocSheetData(
+      ydoc,
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['calcChain'], value: {
+          r: item.r,
+          c: item.c,
+          v: item,
+        }, key: item.r + '_' + item.c,
+        type: 'delete',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    )
   });
 
+  // dataBlockCalcFunction =============
 
   let newDataB = dataBlockCalcFunction?.[currentSheetId as string]
   let oldDataB = plainOldSheets?.find(
@@ -86,11 +101,7 @@ export const updateSheetData = (
 
   newDataB = newDataB ? newDataB : {}
 
-  console.log('plainOldSheets', plainOldSheets, currentSheetId, oldDataB, newDataB, dataBlockCalcFunction);
-
   const dataBlockDiff = diffObjectMap(oldDataB, newDataB)
-
-  console.log('dataBlockDiff', dataBlockDiff);
 
   Object.keys(dataBlockDiff.added).forEach((key) => {
     const item = dataBlockDiff.added[key]
@@ -109,8 +120,149 @@ export const updateSheetData = (
     );
   });
 
+  Object.keys(dataBlockDiff.removed).forEach((key) => {
+    const item = dataBlockDiff.removed[key]
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['dataBlockCalcFunction'], value: item, key: key,
+        type: 'delete',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    );
+  });
 
-  // dataBlockDiff?.added?.forEach((item: any) => {
+  // live query ================
+
+  console.log('plainOldSheets', plainOldSheets, currentSheetId);
+
+  const oldLiveQuery = plainOldSheets?.find(
+    (sheet) => sheet.id === currentSheetId,
+  )?.liveQueryList || {};
+
+  const newLiveQuery = sheetEditor?.getSheet()?.liveQueryList || {};
+  console.log('oldLiveQuery', oldLiveQuery, newLiveQuery);
+
+  const liveQueryDiff = diffObjectMap(oldLiveQuery, newLiveQuery);
+
+  console.log('liveQueryDiff', liveQueryDiff, plainOldSheets, sheetEditor?.getSheet());
+
+  Object.keys(liveQueryDiff.added).forEach((key) => {
+    const item = liveQueryDiff.added[key]
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['liveQueryList'], value: item, key: key,
+        type: 'update',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    );
+  });
+
+  Object.keys(liveQueryDiff.removed).forEach((key) => {
+    const item = liveQueryDiff.removed[key]
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['liveQueryList'], value: item, key: key,
+        type: 'delete',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    );
+  });
+
+
+  // dataVerification =============
+
+  let newDataV = sheetEditor?.getSheet()?.dataVerification || {};
+  let oldDataV = plainOldSheets?.find(
+    (sheet) => sheet.id === currentSheetId,
+  )?.dataVerification || {};
+
+  const diffDataVerification = diffObjectMap(oldDataV, newDataV);
+
+  // console.log('diffDataVerification', diffDataVerification, plainOldSheets, sheetEditor?.getSheet(), oldDataV, newDataV);
+
+  Object.keys(diffDataVerification.added).forEach((key) => {
+    const item = diffDataVerification.added[key]
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
+        type: 'update',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    );
+  });
+
+  Object.keys(diffDataVerification.removed).forEach((key) => {
+    const item = diffDataVerification.removed[key]
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
+        type: 'delete',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    );
+  });
+
+
+  // conditionRules =============
+
+  let newConditionRules = sheetEditor?.getSheet()?.conditionRules || {};
+  let oldConditionRules = plainOldSheets?.find(
+    (sheet) => sheet.id === currentSheetId,
+  )?.conditionRules || {};
+
+  const diffConditionRules = diffObjectMap(oldConditionRules, newConditionRules);
+
+  console.log('diffConditionRules', diffConditionRules, plainOldSheets, sheetEditor?.getSheet(), oldConditionRules, newConditionRules);
+
+  Object.keys(diffConditionRules.added).forEach((key) => {
+    const item = diffConditionRules.added[key]
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['conditionRules'], value: item, key: key,
+        type: 'update',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    );
+  });
+
+  // Object.keys(diffConditionRules.removed).forEach((key) => {
+  //   const item = diffConditionRules.removed[key]
   //   updateYdocSheetData(
   //     // @ts-ignore
   //     ydoc,
@@ -118,17 +270,42 @@ export const updateSheetData = (
   //     dsheetId,
   //     sheetEditor,
   //     [{
-  //       sheetId: currentSheetId, path: ['dataBlockCalcFunction'], value: {
-  //         r: item.r,
-  //         c: item.c,
-  //         v: item,
-  //       }, key: item.r + '_' + item.c,
-  //       type: 'update',
+  //       sheetId: currentSheetId, path: ['conditionRules'], value: item, key: key,
+  //       type: 'delete',
   //     }],
   //     // @ts-ignore
   //     handleContentPortal,
   //   );
   // });
+
+
+  // luckysheet_conditionformat_save ============
+
+  let newLuckysheet_conditionformat_save = sheetEditor?.getSheet()?.luckysheet_conditionformat_save || [];
+  let oldLuckysheet_conditionformat_save = plainOldSheets?.find(
+    (sheet) => sheet.id === currentSheetId,
+  )?.luckysheet_conditionformat_save || [];
+
+  const diffLuckysheet_conditionformat_save = diffObjectArrays(oldLuckysheet_conditionformat_save, newLuckysheet_conditionformat_save);
+  console.log('diffLuckysheet_conditionformat_save', diffLuckysheet_conditionformat_save, plainOldSheets, sheetEditor?.getSheet(), oldLuckysheet_conditionformat_save, newLuckysheet_conditionformat_save);
+
+  if (diffLuckysheet_conditionformat_save.added.length > 0 || diffLuckysheet_conditionformat_save.removed.length > 0 || diffLuckysheet_conditionformat_save.updated.length > 0) {
+    updateYdocSheetData(
+      // @ts-ignore
+      ydoc,
+      // @ts-ignore
+      dsheetId,
+      sheetEditor,
+      [{
+        sheetId: currentSheetId, path: ['luckysheet_conditionformat_save'], value: newLuckysheet_conditionformat_save, key: 'luckysheet_conditionformat_save',
+        type: 'update',
+      }],
+      // @ts-ignore
+      handleContentPortal,
+    )
+
+  }
+
 
 
 

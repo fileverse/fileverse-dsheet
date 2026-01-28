@@ -246,10 +246,15 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             });
           },
           afterAddSheet(sheetD) {
+            // @ts-ignore
+            currentDataRef.current = sheetEditorRef.current?.getAllSheets();
+            sheetEditorRef.current?.activateSheet({
+              id: sheetD?.id
+            });
             const sheet = { ...sheetD }
-            console.log('afterAddSheet', sheet);
-            //const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+            console.log('afterAddSheet', sheetD);
             const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+            sheetArray
 
             const ySheet = new Y.Map<any>();
 
@@ -258,7 +263,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             ySheet.set('order', sheet?.order);
             ySheet.set('row', sheet?.row ?? 500);
             ySheet.set('column', sheet?.column ?? 36);
-            ySheet.set('status', sheet?.status ?? 0);
+            ySheet.set('status', 1);
             ySheet.set('config', sheet?.config ?? {});
             ySheet.set('celldata', new Y.Map());
             ySheet.set('calcChain', new Y.Map());
@@ -267,19 +272,32 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             ydocRef?.current?.transact(() => {
               sheetArray?.push([ySheet]);
             });
+            //return true;
 
           },
-          afterDeleteSheet(sheet) {
-            console.log('afterDeleteSheet', sheet);
+          afterDeleteSheet(id) {
+            console.log('afterDeleteSheet', id);
+
+            const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
+            const index = sheetArray?.toArray()
+              .findIndex((s) => s.get('id') === id);
+
+            if (index === -1) return false;
+
+            ydocRef?.current?.transact(() => {
+              sheetArray?.delete(index as number, 1);
+
+            });
+
             //const sheetArray = ydocRef.current?.getArray<Y.Map>(dsheetId);
-          }
+          },
         }}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
       />
     );
   }, [
-    forceSheetRender,
+    // forceSheetRender,
     isReadOnly,
     handleChange,
     toggleTemplateSidebar,
@@ -290,7 +308,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     exportDropdownOpen,
     commentData,
     syncStatus,
-    currentDataRef.current,
+    // currentDataRef.current,
     isAuthorized,
   ]);
 };
