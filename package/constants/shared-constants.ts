@@ -20,14 +20,163 @@ export const SERVICES_API_KEY: ServicesApiKeyType = RawServicesApiKey;
 
 export const DEFAULT_SHEET_DATA = [
   {
-    id: '0',
-    name: 'Sheet1',
-    celldata: [],
-    config: {},
-    order: 0,
-    row: 500,
-    column: 36,
-  },
+    "name": "yoo",
+    "config": {},
+    "index": "1",
+    "status": "0",
+    "order": 0,
+    "zoomRatio": 1,
+    "showGridLines": "1",
+    "defaultColWidth": 99,
+    "defaultRowHeight": 21,
+    "celldata": [
+      {
+        "r": 0,
+        "c": 0,
+        "v": {
+          "ct": {
+            "fa": "General",
+            "t": "s"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "a",
+          "qp": 1
+        }
+      },
+      {
+        "r": 0,
+        "c": 1,
+        "v": {
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "1.0"
+        }
+      },
+      {
+        "r": 0,
+        "c": 2,
+        "v": {
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "3.0"
+        }
+      },
+      {
+        "r": 1,
+        "c": 0,
+        "v": {
+          "ct": {
+            "fa": "General",
+            "t": "s"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "b",
+          "qp": 1
+        }
+      },
+      {
+        "r": 1,
+        "c": 1,
+        "v": {
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "4.0"
+        }
+      },
+      {
+        "r": 1,
+        "c": 2,
+        "v": {
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "6.0"
+        }
+      },
+      {
+        "r": 2,
+        "c": 0,
+        "v": {
+          "ct": {
+            "fa": "General",
+            "t": "s"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "c",
+          "qp": 1
+        }
+      },
+      {
+        "r": 2,
+        "c": 1,
+        "v": {
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "3.0"
+        }
+      },
+      {
+        "r": 2,
+        "c": 2,
+        "v": {
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "2.0"
+        }
+      },
+      {
+        "r": 2,
+        "c": 4,
+        "v": {
+          "f": "=VLOOKUP(A2,A1:C3,3)",
+          "ct": {
+            "fa": "General"
+          },
+          "fc": "#000000",
+          "ff": "Arial",
+          "tb": 1,
+          "v": "6"
+        }
+      }
+    ],
+    "calcChain": [
+      {
+        "r": 2,
+        "c": 4,
+        "id": "9cc4fbd7-b940-43b0-8123-207a0241de9d"
+      }
+    ],
+    "id": "9cc4fbd7-b940-43b0-8123-207a0241de9d"
+  }
 ];
 
 export const TOOL_BAR_ITEMS = [

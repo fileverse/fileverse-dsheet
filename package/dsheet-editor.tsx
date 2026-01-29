@@ -25,7 +25,10 @@ import { PermissionChip } from './components/permission-chip';
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
-import { updateYdocSheetData, ySheetArrayToPlain } from './utils/update-ydoc';
+import {
+  updateYdocSheetData,
+  //  ySheetArrayToPlain 
+} from './utils/update-ydoc';
 import { Workbook } from '@fileverse-dev/fortune-react';
 
 // Use the types defined in types.ts

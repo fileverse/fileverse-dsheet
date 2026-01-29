@@ -22,7 +22,8 @@ import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
 import { calcChainYdocUpdate } from '../utils/calc-chain-ydoc-update';
 import { conditionFormatYdocUpdate } from '../utils/condition-format-ydoc-update';
 import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
-// import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
+import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
+import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
@@ -352,14 +353,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleContentPortal: handleOnChangePortalUpdate
             })
           },
-          // hyperlinkChange: () => {
-          //   hyperlinkYdocUpdate({
-          //     sheetEditorRef,
-          //     ydocRef,
-          //     dsheetId,
-          //     handleContentPortal: handleOnChangePortalUpdate
-          //   })
-          // },
+          hyperlinkChange: () => {
+            hyperlinkYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          updateCellYdoc: (changes: SheetChangePath[]) => {
+            console.log('updateCellYdoc changes from fortune', changes);
+            updateYdocSheetData(
+              ydocRef.current,
+              dsheetId,
+              sheetEditorRef.current,
+              changes,
+              handleOnChangePortalUpdate
+            )
+          }
         }}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}

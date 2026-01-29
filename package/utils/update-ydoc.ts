@@ -3,7 +3,7 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { fromUint8Array } from 'js-base64';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
-type SheetChangePath = {
+export type SheetChangePath = {
   sheetId: string;
   path: string[];        // ['name'], ['config', 'merge'], ['celldata']
   key?: string;          // 👈 only for celldata
@@ -126,6 +126,23 @@ export const updateYdocSheetData = (
         if (type === 'delete') {
           cellMap.delete(key);
         } else {
+          cellMap.set(key, value);
+        }
+        return;
+      }
+
+      if (path.length === 1 && path[0] === 'hyperlink' && key) {
+        let cellMap = sheet.get('hyperlink');
+
+        if (!(cellMap instanceof Y.Map)) {
+          cellMap = new Y.Map();
+          sheet.set('hyperlink', cellMap);
+        }
+
+        if (type === 'delete') {
+          cellMap.delete(key);
+        } else {
+          console.log('valuewww hyperlink', value);
           cellMap.set(key, value);
         }
         return;
