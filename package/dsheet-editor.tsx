@@ -1,6 +1,8 @@
 import React, { ComponentProps, useEffect, useState } from 'react';
 import cn from 'classnames';
 import * as Y from 'yjs';
+// import { Sheet } from '@fileverse-dev/fortune-react';
+// import { fromUint8Array } from 'js-base64';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import {
@@ -23,6 +25,7 @@ import { PermissionChip } from './components/permission-chip';
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
+import { updateYdocSheetData, ySheetArrayToPlain } from './utils/update-ydoc';
 import { Workbook } from '@fileverse-dev/fortune-react';
 
 // Use the types defined in types.ts
@@ -93,6 +96,7 @@ const EditorContent = ({
     setForceSheetRender,
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
+    handleOnChangePortalUpdate
   } = useEditor();
 
   // Initialize template button functionality
@@ -163,18 +167,59 @@ const EditorContent = ({
   };
 
   useEffect(() => {
-    console.log('is new shouldRenderSheet kk', shouldRenderSheet, isNewSheet, ydocRef.current, sheetEditorRef);
+    // console.log('is new shouldRenderSheet kkuu', shouldRenderSheet, isNewSheet, ydocRef.current, sheetEditorRef);
     if (isNewSheet) {
       ydocRef.current?.transact(() => {
         const sheetArray =
           ydocRef.current?.getArray(dsheetId);
-        if (sheetArray?.toArray().length === 0) {
+        //@ts-ignore
+        // console.log('sheetArray length init', ySheetArrayToPlain(sheetArray));
+        // console.log('sheetArray length init', sheetArray?.toArray().length, ydocRef.current);
+        const sData: any = []
+        if (sheetArray?.toArray().length === 0 && ydocRef.current) {
           DEFAULT_SHEET_DATA.forEach((sheet, index) => {
-            console.log('sheet getting inti', sheet);
-            sheetArray?.push([
+            // console.log('sheet getting inti', sheet);
+            const id = crypto.randomUUID();
+            sheet = {
+              ...sheet,
+              id,
+            }
+            sheetArray?.insert(0, [
               plainSheetToYMap(sheet, index),
             ]);
+            sData.push(sheet);
           });
+          //@ts-ignore
+          currentDataRef.current = sData;
+          const currentSheetId = sheetEditorRef.current?.getWorkbookContext()
+            ?.currentSheetId as string;
+          // const encodedUpdate = fromUint8Array(
+          //   Y.encodeStateAsUpdate(ydocRef.current),
+          // );
+          // console.log('encodedUpdate', encodedUpdate, handleContentPortal);
+          //handleOnChangePortalUpdate(sheetEditorRef.current?.getAllSheets() as Sheet[]);
+          updateYdocSheetData(
+            ydocRef.current,
+            dsheetId,
+            sheetEditorRef.current,
+            [{
+              sheetId: currentSheetId, path: ['celldata'], value: {
+                r: 0,
+                c: 0,
+                v: {
+                  "ct": {
+                    "fa": "General",
+                    "t": "g"
+                  },
+                  "v": "",
+                  "tb": "1",
+                  "m": ""
+                },
+              }, key: '0' + '_' + '0',
+              type: 'update',
+            }],
+            handleOnChangePortalUpdate
+          )
         }
       });
     }

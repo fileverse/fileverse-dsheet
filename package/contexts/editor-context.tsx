@@ -187,6 +187,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         Y.encodeStateAsUpdate(ydocRef.current),
       );
       const sheets = sheetEditorRef.current?.getAllSheets();
+      console.log('yoo portal handleOnChange', encodedUpdate);
       onChange({ data: sheets as Sheet[] }, encodedUpdate);
     }
   };

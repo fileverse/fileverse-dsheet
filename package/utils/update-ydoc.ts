@@ -14,18 +14,20 @@ type SheetChangePath = {
 export const updateYdocSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
+  //@ts-ignore
   sheetEditor: WorkbookInstance | null,
   changes: SheetChangePath[],
   //@ts-ignore
   handleContentPortal: any,
   // isReadOnly?: boolean,
 ) => {
-  if (!ydoc || !sheetEditor || !changes.length) {
+  console.log("callleed", ydoc, changes)
+  if (!ydoc || !changes.length) {
     return;
   }
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
-  console.log('sheetArray', sheetArray.toArray());
+  console.log('sheetArray ===', sheetArray.toArray());
 
   ydoc.transact(() => {
     /**
@@ -48,6 +50,7 @@ export const updateYdocSheetData = (
 
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
+          console.log('cellMap', cellMap, dsheetId);
           sheet.set('celldata', cellMap);
         }
 
@@ -173,7 +176,7 @@ export const updateYdocSheetData = (
 
         target = next;
       }
-
+      console.log('target', target, 'path', path, 'value', value);
       target.set(path[path.length - 1], value);
     });
 
