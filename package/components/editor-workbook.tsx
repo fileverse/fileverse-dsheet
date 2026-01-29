@@ -17,6 +17,12 @@ import {
   afterUpdateCell,
   SmartContractQueryHandler,
 } from '../utils/after-update-cell';
+import { dataVerificationYdocUpdate } from '../utils/data-verification-ydoc-update';
+import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
+import { calcChainYdocUpdate } from '../utils/calc-chain-ydoc-update';
+import { conditionFormatYdocUpdate } from '../utils/condition-format-ydoc-update';
+import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
+// import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
@@ -130,6 +136,15 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     updateDocumentTitle,
   });
 
+  useEffect(() => {
+    dataBlockListYdocUpdate({
+      sheetEditorRef,
+      ydocRef,
+      dsheetId,
+      dataBlockCalcFunction
+    })
+  }, [dataBlockCalcFunction]);
+
   const cellContextMenu = isReadOnly
     ? allowComments
       ? ['comment']
@@ -144,7 +159,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
   const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef });
   const {
-    handleChange: handleContentPortal
+    handleOnChangePortalUpdate
   } = useEditor();
 
   // Memoized workbook component to avoid unnecessary re-renders
@@ -223,7 +238,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           ): void => {
             const refObj = { current: sheetEditorRef.current };
             afterUpdateCell({
-              handleContentPortal,
+              handleContentPortal: handleOnChangePortalUpdate,
               dsheetId,
               ydocRef,
               oldValue: _oldValue,
@@ -245,11 +260,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleLiveQueryData: handleLiveQuery,
             });
           },
-          flvSheetLengthChange: () => {
-            console.log('flvSheetLengthChange');
+          sheetLengthChange: () => {
             const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
-            console.log('sheetArray', sheetArray?.toArray());
-            console.log('currentDataRef.current', sheetEditorRef.current?.getAllSheets());
 
             const sheets = sheetEditorRef.current?.getAllSheets();
             const docSheetLength = sheetArray?.toArray()?.length || 1;
@@ -294,39 +306,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             }
 
           },
-          // afterAddSheet(sheetD) {
-          //   // @ts-ignore
-          //   currentDataRef.current = sheetEditorRef.current?.getAllSheets();
-          //   sheetEditorRef.current?.activateSheet({
-          //     id: sheetD?.id
-          //   });
-          //   const sheet = { ...sheetD }
-          //   console.log('afterAddSheet', sheetD);
-          //   const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
-          //   sheetArray
-
-          //   const ySheet = new Y.Map<any>();
-
-          //   ySheet.set('id', sheet?.id);
-          //   ySheet.set('name', sheet?.name);
-          //   ySheet.set('order', sheet?.order);
-          //   ySheet.set('row', sheet?.row ?? 500);
-          //   ySheet.set('column', sheet?.column ?? 36);
-          //   ySheet.set('status', 1);
-          //   ySheet.set('config', sheet?.config ?? {});
-          //   ySheet.set('celldata', new Y.Map());
-          //   ySheet.set('calcChain', new Y.Map());
-          //   ySheet.set('dataBlockCalcFunction', new Y.Array());
-
-          //   ydocRef?.current?.transact(() => {
-          //     sheetArray?.push([ySheet]);
-          //   });
-          //   //return true;
-
-          // },
           afterDeleteSheet(id) {
-            console.log('afterDeleteSheet', id);
-
             const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
             const index = sheetArray?.toArray()
               .findIndex((s) => s.get('id') === id);
@@ -340,6 +320,46 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
             //const sheetArray = ydocRef.current?.getArray<Y.Map>(dsheetId);
           },
+          dataVerificationChange: () => {
+            dataVerificationYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          liveQueryChange: () => {
+            liveQueryListYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          calcChainChange: () => {
+            calcChainYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          conditionFormatChange: () => {
+            conditionFormatYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          // hyperlinkChange: () => {
+          //   hyperlinkYdocUpdate({
+          //     sheetEditorRef,
+          //     ydocRef,
+          //     dsheetId,
+          //     handleContentPortal: handleOnChangePortalUpdate
+          //   })
+          // },
         }}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
@@ -348,7 +368,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   }, [
     // forceSheetRender,
     isReadOnly,
-    handleChange,
+    // handleChange,
     toggleTemplateSidebar,
     onboardingComplete,
     onboardingHandler,

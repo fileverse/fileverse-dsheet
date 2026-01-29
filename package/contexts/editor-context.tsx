@@ -23,6 +23,7 @@ import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  handleOnChangePortalUpdate: (data: Sheet[]) => void;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
@@ -178,13 +179,15 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChange = (data: Sheet[]) => {
+  const handleOnChangePortalUpdate = (data: Sheet[]) => {
+    console.log('yoo portal handleOnChange', data);
     if (onChange && ydocRef.current) {
       // Encode the YJS document state to pass as second parameter
       const encodedUpdate = fromUint8Array(
         Y.encodeStateAsUpdate(ydocRef.current),
       );
-      onChange({ data }, encodedUpdate);
+      const sheets = sheetEditorRef.current?.getAllSheets();
+      onChange({ data: sheets as Sheet[] }, encodedUpdate);
     }
   };
 
@@ -205,7 +208,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setForceSheetRender,
     portalContent,
     isReadOnly,
-    handleOnChange,
+    handleOnChangePortalUpdate,
     syncStatus,
     commentData,
     dataBlockCalcFunction,
@@ -270,7 +273,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       refreshIndexedDB,
       handleLiveQuery,
       initialiseLiveQueryData,
-      isReadOnly
+      isReadOnly,
+      handleOnChangePortalUpdate
     };
   }, [
     setShowSmartContractModal,

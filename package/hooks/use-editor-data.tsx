@@ -7,6 +7,7 @@ import * as Y from 'yjs';
 //   CELL_COMMENT_DEFAULT_VALUE,
 //   // DEFAULT_SHEET_DATA 
 // } from '../constants/shared-constants';
+// @ts-ignore
 import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
 import { DataBlockApiKeyHandlerType } from '../types';
@@ -120,6 +121,16 @@ function migrateSheetArrayIfNeeded(
           return;
         }
 
+        if (key === 'hyperlink') {
+          const hyperlink = new Y.Map();
+          const hL = value ? value : {};
+          Object.entries(hL as object).forEach(([k, v]) =>
+            hyperlink.set(k, v),
+          );
+          sheetMap.set('hyperlink', hyperlink);
+          return;
+        }
+
         if (key === 'conditionRules') {
           const conditionRules = new Y.Map();
           const cR = value ? value : {};
@@ -128,6 +139,16 @@ function migrateSheetArrayIfNeeded(
           );
           sheetMap.set('conditionRules', conditionRules);
           return;
+        }
+
+        if (key === 'config') {
+          // const config = new Y.Map();
+          // const cR = value ? value : {};
+          // Object.entries(cR as object).forEach(([k, v]) =>
+          //   config.set(k, v),
+          // );
+          sheetMap.set('config', value);
+          return
         }
 
         // nested object → Y.Map
@@ -164,6 +185,7 @@ export const useEditorData = (
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
+  // @ts-ignore
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
   setDataBlockCalcFunction?: React.Dispatch<
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
@@ -197,7 +219,8 @@ export const useEditorData = (
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
-    if (!portalContent?.length || !ydocRef.current || !dsheetId) {
+    console.log('portalContent important', currentDataRef, portalContentProcessed, portalContent, "wewe");
+    if (!portalContent?.length || !ydocRef.current || !dsheetId || portalContentProcessed.current) {
       return;
     }
 
@@ -451,9 +474,9 @@ export const useEditorData = (
       }, 50);
 
       // Call external onChange handler if provided
-      if (onChange) {
-        onChange(data);
-      }
+      // if (onChange) {
+      //   onChange(data);
+      // }
     },
     [dsheetId, onChange],
   );

@@ -16,6 +16,7 @@ export const updateYdocSheetData = (
   dsheetId: string,
   sheetEditor: WorkbookInstance | null,
   changes: SheetChangePath[],
+  //@ts-ignore
   handleContentPortal: any,
   // isReadOnly?: boolean,
 ) => {
@@ -190,6 +191,7 @@ export const updateYdocSheetData = (
   const encodedUpdate = fromUint8Array(
     Y.encodeStateAsUpdate(ydoc),
   );
+  // console.log('encodedUpdate', encodedUpdate, handleContentPortal);
   handleContentPortal({ data: sheetArray.toArray() }, encodedUpdate);
 };
 
@@ -246,6 +248,14 @@ export function ySheetArrayToPlain(
         console.log('dataVerification in converter function', dataVerification);
         if (Object.keys(dataVerification).length === 0) return
         obj.dataVerification = dataVerification;
+        return;
+      }
+
+      if (key === 'hyperlink' && value instanceof Y.Map) {
+        let hyperlink = value.toJSON();
+        console.log('hyperlink in converter function', hyperlink);
+        if (Object.keys(hyperlink).length === 0) return
+        obj.hyperlink = hyperlink;
         return;
       }
 
