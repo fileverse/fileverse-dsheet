@@ -185,6 +185,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
+        // @ts-ignore
         data={data}
         toolbarItems={toolbarItems}
         cellContextMenu={cellContextMenu}
@@ -316,7 +317,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
             ydocRef?.current?.transact(() => {
               sheetArray?.delete(index as number, 1);
-
             });
 
             //const sheetArray = ydocRef.current?.getArray<Y.Map>(dsheetId);
