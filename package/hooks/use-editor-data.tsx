@@ -3,10 +3,10 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
-// import {
-//   CELL_COMMENT_DEFAULT_VALUE,
-//   // DEFAULT_SHEET_DATA 
-// } from '../constants/shared-constants';
+import {
+  CELL_COMMENT_DEFAULT_VALUE,
+  // DEFAULT_SHEET_DATA 
+} from '../constants/shared-constants';
 // @ts-ignore
 import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
@@ -286,66 +286,69 @@ export const useEditorData = (
 
 
   // Apply comment data if provided (do this before any other initialization)
-  // useEffect(() => {
-  //   if (!ydocRef.current || !dsheetId) {
-  //     return;
-  //   }
-  //   try {
-  //     const currentDocData = ydocRef.current.getArray(dsheetId);
-  //     const currentData = Array.from(currentDocData) as Sheet[];
-  //     if (currentData.length > 0 && syncStatus === 'synced') {
-  //       const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
-  //       if (sheetEditorRef.current !== null && setContext) {
-  //         setContext?.((ctx: any) => {
-  //           const files = ctx.luckysheetfile;
-  //           files.forEach((file: any, fileIndex: number) => {
-  //             file.data?.forEach((row: any, rowIndex: number) => {
-  //               row.forEach((cell: any, colIndex: number) => {
-  //                 if (cell) {
-  //                   // @ts-expect-error later
-  //                   const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
-  //                   if (comment) {
-  //                     cell.ps = allowComments ? CELL_COMMENT_DEFAULT_VALUE : undefined;
-  //                   } else {
-  //                     cell.ps = undefined
-  //                   }
-  //                 }
-  //               })
-  //             })
-  //           })
-  //         });
-  //       }
-  //       //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
-  //       if (sheetEditorRef.current === null && syncStatus === 'synced') {
-  //         currentData.forEach((sheet, index) => {
-  //           const sheetCellData = sheet.celldata;
-  //           sheetCellData?.forEach((cell) => {
-  //             // @ts-expect-error later
-  //             const comment = commentData[`${index}_${cell.r}_${cell.c}`];
-  //             if (comment) {
-  //               if (cell.v) {
-  //                 cell.v = {
-  //                   ...cell.v,
-  //                   ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
-  //                 };
-  //               }
-  //             } else {
-  //               if (cell.v) {
-  //                 cell.v = {
-  //                   ...cell.v,
-  //                   ps: undefined,
-  //                 };
-  //               }
-  //             }
-  //           });
-  //         });
-  //       }
-  //       //currentDataRef.current = currentData;
-  //     }
-  //   } catch (error) {
-  //     console.error('[DSheet] Error processing comment data:', error);
-  //   }
-  // }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments, syncStatus]);
+  useEffect(() => {
+    if (!ydocRef.current || !dsheetId) {
+      return;
+    }
+    try {
+      const currentDocData = ydocRef.current.getArray(dsheetId);
+      const currentData = ySheetArrayToPlain(
+        // @ts-ignore
+        currentDocData as Y.Array<Y.Map>,
+      )
+      if (currentData.length > 0 && syncStatus === 'synced') {
+        const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
+        if (sheetEditorRef.current !== null && setContext) {
+          setContext?.((ctx: any) => {
+            const files = ctx.luckysheetfile;
+            files.forEach((file: any, fileIndex: number) => {
+              file.data?.forEach((row: any, rowIndex: number) => {
+                row.forEach((cell: any, colIndex: number) => {
+                  if (cell) {
+                    // @ts-expect-error later
+                    const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
+                    if (comment) {
+                      cell.ps = allowComments ? CELL_COMMENT_DEFAULT_VALUE : undefined;
+                    } else {
+                      cell.ps = undefined
+                    }
+                  }
+                })
+              })
+            })
+          });
+        }
+        //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
+        if (sheetEditorRef.current === null && syncStatus === 'synced') {
+          currentData.forEach((sheet, index) => {
+            const sheetCellData = sheet.celldata;
+            sheetCellData?.forEach((cell) => {
+              // @ts-expect-error later
+              const comment = commentData[`${index}_${cell.r}_${cell.c}`];
+              if (comment) {
+                if (cell.v) {
+                  cell.v = {
+                    ...cell.v,
+                    ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
+                  };
+                }
+              } else {
+                if (cell.v) {
+                  cell.v = {
+                    ...cell.v,
+                    ps: undefined,
+                  };
+                }
+              }
+            });
+          });
+        }
+        //currentDataRef.current = currentData;
+      }
+    } catch (error) {
+      console.error('[DSheet] Error processing comment data:', error);
+    }
+  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments, syncStatus]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {
