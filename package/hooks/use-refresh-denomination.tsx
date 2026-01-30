@@ -68,6 +68,7 @@ export const useRefreshDenomination = ({
       const coin = cell.v?.m?.split(' ')[1] as string;
       const cryptoKey = CRYPTO_MAP[coin] as 'bitcoin' | 'ethereum' | 'solana';
       const price = cryptoPriceRef.current[cryptoKey]?.[cell.v?.baseCurrency];
+      if (!price) return;
       cell.v.m = value.replace(
         /\d+(\.\d+)?/,
         (Number(cell.v?.v) / price).toFixed(decemialCount).toString(),
