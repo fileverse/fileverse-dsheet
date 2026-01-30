@@ -62,23 +62,6 @@ export const calcChainYdocUpdate = ({
         }, key: item.r + '_' + item.c,
         type: 'update',
       })
-      // updateYdocSheetData(
-      //   // @ts-ignore
-      //   ydoc,
-      //   // @ts-ignore
-      //   dsheetId,
-      //   sheetEditor,
-      //   [{
-      //     sheetId: currentSheetId, path: ['calcChain'], value: {
-      //       r: item.r,
-      //       c: item.c,
-      //       v: item,
-      //     }, key: item.r + '_' + item.c,
-      //     type: 'update',
-      //   }],
-      //   // @ts-ignore
-      //   handleContentPortal,
-      // );
     });
   }
 
@@ -91,50 +74,8 @@ export const calcChainYdocUpdate = ({
       }, key: item.r + '_' + item.c,
       type: 'delete',
     })
-    // updateYdocSheetData(
-    //   ydoc,
-    //   dsheetId,
-    //   sheetEditor,
-    //   [{
-    //     sheetId: currentSheetId, path: ['calcChain'], value: {
-    //       r: item.r,
-    //       c: item.c,
-    //       v: item,
-    //     }, key: item.r + '_' + item.c,
-    //     type: 'delete',
-    //   }],
-    //   // @ts-ignore
-    //   handleContentPortal,
-    // )
   });
-  // Object.keys(diffDataVerification.added).forEach((key) => {
-  //   const item = diffDataVerification.added[key]
-  //   changes.push({
-  //     sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
-  //     type: 'update',
-  //   })
-  //   // updateYdocSheetData(
-  //   //   // @ts-ignore
-  //   //   ydocRef.current,
-  //   //   // @ts-ignore
-  //   //   dsheetId,
-  //   //   sheetEditorRef.current,
-  //   //   [{
-  //   //     sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
-  //   //     type: 'update',
-  //   //   }],
-  //   //   // @ts-ignore
-  //   //   handleContentPortal,
-  //   // );
-  // });
 
-  // Object.keys(diffDataVerification.removed).forEach((key) => {
-  //   const item = diffDataVerification.removed[key];
-  //   changes.push({
-  //     sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
-  //     type: 'delete',
-  //   })
-  // });
   if (changes.length > 0) {
     updateYdocSheetData(
       // @ts-ignore
@@ -147,6 +88,4 @@ export const calcChainYdocUpdate = ({
       handleContentPortal,
     );
   }
-
-
 }

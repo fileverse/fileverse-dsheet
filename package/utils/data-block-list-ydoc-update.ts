@@ -57,19 +57,6 @@ export const dataBlockListYdocUpdate = ({
       sheetId: currentSheetId, path: ['dataBlockCalcFunction'], value: item, key: key,
       type: 'update',
     })
-    // updateYdocSheetData(
-    //   // @ts-ignore
-    //   ydocRef.current,
-    //   // @ts-ignore
-    //   dsheetId,
-    //   sheetEditorRef.current,
-    //   [{
-    //     sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
-    //     type: 'update',
-    //   }],
-    //   // @ts-ignore
-    //   handleContentPortal,
-    // );
   });
 
   Object.keys(diffDataBlock.removed).forEach((key) => {

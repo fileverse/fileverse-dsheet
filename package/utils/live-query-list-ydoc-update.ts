@@ -55,19 +55,6 @@ export const liveQueryListYdocUpdate = ({
       sheetId: currentSheetId, path: ['liveQueryList'], value: item, key: key,
       type: 'update',
     })
-    // updateYdocSheetData(
-    //   // @ts-ignore
-    //   ydocRef.current,
-    //   // @ts-ignore
-    //   dsheetId,
-    //   sheetEditorRef.current,
-    //   [{
-    //     sheetId: currentSheetId, path: ['dataVerification'], value: item, key: key,
-    //     type: 'update',
-    //   }],
-    //   // @ts-ignore
-    //   handleContentPortal,
-    // );
   });
 
   Object.keys(diffDataVerification.removed).forEach((key) => {

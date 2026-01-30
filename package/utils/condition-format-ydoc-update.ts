@@ -4,15 +4,6 @@ import * as Y from 'yjs';
 import { diffObjectArrays } from './diff-sheet';
 // import { fromUint8Array } from 'js-base64';
 
-// type SheetChangePath = {
-//   sheetId: string;
-//   path: string[];        // ['name'], ['config', 'merge'], ['celldata']
-//   key?: string;          // 👈 only for celldata
-//   value: any;
-//   type?: 'update' | 'delete';
-// };
-
-
 /**
  * Verifies the integrity of sheet data in a YDoc against a given sheet editor instance.
  * This function is used to verify that the sheet data in a YDoc matches the data in a sheet editor instance.

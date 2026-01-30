@@ -180,14 +180,14 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = (data: Sheet[]) => {
-    console.log('yoo portal handleOnChange', data);
+    console.log('portal handleOnChange', data);
     if (onChange && ydocRef.current) {
       // Encode the YJS document state to pass as second parameter
       const encodedUpdate = fromUint8Array(
         Y.encodeStateAsUpdate(ydocRef.current),
       );
       const sheets = sheetEditorRef.current?.getAllSheets();
-      console.log('yoo portal handleOnChange', encodedUpdate);
+      console.log('portal handleOnChange indexeddb', encodedUpdate);
       onChange({ data: sheets as Sheet[] }, encodedUpdate);
     }
   };

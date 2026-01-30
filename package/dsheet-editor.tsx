@@ -196,11 +196,7 @@ const EditorContent = ({
           currentDataRef.current = sData;
           const currentSheetId = sheetEditorRef.current?.getWorkbookContext()
             ?.currentSheetId as string;
-          // const encodedUpdate = fromUint8Array(
-          //   Y.encodeStateAsUpdate(ydocRef.current),
-          // );
-          // console.log('encodedUpdate', encodedUpdate, handleContentPortal);
-          //handleOnChangePortalUpdate(sheetEditorRef.current?.getAllSheets() as Sheet[]);
+
           updateYdocSheetData(
             ydocRef.current,
             dsheetId,
