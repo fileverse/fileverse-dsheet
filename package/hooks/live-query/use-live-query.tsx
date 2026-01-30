@@ -136,13 +136,12 @@ export const useLiveQuery = (
             );
           }
           animateChangedCell(context!.currentSheetId, row, column);
-          console.log('subSheetIndex ========', subSheetIndex);
           // TODO: see a way to improve this
-          // sheetEditorRef.current?.calculateSubSheetFormula(
-          //   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          //   // @ts-expect-error
-          //   sheetEditorRef.current?.getSheet()?.id,
-          // );
+          sheetEditorRef.current?.calculateSubSheetFormula(
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            sheetEditorRef.current?.getSheet()?.id,
+          );
           return;
         }
       }
