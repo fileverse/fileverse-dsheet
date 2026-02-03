@@ -19,6 +19,7 @@ export const updateSheetData = (
   isReadOnly?: boolean,
   handleContentPortal?: any
 ) => {
+  return;
   console.log('dataBlockCalcFunction =====**', dsheetId, isReadOnly, data);
   // if (data?.length > 0) {
   //   return

@@ -34,6 +34,9 @@ export const formulaResponseUiSync = ({
   shouldIgnoreUsdValue,
 }: FormulaSyncType): void => {
   console.log('apiData', apiData);
+  const currentSheetId = sheetEditorRef.current?.getWorkbookContext()
+    ?.currentSheetId as string;
+  const changesForYDoc: any = [];
   const headers: string[] = Array.isArray(apiData[0])
     ? apiData[0]
     : Object.keys(apiData[0]);
@@ -86,22 +89,46 @@ export const formulaResponseUiSync = ({
           newValue && typeof newValue === 'object'
             ? cloneCellStyles({ ...newValue })
             : newValue;
-        return {
+        const finalData = {
           ...cloneCellData,
           m: headerInfo,
           v: headerInfo,
           isDataBlockFormula: true,
         };
+        changesForYDoc.push({
+          sheetId: currentSheetId,
+          path: ['celldata'],
+          value: {
+            r: row,
+            c: column + index,
+            v: finalData,
+          },
+          key: row + '_' + (column + index),
+          type: 'update',
+        })
+        return finalData;
       }
       const existingHeader = getCellClone(row, column + index, sheetEditorRef);
       const { m, ct, ...existingHeaderData } = existingHeader || {};
       const ctHeader = buildCellFormat(headerInfo, existingHeader?.ct);
-      return {
+      const finalData = {
         ...existingHeaderData,
         v: headerInfo,
         m: String(headerInfo),
         ...(ctHeader ? { ct: ctHeader } : {}),
       };
+      changesForYDoc.push({
+        sheetId: currentSheetId,
+        path: ['celldata'],
+        value: {
+          r: row,
+          c: column + index,
+          v: finalData,
+        },
+        key: row + '_' + (column + index),
+        type: 'update',
+      })
+      return finalData;
     });
     data.push(headerRow);
 
@@ -131,6 +158,24 @@ export const formulaResponseUiSync = ({
           ct: buildCellFormat(cellValue, existing.ct, header),
           ...extraProperties,
         });
+        changesForYDoc.push({
+          sheetId: currentSheetId,
+          path: ["celldata"],
+          value: {
+            r: i + row + 1,
+            c: j + column,
+            v: {
+              "v": cellValue,
+              "ct": {
+                "t": "n",
+                "fa": "General"
+              },
+              "m": cellValue
+            }
+          },
+          key: `${i + row + 1}_${j + column}`,
+          type: "update",
+        })
       });
       data.push(tempData);
     }
@@ -147,22 +192,46 @@ export const formulaResponseUiSync = ({
           newValue && typeof newValue === 'object'
             ? cloneCellStyles({ ...newValue })
             : newValue;
-        return {
+        const finalData = {
           ...cloneCellData,
           m: headerInfo,
           v: headerInfo,
           isDataBlockFormula: true,
         };
+        changesForYDoc.push({
+          sheetId: currentSheetId,
+          path: ['celldata'],
+          value: {
+            r: row,
+            c: column + index,
+            v: finalData,
+          },
+          key: row + '_' + (column + index),
+          type: 'update',
+        })
+        return finalData;
       }
       const existingHeader = getCellClone(row, column + index, sheetEditorRef);
       const { m, ct, ...existingHeaderData } = existingHeader || {};
       const ctHeader = buildCellFormat(headerInfo, existingHeader?.ct);
-      return {
+      const finalData = {
         ...existingHeaderData,
         v: headerInfo,
         m: String(headerInfo),
         ...(ctHeader ? { ct: ctHeader } : {}),
       };
+      changesForYDoc.push({
+        sheetId: currentSheetId,
+        path: ['celldata'],
+        value: {
+          r: row,
+          c: column + index,
+          v: finalData,
+        },
+        key: row + '_' + (column + index),
+        type: 'update',
+      })
+      return finalData;
     });
     data.push(headerRow);
 
@@ -183,14 +252,34 @@ export const formulaResponseUiSync = ({
           // if it's text, explicitly set "m" to match the value so it displays correctly.
           ...(isNum ? {} : { m: cellValue ? String(cellValue) : '' }),
         });
+        changesForYDoc.push({
+          sheetId: currentSheetId,
+          path: ["celldata"],
+          value: {
+            r: i + row + 1,
+            c: j + column,
+            v: {
+              "v": cellValue,
+              "ct": {
+                "t": "n",
+                "fa": "General"
+              },
+              "m": cellValue
+            },
+          },
+          key: `${i + row + 1}_${j + column}`,
+          type: "update",
+        })
       });
       data.push(tempData);
     }
   }
-  console.log('range yoo', range, 'data', data);
+  console.log('range yoo', range, 'data', data, changesForYDoc);
   if (range) {
     //@ts-ignore
-    sheetEditorRef.current?.setCellValuesByRange(data, range, {}, true);
+    sheetEditorRef.current?.setCellValuesByRange(data, range, {}, false);
+    console.log('changesForYDoc', changesForYDoc);
+    sheetEditorRef.current?.getWorkbookContext()?.hooks?.updateCellYdoc?.(changesForYDoc);
   }
 };
 

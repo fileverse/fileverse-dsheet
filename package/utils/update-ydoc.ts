@@ -27,7 +27,7 @@ export const updateYdocSheetData = (
   }
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
-  console.log('sheetArray ===', sheetArray.toArray());
+  console.log('sheetArray ===*', sheetArray.toArray());
 
   ydoc.transact(() => {
     /**
@@ -50,13 +50,13 @@ export const updateYdocSheetData = (
 
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          console.log('cellMap', cellMap, dsheetId);
           sheet.set('celldata', cellMap);
         }
 
         if (type === 'delete') {
           cellMap.delete(key);
         } else {
+          console.log('cellMap', cellMap, sheetId, path, key, value, type);
           cellMap.set(key, value);
         }
         return;
@@ -208,6 +208,7 @@ export const updateYdocSheetData = (
       );
     });
   });
+  console.log('sheetArray last', ySheetArrayToPlain(sheetArray));
   const encodedUpdate = fromUint8Array(
     Y.encodeStateAsUpdate(ydoc),
   );

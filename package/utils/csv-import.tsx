@@ -5,6 +5,9 @@ import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { encode } from 'punycode';
+import { migrateSheetArrayForImport, migrateSheetFactory } from '../utils/migrate-new-yjs';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
+
 
 export const handleCSVUpload = (
   event: React.ChangeEventHandler<HTMLInputElement> | undefined,
@@ -15,7 +18,8 @@ export const handleCSVUpload = (
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   updateDocumentTitle?: (title: string) => void,
   fileArg?: File,
-  importType?: string
+  importType?: string,
+  handleContentPortal?: any
 ) => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -30,6 +34,7 @@ export const handleCSVUpload = (
       return;
     }
     const csvContent = e.target.result;
+    console.log('csvContent', csvContent);
 
     if (typeof csvContent === 'string') {
       Papa.parse(csvContent, {
@@ -37,6 +42,7 @@ export const handleCSVUpload = (
         dynamicTyping: true,
         skipEmptyLines: true,
         complete: (results) => {
+          console.log('results', results);
           if (results.errors.length > 0 && results.data.length === 0) {
             console.error('CSV Parsing errors:', results.errors);
             alert('Error parsing CSV file');
@@ -81,6 +87,8 @@ export const handleCSVUpload = (
           headerRow.forEach((cell) => {
             cellData.push(cell);
           });
+
+          console.log('headerRow', headerRow, results.data);
 
           // Add data rows
           let maxRow = 0;
@@ -130,6 +138,7 @@ export const handleCSVUpload = (
           const data = Array.from(sheetArray) as Sheet[];
 
           const sheetObject = {
+            id: crypto.randomUUID(),
             name: file.name || 'Sheet1',
             celldata: [...cellData],
             row: rowCount,
@@ -148,18 +157,50 @@ export const handleCSVUpload = (
           } else {
             finalData = [sheetObject as Sheet];
           }
-          ydoc.transact(() => {
-            sheetArray.delete(0, sheetArray.length);
-            sheetArray.insert(0, finalData);
+          console.log('finalData before insert', finalData,);
+          //const r = migrateSheetArrayForImport(finalData);
 
-            //currentDataRef.current = finalData;
+          console.log('finalData after insert',);
+
+          // ydoc.transact(() => {
+          //   sheetArray.delete(0, sheetArray.length);
+
+          //   finalData.forEach((sheet) => {
+          //     const factory = migrateSheetFactory(sheet);
+          //     sheetArray.push([factory()]); // 🔥 created + attached
+          //   });
+          // });
+          ydoc.transact(() => {
+            if (importType !== 'merge-current-dsheet') {
+              sheetArray.delete(0, sheetArray.length);
+            }
+
+            finalData.forEach((sheet) => {
+              // 🔴 skip existing Yjs sheets
+              if (sheet instanceof Y.Map) return;
+
+              const factory = migrateSheetFactory(sheet);
+              sheetArray.push([factory()]);
+            });
           });
-          setForceSheetRender((prev: number) => prev + 1);
+
+          const plain = ySheetArrayToPlain(ydoc.getArray(dsheetId));
+          currentDataRef.current = plain;
+          console.log('whyyyy portal missing', handleContentPortal, sheetArray, plain);
+          // migrateSheetArrayForImport(ydoc, sheetArray, dsheetId, handleContentPortal);
+          console.log('now finalData', finalData, ydoc.getArray(dsheetId).toArray(), handleContentPortal);
+          console.log('last finalData', ydoc.getArray(dsheetId).toArray());
+          setTimeout(() => {
+            if (handleContentPortal) {
+              handleContentPortal(finalData);
+            }
+            setForceSheetRender((prev: number) => prev + 1);
+          }, 200)
           setTimeout(() => {
             sheetEditorRef.current?.activateSheet({
               index: finalData.length - 1,
             });
-          }, 100);
+          }, 500);
         },
       });
     }

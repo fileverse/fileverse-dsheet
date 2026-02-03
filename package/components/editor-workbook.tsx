@@ -137,14 +137,14 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     updateDocumentTitle,
   });
 
-  useEffect(() => {
-    dataBlockListYdocUpdate({
-      sheetEditorRef,
-      ydocRef,
-      dsheetId,
-      dataBlockCalcFunction
-    })
-  }, [dataBlockCalcFunction]);
+  // useEffect(() => {
+  //   dataBlockListYdocUpdate({
+  //     sheetEditorRef,
+  //     ydocRef,
+  //     dsheetId,
+  //     dataBlockCalcFunction
+  //   })
+  // }, [dataBlockCalcFunction]);
 
   const cellContextMenu = isReadOnly
     ? allowComments
@@ -203,6 +203,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
+              handleContentPortal: handleOnChangePortalUpdate,
               setShowSmartContractModal,
               getDocumentTitle,
               updateDocumentTitle,
@@ -344,6 +345,12 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate
             })
+            dataBlockListYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              dataBlockCalcFunction
+            })
           },
           conditionFormatChange: () => {
             conditionFormatYdocUpdate({
@@ -377,7 +384,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       />
     );
   }, [
-    // forceSheetRender,
+    forceSheetRender,
     isReadOnly,
     // handleChange,
     toggleTemplateSidebar,

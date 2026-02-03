@@ -180,7 +180,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = (data: Sheet[]) => {
-    console.log('portal handleOnChange', data);
+    console.log('portal handleOnChange', data, ydocRef.current?.getArray(dsheetId).toArray());
     if (onChange && ydocRef.current) {
       // Encode the YJS document state to pass as second parameter
       const encodedUpdate = fromUint8Array(
