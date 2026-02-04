@@ -5,7 +5,7 @@ import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { encode } from 'punycode';
-import { migrateSheetArrayForImport, migrateSheetFactory } from '../utils/migrate-new-yjs';
+import { migrateSheetFactory } from '../utils/migrate-new-yjs';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 
 
@@ -157,10 +157,10 @@ export const handleCSVUpload = (
           } else {
             finalData = [sheetObject as Sheet];
           }
-          console.log('finalData before insert', finalData,);
+          // console.log('finalData before insert', finalData,);
           //const r = migrateSheetArrayForImport(finalData);
 
-          console.log('finalData after insert',);
+          // console.log('finalData after insert',);
 
           // ydoc.transact(() => {
           //   sheetArray.delete(0, sheetArray.length);
@@ -176,7 +176,6 @@ export const handleCSVUpload = (
             }
 
             finalData.forEach((sheet) => {
-              // 🔴 skip existing Yjs sheets
               if (sheet instanceof Y.Map) return;
 
               const factory = migrateSheetFactory(sheet);
@@ -186,10 +185,10 @@ export const handleCSVUpload = (
 
           const plain = ySheetArrayToPlain(ydoc.getArray(dsheetId));
           currentDataRef.current = plain;
-          console.log('whyyyy portal missing', handleContentPortal, sheetArray, plain);
+          // console.log('whyyyy portal missing', handleContentPortal, sheetArray, plain);
           // migrateSheetArrayForImport(ydoc, sheetArray, dsheetId, handleContentPortal);
-          console.log('now finalData', finalData, ydoc.getArray(dsheetId).toArray(), handleContentPortal);
-          console.log('last finalData', ydoc.getArray(dsheetId).toArray());
+          // console.log('now finalData', finalData, ydoc.getArray(dsheetId).toArray(), handleContentPortal);
+          // console.log('last finalData', ydoc.getArray(dsheetId).toArray());
           setTimeout(() => {
             if (handleContentPortal) {
               handleContentPortal(finalData);
