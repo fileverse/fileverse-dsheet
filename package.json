@@ -35,7 +35,7 @@
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.29",
     "@fileverse-dev/formulajs": "^4.4.47",
-    "@fileverse-dev/fortune-react": "^1.2.94",
+    "@fileverse-dev/fortune-react": "^1.2.95",
     "@fileverse/ui": "^5.0.0",
     "classnames": "^2.5.1",
     "exceljs": "^4.4.0",
