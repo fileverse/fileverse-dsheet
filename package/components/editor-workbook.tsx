@@ -378,6 +378,99 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               changes,
               handleOnChangePortalUpdate
             )
+          },
+          afterImagesChange: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocImage = currentYdocSheet?.get('images');
+            if (ydocImage !== currentSheet?.images) {
+              currentYdocSheet?.set('images', currentSheet?.images);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
+
+          },
+          afterIframesChange: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocIframe = currentYdocSheet?.get('iframes');
+            if (ydocIframe !== currentSheet?.iframes) {
+              currentYdocSheet?.set('iframes', currentSheet?.iframes);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
+          },
+          afterFrozenChange: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocFrozen = currentYdocSheet?.get('frozen');
+            if (ydocFrozen !== currentSheet?.frozen) {
+              currentYdocSheet?.set('frozen', currentSheet?.frozen);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
+          },
+          afterUpdateSheetName: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocName = currentYdocSheet?.get('name');
+            if (ydocName !== currentSheet?.name) {
+              currentYdocSheet?.set('name', currentSheet?.name);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
+          },
+          afterOrderChanges: () => {
+            const allSheets = sheetEditorRef?.current?.getAllSheets();
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            allSheets?.forEach((sheet) => {
+              const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === sheet?.id) as any;
+              const ydocOrder = currentYdocSheet?.get('order');
+              if (ydocOrder !== sheet?.order) {
+                currentYdocSheet?.set('order', sheet?.order);
+                // @ts-ignore
+                handleOnChangePortalUpdate(oldSheets?.toArray());
+              }
+            })
+          },
+          afterConfigChanges: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocConfig = currentYdocSheet?.get('config');
+            if (ydocConfig !== currentSheet?.config) {
+              currentYdocSheet?.set('config', currentSheet?.config);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
+          },
+          afterColRowChanges: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocCol = currentYdocSheet?.get('column');
+            const ydocRow = currentYdocSheet?.get('row');
+            if (ydocCol !== currentSheet?.column || ydocRow !== currentSheet?.row) {
+              currentYdocSheet?.set('column', currentSheet?.column);
+              currentYdocSheet?.set('row', currentSheet?.row);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
+          },
+          afterShowGridLinesChange: () => {
+            const currentSheet = sheetEditorRef?.current?.getSheet()
+            let oldSheets = ydocRef?.current?.getArray(dsheetId);
+            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+            const ydocShowGridLines = currentYdocSheet?.get('showGridLines');
+            if (ydocShowGridLines !== currentSheet?.showGridLines) {
+              currentYdocSheet?.set('showGridLines', currentSheet?.showGridLines);
+              // @ts-ignore
+              handleOnChangePortalUpdate(oldSheets?.toArray());
+            }
           }
         }}
         onDuneChartEmbed={onDuneChartEmbed}

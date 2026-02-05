@@ -23,7 +23,7 @@ import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
-  handleOnChangePortalUpdate: (data: Sheet[]) => void;
+  handleOnChangePortalUpdate: (data: any[]) => void;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
@@ -186,9 +186,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       const encodedUpdate = fromUint8Array(
         Y.encodeStateAsUpdate(ydocRef.current),
       );
-      const sheets = sheetEditorRef.current?.getAllSheets();
+      // const sheets = sheetEditorRef.current?.getAllSheets();
       console.log('portal handleOnChange indexeddb', encodedUpdate);
-      onChange({ data: sheets as Sheet[] }, encodedUpdate);
+      onChange({ data: currentDataRef.current }, encodedUpdate);
     }
   };
 

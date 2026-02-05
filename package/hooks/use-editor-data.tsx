@@ -50,7 +50,7 @@ export const useEditorData = (
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
-  console.log('isReadOnly', currentDataRef, firstRender, sheetEditorRef.current?.getAllSheets());
+  console.log('isReadOnly', currentDataRef, firstRender);
   // if (!firstRender.current) {
   //   currentDataRef.current = sheetEditorRef.current?.getAllSheets() as Sheet[];
   // }
@@ -306,15 +306,6 @@ export const useEditorData = (
 
       // Set the flag to indicate we're in the process of updating YJS
       isUpdatingRef.current = true;
-      updateSheetData(
-        ydocRef.current,
-        dsheetId,
-        data,
-        sheetEditorRef.current,
-        dataBlockCalcFunction,
-        isReadOnly,
-        onChange,
-      );
 
       // Reset the flag after a short delay to allow the update to complete
       setTimeout(() => {
