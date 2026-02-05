@@ -159,6 +159,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     : TOOL_BAR_ITEMS;
 
   const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef });
+  console.log('refreshDenomination', refreshDenomination);
   const {
     handleOnChangePortalUpdate
   } = useEditor();
@@ -225,14 +226,14 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             : []
         }
         hooks={{
-          afterActivateSheet: () => {
-            if (
-              sheetEditorRef.current &&
-              sheetEditorRef.current?.getAllSheets().length > 0
-            ) {
-              refreshDenomination();
-            }
-          },
+          // afterActivateSheet: () => {
+          //   if (
+          //     sheetEditorRef.current &&
+          //     sheetEditorRef.current?.getAllSheets().length > 0
+          //   ) {
+          //     refreshDenomination();
+          //   }
+          // },
           afterUpdateCell: (
             row: number,
             column: number,

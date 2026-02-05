@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
-import { fromUint8Array } from 'js-base64';
+// import { fromUint8Array } from 'js-base64';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 export type SheetChangePath = {
@@ -209,11 +209,14 @@ export const updateYdocSheetData = (
     });
   });
   console.log('sheetArray last', ySheetArrayToPlain(sheetArray));
-  const encodedUpdate = fromUint8Array(
-    Y.encodeStateAsUpdate(ydoc),
-  );
+  // const encodedUpdate = fromUint8Array(
+  //   Y.encodeStateAsUpdate(ydoc),
+  // );
   // console.log('encodedUpdate', encodedUpdate, handleContentPortal);
-  handleContentPortal({ data: sheetArray.toArray() }, encodedUpdate);
+  if (handleContentPortal) {
+    handleContentPortal(sheetArray.toArray());
+  }
+  //return encodedUpdate;
 };
 
 export function ySheetArrayToPlain(
@@ -223,9 +226,10 @@ export function ySheetArrayToPlain(
   return sheetArray.toArray().map((sheetMap) => {
     const obj: any = {};
 
+    console.log('yjs to plain', sheetMap);
     // @ts-ignore
     sheetMap.forEach((value, key) => {
-      console.log('key', key, 'value', value, 'typeof value', typeof value, value instanceof Y.Map);
+      //console.log('key', key, 'value', value, 'typeof value', typeof value, value instanceof Y.Map);
       // ✅ celldata: Y.Map → plain object
       if (key === 'celldata' && value instanceof Y.Map) {
         obj.celldata = value.toJSON();
@@ -234,7 +238,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'calcChain' && value instanceof Y.Map) {
         let calcChain = value.toJSON();
-        console.log('calcChain in converter function', calcChain);
+        //console.log('calcChain in converter function', calcChain);
         if (Object.keys(calcChain).length === 0) return
         obj.calcChain = calcChain;
         return;
@@ -242,7 +246,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Map) {
         let conditionRules = value.toJSON();
-        console.log('conditionRules in converter function', conditionRules);
+        //console.log('conditionRules in converter function', conditionRules);
         if (conditionRules.length === 0) return
         obj.conditionRules = conditionRules;
         return;
@@ -250,7 +254,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'dataBlockCalcFunction' && value instanceof Y.Map) {
         let dataBlockCalcFunction = value.toJSON();
-        console.log('dataBlockCalcFunction in converter function', dataBlockCalcFunction);
+        //console.log('dataBlockCalcFunction in converter function', dataBlockCalcFunction);
         if (Object.keys(dataBlockCalcFunction).length === 0) return
         obj.dataBlockCalcFunction = dataBlockCalcFunction;
         return;
@@ -258,7 +262,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'liveQueryList' && value instanceof Y.Map) {
         let liveQueryList = value.toJSON();
-        console.log('liveQueryList in converter function', liveQueryList);
+        //console.log('liveQueryList in converter function', liveQueryList);
         if (Object.keys(liveQueryList).length === 0) return
         obj.liveQueryList = liveQueryList;
         return;
@@ -266,7 +270,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'dataVerification' && value instanceof Y.Map) {
         let dataVerification = value.toJSON();
-        console.log('dataVerification in converter function', dataVerification);
+        //console.log('dataVerification in converter function', dataVerification);
         if (Object.keys(dataVerification).length === 0) return
         obj.dataVerification = dataVerification;
         return;
@@ -274,7 +278,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'hyperlink' && value instanceof Y.Map) {
         let hyperlink = value.toJSON();
-        console.log('hyperlink in converter function', hyperlink);
+        //console.log('hyperlink in converter function', hyperlink);
         if (Object.keys(hyperlink).length === 0) return
         obj.hyperlink = hyperlink;
         return;
@@ -282,7 +286,7 @@ export function ySheetArrayToPlain(
 
       if (key === 'conditionRules' && value instanceof Y.Map) {
         let conditionRules = value.toJSON();
-        console.log('conditionRules in converter function', conditionRules);
+        //console.log('conditionRules in converter function', conditionRules);
         if (Object.keys(conditionRules).length === 0) return
         obj.conditionRules = conditionRules;
         return;

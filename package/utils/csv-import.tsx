@@ -5,7 +5,7 @@ import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { encode } from 'punycode';
-import { migrateSheetFactory } from '../utils/migrate-new-yjs';
+import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 
 
@@ -166,7 +166,7 @@ export const handleCSVUpload = (
           //   sheetArray.delete(0, sheetArray.length);
 
           //   finalData.forEach((sheet) => {
-          //     const factory = migrateSheetFactory(sheet);
+          //     const factory = migrateSheetFactoryForImport(sheet);
           //     sheetArray.push([factory()]); // 🔥 created + attached
           //   });
           // });
@@ -178,7 +178,7 @@ export const handleCSVUpload = (
             finalData.forEach((sheet) => {
               if (sheet instanceof Y.Map) return;
 
-              const factory = migrateSheetFactory(sheet);
+              const factory = migrateSheetFactoryForImport(sheet);
               sheetArray.push([factory()]);
             });
           });

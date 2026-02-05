@@ -72,11 +72,12 @@ export const handleExportToXLSX = async (
 
     const sheetArray = ydoc.getArray(dsheetId);
     const sheetData = Array.from(sheetArray) as Sheet[];
+    console.log('sheetData', sheetData);
 
     const sheetWithData = workbookRef.current.getAllSheets();
     const workbook = XLSXUtil.book_new();
 
-    sheetData.forEach((sheet, index) => {
+    sheetWithData.forEach((sheet, index) => {
       const rows = sheetWithData[index]?.data || [];
 
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);

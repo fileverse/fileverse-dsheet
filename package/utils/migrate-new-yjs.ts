@@ -160,60 +160,9 @@ export function migrateSheetArrayIfNeeded(
   });
 }
 
-export function migrateSheetArrayForImport(
-  sheets: Sheet[]
-): Y.Map<any>[] {
-  return sheets.map((item) => {
-    console.log('item', item);
-
-    if (item instanceof Y.Map) {
-      return item;
-    }
-    const sheetMap = new Y.Map();
-
-
-    Object.entries(item).forEach(([key, value]) => {
-
-      if (key === 'celldata' && Array.isArray(value)) {
-        const cellMap = new Y.Map();
-        const normalized = normalizeCelldataArray(value);
-
-        Object.entries(normalized).forEach(([k, v]) => {
-          cellMap.set(k, v);
-        });
-
-        sheetMap.set('celldata', cellMap);
-        return;
-      }
-
-      if (key === 'config' && value && typeof value === 'object') {
-        const configMap = new Y.Map();
-        Object.entries(value).forEach(([k, v]) => {
-          configMap.set(k, v);
-        });
-        sheetMap.set('config', configMap);
-        return;
-      }
-
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const yMap = new Y.Map();
-        Object.entries(value).forEach(([k, v]) => yMap.set(k, v));
-        sheetMap.set(key, yMap);
-        return;
-      }
-
-      sheetMap.set(key, value);
-    });
-    console.log('sheetMap ===', sheetMap);
-
-    return sheetMap;
-  });
-}
-
-
 type SheetFactory = () => Y.Map<any>;
 
-export function migrateSheetFactory(
+export function migrateSheetFactoryForImport(
   sheet: Sheet | Y.Map<any>
 ): SheetFactory {
   // already Yjs → reuse directly

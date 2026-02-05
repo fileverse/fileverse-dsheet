@@ -3,7 +3,7 @@ import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { migrateSheetFactory } from '../utils/migrate-new-yjs';
+import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 
 // @ts-expect-error, type is not available from package
@@ -201,7 +201,7 @@ export const useXLSXImport = ({
               combinedSheets.forEach((sheet) => {
                 if (sheet instanceof Y.Map) return;
 
-                const factory = migrateSheetFactory(sheet);
+                const factory = migrateSheetFactoryForImport(sheet);
                 sheetArray.push([factory()]);
               });
             });

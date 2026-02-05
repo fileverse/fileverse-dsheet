@@ -51,7 +51,7 @@ export const calcChainYdocUpdate = ({
   //@ts-ignore
   const calcChainDiff = diffObjectArrays(oldDataC, newDataC, getCalcChainKey)
   const changes: SheetChangePath[] = []
-  console.log('diffDataVerification', calcChainDiff, plainOldSheets, newDataC, oldDataC);
+  console.log('diffCalcChain', calcChainDiff, plainOldSheets, newDataC, oldDataC);
   if (calcChainDiff?.added?.length) {
     calcChainDiff.added.forEach((item) => {
       changes.push({

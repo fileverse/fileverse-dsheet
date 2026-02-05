@@ -3,6 +3,8 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
 import { TEMPLATES_DATA } from '@fileverse-dev/dsheets-templates';
+import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
 
 export const useApplyTemplatesBtn = ({
   selectedTemplate,
@@ -25,7 +27,7 @@ export const useApplyTemplatesBtn = ({
   >;
   initialiseLiveQueryData: (sheets: Sheet[]) => void;
 }) => {
-  console.log('selectedTemplate ignore', currentDataRef);
+  console.log('selectedTemplate ignore', currentDataRef, setDataBlockCalcFunction, initialiseLiveQueryData, ySheetArrayToPlain, setForceSheetRender);
   useEffect(() => {
     if (!selectedTemplate) return;
     if (!ydocRef.current) return;
@@ -43,16 +45,31 @@ export const useApplyTemplatesBtn = ({
         templateData[0].id = newSheetId;
       }
       const finalData = [...data, ...templateData];
+      // ydocRef.current.transact(() => {
+      //   sheetArray.delete(0, sheetArray.length);
+      //   sheetArray.insert(0, finalData);
+      //   //currentDataRef.current = finalData;
+      // });
       ydocRef.current.transact(() => {
-        sheetArray.delete(0, sheetArray.length);
-        sheetArray.insert(0, finalData);
-        //currentDataRef.current = finalData;
+        // if (importType !== 'merge-current-dsheet') {
+        // sheetArray.delete(0, sheetArray.length);
+        // }
+
+        finalData.forEach((sheet) => {
+          if (sheet instanceof Y.Map) return;
+
+          const factory = migrateSheetFactoryForImport(sheet);
+          sheetArray.push([factory()]);
+        });
       });
-      initialiseLiveQueryData(finalData);
+      const plainData = ySheetArrayToPlain(sheetArray);
+      currentDataRef.current = plainData;
+      console.log('plainData===', plainData);
+      initialiseLiveQueryData(plainData);
       setForceSheetRender?.((prev: number) => prev + 1);
       setTimeout(() => {
         sheetEditorRef.current?.activateSheet({
-          index: finalData.length - 1,
+          index: plainData.length - 1,
         });
       }, 100);
       setDataBlockCalcFunction((prev) => {
