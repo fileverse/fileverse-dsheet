@@ -160,6 +160,14 @@ export const useXLSXImport = ({
             const sheetArray = ydocRef.current.getArray(dsheetId);
             const localSheetsArray = Array.from(sheetArray) as Sheet[];
             sheets = sheets.map((sheet) => {
+              const lastCell = sheet?.celldata?.[sheet.celldata.length - 1];
+
+              const lastRow = lastCell?.r ?? 0;
+              const lastCol = lastCell?.c ?? 0;
+
+              sheet.row = Math.max(lastRow, 500);
+              sheet.column = Math.max(lastCol, 36);
+
               if (!sheet.id) {
                 sheet.id = sheetEditorRef.current?.getSettings().generateSheetId();
               }
