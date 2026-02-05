@@ -445,11 +445,19 @@ const handlePromiseValue = async (
   } else {
     // Regular promise handling
     processRegularPromise(promise, params);
-
-    sheetEditorRef.current?.setCellValue(row, column, {
+    const newCellValue = {
       ...newValue,
-      m: LOADING_MESSAGE,
-    });
+      m: "fetching data...",
+    }
+
+    // sheetEditorRef.current?.setCellValue(row, column, {
+    //   ...newValue,
+    //   m: LOADING_MESSAGE,
+    // }, {}, false);
+    sheetEditorRef.current?.setCellValuesByRange([[newCellValue]], {
+      row: [row, row],
+      column: [column, column],
+    }, {}, false);
   }
 };
 
@@ -518,7 +526,6 @@ export const afterUpdateCell = async (
     params.ydocRef.current,
     // @ts-ignore
     params.dsheetId,
-    params.sheetEditorRef.current,
     [{
       sheetId: currentSheetId, path: ['celldata'], value: {
         r: params.row,

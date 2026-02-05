@@ -71,7 +71,6 @@ export const dataVerificationYdocUpdate = ({
       ydocRef.current,
       // @ts-ignore
       dsheetId,
-      sheetEditorRef.current,
       changes,
       // @ts-ignore
       handleContentPortal,

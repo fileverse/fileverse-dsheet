@@ -374,7 +374,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,
-              sheetEditorRef.current,
               changes,
               handleOnChangePortalUpdate
             )

@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 // import { fromUint8Array } from 'js-base64';
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+// import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 export type SheetChangePath = {
   sheetId: string;
@@ -14,8 +14,6 @@ export type SheetChangePath = {
 export const updateYdocSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
-  //@ts-ignore
-  sheetEditor: WorkbookInstance | null,
   changes: SheetChangePath[],
   //@ts-ignore
   handleContentPortal: any,
@@ -213,7 +211,7 @@ export const updateYdocSheetData = (
   //   Y.encodeStateAsUpdate(ydoc),
   // );
   // console.log('encodedUpdate', encodedUpdate, handleContentPortal);
-  if (handleContentPortal) {
+  if (handleContentPortal && sheetArray && ydoc) {
     handleContentPortal(sheetArray.toArray());
   }
   //return encodedUpdate;

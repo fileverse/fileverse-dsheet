@@ -72,7 +72,6 @@ export const dataBlockListYdocUpdate = ({
       ydocRef.current,
       // @ts-ignore
       dsheetId,
-      sheetEditorRef.current,
       changes,
       // @ts-ignore
       handleContentPortal,

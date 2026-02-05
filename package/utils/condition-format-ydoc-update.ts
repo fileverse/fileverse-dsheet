@@ -47,7 +47,6 @@ export const conditionFormatYdocUpdate = ({
       ydoc,
       // @ts-ignore
       dsheetId,
-      sheetEditorRef.current,
       [{
         sheetId: currentSheetId, path: ['luckysheet_conditionformat_save'], value: newDataV, key: 'luckysheet_conditionformat_save',
         type: 'update',

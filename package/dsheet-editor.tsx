@@ -200,7 +200,6 @@ const EditorContent = ({
           updateYdocSheetData(
             ydocRef.current,
             dsheetId,
-            sheetEditorRef.current,
             [{
               sheetId: currentSheetId, path: ['celldata'], value: {
                 r: 0,
