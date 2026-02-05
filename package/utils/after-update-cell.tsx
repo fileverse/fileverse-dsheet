@@ -447,7 +447,7 @@ const handlePromiseValue = async (
     processRegularPromise(promise, params);
     const newCellValue = {
       ...newValue,
-      m: "fetching data...",
+      m: LOADING_MESSAGE,
     }
 
     // sheetEditorRef.current?.setCellValue(row, column, {

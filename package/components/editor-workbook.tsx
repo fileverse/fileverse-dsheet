@@ -412,7 +412,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleOnChangePortalUpdate(oldSheets?.toArray());
             }
           },
-          afterUpdateSheetName: () => {
+          afterNameChanges: () => {
             const currentSheet = sheetEditorRef?.current?.getSheet()
             let oldSheets = ydocRef?.current?.getArray(dsheetId);
             const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
