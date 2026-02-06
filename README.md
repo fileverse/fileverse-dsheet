@@ -199,4 +199,4 @@ import { DsheetProps, SheetUpdateData, EditorValues } from '@fileverse-dev/dshee
 
 ## License
 
-MIT
+AGPL-3.0
