@@ -11,173 +11,158 @@ export type SheetChangePath = {
   type?: 'update' | 'delete';
 };
 
+/**
+ * Convert any third-party / proxy object into plain data
+ * BEFORE storing it in Yjs
+ */
+function toPlain<T>(value: T): T {
+  try {
+    return structuredClone(value);
+  } catch {
+    return JSON.parse(JSON.stringify(value));
+  }
+}
+
 export const updateYdocSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
   changes: SheetChangePath[],
-  //@ts-ignore
   handleContentPortal: any,
-  // isReadOnly?: boolean,
 ) => {
-  console.log("callleed", ydoc, changes)
-  if (!ydoc || !changes.length) {
-    return;
-  }
+  console.log('called', ydoc, changes);
+
+  if (!ydoc || !changes.length) return;
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
   console.log('sheetArray ===*', sheetArray.toArray());
 
   ydoc.transact(() => {
-    /**
-     * STEP 1: MIGRATION (plain object → Y.Map)
-     */
-
-
-    /**
-     * STEP 2: APPLY CHANGES
-     */
     changes.forEach(({ sheetId, path, key, value, type }) => {
-      //@ts-ignore
-      const sheet = sheetArray.toArray().find((s: Y.Map) => s.get('id') === sheetId) as Y.Map | undefined;
+      const sheet = sheetArray
+        .toArray()
+        .find((s: Y.Map<any>) => s.get('id') === sheetId) as Y.Map<any> | undefined;
 
       if (!sheet) return;
 
-      // SPECIAL CASE: celldata merge
+      /**
+       * ===== SPECIAL CASES =====
+       */
+
+      // celldata
       if (path.length === 1 && path[0] === 'celldata' && key) {
         let cellMap = sheet.get('celldata');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('celldata', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          console.log('cellMap', cellMap, sheetId, path, key, value, type);
-          cellMap.set(key, value);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
-      // SPECIAL CASE: celldata merge
+      // calcChain
       if (path.length === 1 && path[0] === 'calcChain' && key) {
         let cellMap = sheet.get('calcChain');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('calcChain', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          cellMap.set(key, value.v);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value?.v));
         return;
       }
 
-      // SPECIAL CASE: celldata merge
+      // dataBlockCalcFunction
       if (path.length === 1 && path[0] === 'dataBlockCalcFunction' && key) {
         let cellMap = sheet.get('dataBlockCalcFunction');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('dataBlockCalcFunction', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          console.log('valuewww', value);
-          cellMap.set(key, value);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
-      // SPECIAL CASE: celldata merge
+      // liveQueryList
       if (path.length === 1 && path[0] === 'liveQueryList' && key) {
         let cellMap = sheet.get('liveQueryList');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('liveQueryList', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          cellMap.set(key, value);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
-      // SPECIAL CASE: celldata merge
+      // dataVerification
       if (path.length === 1 && path[0] === 'dataVerification' && key) {
         let cellMap = sheet.get('dataVerification');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('dataVerification', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          cellMap.set(key, value);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
+      // hyperlink
       if (path.length === 1 && path[0] === 'hyperlink' && key) {
         let cellMap = sheet.get('hyperlink');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('hyperlink', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          console.log('valuewww hyperlink', value);
-          cellMap.set(key, value);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
-      // SPECIAL CASE: celldata merge
+      // conditionRules
       if (path.length === 1 && path[0] === 'conditionRules' && key) {
         let cellMap = sheet.get('conditionRules');
-
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
           sheet.set('conditionRules', cellMap);
         }
 
-        if (type === 'delete') {
-          cellMap.delete(key);
-        } else {
-          cellMap.set(key, value);
-        }
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
-      // SPECIAL CASE: celldata merge
+      // luckysheet_conditionformat_save (array)
       if (path.length === 1 && path[0] === 'luckysheet_conditionformat_save' && key) {
         let cellArray = sheet.get('luckysheet_conditionformat_save');
-
         if (!(cellArray instanceof Y.Array)) {
           cellArray = new Y.Array();
           sheet.set('luckysheet_conditionformat_save', cellArray);
         }
 
-        cellArray.delete(0, cellArray.toArray().length);
-        cellArray.insert(0, value);
+        cellArray.delete(0, cellArray.length);
+        cellArray.insert(0, [toPlain(value)]);
         return;
       }
 
-      // NORMAL PATH WALK (config, name, order, etc.)
+      /**
+       * ===== NORMAL PATH WALK =====
+       */
+
       let target: any = sheet;
 
       for (let i = 0; i < path.length - 1; i++) {
@@ -188,34 +173,27 @@ export const updateYdocSheetData = (
           next = new Y.Map();
           target.set(p, next);
         }
-
         target = next;
       }
-      console.log('target', target, 'path', path, 'value', value);
-      target.set(path[path.length - 1], value);
+
+      target.set(path[path.length - 1], toPlain(value));
     });
 
     /**
-     * STEP 3: status update
+     * ===== STATUS UPDATE =====
      */
-    //@ts-ignore
-    sheetArray.forEach((sheet: Y.Map) => {
-      sheet.set(
-        'status',
-        sheet.get('order') === 0 ? 1 : 0,
-      );
+    sheetArray.forEach((sheet: Y.Map<any>) => {
+      sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
     });
   });
+
   console.log('sheetArray last', ySheetArrayToPlain(sheetArray));
-  // const encodedUpdate = fromUint8Array(
-  //   Y.encodeStateAsUpdate(ydoc),
-  // );
-  // console.log('encodedUpdate', encodedUpdate, handleContentPortal);
-  if (handleContentPortal && sheetArray && ydoc) {
-    handleContentPortal(sheetArray.toArray());
+
+  if (handleContentPortal) {
+    handleContentPortal();
   }
-  //return encodedUpdate;
 };
+
 
 export function ySheetArrayToPlain(
   // @ts-ignore

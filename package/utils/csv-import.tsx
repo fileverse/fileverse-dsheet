@@ -191,7 +191,7 @@ export const handleCSVUpload = (
           // console.log('last finalData', ydoc.getArray(dsheetId).toArray());
           setTimeout(() => {
             if (handleContentPortal) {
-              handleContentPortal(finalData);
+              handleContentPortal();
             }
             setForceSheetRender((prev: number) => prev + 1);
           }, 200)

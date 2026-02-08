@@ -41,6 +41,7 @@
     "exceljs": "^4.4.0",
     "js-base64": "^3.7.7",
     "katex": "^0.16.11",
+    "lodash": "^4.17.23",
     "luckyexcel": "^1.0.1",
     "papaparse": "^5.5.2",
     "react": "^18.2.0",
@@ -56,6 +57,7 @@
     "yjs": "^13.6.15"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.23",
     "@types/node": "^20.10.0",
     "@types/papaparse": "^5.3.15",
     "@types/react": "^18.2.37",

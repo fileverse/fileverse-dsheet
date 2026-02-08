@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useMemo,
 } from 'react';
+import throttle from 'lodash/throttle';
 import { LiveQueryData, Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
@@ -23,7 +24,7 @@ import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
-  handleOnChangePortalUpdate: (data: any[]) => void;
+  handleOnChangePortalUpdate: () => void;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
@@ -179,18 +180,36 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChangePortalUpdate = (data: Sheet[]) => {
-    console.log('portal handleOnChange', data, ydocRef.current?.getArray(dsheetId).toArray());
-    if (onChange && ydocRef.current) {
-      // Encode the YJS document state to pass as second parameter
-      const encodedUpdate = fromUint8Array(
-        Y.encodeStateAsUpdate(ydocRef.current),
-      );
-      // const sheets = sheetEditorRef.current?.getAllSheets();
-      console.log('portal handleOnChange indexeddb', encodedUpdate);
-      onChange({ data: currentDataRef.current }, encodedUpdate);
-    }
-  };
+  const handleOnChangePortalUpdate = useMemo(
+    () =>
+      throttle(() => {
+        console.log(
+          'portal handleOnChange',
+          ydocRef.current?.getArray(dsheetId).toArray()
+        );
+
+        if (onChange && ydocRef.current) {
+          const encodedUpdate = fromUint8Array(
+            Y.encodeStateAsUpdate(ydocRef.current),
+          );
+
+          console.log('portal handleOnChange indexeddb ddoo', encodedUpdate);
+          onChange({ data: currentDataRef.current }, encodedUpdate);
+        }
+      }, 3000),
+    [onChange, dsheetId]
+  );
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      handleOnChangePortalUpdate();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
 
   // Initialize sheet data
   const {

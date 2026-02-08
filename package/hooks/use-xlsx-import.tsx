@@ -190,17 +190,7 @@ export const useXLSXImport = ({
               combinedSheets = [...sheets]
             }
 
-            // combinedSheets = combinedSheets.map((sheet, index) => {
-            //   sheet.order = index;
-            //   return sheet
-            // })
-
             setSheetData(combinedSheets);
-            // ydocRef.current.transact(() => {
-            //   sheetArray.delete(0, sheetArray.length);
-            //   sheetArray.insert(0, combinedSheets);
-            //   //currentDataRef.current = combinedSheets;
-            // });
             ydocRef.current.transact(() => {
               if (importType !== 'merge-current-dsheet') {
                 sheetArray.delete(0, sheetArray.length);
