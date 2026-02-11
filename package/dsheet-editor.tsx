@@ -125,26 +125,26 @@ const EditorContent = ({
   return (
     <div
       style={{ height: 'calc(100vh)' }}
-      className={isReadOnly ? 'fortune-read-only' : ''}
+      className={cn('dsheet-editor', isReadOnly && 'fortune-read-only')}
+      data-testid="dsheet-editor"
     >
       {renderNavbar && (
         <nav
           id="Navbar"
           className={cn(
-            `h-[44px] color-bg-default px-4 flex gap-2 items-center
-             justify-between w-screen fixed left-0 top-0 border-b
-             color-border-default z-10 transition-transform duration-300`,
+            'dsheet-nav h-[44px] color-bg-default px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-10 transition-transform duration-300',
             {
               'translate-y-0': true,
               'translate-y-[-100%]': false,
             },
           )}
+          data-testid="dsheet-navbar"
         >
           {renderNavbar(editorValues)}
         </nav>
       )}
 
-      <div className="relative overflow-hidden h-[94dvh] md:!h-[calc(100vh-44px)] mt-[44px]">
+      <div className="dsheet-editor-main relative overflow-hidden h-[94dvh] md:!h-[calc(100vh-44px)] mt-[44px]" data-testid="dsheet-editor-main">
         <TransitionWrapper show={true}>
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
@@ -152,7 +152,7 @@ const EditorContent = ({
         <TransitionWrapper show={!loading && shouldRenderSheet} duration={1000}>
           {/* Permission chip - only visible with real content */}
           {isReadOnly && (
-            <div className="absolute top-2 right-4 z-20">
+            <div className="dsheet-permission-chip-wrap absolute top-2 right-4 z-20" data-testid="dsheet-permission-chip-wrap">
               <PermissionChip allowComments={allowComments || false} />
             </div>
           )}

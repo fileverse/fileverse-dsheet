@@ -65,77 +65,89 @@ export const CustomButton = ({
       }}
     >
       <PopoverTrigger
-        className="hover:bg-red"
+        className="dsheet-btn dsheet-export-trigger hover:bg-red"
         style={{ backgroundColor: 'red!important' }}
+        data-testid="export-popover-trigger"
       >
         {/* export-button is used in use xocument style */}
         <IconButton
-          className="export-button hover:bg-red"
+          className="export-button dsheet-btn-icon hover:bg-red"
           icon="FileExport"
           variant="ghost"
           size="md"
+          data-testid="export-dropdown-button"
         />
       </PopoverTrigger>
       <PopoverContent
         align="start"
         alignOffset={0}
-        className="w-72 export-content-popover"
+        className="w-72 export-content-popover dsheet-export-popover"
         elevation={2}
         side="bottom"
         sideOffset={4}
+        data-testid="export-import-popover-content"
       >
         <div
           onClick={() => setIsOpen(false)}
-          className="p-2 color-text-default"
+          className="p-2 color-text-default dsheet-export-section"
+          data-testid="export-section"
         >
-          <h1 className="text-helper-text-sm color-text-secondary pl-2">
+          <h2 className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2" data-testid="export-heading">
             Export
-          </h1>
+          </h2>
           <button
+            type="button"
             onClick={() => handleExportToJSON()}
-            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            className="dsheet-btn dsheet-btn--export-json hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            data-testid="export-json-button"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
-            <span className="text-body-sm">Export to .json</span>
+            <span className="dsheet-text dsheet-text--body text-body-sm">Export to .json</span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleExportToXLSX()}
-            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            className="dsheet-btn dsheet-btn--export-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            data-testid="export-xlsx-button"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
-            <span className="text-body-sm">Export to .xlsx</span>
+            <span className="dsheet-text dsheet-text--body text-body-sm">Export to .xlsx</span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleExportToCSV()}
-            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            className="dsheet-btn dsheet-btn--export-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            data-testid="export-csv-button"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
-            <span className="text-body-sm">Export to .csv</span>
+            <span className="dsheet-text dsheet-text--body text-body-sm">Export to .csv</span>
           </button>
         </div>
         <div
-          className="p-2 color-text-default"
+          className="p-2 color-text-default dsheet-import-section"
+          data-testid="import-section"
         // onClick={() => setIsOpen(false)}
         >
-          <h1 className="text-helper-text-sm color-text-secondary pl-2">
+          <h2 className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2" data-testid="import-heading">
             Import
-          </h1>
-          <div className="btn">
-            <button className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition">
+          </h2>
+          <div className="btn dsheet-import-actions">
+            <button type="button" className="dsheet-btn dsheet-btn--import-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition" data-testid="import-xlsx-button">
               <LucideIcon name="FileImport" />
               <label
                 htmlFor="xlsx-upload"
-                className="text-body-sm w-full cursor-pointer"
+                className="dsheet-label text-body-sm w-full cursor-pointer"
               >
-                <p>Import .xlsx</p>
+                <span className="dsheet-text dsheet-text--body">Import .xlsx</span>
               </label>
             </button>
             <input
               type="file"
               accept=".xlsx"
               id="xlsx-upload"
+              data-testid="import-xlsx-input"
               onChange={(e) => {
                 setExtension('xlsx');
                 setFile(e.target.files?.[0]);
@@ -146,11 +158,12 @@ export const CustomButton = ({
               style={{ display: 'none' }}
             />
           </div>
-          <div className="btn">
+          <div className="btn dsheet-import-actions">
             <input
               type="file"
               accept=".csv"
               id="csv-upload"
+              data-testid="import-csv-input"
               onChange={(e) => {
                 setExtension('csv');
                 setFile(e.target.files?.[0]);
@@ -160,13 +173,13 @@ export const CustomButton = ({
               }}
               style={{ display: 'none' }}
             />
-            <button className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition">
+            <button type="button" className="dsheet-btn dsheet-btn--import-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition" data-testid="import-csv-button">
               <LucideIcon width={18} height={18} name="FileImport" />
               <label
                 htmlFor="csv-upload"
-                className="text-body-sm w-full cursor-pointer"
+                className="dsheet-label text-body-sm w-full cursor-pointer"
               >
-                <p>Import .csv</p>
+                <span className="dsheet-text dsheet-text--body">Import .csv</span>
               </label>
             </button>
           </div>
@@ -176,29 +189,32 @@ export const CustomButton = ({
         hasCloseIcon
         open={openImportTypeModal}
         onOpenChange={setOpenImportTypeModal}
-        className="rounded-lg max-w-[420px]"
+        className="dsheet-modal dsheet-modal--import rounded-lg max-w-[420px]"
         contentClassName="!pt-4 px-6"
         title={
-          <div className="font-medium text-lg leading-6">Import file</div>
+          <div className="dsheet-heading dsheet-heading--modal font-medium text-lg leading-6" data-testid="import-modal-title">Import file</div>
         }
         content={
-          <div className="flex flex-col gap-4 font-normal text-sm leading-5">
-            <div>
-              <div className='text-heading-xsm mb-[4px]'>File name</div>
-              <div className='h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center'>
-                <p className='text-body-sm color-text-disabled truncate-text'>{file?.name}</p>
+          <div className="dsheet-modal-content flex flex-col gap-4 font-normal text-sm leading-5" data-testid="import-modal-content">
+            <div className="dsheet-modal-field" data-testid="import-modal-filename-field">
+              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">File name</div>
+              <div className="dsheet-input-wrap h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center">
+                <p className="dsheet-text dsheet-text--body text-body-sm color-text-disabled truncate-text" data-testid="import-modal-filename">{file?.name}</p>
               </div>
-              {file?.size > MAX_FILE_SIZE && <p className='text-[hsla(var(--color-text-danger))] font-[`Helvetica_Neue`] text-[14px] font-normal mt-[4px] leading-[20px]'
-              >Can't import this file right now. Try again later.</p>}
+              {file?.size > MAX_FILE_SIZE && (
+                <p className="dsheet-text dsheet-text--error text-[hsla(var(--color-text-danger))] font-[`Helvetica_Neue`] text-[14px] font-normal mt-[4px] leading-[20px]" data-testid="import-modal-file-size-error">
+                  Can't import this file right now. Try again later.
+                </p>
+              )}
             </div>
 
-            <div>
-              <div className='text-heading-xsm mb-[4px]'>Import location</div>
+            <div className="dsheet-modal-field" data-testid="import-modal-location-field">
+              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">Import location</div>
 
               <Select onValueChange={(value) => {
                 setImportType(value);
               }}>
-                <SelectTrigger>
+                <SelectTrigger data-testid="import-location-trigger">
                   <SelectValue placeholder="Create new dSheet" />
                 </SelectTrigger>
                 <SelectContent id="publish-category">
@@ -210,20 +226,22 @@ export const CustomButton = ({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end items-center gap-2">
+            <div className="dsheet-modal-actions flex justify-end items-center gap-2" data-testid="import-modal-actions">
               <Button
-                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 h-[36px] max-h-10 rounded"
+                className="dsheet-btn dsheet-btn--secondary font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 h-[36px] max-h-10 rounded"
                 size="md"
                 variant="secondary"
                 onClick={() => setOpenImportTypeModal(false)}
+                data-testid="import-modal-cancel-button"
               >
                 Cancel
               </Button>
               <Button
                 disabled={!file || file?.size > MAX_FILE_SIZE}
-                className="font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
+                className="dsheet-btn dsheet-btn--primary font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
                 size="md"
                 onClick={handleApplyData}
+                data-testid="import-modal-submit-button"
               >
                 Import data
               </Button>
