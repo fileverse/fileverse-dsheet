@@ -5,66 +5,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Semantic CSS selectors for dsheet – use for tests and overrides */
-.dsheet-heading {}
-
-.dsheet-heading--section {}
-
-.dsheet-heading--modal {}
-
-.dsheet-heading--xsm {}
-
-.dsheet-text {}
-
-.dsheet-text--body {}
-
-.dsheet-text--helper {}
-
-.dsheet-text--chip {}
-
-.dsheet-text--error {}
-
-.dsheet-btn {}
-
-.dsheet-btn--export-json,
-.dsheet-btn--export-xlsx,
-.dsheet-btn--export-csv {}
-
-.dsheet-btn--import-xlsx,
-.dsheet-btn--import-csv {}
-
-.dsheet-btn--primary,
-.dsheet-btn--secondary {}
-
-.dsheet-btn--share {}
-
-.dsheet-btn--import-smart-contract,
-.dsheet-btn--view-smart-contract {}
-
-.dsheet-label {}
-
-.dsheet-label--heading {}
-
-.dsheet-chip {}
-
-.dsheet-chip--comment,
-.dsheet-chip--view-only {}
-
-.dsheet-modal {}
-
-.dsheet-modal--import {}
-
-.dsheet-nav {}
-
-.dsheet-editor {}
-
-.dsheet-editor-main {}
-
-.dsheet-skeleton-loader {}
-
-.dsheet-skeleton {}
-
-.dsheet-transition-wrapper {}
 
 @layer base {
 
