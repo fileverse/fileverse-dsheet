@@ -28,29 +28,27 @@ function App() {
   const renderNavbar = (): JSX.Element => {
     return (
       <>
-        <div className="dsheet-navbar-left flex items-center gap-[12px]" data-testid="navbar-left">
-          <IconButton variant={'ghost'} icon="Menu" size="md" data-testid="navbar-menu-button" />
-          <div className="dsheet-doc-title-wrap relative truncate inline-block xl:!max-w-[300px] !max-w-[108px] color-bg-default text-[14px] font-medium leading-[20px]">
+        <div className="flex items-center gap-[12px]">
+          <IconButton variant={'ghost'} icon="Menu" size="md" />
+          <div className="relative truncate inline-block xl:!max-w-[300px] !max-w-[108px] color-bg-default text-[14px] font-medium leading-[20px]">
             <span className="invisible whitespace-pre">
               {title || 'Untitled'}
             </span>
             <input
-              className="dsheet-input dsheet-input--doc-title focus:outline-none truncate color-bg-default absolute top-0 left-0 right-0 bottom-0 select-text"
+              className="focus:outline-none truncate color-bg-default absolute top-0 left-0 right-0 bottom-0 select-text"
               type="text"
               placeholder="Untitled"
               value={title || 'Untitled'}
               onChange={(e) => setTitle(e.target.value)}
-              data-testid="document-title-input"
             />
           </div>
           <Tag
             icon="BadgeCheck"
-            className="dsheet-tag dsheet-tag--saved h-6 rounded !border !color-border-default color-text-secondary text-[12px] font-normal hidden xl:flex"
-            data-testid="saved-tag"
+            className="h-6 rounded !border !color-border-default color-text-secondary text-[12px] font-normal hidden xl:flex"
           >
             Saved in local storage
           </Tag>
-          <div className="dsheet-navbar-saved-icon w-6 h-6 rounded color-bg-secondary flex justify-center items-center border color-border-default xl:hidden" data-testid="navbar-saved-icon">
+          <div className="w-6 h-6 rounded color-bg-secondary flex justify-center items-center border color-border-default xl:hidden">
             <LucideIcon
               name="BadgeCheck"
               size="sm"
@@ -58,7 +56,7 @@ function App() {
             />
           </div>
         </div>
-        <div className="dsheet-navbar-right flex gap-2" data-testid="navbar-right">
+        <div className="flex gap-2">
           {isMediaMax1280px ? (
             <DynamicDropdown
               key="navbar-more-actions"
@@ -69,16 +67,14 @@ function App() {
                   icon={'EllipsisVertical'}
                   variant="ghost"
                   size="md"
-                  data-testid="navbar-more-actions"
                 />
               }
               content={
-                <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 " data-testid="navbar-more-dropdown">
+                <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
                     onClick={() => { }}
-                    className="dsheet-btn dsheet-btn--share flex justify-start gap-2"
-                    data-testid="navbar-share-button"
+                    className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
                     Share
@@ -90,25 +86,23 @@ function App() {
             <IconButton
               variant={'ghost'}
               icon="Share2"
-              className="dsheet-btn-icon flex xl:hidden"
+              className="flex xl:hidden"
               size="md"
-              data-testid="navbar-share-icon"
             />
           )}
           <Button
             toggleLeftIcon={true}
             leftIcon="Share2"
             variant={'ghost'}
-            className="dsheet-btn dsheet-btn--share !min-w-[90px] !px-0 hidden xl:flex"
-            data-testid="navbar-share-button-desktop"
+            className="!min-w-[90px] !px-0 hidden xl:flex"
           >
             Share
           </Button>
-          <div className="dsheet-navbar-farcaster flex gap-2 px-2 justify-center items-center" data-testid="navbar-farcaster">
+          <div className="flex gap-2 px-2 justify-center items-center">
             <LucideIcon name="Farcaster" />
             <div className="flex-col hidden xl:flex">
-              <p className="dsheet-heading dsheet-heading--xsm text-heading-xsm" data-testid="navbar-username">@[username]</p>
-              <p className="dsheet-text dsheet-text--helper text-helper-text-sm" data-testid="navbar-farcaster-label">Farcaster</p>
+              <p className="text-heading-xsm">@[username]</p>
+              <p className="text-helper-text-sm">Farcaster</p>
             </div>
           </div>
         </div>
@@ -123,7 +117,7 @@ function App() {
   useEffect(() => { setTimeout(() => { setIsNewSheet(true) }, 5000) }, [])
 
   const EditorPage = () => (
-    <div className="dsheet-demo-page" data-testid="dsheet-demo-page">
+    <div>
       <DSheetEditor
         isReadOnly={false}
         renderNavbar={renderNavbar}
