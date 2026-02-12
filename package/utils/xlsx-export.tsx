@@ -1,5 +1,4 @@
 import { utils as XLSXUtil, writeFile as XLSXWriteFile } from "xlsx-js-style";
-import { Sheet } from "@fileverse-dev/fortune-react";
 import * as Y from "yjs";
 import { WorkbookInstance } from "@fileverse-dev/fortune-react";
 import { MutableRefObject } from "react";
@@ -69,9 +68,7 @@ export const handleExportToXLSX = async (
 
   try {
     const ydoc = ydocRef.current;
-
-    const sheetArray = ydoc.getArray(dsheetId);
-    const sheetData = Array.from(sheetArray) as Sheet[];
+    ydoc.getArray(dsheetId);
 
     const sheetWithData = workbookRef.current.getAllSheets();
     const workbook = XLSXUtil.book_new();

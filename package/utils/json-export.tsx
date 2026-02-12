@@ -5,7 +5,7 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 export const handleExportToJSON = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
   ydocRef: React.RefObject<Y.Doc | null>,
-  dsheetId: string,
+  _dsheetId: string,
 ) => {
   if (!sheetEditorRef.current || !ydocRef.current) return;
 

@@ -276,7 +276,8 @@ export const formulaResponseUiSync = ({
   if (range) {
     //@ts-ignore
     sheetEditorRef.current?.setCellValuesByRange(data, range, {}, false);
-    sheetEditorRef.current?.getWorkbookContext()?.hooks?.updateCellYdoc?.(changesForYDoc);
+    const workbookHooks = sheetEditorRef.current?.getWorkbookContext()?.hooks as any;
+    workbookHooks?.updateCellYdoc?.(changesForYDoc);
   }
 };
 
