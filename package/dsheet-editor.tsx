@@ -170,18 +170,14 @@ const EditorContent = ({
   };
 
   useEffect(() => {
-    // console.log('is new shouldRenderSheet kkuu', shouldRenderSheet, isNewSheet, ydocRef.current, sheetEditorRef);
     if (isNewSheet) {
       ydocRef.current?.transact(() => {
         const sheetArray =
           ydocRef.current?.getArray(dsheetId);
         //@ts-ignore
-        // console.log('sheetArray length init', ySheetArrayToPlain(sheetArray));
-        // console.log('sheetArray length init', sheetArray?.toArray().length, ydocRef.current);
         const sData: any = []
         if (sheetArray?.toArray().length === 0 && ydocRef.current) {
           DEFAULT_SHEET_DATA.forEach((sheet, index) => {
-            // console.log('sheet getting inti', sheet);
             const id = crypto.randomUUID();
             sheet = {
               ...sheet,

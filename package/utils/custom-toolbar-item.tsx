@@ -76,7 +76,6 @@ export const getCustomToolbarItems = ({
   | React.Dispatch<React.SetStateAction<boolean>>
   | undefined;
 }) => {
-  console.log('handleContentPortal', handleContentPortal);
   return [
     {
       key: 'Smart Contract',
@@ -147,6 +146,8 @@ export const getCustomToolbarItems = ({
           size="md"
           variant="ghost"
           color="blue"
+          aria-label="Fetch data"
+          data-testid="toolbar-fetch-data-button"
         />
       ),
       onClick: () => {
@@ -171,6 +172,8 @@ export const getCustomToolbarItems = ({
           icon="LayoutTemplate"
           size="md"
           variant="ghost"
+          aria-label="Open templates"
+          data-testid="toolbar-templates-button"
         />
       ),
       onClick: toggleTemplateSidebar,

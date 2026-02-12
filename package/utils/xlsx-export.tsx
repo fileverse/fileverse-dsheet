@@ -72,7 +72,6 @@ export const handleExportToXLSX = async (
 
     const sheetArray = ydoc.getArray(dsheetId);
     const sheetData = Array.from(sheetArray) as Sheet[];
-    console.log('sheetData', sheetData);
 
     const sheetWithData = workbookRef.current.getAllSheets();
     const workbook = XLSXUtil.book_new();
@@ -142,7 +141,6 @@ export const handleExportToXLSX = async (
         newCell.s = newCell.s || {};
 
         // ============ FILL ============
-        console.log(v.bg);
         if (v.bg) {
           const hex = parseColorToHex(v.bg);
           if (hex) {

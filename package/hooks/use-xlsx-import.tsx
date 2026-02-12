@@ -24,7 +24,6 @@ export const useXLSXImport = ({
   currentDataRef: React.MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
 }) => {
-  console.log('avoid re-render', currentDataRef);
   // if (!sheetEditorRef || !currentDataRef) return
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<

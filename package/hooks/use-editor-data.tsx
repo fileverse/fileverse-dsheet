@@ -3,17 +3,13 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
-import {
-  CELL_COMMENT_DEFAULT_VALUE,
-  // DEFAULT_SHEET_DATA 
-} from '../constants/shared-constants';
+import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 // @ts-ignore
 import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
 import { DataBlockApiKeyHandlerType } from '../types';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 import { migrateSheetArrayIfNeeded } from '../utils/migrate-new-yjs';
-// import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
 
 /**
  * Hook for managing sheet data
@@ -40,20 +36,15 @@ export const useEditorData = (
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   allowComments?: boolean
 ) => {
-  console.log('useEditorData', commentData, allowComments);
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
   const currentDataRef = useRef<Sheet[]>([]);
   const remoteUpdateRef = useRef<boolean>(false);
   const dataInitialized = useRef<boolean>(false);
-  const firstRender = useRef<boolean>(true);
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
-  console.log('isReadOnly', currentDataRef, firstRender);
-  // if (!firstRender.current) {
-  //   currentDataRef.current = sheetEditorRef.current?.getAllSheets() as Sheet[];
-  // }
+
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
@@ -64,7 +55,6 @@ export const useEditorData = (
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
-    console.log('portalContent important', currentDataRef, portalContentProcessed, portalContent, "wewe");
     if (!portalContent?.length || !ydocRef.current || !dsheetId || portalContentProcessed.current) {
       return;
     }
@@ -80,24 +70,19 @@ export const useEditorData = (
 
       const sheetArray =
         ydocRef.current.getArray(dsheetId);
-      console.log('sheetArray before calling migrate', sheetArray, Array.from(sheetArray), sheetArray.length, ydocRef.current?.getArray(dsheetId).toArray());
 
-
-      // ✅ FULL migration (including celldata)
+      // Migrate legacy sheet array to Y.Map-based structure if needed
       migrateSheetArrayIfNeeded(
         ydocRef.current,
         sheetArray,
       );
 
-      console.log('sheetArray after calling migrate', sheetArray);
-      // ✅ Convert to plain snapshot for spreadsheet
+      // Convert Yjs sheet array to plain snapshot for Fortune spreadsheet
       const newSheetData =
         ySheetArrayToPlain(
           // @ts-ignore
           sheetArray as Y.Array<Y.Map>,
         );
-
-      console.log('newSheetData after calling migrate for UI', newSheetData);
 
       currentDataRef.current = newSheetData;
       initialiseLiveQueryData(newSheetData);
@@ -116,7 +101,6 @@ export const useEditorData = (
           };
         }
       });
-      console.log('dataBlockList', dataBlockList);
       //@ts-ignore
       setDataBlockCalcFunction?.(dataBlockList);
 
@@ -264,41 +248,7 @@ export const useEditorData = (
 
   // Handle changes to the sheet
   const handleChange = useCallback(
-    (data: Sheet[]) => {
-      console.log('data whyyy', data);
-      // if (firstRender.current) {
-      //   const cachedDataBlockCalcFunction: {
-      //     [key: string]: { [key: string]: any };
-      //   } = {};
-      //   data.map((sheet) => {
-      //     if (Array.isArray(sheet.dataBlockCalcFunction)) {
-      //       const newDataBlockCalcFunction: {
-      //         [key: string]: { [key: string]: any };
-      //       } = {};
-      //       sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
-      //         newDataBlockCalcFunction[
-      //           dataBlockCalc.row + '_' + dataBlockCalc.column
-      //         ] = dataBlockCalc;
-      //       });
-      //       cachedDataBlockCalcFunction[sheet.id as string] = {
-      //         ...newDataBlockCalcFunction,
-      //       };
-      //     } else {
-      //       if (!sheet.dataBlockCalcFunction) return;
-      //       // @ts-expect-error later
-      //       cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction;
-      //     }
-      //   });
-      //   setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
-      //   /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
-      //   // setTimeout(() => {
-      //   //   // @ts-expect-error later
-      //   //   dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
-      //   // }, 1000)
-
-      //   firstRender.current = false;
-      //   return;
-      // }
+    (_data: Sheet[]) => {
       if (remoteUpdateRef.current) {
         remoteUpdateRef.current = false;
         return;
@@ -312,10 +262,6 @@ export const useEditorData = (
         isUpdatingRef.current = false;
       }, 50);
 
-      // Call external onChange handler if provided
-      // if (onChange) {
-      //   onChange(data);
-      // }
     },
     [dsheetId, onChange],
   );

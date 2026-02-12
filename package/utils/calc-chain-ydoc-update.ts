@@ -1,28 +1,19 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { updateYdocSheetData, ySheetArrayToPlain } from './update-ydoc';
 import * as Y from 'yjs';
 import { diffObjectArrays } from './diff-sheet';
-// import { fromUint8Array } from 'js-base64';
-
-type SheetChangePath = {
-  sheetId: string;
-  path: string[];        // ['name'], ['config', 'merge'], ['celldata']
-  key?: string;          // 👈 only for celldata
-  value: any;
-  type?: 'update' | 'delete';
-};
+import { SheetChangePath } from './update-ydoc';
+import {
+  applyYdocSheetChanges,
+  getSheetYdocSyncContext,
+} from './sheet-ydoc-sync-utils';
 
 const getCalcChainKey = (item: any) =>
   `${item.r}_${item.c}`;
 
 
 /**
- * Verifies the integrity of sheet data in a YDoc against a given sheet editor instance.
- * This function is used to verify that the sheet data in a YDoc matches the data in a sheet editor instance.
- * @param {Object} options
- * @param {React.RefObject<WorkbookInstance | null>} options.sheetEditorRef - Reference to the sheet editor instance
- * @param {React.RefObject<Y.Doc | null>} options.ydocRef - Reference to the YDoc instance
- * @returns {void}
+ * Sync calcChain array for active sheet.
+ * calcChain is keyed by `r_c` while stored in Yjs.
  */
 export const calcChainYdocUpdate = ({
   sheetEditorRef,
@@ -36,26 +27,23 @@ export const calcChainYdocUpdate = ({
   handleContentPortal?: any
 }
 ) => {
-  console.log('calcChainYdocUpdate', sheetEditorRef, ydocRef, handleContentPortal, updateYdocSheetData);
-  if (!sheetEditorRef.current || !ydocRef.current) return;
-  const currentSheetId: string = sheetEditorRef.current?.getWorkbookContext()
-    ?.currentSheetId as string;
-  let newDataC = sheetEditorRef.current?.getSheet()?.calcChain || [];
-  let oldSheets = ydocRef.current?.getArray(dsheetId);
-  //@ts-ignore
-  let plainOldSheets = ySheetArrayToPlain(oldSheets as Y.Array<Y.Map>)
-  let oldDataC = plainOldSheets?.find(
-    (sheet) => sheet.id === currentSheetId,
-  )?.calcChain || [];
+  const syncContext = getSheetYdocSyncContext({
+    sheetEditorRef,
+    ydocRef,
+    dsheetId,
+  });
+  if (!syncContext) return;
 
-  //@ts-ignore
-  const calcChainDiff = diffObjectArrays(oldDataC, newDataC, getCalcChainKey)
-  const changes: SheetChangePath[] = []
-  console.log('diffCalcChain', calcChainDiff, plainOldSheets, newDataC, oldDataC);
+  const newData = sheetEditorRef.current?.getSheet()?.calcChain || [];
+  const oldData = syncContext.oldSheet.calcChain || [];
+  // @ts-ignore
+  const calcChainDiff = diffObjectArrays(oldData, newData, getCalcChainKey);
+  const changes: SheetChangePath[] = [];
+
   if (calcChainDiff?.added?.length) {
     calcChainDiff.added.forEach((item) => {
       changes.push({
-        sheetId: currentSheetId, path: ['calcChain'], value: {
+        sheetId: syncContext.currentSheetId, path: ['calcChain'], value: {
           r: item.r,
           c: item.c,
           v: item,
@@ -67,7 +55,7 @@ export const calcChainYdocUpdate = ({
 
   calcChainDiff?.removed?.forEach((item) => {
     changes.push({
-      sheetId: currentSheetId, path: ['calcChain'], value: {
+      sheetId: syncContext.currentSheetId, path: ['calcChain'], value: {
         r: item.r,
         c: item.c,
         v: item,
@@ -76,15 +64,10 @@ export const calcChainYdocUpdate = ({
     })
   });
 
-  if (changes.length > 0) {
-    updateYdocSheetData(
-      // @ts-ignore
-      ydocRef.current,
-      // @ts-ignore
-      dsheetId,
-      changes,
-      // @ts-ignore
-      handleContentPortal,
-    );
-  }
-}
+  applyYdocSheetChanges({
+    ydoc: syncContext.ydoc,
+    dsheetId,
+    changes,
+    handleContentPortal,
+  });
+};

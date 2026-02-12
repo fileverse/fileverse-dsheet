@@ -27,7 +27,6 @@ export const useApplyTemplatesBtn = ({
   >;
   initialiseLiveQueryData: (sheets: Sheet[]) => void;
 }) => {
-  console.log('selectedTemplate ignore', currentDataRef, setDataBlockCalcFunction, initialiseLiveQueryData, ySheetArrayToPlain, setForceSheetRender);
   useEffect(() => {
     if (!selectedTemplate) return;
     if (!ydocRef.current) return;
@@ -45,16 +44,7 @@ export const useApplyTemplatesBtn = ({
         templateData[0].id = newSheetId;
       }
       const finalData = [...data, ...templateData];
-      // ydocRef.current.transact(() => {
-      //   sheetArray.delete(0, sheetArray.length);
-      //   sheetArray.insert(0, finalData);
-      //   //currentDataRef.current = finalData;
-      // });
       ydocRef.current.transact(() => {
-        // if (importType !== 'merge-current-dsheet') {
-        // sheetArray.delete(0, sheetArray.length);
-        // }
-
         finalData.forEach((sheet) => {
           if (sheet instanceof Y.Map) return;
 
@@ -64,7 +54,6 @@ export const useApplyTemplatesBtn = ({
       });
       const plainData = ySheetArrayToPlain(sheetArray);
       currentDataRef.current = plainData;
-      console.log('plainData===', plainData);
       initialiseLiveQueryData(plainData);
       setForceSheetRender?.((prev: number) => prev + 1);
       setTimeout(() => {

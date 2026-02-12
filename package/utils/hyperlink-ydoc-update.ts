@@ -1,25 +1,13 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { updateYdocSheetData, ySheetArrayToPlain } from './update-ydoc';
 import * as Y from 'yjs';
-import { diffObjectMap } from './diff-sheet';
-// import { fromUint8Array } from 'js-base64';
-
-type SheetChangePath = {
-  sheetId: string;
-  path: string[];        // ['name'], ['config', 'merge'], ['celldata']
-  key?: string;          // 👈 only for celldata
-  value: any;
-  type?: 'update' | 'delete';
-};
-
+import {
+  applyYdocSheetChanges,
+  buildMapFieldChanges,
+  getSheetYdocSyncContext,
+} from './sheet-ydoc-sync-utils';
 
 /**
- * Verifies the integrity of sheet data in a YDoc against a given sheet editor instance.
- * This function is used to verify that the sheet data in a YDoc matches the data in a sheet editor instance.
- * @param {Object} options
- * @param {React.RefObject<WorkbookInstance | null>} options.sheetEditorRef - Reference to the sheet editor instance
- * @param {React.RefObject<Y.Doc | null>} options.ydocRef - Reference to the YDoc instance
- * @returns {void}
+ * Sync hyperlink map for the active sheet to Yjs.
  */
 export const hyperlinkYdocUpdate = ({
   sheetEditorRef,
@@ -33,49 +21,27 @@ export const hyperlinkYdocUpdate = ({
   handleContentPortal?: any
 }
 ) => {
-  console.log('dataVerificationYdocUpdate getting called');
-  console.log('dataVerificationYdocUpdate', sheetEditorRef, ydocRef, handleContentPortal, updateYdocSheetData);
-  if (!sheetEditorRef.current || !ydocRef.current) return;
-  const currentSheetId: string = sheetEditorRef.current?.getWorkbookContext()
-    ?.currentSheetId as string;
-  let newDataV = sheetEditorRef.current?.getSheet()?.hyperlink || {};
-  let oldSheets = ydocRef.current?.getArray(dsheetId);
-  //@ts-ignore
-  let plainOldSheets = ySheetArrayToPlain(oldSheets as Y.Array<Y.Map>)
-  let oldDataV = plainOldSheets?.find(
-    (sheet) => sheet.id === currentSheetId,
-  )?.hyperlink || {};
+  const syncContext = getSheetYdocSyncContext({
+    sheetEditorRef,
+    ydocRef,
+    dsheetId,
+  });
+  if (!syncContext) return;
 
-  //@ts-ignore
-  const diffDataVerification = diffObjectMap(oldDataV, newDataV);
-  const changes: SheetChangePath[] = []
-  console.log('diffHyperlink', diffDataVerification, plainOldSheets, newDataV, oldDataV);
-  Object.keys(diffDataVerification.added).forEach((key) => {
-    const item = diffDataVerification.added[key]
-    changes.push({
-      sheetId: currentSheetId, path: ['hyperlink'], value: item, key: key,
-      type: 'update',
-    })
+  const newData = sheetEditorRef.current?.getSheet()?.hyperlink || {};
+  const oldData = syncContext.oldSheet.hyperlink || {};
+
+  const changes = buildMapFieldChanges({
+    sheetId: syncContext.currentSheetId,
+    fieldPath: 'hyperlink',
+    oldData,
+    newData,
   });
 
-  Object.keys(diffDataVerification.removed).forEach((key) => {
-    const item = diffDataVerification.removed[key];
-    changes.push({
-      sheetId: currentSheetId, path: ['hyperlink'], value: item, key: key,
-      type: 'delete',
-    })
+  applyYdocSheetChanges({
+    ydoc: syncContext.ydoc,
+    dsheetId,
+    changes,
+    handleContentPortal,
   });
-  if (changes.length > 0) {
-    updateYdocSheetData(
-      // @ts-ignore
-      ydocRef.current,
-      // @ts-ignore
-      dsheetId,
-      changes,
-      // @ts-ignore
-      handleContentPortal,
-    );
-  }
-
-
-}
+};
