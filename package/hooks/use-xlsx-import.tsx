@@ -93,6 +93,34 @@ export const useXLSXImport = ({
         //@ts-expect-error, later
         await workbook.xlsx.load(arrayBuffer);
         const worksheet = workbook.getWorksheet(1);
+        // Extract hyperlinks from all worksheets, indexed by worksheet position
+        const hyperlinksBySheet: Record<
+          number,
+          Record<string, { linkType: string; linkAddress: string }>
+        > = {};
+        workbook.eachSheet((ws, sheetIndex) => {
+          const sheetHyperlinks: Record<
+            string,
+            { linkType: string; linkAddress: string }
+          > = {};
+          ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+              if (cell.hyperlink) {
+                // fortune-sheet uses 0-indexed row_col keys
+                const key = `${rowNumber - 1}_${colNumber - 1}`;
+                sheetHyperlinks[key] = {
+                  linkType: 'webpage',
+                  linkAddress: cell.hyperlink,
+                };
+              }
+            });
+          });
+          if (Object.keys(sheetHyperlinks).length > 0) {
+            // sheetIndex is 1-based in exceljs, store as 0-based
+            hyperlinksBySheet[sheetIndex - 1] = sheetHyperlinks;
+          }
+        });
+
         dropdownInfo =
           worksheet
             ?.getSheetValues()
@@ -154,7 +182,7 @@ export const useXLSXImport = ({
             }
             const sheetArray = ydocRef.current.getArray(dsheetId);
             const localSheetsArray = Array.from(sheetArray) as Sheet[];
-            sheets = sheets.map((sheet) => {
+            sheets = sheets.map((sheet, sheetIndex) => {
               const lastCell = sheet?.celldata?.[sheet.celldata.length - 1];
 
               const lastRow = lastCell?.r ?? 0;
@@ -164,31 +192,51 @@ export const useXLSXImport = ({
               sheet.column = Math.max(lastCol, 36);
 
               if (!sheet.id) {
-                sheet.id = sheetEditorRef.current?.getSettings().generateSheetId();
+                sheet.id = sheetEditorRef.current
+                  ?.getSettings()
+                  .generateSheetId();
               }
               if (sheet.calcChain) {
                 sheet.calcChain = sheet.calcChain.map((chain) => {
-                  delete chain.id
-                  delete chain.index
-                  chain.id = sheet.id
-                  return chain
-                })
+                  delete chain.id;
+                  delete chain.index;
+                  chain.id = sheet.id;
+                  return chain;
+                });
               }
-              return sheet
-            })
+              // Attach hyperlinks extracted from exceljs for this sheet
+              if (hyperlinksBySheet[sheetIndex]) {
+                sheet.hyperlink = {
+                  ...(sheet.hyperlink || {}),
+                  ...hyperlinksBySheet[sheetIndex],
+                };
+                // Apply blue + underline styling to hyperlink cells
+                const hlKeys = hyperlinksBySheet[sheetIndex];
+                if (sheet.celldata) {
+                  for (const cell of sheet.celldata) {
+                    const key = `${cell.r}_${cell.c}`;
+                    if (hlKeys[key] && cell.v) {
+                      cell.v.fc = 'rgb(0, 0, 255)';
+                      cell.v.un = 1;
+                    }
+                  }
+                }
+              }
+              return sheet;
+            });
 
             let combinedSheets;
 
             if (importType === 'merge-current-dsheet') {
-              combinedSheets = [...localSheetsArray, ...sheets]
+              combinedSheets = [...localSheetsArray, ...sheets];
             } else {
-              combinedSheets = [...sheets]
+              combinedSheets = [...sheets];
             }
 
             combinedSheets = combinedSheets.map((sheet, index) => {
               sheet.order = index;
-              return sheet
-            })
+              return sheet;
+            });
 
             setSheetData(combinedSheets);
             ydocRef.current.transact(() => {

@@ -4,7 +4,6 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
-import { encode } from 'punycode';
 
 export const handleCSVUpload = (
   event: React.ChangeEventHandler<HTMLInputElement> | undefined,
@@ -15,7 +14,7 @@ export const handleCSVUpload = (
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   updateDocumentTitle?: (title: string) => void,
   fileArg?: File,
-  importType?: string
+  importType?: string,
 ) => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -85,33 +84,41 @@ export const handleCSVUpload = (
           // Add data rows
           let maxRow = 0;
           let maxCol = 0;
+          const urlRegex = /^https?:\/\/\S+$/i;
+          const hyperlinkMap: Record<
+            string,
+            { linkType: string; linkAddress: string }
+          > = {};
           results.data.forEach((row, rowIndex) => {
             headers.forEach((header, colIndex) => {
+              const cellValue = (row as Record<string, string | number | null>)[
+                header
+              ];
+              const cellStr =
+                cellValue !== null && cellValue !== undefined
+                  ? cellValue.toString()
+                  : null;
+              const isUrl = cellStr && urlRegex.test(cellStr);
               cellData.push({
                 r: rowIndex + 1, // +1 because header is row 0
                 c: colIndex,
                 v: {
-                  // @ts-expect-error later
-                  m:
-                    (row as Record<string, string | null>)[header] !== null
-                      ? (row as Record<string, string | null>)[
-                        header
-                      ]?.toString()
-                      : null,
+                  m: cellStr,
                   ct: {
                     fa: 'General',
                     t: 'g',
                   },
-                  // @ts-expect-error later
-                  v:
-                    (row as Record<string, string | number | null>)[header] !==
-                      null
-                      ? (row as Record<string, string | number | null>)[
-                        header
-                      ]?.toString()
-                      : null,
+                  v: cellStr,
+                  ...(isUrl && { fc: 'rgb(0, 0, 255)', un: 1 }),
                 },
               });
+              // Detect URLs and store as hyperlinks
+              if (isUrl) {
+                hyperlinkMap[`${rowIndex + 1}_${colIndex}`] = {
+                  linkType: 'webpage',
+                  linkAddress: cellStr,
+                };
+              }
               maxRow = Math.max(maxRow, rowIndex + 1);
               maxCol = Math.max(maxCol, colIndex + 1);
             });
@@ -139,6 +146,9 @@ export const handleCSVUpload = (
             config: {
               merge: {}, // No merge cells for CSV by default
             },
+            ...(Object.keys(hyperlinkMap).length > 0 && {
+              hyperlink: hyperlinkMap,
+            }),
           };
 
           updateDocumentTitle?.(file.name);
