@@ -147,6 +147,9 @@ const containsFlvurlFunction = (formula: string): boolean => {
   return FLVURL_FUNCTIONS.some((func) => formula.includes(func));
 };
 
+const getFormulaName = (cell: Cell): string | undefined =>
+  cell.f?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]?.toUpperCase();
+
 /**
  * Extracts URL from FLVURL function
  */
@@ -314,9 +317,7 @@ const processRegularPromise = async (
 ): Promise<void> => {
   try {
     const data = await promise;
-    const formulaName = params.newValue?.f
-      ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
-      ?.toUpperCase();
+    const formulaName = getFormulaName(params.newValue);
     if (isDatablockError(data)) {
       const _data = data as ErrorMessageHandlerReturnType;
       const message =
@@ -405,9 +406,7 @@ const processRegularPromise = async (
     ) {
       throw new Error('dataBlockApiKeyHandler missing');
     } else {
-      const formulaName = params.newValue?.f
-        ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
-        ?.toUpperCase();
+      const formulaName = getFormulaName(params.newValue);
       handleDatablockErroMessage(
         {
           type: 'DSHEET_ERROR',
@@ -448,13 +447,8 @@ const handlePromiseValue = async (
     const newCellValue = {
       ...newValue,
       m: LOADING_MESSAGE,
-    }
-
-    // sheetEditorRef.current?.setCellValue(row, column, {
-    //   ...newValue,
-    //   m: LOADING_MESSAGE,
-    // }, {}, false);
-    sheetEditorRef.current?.setCellValuesByRange([[newCellValue]], {
+    };
+    (sheetEditorRef.current as any)?.setCellValuesByRange([[newCellValue]], {
       row: [row, row],
       column: [column, column],
     }, {}, false);
@@ -517,10 +511,8 @@ const adjustRowHeight = ({
 export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
-  console.log('afterUpdateCell', params);
   const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
     ?.currentSheetId as string;
-  console.log('currentSheetId f7b72d1c-4c97-4c27-ab08-399624b5dd79', currentSheetId);
   updateYdocSheetData(
     // @ts-ignore
     params.ydocRef.current,
@@ -570,11 +562,7 @@ export const afterUpdateCell = async (
   // Handle onboarding if needed
   const { row, column } = handleOnboarding(params);
   const updatedParams = { ...params, row, column };
-  const formulaName = newValue.f
-    ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
-    ?.toUpperCase();
-  // const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
-  //   ?.currentSheetId as string;
+  const formulaName = getFormulaName(newValue);
 
   // Handle promise-based values
   if (
@@ -600,7 +588,7 @@ export const afterUpdateCell = async (
   });
 };
 
-// add new entry for new data block refernce
+// Add a new entry for the edited data block dependency map.
 const updateDataCalcFunc = ({
   params,
   currentSheetId,
@@ -608,9 +596,7 @@ const updateDataCalcFunc = ({
   params: AfterUpdateCellParams;
   currentSheetId: string;
 }) => {
-  //return;
   try {
-    console.log('updateDataCalcFunc', params);
     params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
       const formulaString = params.newValue?.f?.split('=')[1];
 
@@ -674,9 +660,7 @@ const updateDataCalcFunc = ({
       };
     });
   } catch (error: any) {
-    const formulaName = params.newValue.f
-      ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
-      ?.toUpperCase();
+    const formulaName = getFormulaName(params.newValue);
     // send error message to dsheet.new to commit to sentry
     params?.dataBlockApiKeyHandler?.({
       data: {

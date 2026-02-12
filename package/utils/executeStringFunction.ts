@@ -183,7 +183,6 @@ function evaluateArg(
   if (arg === 'undefined') return undefined;
 
   // Array
-  console.log('arg', arg);
   if (arg.startsWith('[') && arg.endsWith(']')) {
     try {
       return JSON.parse(arg);
@@ -194,7 +193,6 @@ function evaluateArg(
   }
 
   // Object
-  console.log('arg', arg);
   if (arg.startsWith('{') && arg.endsWith('}')) {
     try {
       return JSON.parse(arg);
@@ -204,7 +202,6 @@ function evaluateArg(
   }
 
   // String (remove outer quotes if present)
-  console.log('arg', arg);
   if (
     (arg.startsWith('"') && arg.endsWith('"')) ||
     (arg.startsWith("'") && arg.endsWith("'"))

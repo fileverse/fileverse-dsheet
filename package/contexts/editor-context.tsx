@@ -183,17 +183,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const handleOnChangePortalUpdate = useMemo(
     () =>
       throttle(() => {
-        console.log(
-          'portal handleOnChange',
-          ydocRef.current?.getArray(dsheetId).toArray()
-        );
-
         if (onChange && ydocRef.current) {
           const encodedUpdate = fromUint8Array(
             Y.encodeStateAsUpdate(ydocRef.current),
           );
-
-          console.log('portal handleOnChange indexeddb ddoo', encodedUpdate);
           onChange({ data: currentDataRef.current }, encodedUpdate);
         }
       }, 3000),

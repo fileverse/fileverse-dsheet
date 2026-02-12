@@ -34,7 +34,6 @@ export const handleCSVUpload = (
       return;
     }
     const csvContent = e.target.result;
-    console.log('csvContent', csvContent);
 
     if (typeof csvContent === 'string') {
       Papa.parse(csvContent, {
@@ -42,7 +41,6 @@ export const handleCSVUpload = (
         dynamicTyping: true,
         skipEmptyLines: true,
         complete: (results) => {
-          console.log('results', results);
           if (results.errors.length > 0 && results.data.length === 0) {
             console.error('CSV Parsing errors:', results.errors);
             alert('Error parsing CSV file');
@@ -87,8 +85,6 @@ export const handleCSVUpload = (
           headerRow.forEach((cell) => {
             cellData.push(cell);
           });
-
-          console.log('headerRow', headerRow, results.data);
 
           // Add data rows
           let maxRow = 0;
@@ -157,19 +153,7 @@ export const handleCSVUpload = (
           } else {
             finalData = [sheetObject as Sheet];
           }
-          // console.log('finalData before insert', finalData,);
-          //const r = migrateSheetArrayForImport(finalData);
 
-          // console.log('finalData after insert',);
-
-          // ydoc.transact(() => {
-          //   sheetArray.delete(0, sheetArray.length);
-
-          //   finalData.forEach((sheet) => {
-          //     const factory = migrateSheetFactoryForImport(sheet);
-          //     sheetArray.push([factory()]); // 🔥 created + attached
-          //   });
-          // });
           ydoc.transact(() => {
             if (importType !== 'merge-current-dsheet') {
               sheetArray.delete(0, sheetArray.length);
@@ -185,10 +169,6 @@ export const handleCSVUpload = (
 
           const plain = ySheetArrayToPlain(ydoc.getArray(dsheetId));
           currentDataRef.current = plain;
-          // console.log('whyyyy portal missing', handleContentPortal, sheetArray, plain);
-          // migrateSheetArrayForImport(ydoc, sheetArray, dsheetId, handleContentPortal);
-          // console.log('now finalData', finalData, ydoc.getArray(dsheetId).toArray(), handleContentPortal);
-          // console.log('last finalData', ydoc.getArray(dsheetId).toArray());
           setTimeout(() => {
             if (handleContentPortal) {
               handleContentPortal();

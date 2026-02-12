@@ -2,9 +2,6 @@
 import React, { ComponentProps, useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-react';
-import * as Y from 'yjs';
-
-
 import {
   TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
@@ -30,9 +27,13 @@ import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
 import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
-
-import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import {
+  createAfterColRowChangesHandler,
+  createAfterOrderChangesHandler,
+  createSheetLengthChangeHandler,
+  syncCurrentSheetField,
+} from './editor-workbook-sync';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -137,15 +138,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     updateDocumentTitle,
   });
 
-  // useEffect(() => {
-  //   dataBlockListYdocUpdate({
-  //     sheetEditorRef,
-  //     ydocRef,
-  //     dsheetId,
-  //     dataBlockCalcFunction
-  //   })
-  // }, [dataBlockCalcFunction]);
-
   const cellContextMenu = isReadOnly
     ? allowComments
       ? ['comment']
@@ -158,11 +150,22 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       : ['filter']
     : TOOL_BAR_ITEMS;
 
-  const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef });
-  console.log('refreshDenomination', refreshDenomination);
   const {
     handleOnChangePortalUpdate
   } = useEditor();
+
+  const syncContext = {
+    sheetEditorRef,
+    ydocRef,
+    dsheetId,
+    handleOnChangePortalUpdate,
+  };
+  const handleSheetLengthChange = createSheetLengthChangeHandler({
+    ...syncContext,
+    currentDataRef,
+  });
+  const handleAfterOrderChanges = createAfterOrderChangesHandler(syncContext);
+  const handleAfterColRowChanges = createAfterColRowChangesHandler(syncContext);
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -176,8 +179,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         : isReadOnly
           ? []
           : DEFAULT_SHEET_DATA;
-
-    console.log('data vvvvvvv', data);
 
     return (
       // @ts-ignore
@@ -226,14 +227,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             : []
         }
         hooks={{
-          // afterActivateSheet: () => {
-          //   if (
-          //     sheetEditorRef.current &&
-          //     sheetEditorRef.current?.getAllSheets().length > 0
-          //   ) {
-          //     refreshDenomination();
-          //   }
-          // },
           afterUpdateCell: (
             row: number,
             column: number,
@@ -264,92 +257,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleLiveQueryData: handleLiveQuery,
             });
           },
-          sheetLengthChange: () => {
-            const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
-            const sheets = sheetEditorRef.current?.getAllSheets();
-
-            if (!sheetArray || !sheets) return;
-
-            const docSheets = sheetArray.toArray();
-            const docSheetLength = docSheets.length || 1;
-            const editorSheetLength = sheets.length || 1;
-
-            /* -------------------- ADD SHEET -------------------- */
-            if (
-              docSheetLength < editorSheetLength &&
-              editorSheetLength > 1 &&
-              docSheetLength > 0
-            ) {
-              // @ts-ignore
-              currentDataRef.current = sheets;
-
-              setTimeout(() => {
-                const createdSheet = sheets[sheets.length - 1];
-                const sheet = { ...createdSheet };
-
-                const ySheet = new Y.Map<any>();
-                ySheet.set('id', sheet.id);
-                ySheet.set('name', sheet.name);
-                ySheet.set('order', sheet.order);
-                ySheet.set('row', sheet.row ?? 500);
-                ySheet.set('column', sheet.column ?? 36);
-                ySheet.set('status', 1);
-                ySheet.set('config', sheet.config ?? {});
-                ySheet.set('celldata', new Y.Map());
-                ySheet.set('calcChain', new Y.Map());
-                ySheet.set('dataBlockCalcFunction', new Y.Array());
-
-                ydocRef.current?.transact(() => {
-                  sheetArray.push([ySheet]);
-                });
-
-                sheetEditorRef.current?.activateSheet({ id: sheet.id });
-                handleOnChangePortalUpdate();
-              }, 50);
-
-              return;
-            }
-
-            /* -------------------- DELETE SHEET -------------------- */
-            if (
-              docSheetLength > editorSheetLength &&
-              editorSheetLength > 0
-            ) {
-              const editorSheetIds = new Set(sheets.map(s => s.id));
-
-              // find removed sheet index in Yjs
-              const removedIndex = docSheets.findIndex(
-                ySheet => !editorSheetIds.has(ySheet.get('id'))
-              );
-
-              if (removedIndex !== -1) {
-                currentDataRef.current = sheetEditorRef.current?.getAllSheets() || [];
-                console.log('Removed sheet index:', removedIndex, currentDataRef.current);
-                setTimeout(() => {
-                  // @ts-ignore
-                  ydocRef.current?.transact(() => {
-                    sheetArray.delete(removedIndex, 1);
-                  });
-                  const sheetArrayN = ydocRef.current?.getArray(dsheetId);
-                  console.log('Sheet array after deletion:', sheetArrayN?.toArray());
-                  handleOnChangePortalUpdate();
-                }, 50);
-              }
-            }
-          },
-          // afterDeleteSheet(id) {
-          //   const sheetArray = ydocRef.current?.getArray<Y.Map<any>>(dsheetId);
-          //   const index = sheetArray?.toArray()
-          //     .findIndex((s) => s.get('id') === id);
-
-          //   if (index === -1) return false;
-
-          //   ydocRef?.current?.transact(() => {
-          //     sheetArray?.delete(index as number, 1);
-          //   });
-
-          //   //const sheetArray = ydocRef.current?.getArray<Y.Map>(dsheetId);
-          // },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          sheetLengthChange: handleSheetLengthChange,
           dataVerificationChange: () => {
             dataVerificationYdocUpdate({
               sheetEditorRef,
@@ -397,7 +306,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             })
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
-            console.log('updateCellYdoc changes from fortune', changes);
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,
@@ -406,88 +314,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             )
           },
           afterImagesChange: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocImage = currentYdocSheet?.get('images');
-            if (ydocImage !== currentSheet?.images) {
-              currentYdocSheet?.set('images', currentSheet?.images);
-              handleOnChangePortalUpdate();
-            }
+            syncCurrentSheetField(syncContext, 'images');
           },
           afterIframesChange: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocIframe = currentYdocSheet?.get('iframes');
-            if (ydocIframe !== currentSheet?.iframes) {
-              currentYdocSheet?.set('iframes', currentSheet?.iframes);
-              handleOnChangePortalUpdate();
-            }
+            syncCurrentSheetField(syncContext, 'iframes');
           },
           afterFrozenChange: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocFrozen = currentYdocSheet?.get('frozen');
-            if (ydocFrozen !== currentSheet?.frozen) {
-              currentYdocSheet?.set('frozen', currentSheet?.frozen);
-              handleOnChangePortalUpdate();
-            }
+            syncCurrentSheetField(syncContext, 'frozen');
           },
           afterNameChanges: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocName = currentYdocSheet?.get('name');
-            if (ydocName !== currentSheet?.name) {
-              currentYdocSheet?.set('name', currentSheet?.name);
-              handleOnChangePortalUpdate();
-            }
+            syncCurrentSheetField(syncContext, 'name');
           },
-          afterOrderChanges: () => {
-            const allSheets = sheetEditorRef?.current?.getAllSheets();
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            allSheets?.forEach((sheet) => {
-              const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === sheet?.id) as any;
-              const ydocOrder = currentYdocSheet?.get('order');
-              if (ydocOrder !== sheet?.order) {
-                currentYdocSheet?.set('order', sheet?.order);
-                handleOnChangePortalUpdate();
-              }
-            })
-          },
+          afterOrderChanges: handleAfterOrderChanges,
           afterConfigChanges: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocConfig = currentYdocSheet?.get('config');
-            if (ydocConfig !== currentSheet?.config) {
-              currentYdocSheet?.set('config', currentSheet?.config);
-              handleOnChangePortalUpdate();
-            }
+            syncCurrentSheetField(syncContext, 'config');
           },
-          afterColRowChanges: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocCol = currentYdocSheet?.get('column');
-            const ydocRow = currentYdocSheet?.get('row');
-            if (ydocCol !== currentSheet?.column || ydocRow !== currentSheet?.row) {
-              currentYdocSheet?.set('column', currentSheet?.column);
-              currentYdocSheet?.set('row', currentSheet?.row);
-              handleOnChangePortalUpdate();
-            }
-          },
+          afterColRowChanges: handleAfterColRowChanges,
           afterShowGridLinesChange: () => {
-            const currentSheet = sheetEditorRef?.current?.getSheet()
-            let oldSheets = ydocRef?.current?.getArray(dsheetId);
-            const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-            const ydocShowGridLines = currentYdocSheet?.get('showGridLines');
-            if (ydocShowGridLines !== currentSheet?.showGridLines) {
-              currentYdocSheet?.set('showGridLines', currentSheet?.showGridLines);
-              handleOnChangePortalUpdate();
-            }
+            syncCurrentSheetField(syncContext, 'showGridLines');
           }
         }}
         onDuneChartEmbed={onDuneChartEmbed}
@@ -497,7 +341,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   }, [
     forceSheetRender,
     isReadOnly,
-    // handleChange,
     toggleTemplateSidebar,
     onboardingComplete,
     onboardingHandler,
@@ -506,7 +349,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     exportDropdownOpen,
     commentData,
     syncStatus,
-    // currentDataRef.current,
     isAuthorized,
   ]);
 };

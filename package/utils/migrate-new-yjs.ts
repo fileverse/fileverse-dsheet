@@ -1,4 +1,3 @@
-
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 // import { ySheetArrayToPlain } from "./update-ydoc";
@@ -32,8 +31,6 @@ export function migrateSheetArrayIfNeeded(
     }
   });
 
-  console.log('needsMigration ****', needsMigration, sheetArray);
-
   if (!needsMigration) return;
 
   ydoc.transact(() => {
@@ -43,8 +40,7 @@ export function migrateSheetArrayIfNeeded(
       const sheetMap = new Y.Map();
 
       Object.entries(item).forEach(([key, value]) => {
-        console.log('key [[[[[[[[[[[[[[', key, 'value', value,);
-        // ✅ SPECIAL: celldata array → Y.Map keyed by r_c
+        // celldata array → Y.Map keyed by r_c for efficient Yjs updates
         if (key === 'celldata' && Array.isArray(value)) {
           const cellMap = new Y.Map();
           const normalized = normalizeCelldataArray(value);
