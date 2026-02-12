@@ -17,8 +17,8 @@ export const SmartContractButton = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger>
-        <div role="button" className="p-2 rounded-lg bg-[#fef2ef]">
+      <PopoverTrigger data-testid="smart-contract-popover-trigger">
+        <div role="button" className="dsheet-btn dsheet-btn--smart-contract-trigger p-2 rounded-lg bg-[#fef2ef]" data-testid="smart-contract-trigger">
           <LucideIcon
             name="FileExport"
             size="md"
@@ -29,12 +29,13 @@ export const SmartContractButton = ({
       <PopoverContent
         align="end"
         alignOffset={0}
-        className="export-content-popover !w-[235px]"
+        className="dsheet-smart-contract-popover export-content-popover !w-[235px]"
         elevation={2}
         side="bottom"
         sideOffset={4}
+        data-testid="smart-contract-popover-content"
       >
-        <div className="p-2 w-full">
+        <div className="p-2 w-full dsheet-smart-contract-actions" data-testid="smart-contract-actions">
           {!isAuthorized && (
             <div
               onClick={() => {
@@ -44,13 +45,14 @@ export const SmartContractButton = ({
                 window.history.replaceState({}, '', url.toString());
                 setOpen(false);
               }}
-              className="w-full flex cursor-pointer rounded-md flex-col p-2"
+              className="dsheet-text-block w-full flex cursor-pointer rounded-md flex-col p-2"
               style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
+              data-testid="smart-contract-auth-prompt"
             >
-              <p className="font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default">
+              <p className="dsheet-text dsheet-text--body font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default" data-testid="smart-contract-required-message">
                 dSheets account required
               </p>
-              <p className="text-helper-text-sm mt-1 color-text-secondary">
+              <p className="dsheet-text dsheet-text--helper text-helper-text-sm mt-1 color-text-secondary" data-testid="smart-contract-signup-message">
                 <a className="inline color-text-link">Signup/Login </a> to be
                 able to access smart contracts.
               </p>
@@ -58,40 +60,44 @@ export const SmartContractButton = ({
           )}
 
           <button
+            type="button"
             onClick={() => {
               if (isAuthorized) {
                 handleImportSmartContract();
                 setOpen(false);
               }
             }}
-            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            className="dsheet-btn dsheet-btn--import-smart-contract hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            data-testid="smart-contract-import-button"
           >
             <LucideIcon
               name="FileExport"
               className={`w-[17px] h-[17px] ${!isAuthorized && 'color-text-secondary cursor-not-allowed'}`}
             />
             <span
-              className={`text-body-sm ${!isAuthorized && 'color-text-secondary cursor-not-allowed'} `}
+              className={`dsheet-text dsheet-text--body text-body-sm ${!isAuthorized && 'color-text-secondary cursor-not-allowed'} `}
             >
               Import Smart Contract
             </span>
           </button>
 
           <button
+            type="button"
             onClick={() => {
               if (isAuthorized) {
                 handleViewSmartContract();
                 setOpen(false);
               }
             }}
-            className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            className="dsheet-btn dsheet-btn--view-smart-contract hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+            data-testid="smart-contract-view-button"
           >
             <LucideIcon
               name="FileKey2"
               className={`w-[17px] h-[17px] ${!isAuthorized && 'color-text-secondary cursor-not-allowed'}`}
             />
             <span
-              className={`text-body-sm ${!isAuthorized && 'color-text-secondary cursor-not-allowed'} `}
+              className={`dsheet-text dsheet-text--body text-body-sm ${!isAuthorized && 'color-text-secondary cursor-not-allowed'} `}
             >
               My Smart Contract
             </span>

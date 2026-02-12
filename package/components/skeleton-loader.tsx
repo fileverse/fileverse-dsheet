@@ -56,10 +56,11 @@ const useGridDimensions = (containerRef: React.RefObject<HTMLDivElement>) => {
 // Skeleton formula bar component
 export const SkeletonFormulaBar = () => (
   <div
-    className={`w-full h-7 px-4 flex items-center bg-gray-50 border-b ${pulseAnimation}`}
+    className={`dsheet-skeleton dsheet-skeleton-formula-bar w-full h-7 px-4 flex items-center bg-gray-50 border-b ${pulseAnimation}`}
+    data-testid="skeleton-formula-bar"
   >
     <div className="flex items-center gap-2">
-      <div className="h-4 w-32 bg-gray-200 rounded"></div>{' '}
+      <div className="h-4 w-32 bg-gray-200 rounded" aria-hidden></div>{' '}
       {/* Formula content */}
     </div>
   </div>
@@ -96,8 +97,9 @@ export const SkeletonToolbar = ({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-10 px-2 flex items-center border-b ml-5 bg-gray-50 ${pulseAnimation}`}
+      className={`dsheet-skeleton dsheet-skeleton-toolbar w-full h-10 px-2 flex items-center border-b ml-5 bg-gray-50 ${pulseAnimation}`}
       style={{ height: '39px' }}
+      data-testid="skeleton-toolbar"
     >
       {sections.map((section, sectionIndex) => (
         <div key={sectionIndex} className="flex items-center">
@@ -129,9 +131,9 @@ export const SkeletonGrid = () => {
   const { cols, rows } = useGridDimensions(containerRef);
 
   return (
-    <div ref={containerRef} className="w-full h-full flex flex-col">
+    <div ref={containerRef} className="dsheet-skeleton dsheet-skeleton-grid w-full h-full flex flex-col" data-testid="skeleton-grid">
       {/* Column headers */}
-      <div className="flex sticky top-0 z-10 bg-gray-100">
+      <div className="dsheet-skeleton-grid-header flex sticky top-0 z-10 bg-gray-100">
         {[...Array(cols)].map((_, i) => (
           <div
             key={i}
@@ -178,7 +180,7 @@ const SkeletonLoader = ({
 }: {
   isReadOnly: boolean | undefined;
 }) => (
-  <div className="w-full h-full flex flex-col">
+  <div className="dsheet-skeleton-loader w-full h-full flex flex-col" data-testid="skeleton-loader">
     <SkeletonToolbar isReadOnly={isReadOnly} />
     <SkeletonFormulaBar />
     <div className="flex-1 overflow-hidden">
