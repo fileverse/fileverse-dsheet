@@ -3,17 +3,19 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
-
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
+// @ts-ignore
 import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
 import { DataBlockApiKeyHandlerType } from '../types';
-// import { dataBlockCalcFunctionHandler } from '../utils/dataBlockCalcFunction';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
+import { migrateSheetArrayIfNeeded } from '../utils/migrate-new-yjs';
 
 /**
  * Hook for managing sheet data
  * Handles initialization, updates, and persistence of sheet data
  */
+
 export const useEditorData = (
   ydocRef: React.MutableRefObject<Y.Doc | null>,
   dsheetId: string,
@@ -24,6 +26,7 @@ export const useEditorData = (
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
   commentData?: object,
+  // @ts-ignore
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
   setDataBlockCalcFunction?: React.Dispatch<
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
@@ -33,16 +36,15 @@ export const useEditorData = (
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   allowComments?: boolean
 ) => {
-
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
   const currentDataRef = useRef<Sheet[]>([]);
   const remoteUpdateRef = useRef<boolean>(false);
   const dataInitialized = useRef<boolean>(false);
-  const firstRender = useRef<boolean>(true);
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
+
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
@@ -53,47 +55,64 @@ export const useEditorData = (
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
-    if (!portalContent?.length || !ydocRef.current || !dsheetId) {
+    if (!portalContent?.length || !ydocRef.current || !dsheetId || portalContentProcessed.current) {
       return;
     }
 
     try {
       const uint8Array = toUint8Array(portalContent);
 
-      // Create a temporary doc to decode the update.
       const tempDoc = new Y.Doc();
       Y.applyUpdate(tempDoc, uint8Array);
 
-      // Get the sheet data from temp doc to extract metadata
-      const tempMap = tempDoc.getArray(dsheetId);
-      const decodedSheetData = Array.from(tempMap) as Sheet[];
+      // Merge into main doc
+      Y.applyUpdate(ydocRef.current, uint8Array);
 
-      if (decodedSheetData.length > 0) {
-        // Merge the portal content into the main YJS document
-        Y.applyUpdate(ydocRef.current, uint8Array);
+      const sheetArray =
+        ydocRef.current.getArray(dsheetId);
 
-        const map = ydocRef.current.getArray(dsheetId);
+      // Migrate legacy sheet array to Y.Map-based structure if needed
+      migrateSheetArrayIfNeeded(
+        ydocRef.current,
+        sheetArray,
+      );
 
-        const newSheetData = Array.from(map) as Sheet[];
+      // Convert Yjs sheet array to plain snapshot for Fortune spreadsheet
+      const newSheetData =
+        ySheetArrayToPlain(
+          // @ts-ignore
+          sheetArray as Y.Array<Y.Map>,
+        );
 
-        // Update the current data reference
-        currentDataRef.current = newSheetData;
-        initialiseLiveQueryData(newSheetData);
+      currentDataRef.current = newSheetData;
+      initialiseLiveQueryData(newSheetData);
 
-        // Always mark portal content as processed
-        portalContentProcessed.current = true;
+      portalContentProcessed.current = true;
 
-        // Force a re-render with the portal content data
-        if (setForceSheetRender) {
-          setForceSheetRender((prev) => prev + 1);
-        }
+      if (setForceSheetRender) {
+        setForceSheetRender((prev) => prev + 1);
       }
+
+      const dataBlockList: { [key: string]: any } = {};
+      newSheetData.forEach((sheet: Sheet) => {
+        if (sheet?.id && sheet?.dataBlockCalcFunction) {
+          dataBlockList[sheet.id] = {
+            ...sheet.dataBlockCalcFunction,
+          };
+        }
+      });
+      //@ts-ignore
+      setDataBlockCalcFunction?.(dataBlockList);
 
       tempDoc.destroy();
     } catch (error) {
-      console.error('[DSheet] Error processing portal content:', error);
+      console.error(
+        '[DSheet] Error processing portal content:',
+        error,
+      );
     }
   }, [portalContent]);
+
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
@@ -102,7 +121,10 @@ export const useEditorData = (
     }
     try {
       const currentDocData = ydocRef.current.getArray(dsheetId);
-      const currentData = Array.from(currentDocData) as Sheet[];
+      const currentData = ySheetArrayToPlain(
+        // @ts-ignore
+        currentDocData as Y.Array<Y.Map>,
+      )
       if (currentData.length > 0 && syncStatus === 'synced') {
         const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
         if (sheetEditorRef.current !== null && setContext) {
@@ -150,7 +172,7 @@ export const useEditorData = (
             });
           });
         }
-        currentDataRef.current = currentData;
+        //currentDataRef.current = currentData;
       }
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
@@ -173,7 +195,7 @@ export const useEditorData = (
 
         const sheetArray = ydocRef.current?.getArray(dsheetId);
         const currentData = Array.from(sheetArray || []) as Sheet[];
-        currentDataRef.current = currentData;
+        //currentDataRef.current = currentData;
         initialiseLiveQueryData(currentData);
 
         dataInitialized.current = true;
@@ -198,8 +220,8 @@ export const useEditorData = (
       }
 
       remoteUpdateRef.current = true;
-      const newData = Array.from(sheetArray) as Sheet[];
-      currentDataRef.current = newData;
+      //const newData = Array.from(sheetArray) as Sheet[];
+      //currentDataRef.current = newData;
 
       // Debounce the re-render to prevent multiple quick updates
       if (debounceTimerRef.current !== null) {
@@ -226,40 +248,7 @@ export const useEditorData = (
 
   // Handle changes to the sheet
   const handleChange = useCallback(
-    (data: Sheet[]) => {
-      if (firstRender.current) {
-        const cachedDataBlockCalcFunction: {
-          [key: string]: { [key: string]: any };
-        } = {};
-        data.map((sheet) => {
-          if (Array.isArray(sheet.dataBlockCalcFunction)) {
-            const newDataBlockCalcFunction: {
-              [key: string]: { [key: string]: any };
-            } = {};
-            sheet.dataBlockCalcFunction.map((dataBlockCalc) => {
-              newDataBlockCalcFunction[
-                dataBlockCalc.row + '_' + dataBlockCalc.column
-              ] = dataBlockCalc;
-            });
-            cachedDataBlockCalcFunction[sheet.id as string] = {
-              ...newDataBlockCalcFunction,
-            };
-          } else {
-            if (!sheet.dataBlockCalcFunction) return;
-            // @ts-expect-error later
-            cachedDataBlockCalcFunction[sheet.id] = sheet.dataBlockCalcFunction;
-          }
-        });
-        setDataBlockCalcFunction?.(cachedDataBlockCalcFunction);
-        /*Here we are calling dataBlockCalcFunctionHandler to update the sheet UI with latest data. Comment it for now, will decide to remove later*/
-        // setTimeout(() => {
-        //   // @ts-expect-error later
-        //   dataBlockCalcFunctionHandler({ dataBlockCalcFunction: cachedDataBlockCalcFunction, sheetEditorRef });
-        // }, 1000)
-
-        firstRender.current = false;
-        return;
-      }
+    (_data: Sheet[]) => {
       if (remoteUpdateRef.current) {
         remoteUpdateRef.current = false;
         return;
@@ -267,24 +256,12 @@ export const useEditorData = (
 
       // Set the flag to indicate we're in the process of updating YJS
       isUpdatingRef.current = true;
-      updateSheetData(
-        ydocRef.current,
-        dsheetId,
-        data,
-        sheetEditorRef.current,
-        dataBlockCalcFunction,
-        isReadOnly,
-      );
 
       // Reset the flag after a short delay to allow the update to complete
       setTimeout(() => {
         isUpdatingRef.current = false;
       }, 50);
 
-      // Call external onChange handler if provided
-      if (onChange) {
-        onChange(data);
-      }
     },
     [dsheetId, onChange],
   );

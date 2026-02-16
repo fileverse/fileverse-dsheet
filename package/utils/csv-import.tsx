@@ -5,6 +5,9 @@ import React from 'react';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { encode } from 'punycode';
+import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
+
 
 export const handleCSVUpload = (
   event: React.ChangeEventHandler<HTMLInputElement> | undefined,
@@ -15,7 +18,8 @@ export const handleCSVUpload = (
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
   updateDocumentTitle?: (title: string) => void,
   fileArg?: File,
-  importType?: string
+  importType?: string,
+  handleContentPortal?: any
 ) => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -130,6 +134,7 @@ export const handleCSVUpload = (
           const data = Array.from(sheetArray) as Sheet[];
 
           const sheetObject = {
+            id: crypto.randomUUID(),
             name: file.name || 'Sheet1',
             celldata: [...cellData],
             row: rowCount,
@@ -148,18 +153,33 @@ export const handleCSVUpload = (
           } else {
             finalData = [sheetObject as Sheet];
           }
-          ydoc.transact(() => {
-            sheetArray.delete(0, sheetArray.length);
-            sheetArray.insert(0, finalData);
 
-            currentDataRef.current = finalData;
+          ydoc.transact(() => {
+            if (importType !== 'merge-current-dsheet') {
+              sheetArray.delete(0, sheetArray.length);
+            }
+
+            finalData.forEach((sheet) => {
+              if (sheet instanceof Y.Map) return;
+
+              const factory = migrateSheetFactoryForImport(sheet);
+              sheetArray.push([factory()]);
+            });
           });
-          setForceSheetRender((prev: number) => prev + 1);
+
+          const plain = ySheetArrayToPlain(ydoc.getArray(dsheetId));
+          currentDataRef.current = plain;
+          setTimeout(() => {
+            if (handleContentPortal) {
+              handleContentPortal();
+            }
+            setForceSheetRender((prev: number) => prev + 1);
+          }, 200)
           setTimeout(() => {
             sheetEditorRef.current?.activateSheet({
               index: finalData.length - 1,
             });
-          }, 100);
+          }, 500);
         },
       });
     }

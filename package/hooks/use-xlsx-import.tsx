@@ -3,6 +3,9 @@ import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
+
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 
@@ -21,6 +24,7 @@ export const useXLSXImport = ({
   currentDataRef: React.MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
 }) => {
+  // if (!sheetEditorRef || !currentDataRef) return
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<
     string,
@@ -185,20 +189,31 @@ export const useXLSXImport = ({
               combinedSheets = [...sheets]
             }
 
-            combinedSheets = combinedSheets.map((sheet, index) => {
-              sheet.order = index;
-              return sheet
-            })
-
             setSheetData(combinedSheets);
             ydocRef.current.transact(() => {
-              sheetArray.delete(0, sheetArray.length);
-              sheetArray.insert(0, combinedSheets);
-              currentDataRef.current = combinedSheets;
+              if (importType !== 'merge-current-dsheet') {
+                sheetArray.delete(0, sheetArray.length);
+              }
+
+              combinedSheets.forEach((sheet) => {
+                if (sheet instanceof Y.Map) return;
+
+                const factory = migrateSheetFactoryForImport(sheet);
+                sheetArray.push([factory()]);
+              });
             });
+
+            setTimeout(() => {
+              if (ydocRef && ydocRef?.current) {
+                const plain = ySheetArrayToPlain(ydocRef?.current?.getArray(dsheetId));
+                currentDataRef.current = plain;
+              }
+            }, 100)
             // @ts-expect-error later
             updateDocumentTitle?.(exportJson.info?.name);
-            setForceSheetRender((prev: number) => prev + 1);
+            setTimeout(() => {
+              setForceSheetRender((prev: number) => prev + 1);
+            }, 300)
           },
         );
       } catch (error) {

@@ -1,337 +1,156 @@
 //@ts-nocheck
 import { Sheet } from '@fileverse-dev/fortune-react';
 
-const sheetOrderChanged = (
-  latestContent: Sheet[],
-  existingContent: Sheet[],
-) => {
-  for (const sheetIndex in latestContent) {
-    if (latestContent[sheetIndex].order !== existingContent[sheetIndex].order) {
-      return true;
-    }
-  }
-};
-
-const sheetShowGridLinesChanged = (
-  latestContent: Sheet[],
-  existingContent: Sheet[],
-) => {
-  for (const sheetIndex in latestContent) {
-    if (latestContent[sheetIndex].showGridLines !== existingContent[sheetIndex].showGridLines) {
-      return true;
-    }
-  }
-};
-
 /**
  * Compare two spreadsheets' cell data and images, checking if anything changed
  * @param {Array} oldSheets - Original sheets data
  * @param {Array} newSheets - New sheets data
  * @returns {boolean} - true if any cell data or images changed, false if identical
  */
-export function isSpreadsheetChanged(oldSheets: Sheet[], newSheets: Sheet[]) {
-  if (!oldSheets || !newSheets || oldSheets.length !== newSheets.length) {
-    return true;
-  }
 
-  if (oldSheets.length > 0) {
-    for (let i = 0; i < oldSheets.length; i++) {
-      const oldSheet = oldSheets[i];
-      const newSheet = newSheets[i];
+type DiffChange<T> = {
+  from: T;
+  to: T;
+};
 
-      // Check if sheet name has changed
-      if (oldSheet.name !== newSheet.name) {
-        return true;
+type UpdatedItem<T> = {
+  key: string;
+  before: T;
+  after: T;
+  changes: Partial<Record<keyof T, DiffChange<any>>>;
+};
+
+type DiffResult<T> = {
+  added: T[];
+  removed: T[];
+  updated: UpdatedItem<T>[];
+};
+
+
+export function diffObjectArrays<T extends Record<string, any>>(
+  oldArr: readonly T[],
+  newArr: readonly T[],
+  getKey?: (item: T) => string
+): DiffResult<T> {
+  const oldMap = new Map<string, T>();
+  const newMap = new Map<string, T>();
+
+  oldArr?.forEach((item, index) => oldMap.set(getKey ? getKey(item) : index, item));
+  newArr?.forEach((item, index) => newMap.set(getKey ? getKey(item) : index, item));
+
+  const added: T[] = [];
+  const removed: T[] = [];
+  const updated: UpdatedItem<T>[] = [];
+
+  // Added + Updated
+  for (const [key, newItem] of newMap) {
+    const oldItem = oldMap.get(key);
+
+    if (!oldItem) {
+      added.push(newItem);
+      continue;
+    }
+
+    const changes: UpdatedItem<T>["changes"] = {};
+
+    (Object.keys(newItem) as Array<keyof T>).forEach(prop => {
+      if (newItem[prop] !== oldItem[prop]) {
+        changes[prop] = {
+          from: oldItem[prop],
+          to: newItem[prop],
+        };
       }
+    });
 
-      // Check if sheet color has changed
-      if (oldSheet.color !== newSheet.color) {
-        return true;
-      }
-
-      if (JSON.stringify(oldSheet.config) !== JSON.stringify(newSheet.config)) {
-        return true;
-      }
-
-      // Check if data verification settings have changed
-      if (
-        JSON.stringify(oldSheet.dataVerification) !==
-        JSON.stringify(newSheet.dataVerification)
-      ) {
-        return true;
-      }
-
-      // Check if condition rules have changed
-      if (
-        JSON.stringify(oldSheet.conditionRules) !==
-        JSON.stringify(newSheet.conditionRules)
-      ) {
-        return true;
-      }
-
-      // Check celldata changes
-      const oldCellData = oldSheet?.celldata || [];
-      const newCellData = newSheet?.celldata || [];
-
-      const oldCellMap = new Map();
-      const newCellMap = new Map();
-
-      // Only store cells with non-null values
-      for (const cell of oldCellData) {
-        if (cell && cell.v !== null) {
-          const key = `${cell.r},${cell.c}`;
-          oldCellMap.set(key, cell.v);
-        }
-      }
-
-      for (const cell of newCellData) {
-        if (cell.v !== null) {
-          const key = `${cell.r},${cell.c}`;
-          newCellMap.set(key, cell.v);
-        }
-      }
-
-      // Different number of non-null cells means change
-      if (oldCellMap.size !== newCellMap.size) {
-        return true;
-      }
-
-      // Check each non-null cell specifically
-      for (const [key, value] of oldCellMap.entries()) {
-        if (!newCellMap.has(key)) {
-          return true;
-        }
-
-        const newValue = newCellMap.get(key);
-
-        // If both values are objects, we need to do deep comparison
-        if (
-          typeof value === 'object' &&
-          value !== null &&
-          typeof newValue === 'object' &&
-          newValue !== null
-        ) {
-          for (const prop in value) {
-            if (value[prop] !== newValue[prop]) {
-              return true;
-            }
-          }
-
-          for (const prop in newValue) {
-            if (value[prop] !== newValue[prop]) {
-              return true;
-            }
-          }
-        }
-        // Simple value comparison for non-objects
-        else if (value !== newValue) {
-          return true;
-        }
-      }
-
-      // Check image changes
-      const oldImages = oldSheet?.images || [];
-      const newImages = newSheet?.images || [];
-
-      // Different number of images means change
-      if (oldImages.length !== newImages.length) {
-        return true;
-      }
-
-      // Create maps for efficient image comparison
-      const oldImageMap = new Map();
-      const newImageMap = new Map();
-
-      // Map images by their position or unique identifier
-      // Assuming images have some identifying property like id, src, or position
-      for (const image of oldImages) {
-        // You can adjust this key generation based on your image object structure
-        // For example, if images have id: use image.id
-        // If they have position: use `${image.x},${image.y}` or similar
-        const key =
-          image.id ||
-          `${image.x || 0},${image.y || 0}` ||
-          JSON.stringify(image);
-        oldImageMap.set(key, image);
-      }
-
-      for (const image of newImages) {
-        const key =
-          image.id ||
-          `${image.x || 0},${image.y || 0}` ||
-          JSON.stringify(image);
-        newImageMap.set(key, image);
-      }
-
-      // Check each image for changes
-      for (const [key, oldImage] of oldImageMap.entries()) {
-        if (!newImageMap.has(key)) {
-          return true; // Image was removed
-        }
-
-        const newImage = newImageMap.get(key);
-
-        // Compare each property of the image objects
-        const oldImageProps = Object.keys(oldImage);
-        const newImageProps = Object.keys(newImage);
-
-        // Check if number of properties changed
-        if (oldImageProps.length !== newImageProps.length) {
-          return true;
-        }
-
-        // Compare each property
-        for (const prop of oldImageProps) {
-          if (!newImage.hasOwnProperty(prop)) {
-            return true; // Property was removed
-          }
-
-          const oldValue = oldImage[prop];
-          const newValue = newImage[prop];
-
-          // Deep comparison for nested objects
-          if (
-            typeof oldValue === 'object' &&
-            oldValue !== null &&
-            typeof newValue === 'object' &&
-            newValue !== null
-          ) {
-            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-              return true;
-            }
-          }
-          // Simple value comparison
-          else if (oldValue !== newValue) {
-            return true;
-          }
-        }
-
-        // Check for new properties in newImage
-        for (const prop of newImageProps) {
-          if (!oldImage.hasOwnProperty(prop)) {
-            return true; // New property was added
-          }
-        }
-      }
-
-      // Check for new images that weren't in oldImages
-      for (const key of newImageMap.keys()) {
-        if (!oldImageMap.has(key)) {
-          return true; // New image was added
-        }
-      }
-
-      // Check iframe changes
-      const oldIframes = oldSheet?.iframes || [];
-      const newIframes = newSheet?.iframes || [];
-
-      // Different number of iframes means change
-      if (oldIframes.length !== newIframes.length) {
-        return true;
-      }
-
-      // Create maps for efficient iframe comparison
-      const oldIframeMap = new Map();
-      const newIframeMap = new Map();
-
-      // Map iframes by their position or unique identifier
-      for (const iframe of oldIframes) {
-        // Use iframe id or position as key
-        const key =
-          iframe.id ||
-          `${iframe.left || 0},${iframe.top || 0}` ||
-          JSON.stringify(iframe);
-        oldIframeMap.set(key, iframe);
-      }
-
-      for (const iframe of newIframes) {
-        const key =
-          iframe.id ||
-          `${iframe.left || 0},${iframe.top || 0}` ||
-          JSON.stringify(iframe);
-        newIframeMap.set(key, iframe);
-      }
-
-      // Check each iframe for changes
-      for (const [key, oldIframe] of oldIframeMap.entries()) {
-        if (!newIframeMap.has(key)) {
-          return true; // Iframe was removed
-        }
-
-        const newIframe = newIframeMap.get(key);
-
-        // Compare each property of the iframe objects
-        const oldIframeProps = Object.keys(oldIframe);
-        const newIframeProps = Object.keys(newIframe);
-
-        // Check if number of properties changed
-        if (oldIframeProps.length !== newIframeProps.length) {
-          return true;
-        }
-
-        // Compare each property
-        for (const prop of oldIframeProps) {
-          if (!Object.prototype.hasOwnProperty.call(newIframe, prop)) {
-            return true; // Property was removed
-          }
-
-          const oldValue = oldIframe[prop];
-          const newValue = newIframe[prop];
-
-          // Deep comparison for nested objects
-          if (
-            typeof oldValue === 'object' &&
-            oldValue !== null &&
-            typeof newValue === 'object' &&
-            newValue !== null
-          ) {
-            if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-              return true;
-            }
-          }
-          // Simple value comparison
-          else if (oldValue !== newValue) {
-            return true;
-          }
-        }
-
-        // Check for new properties in newIframe
-        for (const prop of newIframeProps) {
-          if (!Object.prototype.hasOwnProperty.call(oldIframe, prop)) {
-            return true; // New property was added
-          }
-        }
-      }
-
-      // Check for new iframes that weren't in oldIframes
-      for (const key of newIframeMap.keys()) {
-        if (!oldIframeMap.has(key)) {
-          return true; // New iframe was added
-        }
-      }
-
-      // check for freeze changes
-      const oldSheetFreezeString = JSON.stringify(oldSheet?.frozen || {});
-      const newSheetFreezeString = JSON.stringify(newSheet?.frozen || {});
-      if (oldSheetFreezeString !== newSheetFreezeString) {
-        return true;
-      }
-
-      const oldSheetDataBlockCalcString = JSON.stringify(
-        oldSheet?.dataBlockCalcFunction || {},
-      );
-      const newSheetDataBlockCalcString = JSON.stringify(
-        newSheet?.dataBlockCalcFunction || {},
-      );
-      if (oldSheetDataBlockCalcString !== newSheetDataBlockCalcString) {
-        return true;
-      }
+    if (Object.keys(changes).length > 0) {
+      updated.push({
+        key,
+        before: oldItem,
+        after: newItem,
+        changes,
+      });
     }
   }
 
-  if (sheetOrderChanged(oldSheets, newSheets) || sheetShowGridLinesChanged(oldSheets, newSheets)) {
-    return true;
+  // Removed
+  for (const [key, oldItem] of oldMap) {
+    if (!newMap.has(key)) {
+      removed.push(oldItem);
+    }
   }
 
-  return false;
+  return { added, removed, updated };
 }
+
+type DiffChange<T> = {
+  from: T;
+  to: T;
+};
+
+type UpdatedEntry<T> = {
+  key: string;
+  before: T;
+  after: T;
+  changes: Partial<Record<keyof T, DiffChange<any>>>;
+};
+
+type ObjectDiffResult<T> = {
+  added: Record<string, T>;
+  removed: Record<string, T>;
+  updated: UpdatedEntry<T>[];
+};
+
+
+export function diffObjectMap<T extends Record<string, any>>(
+  oldObj: Record<string, T>,
+  newObj: Record<string, T>
+): ObjectDiffResult<T> {
+  const added: Record<string, T> = {};
+  const removed: Record<string, T> = {};
+  const updated: UpdatedEntry<T>[] = [];
+
+  const oldKeys = new Set(Object.keys(oldObj));
+  const newKeys = new Set(Object.keys(newObj));
+
+  // Added + Updated
+  for (const key of newKeys) {
+    const newVal = newObj[key];
+    const oldVal = oldObj[key];
+
+    if (!oldVal) {
+      added[key] = newVal;
+      continue;
+    }
+
+    const changes: UpdatedEntry<T>["changes"] = {};
+
+    (Object.keys(newVal) as Array<keyof T>).forEach(prop => {
+      if (newVal[prop] !== oldVal[prop]) {
+        changes[prop] = {
+          from: oldVal[prop],
+          to: newVal[prop],
+        };
+      }
+    });
+
+    if (Object.keys(changes).length > 0) {
+      updated.push({
+        key,
+        before: oldVal,
+        after: newVal,
+        changes,
+      });
+    }
+  }
+
+  // Removed
+  for (const key of oldKeys) {
+    if (!newKeys.has(key)) {
+      removed[key] = oldObj[key];
+    }
+  }
+
+  return { added, removed, updated };
+}
+
+

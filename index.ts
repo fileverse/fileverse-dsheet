@@ -14,5 +14,4 @@ export { handleExportToXLSX } from './package/utils/xlsx-export';
 export { handleExportToCSV } from './package/utils/csv-export';
 export { handleExportToJSON } from './package/utils/json-export';
 export { useXLSXImport } from './package/hooks/use-xlsx-import';
-export { updateSheetData } from './package/utils/sheet-operations';
 export * as FortuneCore from '@fileverse-dev/fortune-core'

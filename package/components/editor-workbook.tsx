@@ -2,7 +2,6 @@
 import React, { ComponentProps, useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-react';
-
 import {
   TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
@@ -15,15 +14,26 @@ import {
   afterUpdateCell,
   SmartContractQueryHandler,
 } from '../utils/after-update-cell';
+import { dataVerificationYdocUpdate } from '../utils/data-verification-ydoc-update';
+import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
+import { calcChainYdocUpdate } from '../utils/calc-chain-ydoc-update';
+import { conditionFormatYdocUpdate } from '../utils/condition-format-ydoc-update';
+import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
+import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
+import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
 import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
-
-import { useRefreshDenomination } from '../hooks/use-refresh-denomination';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import {
+  createAfterColRowChangesHandler,
+  createAfterOrderChangesHandler,
+  createSheetLengthChangeHandler,
+  syncCurrentSheetField,
+} from './editor-workbook-sync';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -140,7 +150,22 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       : ['filter']
     : TOOL_BAR_ITEMS;
 
-  const { refreshDenomination } = useRefreshDenomination({ sheetEditorRef });
+  const {
+    handleOnChangePortalUpdate
+  } = useEditor();
+
+  const syncContext = {
+    sheetEditorRef,
+    ydocRef,
+    dsheetId,
+    handleOnChangePortalUpdate,
+  };
+  const handleSheetLengthChange = createSheetLengthChangeHandler({
+    ...syncContext,
+    currentDataRef,
+  });
+  const handleAfterOrderChanges = createAfterOrderChangesHandler(syncContext);
+  const handleAfterColRowChanges = createAfterColRowChangesHandler(syncContext);
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -162,6 +187,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
+        // @ts-ignore
         data={data}
         toolbarItems={toolbarItems}
         cellContextMenu={cellContextMenu}
@@ -179,6 +205,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
+              handleContentPortal: handleOnChangePortalUpdate,
               setShowSmartContractModal,
               getDocumentTitle,
               updateDocumentTitle,
@@ -200,14 +227,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             : []
         }
         hooks={{
-          afterActivateSheet: () => {
-            if (
-              sheetEditorRef.current &&
-              sheetEditorRef.current?.getAllSheets().length > 0
-            ) {
-              refreshDenomination();
-            }
-          },
           afterUpdateCell: (
             row: number,
             column: number,
@@ -216,6 +235,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           ): void => {
             const refObj = { current: sheetEditorRef.current };
             afterUpdateCell({
+              handleContentPortal: handleOnChangePortalUpdate,
+              dsheetId,
+              ydocRef,
               oldValue: _oldValue,
               row,
               column,
@@ -235,6 +257,82 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleLiveQueryData: handleLiveQuery,
             });
           },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          sheetLengthChange: handleSheetLengthChange,
+          dataVerificationChange: () => {
+            dataVerificationYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          liveQueryChange: () => {
+            liveQueryListYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          calcChainChange: () => {
+            calcChainYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+            dataBlockListYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              dataBlockCalcFunction
+            })
+          },
+          conditionFormatChange: () => {
+            conditionFormatYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          hyperlinkChange: () => {
+            hyperlinkYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate
+            })
+          },
+          updateCellYdoc: (changes: SheetChangePath[]) => {
+            updateYdocSheetData(
+              ydocRef.current,
+              dsheetId,
+              changes,
+              handleOnChangePortalUpdate
+            )
+          },
+          afterImagesChange: () => {
+            syncCurrentSheetField(syncContext, 'images');
+          },
+          afterIframesChange: () => {
+            syncCurrentSheetField(syncContext, 'iframes');
+          },
+          afterFrozenChange: () => {
+            syncCurrentSheetField(syncContext, 'frozen');
+          },
+          afterNameChanges: () => {
+            syncCurrentSheetField(syncContext, 'name');
+          },
+          afterOrderChanges: handleAfterOrderChanges,
+          afterConfigChanges: () => {
+            syncCurrentSheetField(syncContext, 'config');
+          },
+          afterColRowChanges: handleAfterColRowChanges,
+          afterShowGridLinesChange: () => {
+            syncCurrentSheetField(syncContext, 'showGridLines');
+          }
         }}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
@@ -243,7 +341,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   }, [
     forceSheetRender,
     isReadOnly,
-    handleChange,
     toggleTemplateSidebar,
     onboardingComplete,
     onboardingHandler,
@@ -252,7 +349,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     exportDropdownOpen,
     commentData,
     syncStatus,
-    currentDataRef.current,
     isAuthorized,
   ]);
 };

@@ -48,7 +48,7 @@ export const useRefreshDenomination = ({
   };
 
   const refreshDenomination = async () => {
-    const currentSubSheetId = sheetEditorRef.current?.getSheet()?.id;
+    // const currentSubSheetId = sheetEditorRef.current?.getSheet()?.id;
     if (cryptoPriceRef.current === null) return;
     const currentData = sheetEditorRef.current?.getSheet();
     const cellData = currentData?.celldata;

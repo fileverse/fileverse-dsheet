@@ -9,6 +9,7 @@ import { SmartContractButton } from '../components/smart-contract';
 import { IconButton } from '@fileverse/ui';
 
 export const getCustomToolbarItems = ({
+  handleContentPortal,
   setShowSmartContractModal,
   setExportDropdownOpen,
   handleCSVUpload,
@@ -26,6 +27,7 @@ export const getCustomToolbarItems = ({
   updateDocumentTitle,
   // setShowFetchURLModal,
 }: {
+  handleContentPortal?: any;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: () => string;
   updateDocumentTitle?: (title: string) => void;
@@ -40,7 +42,8 @@ export const getCustomToolbarItems = ({
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     updateDocumentTitle?: (title: string) => void,
     file?: File,
-    importType?: string
+    importType?: string,
+    handleContentPortal?: any
   ) => void;
   handleXLSXUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
@@ -72,7 +75,8 @@ export const getCustomToolbarItems = ({
   setShowFetchURLModal:
   | React.Dispatch<React.SetStateAction<boolean>>
   | undefined;
-}) => [
+}) => {
+  return [
     {
       key: 'Smart Contract',
       tooltip: 'Smart Contract',
@@ -109,6 +113,7 @@ export const getCustomToolbarItems = ({
               updateDocumentTitle,
               file,
               importType,
+              handleContentPortal,
             )
 
           }
@@ -141,6 +146,8 @@ export const getCustomToolbarItems = ({
           size="md"
           variant="ghost"
           color="blue"
+          aria-label="Fetch data"
+          data-testid="toolbar-fetch-data-button"
         />
       ),
       onClick: () => {
@@ -165,8 +172,11 @@ export const getCustomToolbarItems = ({
           icon="LayoutTemplate"
           size="md"
           variant="ghost"
+          aria-label="Open templates"
+          data-testid="toolbar-templates-button"
         />
       ),
       onClick: toggleTemplateSidebar,
     },
-  ];
+  ]
+};

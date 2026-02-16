@@ -1,6 +1,9 @@
-import React, { ComponentProps, useState } from 'react';
+import React, { ComponentProps, useEffect, useState } from 'react';
 import cn from 'classnames';
-
+import * as Y from 'yjs';
+// import { Sheet } from '@fileverse-dev/fortune-react';
+// import { fromUint8Array } from 'js-base64';
+import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import {
   DsheetProps,
@@ -22,6 +25,10 @@ import { PermissionChip } from './components/permission-chip';
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
+import {
+  updateYdocSheetData,
+  //  ySheetArrayToPlain 
+} from './utils/update-ydoc';
 import { Workbook } from '@fileverse-dev/fortune-react';
 
 // Use the types defined in types.ts
@@ -92,6 +99,7 @@ const EditorContent = ({
     setForceSheetRender,
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
+    handleOnChangePortalUpdate
   } = useEditor();
 
   // Initialize template button functionality
@@ -121,6 +129,95 @@ const EditorContent = ({
     ydocRef,
   };
   const shouldRenderSheet = currentDataRef.current.length > 0 || isNewSheet;
+
+  const cellArrayToYMap = (celldata: any[] = []) => {
+    const yCellMap = new Y.Map();
+
+    celldata.forEach((cell) => {
+      yCellMap.set(`${cell.r}_${cell.c}`, cell);
+    });
+
+    return yCellMap;
+  };
+
+  const plainSheetToYMap = (sheet: any, index = 0) => {
+    const ySheet = new Y.Map();
+
+    ySheet.set('id', sheet.id ?? crypto.randomUUID());
+    ySheet.set('name', sheet.name ?? `Sheet${index + 1}`);
+    ySheet.set('order', sheet.order ?? index);
+    ySheet.set('row', sheet.row ?? 500);
+    ySheet.set('column', sheet.column ?? 36);
+    ySheet.set('status', sheet.status ?? (index === 0 ? 1 : 0));
+    ySheet.set('config', sheet.config ?? {});
+    ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
+    ySheet.set('calcChain', cellArrayToYMap(sheet.calcChain ?? []));
+    ySheet.set('dataBlockCalcFunction', sheet.dataBlockCalcFunction ?? {});
+    const yDataBlockList = new Y.Map();
+    ySheet.set('dataBlockCalcFunction', yDataBlockList);
+    const yLiveQueryList = new Y.Map();
+    ySheet.set('liveQueryList', yLiveQueryList);
+    const dataVerification = new Y.Map();
+    ySheet.set('dataVerification', dataVerification);
+    const conditionRules = new Y.Map();
+    ySheet.set('conditionRules', conditionRules);
+
+    const luckysheet_conditionformat_save = new Y.Array();
+    ySheet.set('luckysheet_conditionformat_save', luckysheet_conditionformat_save);
+
+
+    return ySheet;
+  };
+
+  useEffect(() => {
+    if (isNewSheet) {
+      ydocRef.current?.transact(() => {
+        const sheetArray =
+          ydocRef.current?.getArray(dsheetId);
+        //@ts-ignore
+        const sData: any = []
+        if (sheetArray?.toArray().length === 0 && ydocRef.current) {
+          DEFAULT_SHEET_DATA.forEach((sheet, index) => {
+            const id = crypto.randomUUID();
+            sheet = {
+              ...sheet,
+              id,
+            }
+            sheetArray?.insert(0, [
+              plainSheetToYMap(sheet, index),
+            ]);
+            sData.push(sheet);
+          });
+          //@ts-ignore
+          currentDataRef.current = sData;
+          const currentSheetId = sheetEditorRef.current?.getWorkbookContext()
+            ?.currentSheetId as string;
+
+          updateYdocSheetData(
+            ydocRef.current,
+            dsheetId,
+            [{
+              sheetId: currentSheetId, path: ['celldata'], value: {
+                r: 0,
+                c: 0,
+                v: {
+                  "ct": {
+                    "fa": "General",
+                    "t": "g"
+                  },
+                  "v": "",
+                  "tb": "1",
+                  "m": ""
+                },
+              }, key: '0' + '_' + '0',
+              type: 'update',
+            }],
+            handleOnChangePortalUpdate
+          )
+        }
+      });
+    }
+  }, [isNewSheet, shouldRenderSheet, loading]);
 
   return (
     <div
