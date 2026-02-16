@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "1.2.93-ydoc-9",
+  "version": "1.2.97",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -34,8 +34,8 @@
   },
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.29",
-    "@fileverse-dev/formulajs": "^4.4.47",
-    "@fileverse-dev/fortune-react": "1.2.95-ydoc-2",
+    "@fileverse-dev/formulajs": "4.4.49",
+    "@fileverse-dev/fortune-react": "1.2.99",
     "@fileverse/ui": "^5.0.0",
     "classnames": "^2.5.1",
     "exceljs": "^4.4.0",

@@ -49,7 +49,7 @@ export const TransitionWrapper = ({
   return (
     <div
       className={cn(
-        'absolute inset-0 transition-opacity ease-in-out',
+        'dsheet-transition-wrapper absolute inset-0 transition-opacity ease-in-out',
         isVisible ? 'opacity-100' : 'opacity-0',
         transitionClasses,
       )}
@@ -59,6 +59,7 @@ export const TransitionWrapper = ({
         transitionDuration: `${duration}ms`,
         transitionProperty: 'opacity, transform',
       }}
+      data-testid="transition-wrapper"
     >
       {children}
     </div>
