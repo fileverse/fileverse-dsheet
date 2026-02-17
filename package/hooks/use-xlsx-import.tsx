@@ -93,6 +93,137 @@ export const useXLSXImport = ({
         //@ts-expect-error, later
         await workbook.xlsx.load(arrayBuffer);
         const worksheet = workbook.getWorksheet(1);
+        // Extract hyperlinks, freeze info, and cell formatting from all worksheets
+        const hyperlinksBySheet: Record<
+          number,
+          Record<string, { linkType: string; linkAddress: string }>
+        > = {};
+        const frozenBySheet: Record<
+          number,
+          {
+            type:
+              | 'row'
+              | 'column'
+              | 'both'
+              | 'rangeRow'
+              | 'rangeColumn'
+              | 'rangeBoth';
+            range: { row_focus: number; column_focus: number };
+          }
+        > = {};
+        const cellStylesBySheet: Record<
+          number,
+          Record<
+            string,
+            {
+              bl?: number;
+              it?: number;
+              fs?: number;
+              ff?: string;
+              fc?: string;
+              bg?: string;
+              un?: number;
+            }
+          >
+        > = {};
+        workbook.eachSheet((ws, sheetIndex) => {
+          const idx = sheetIndex - 1; // exceljs is 1-based
+
+          // Hyperlinks
+          const sheetHyperlinks: Record<
+            string,
+            { linkType: string; linkAddress: string }
+          > = {};
+
+          // Freeze panes from worksheet views
+          const views = ws.views;
+          if (views && views.length > 0) {
+            const view = views[0];
+            if (view.state === 'frozen') {
+              const xSplit = view.xSplit || 0;
+              const ySplit = view.ySplit || 0;
+              let type: 'rangeRow' | 'rangeColumn' | 'rangeBoth' | null = null;
+              if (xSplit > 0 && ySplit > 0) type = 'rangeBoth';
+              else if (ySplit > 0) type = 'rangeRow';
+              else if (xSplit > 0) type = 'rangeColumn';
+              if (type) {
+                frozenBySheet[idx] = {
+                  type,
+                  range: {
+                    row_focus: ySplit - 1,
+                    column_focus: xSplit - 1,
+                  },
+                };
+              }
+            }
+          }
+
+          // Cell-level formatting and hyperlinks
+          const styles: Record<
+            string,
+            {
+              bl?: number;
+              it?: number;
+              fs?: number;
+              ff?: string;
+              fc?: string;
+              bg?: string;
+              un?: number;
+            }
+          > = {};
+          ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+            row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+              const key = `${rowNumber - 1}_${colNumber - 1}`;
+
+              if (cell.hyperlink) {
+                sheetHyperlinks[key] = {
+                  linkType: 'webpage',
+                  linkAddress: cell.hyperlink,
+                };
+              }
+
+              // Extract cell formatting
+              const font = cell.style?.font;
+              const fill = cell.style?.fill;
+              const cellStyle: Record<string, string | number> = {};
+
+              if (font) {
+                if (font.bold) cellStyle.bl = 1;
+                if (font.italic) cellStyle.it = 1;
+                if (font.underline) cellStyle.un = 1;
+                if (font.size) cellStyle.fs = font.size;
+                if (font.name) cellStyle.ff = font.name;
+                if (font.color?.argb) {
+                  const argb = font.color.argb;
+                  const hex = '#' + argb.substring(argb.length - 6);
+                  cellStyle.fc = hex;
+                }
+              }
+              if (
+                fill?.type === 'pattern' &&
+                fill.pattern === 'solid' &&
+                fill.fgColor
+              ) {
+                if (fill.fgColor.argb) {
+                  const argb = fill.fgColor.argb;
+                  const hex = '#' + argb.substring(argb.length - 6);
+                  cellStyle.bg = hex;
+                }
+              }
+              if (Object.keys(cellStyle).length > 0) {
+                styles[key] = cellStyle;
+              }
+            });
+          });
+
+          if (Object.keys(sheetHyperlinks).length > 0) {
+            hyperlinksBySheet[idx] = sheetHyperlinks;
+          }
+          if (Object.keys(styles).length > 0) {
+            cellStylesBySheet[idx] = styles;
+          }
+        });
+
         dropdownInfo =
           worksheet
             ?.getSheetValues()
@@ -154,7 +285,7 @@ export const useXLSXImport = ({
             }
             const sheetArray = ydocRef.current.getArray(dsheetId);
             const localSheetsArray = Array.from(sheetArray) as Sheet[];
-            sheets = sheets.map((sheet) => {
+            sheets = sheets.map((sheet, sheetIndex) => {
               const lastCell = sheet?.celldata?.[sheet.celldata.length - 1];
 
               const lastRow = lastCell?.r ?? 0;
@@ -164,31 +295,63 @@ export const useXLSXImport = ({
               sheet.column = Math.max(lastCol, 36);
 
               if (!sheet.id) {
-                sheet.id = sheetEditorRef.current?.getSettings().generateSheetId();
+                sheet.id = sheetEditorRef.current
+                  ?.getSettings()
+                  .generateSheetId();
               }
               if (sheet.calcChain) {
                 sheet.calcChain = sheet.calcChain.map((chain) => {
-                  delete chain.id
-                  delete chain.index
-                  chain.id = sheet.id
-                  return chain
-                })
+                  delete chain.id;
+                  delete chain.index;
+                  chain.id = sheet.id;
+                  return chain;
+                });
               }
-              return sheet
-            })
+              // Attach freeze pane info
+              if (frozenBySheet[sheetIndex]) {
+                sheet.frozen = frozenBySheet[sheetIndex];
+              }
+              // Attach hyperlinks extracted from exceljs for this sheet
+              if (hyperlinksBySheet[sheetIndex]) {
+                sheet.hyperlink = {
+                  ...(sheet.hyperlink || {}),
+                  ...hyperlinksBySheet[sheetIndex],
+                };
+              }
+              // Apply cell formatting from exceljs (hyperlink styling, bold, italic, bg, etc.)
+              const hlKeys = hyperlinksBySheet[sheetIndex];
+              const styleKeys = cellStylesBySheet[sheetIndex];
+              if ((hlKeys || styleKeys) && sheet.celldata) {
+                for (const cell of sheet.celldata) {
+                  const key = `${cell.r}_${cell.c}`;
+                  if (cell.v) {
+                    // Apply formatting extracted from exceljs
+                    if (styleKeys?.[key]) {
+                      Object.assign(cell.v, styleKeys[key]);
+                    }
+                    // Override font color + underline for hyperlink cells
+                    if (hlKeys?.[key]) {
+                      cell.v.fc = 'rgb(0, 0, 255)';
+                      cell.v.un = 1;
+                    }
+                  }
+                }
+              }
+              return sheet;
+            });
 
             let combinedSheets;
 
             if (importType === 'merge-current-dsheet') {
-              combinedSheets = [...localSheetsArray, ...sheets]
+              combinedSheets = [...localSheetsArray, ...sheets];
             } else {
-              combinedSheets = [...sheets]
+              combinedSheets = [...sheets];
             }
 
             combinedSheets = combinedSheets.map((sheet, index) => {
               sheet.order = index;
-              return sheet
-            })
+              return sheet;
+            });
 
             setSheetData(combinedSheets);
             ydocRef.current.transact(() => {
