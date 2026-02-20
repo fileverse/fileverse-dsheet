@@ -72,8 +72,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -580,14 +580,14 @@ const updateDataCalcFunc = ({
 }) => {
   //return;
   try {
+    const formulaString = params.newValue?.f?.split('=')[1];
+    const functionMatch = formulaString?.match(/^=?(\w+)(?:\(([^)]*)\)?)?$/);
+    if (!functionMatch) {
+      // Skip dependency registration — formula is already executing and our regex doesn't cover all valid syntax.
+      return;
+    }
+
     params?.setDataBlockCalcFunction?.((dataBlockCalcFunction) => {
-      const formulaString = params.newValue?.f?.split('=')[1];
-
-      const functionMatch = formulaString?.match(/^=?(\w+)(?:\(([^)]*)\)?)?$/);
-      if (!functionMatch) {
-        throw new Error(`Invalid function call format: ${formulaString}`);
-      }
-
       const argsString = functionMatch[2]; // The entire argument string
 
       // Parse the arguments, respecting nested structures

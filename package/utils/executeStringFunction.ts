@@ -83,7 +83,21 @@ export const executeStringFunction = async ({
     }
   } catch (error) {
     console.error('Error:', error);
-    throw error;
+    // Show error on the cell instead of propagating the throw and crashing the app.
+    if (
+      sheetEditorRef?.current &&
+      dataBlockRow !== undefined &&
+      dataBlockColumn !== undefined
+    ) {
+      sheetEditorRef.current.setCellError(dataBlockRow, dataBlockColumn, {
+        title: 'Formula Error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Invalid function call format',
+      });
+    }
+    return undefined;
   }
 };
 
