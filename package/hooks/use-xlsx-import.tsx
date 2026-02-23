@@ -190,7 +190,8 @@ export const useXLSXImport = ({
             }
 
             setSheetData(combinedSheets);
-            ydocRef.current.transact(() => {
+            const ydoc = ydocRef.current;
+            ydoc.transact(() => {
               if (importType !== 'merge-current-dsheet') {
                 sheetArray.delete(0, sheetArray.length);
               }
@@ -203,17 +204,15 @@ export const useXLSXImport = ({
               });
             });
 
-            setTimeout(() => {
-              if (ydocRef && ydocRef?.current) {
-                const plain = ySheetArrayToPlain(ydocRef?.current?.getArray(dsheetId));
-                currentDataRef.current = plain;
-              }
-            }, 100)
+            // Update UI immediately so sync handler sees correct count before it can run
+            if (ydocRef?.current) {
+              const arr = ydocRef.current.getArray(dsheetId);
+              const plain = ySheetArrayToPlain(arr);
+              currentDataRef.current = plain;
+              setForceSheetRender((prev: number) => prev + 1);
+            }
             // @ts-expect-error later
             updateDocumentTitle?.(exportJson.info?.name);
-            setTimeout(() => {
-              setForceSheetRender((prev: number) => prev + 1);
-            }, 300)
           },
         );
       } catch (error) {
