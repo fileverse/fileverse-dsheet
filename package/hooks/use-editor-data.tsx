@@ -34,7 +34,7 @@ export const useEditorData = (
   enableLiveQuery = false,
   liveQueryRefreshRate?: number,
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
-  allowComments?: boolean
+  allowComments?: boolean,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -45,7 +45,6 @@ export const useEditorData = (
   const debounceTimerRef = useRef<number | null>(null);
   const portalContentProcessed = useRef<boolean>(false);
 
-
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
     dataBlockApiKeyHandler,
@@ -55,7 +54,12 @@ export const useEditorData = (
 
   // Apply portal content if provided (do this before any other initialization)
   useEffect(() => {
-    if (!portalContent?.length || !ydocRef.current || !dsheetId || portalContentProcessed.current) {
+    if (
+      !portalContent?.length ||
+      !ydocRef.current ||
+      !dsheetId ||
+      portalContentProcessed.current
+    ) {
       return;
     }
 
@@ -68,21 +72,17 @@ export const useEditorData = (
       // Merge into main doc
       Y.applyUpdate(ydocRef.current, uint8Array);
 
-      const sheetArray =
-        ydocRef.current.getArray(dsheetId);
+      const portalKey = [...tempDoc.share.keys()][0];
+      const sheetArray = tempDoc.getArray(portalKey);
 
       // Migrate legacy sheet array to Y.Map-based structure if needed
-      migrateSheetArrayIfNeeded(
-        ydocRef.current,
-        sheetArray,
-      );
+      migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
 
       // Convert Yjs sheet array to plain snapshot for Fortune spreadsheet
-      const newSheetData =
-        ySheetArrayToPlain(
-          // @ts-ignore
-          sheetArray as Y.Array<Y.Map>,
-        );
+      const newSheetData = ySheetArrayToPlain(
+        // @ts-ignore
+        sheetArray as Y.Array<Y.Map>,
+      );
 
       currentDataRef.current = newSheetData;
       initialiseLiveQueryData(newSheetData);
@@ -106,13 +106,9 @@ export const useEditorData = (
 
       tempDoc.destroy();
     } catch (error) {
-      console.error(
-        '[DSheet] Error processing portal content:',
-        error,
-      );
+      console.error('[DSheet] Error processing portal content:', error);
     }
   }, [portalContent]);
-
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
@@ -124,7 +120,7 @@ export const useEditorData = (
       const currentData = ySheetArrayToPlain(
         // @ts-ignore
         currentDocData as Y.Array<Y.Map>,
-      )
+      );
       if (currentData.length > 0 && syncStatus === 'synced') {
         const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
         if (sheetEditorRef.current !== null && setContext) {
@@ -135,16 +131,19 @@ export const useEditorData = (
                 row.forEach((cell: any, colIndex: number) => {
                   if (cell) {
                     // @ts-expect-error later
-                    const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
+                    const comment =
+                      commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
                     if (comment) {
-                      cell.ps = allowComments ? CELL_COMMENT_DEFAULT_VALUE : undefined;
+                      cell.ps = allowComments
+                        ? CELL_COMMENT_DEFAULT_VALUE
+                        : undefined;
                     } else {
-                      cell.ps = undefined
+                      cell.ps = undefined;
                     }
                   }
-                })
-              })
-            })
+                });
+              });
+            });
           });
         }
         //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
@@ -177,7 +176,16 @@ export const useEditorData = (
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
     }
-  }, [commentData, dsheetId, ydocRef, isReadOnly, isDataLoaded, portalContent, allowComments, syncStatus]);
+  }, [
+    commentData,
+    dsheetId,
+    ydocRef,
+    isReadOnly,
+    isDataLoaded,
+    portalContent,
+    allowComments,
+    syncStatus,
+  ]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {
@@ -261,7 +269,6 @@ export const useEditorData = (
       setTimeout(() => {
         isUpdatingRef.current = false;
       }, 50);
-
     },
     [dsheetId, onChange],
   );
