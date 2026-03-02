@@ -1,8 +1,6 @@
 import React, { ComponentProps, useEffect, useState } from 'react';
 import cn from 'classnames';
 import * as Y from 'yjs';
-// import { Sheet } from '@fileverse-dev/fortune-react';
-// import { fromUint8Array } from 'js-base64';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import {
@@ -17,18 +15,10 @@ import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
 import { PermissionChip } from './components/permission-chip';
-// import { FLVURL } from '@fileverse-dev/formulajs';
-// import { formulaResponseUiSync } from './utils/formula-ui-sync';
-
-// import { Button, TextField, LucideIcon, Toggle } from '@fileverse/ui';
 
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
-import {
-  updateYdocSheetData,
-  //  ySheetArrayToPlain 
-} from './utils/update-ydoc';
 import { Workbook } from '@fileverse-dev/fortune-react';
 
 // Use the types defined in types.ts
@@ -99,7 +89,6 @@ const EditorContent = ({
     setForceSheetRender,
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
-    handleOnChangePortalUpdate
   } = useEditor();
 
   // Initialize template button functionality
@@ -190,30 +179,6 @@ const EditorContent = ({
           });
           //@ts-ignore
           currentDataRef.current = sData;
-          const currentSheetId = sheetEditorRef.current?.getWorkbookContext()
-            ?.currentSheetId as string;
-
-          updateYdocSheetData(
-            ydocRef.current,
-            dsheetId,
-            [{
-              sheetId: currentSheetId, path: ['celldata'], value: {
-                r: 0,
-                c: 0,
-                v: {
-                  "ct": {
-                    "fa": "General",
-                    "t": "g"
-                  },
-                  "v": "",
-                  "tb": "1",
-                  "m": ""
-                },
-              }, key: '0' + '_' + '0',
-              type: 'update',
-            }],
-            handleOnChangePortalUpdate
-          )
         }
       });
     }

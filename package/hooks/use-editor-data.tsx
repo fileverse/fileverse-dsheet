@@ -172,7 +172,6 @@ export const useEditorData = (
             });
           });
         }
-        //currentDataRef.current = currentData;
       }
     } catch (error) {
       console.error('[DSheet] Error processing comment data:', error);
@@ -195,7 +194,6 @@ export const useEditorData = (
 
         const sheetArray = ydocRef.current?.getArray(dsheetId);
         const currentData = Array.from(sheetArray || []) as Sheet[];
-        //currentDataRef.current = currentData;
         initialiseLiveQueryData(currentData);
 
         dataInitialized.current = true;
@@ -220,8 +218,6 @@ export const useEditorData = (
       }
 
       remoteUpdateRef.current = true;
-      //const newData = Array.from(sheetArray) as Sheet[];
-      //currentDataRef.current = newData;
 
       // Debounce the re-render to prevent multiple quick updates
       if (debounceTimerRef.current !== null) {

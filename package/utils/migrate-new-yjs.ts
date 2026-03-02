@@ -1,6 +1,5 @@
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
-// import { ySheetArrayToPlain } from "./update-ydoc";
 
 function normalizeCelldataArray(
   celldata: any[],
@@ -121,11 +120,6 @@ export function migrateSheetArrayIfNeeded(
         }
 
         if (key === 'config') {
-          // const config = new Y.Map();
-          // const cR = value ? value : {};
-          // Object.entries(cR as object).forEach(([k, v]) =>
-          //   config.set(k, v),
-          // );
           sheetMap.set('config', value);
           return
         }

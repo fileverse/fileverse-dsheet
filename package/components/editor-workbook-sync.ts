@@ -63,6 +63,7 @@ export const createSheetLengthChangeHandler = ({
       docSheetLength > 0
     ) {
       currentDataRef.current = sheets;
+      console.log('createdSheet set', sheets);
 
       setTimeout(() => {
         const createdSheet = sheets[sheets.length - 1];

@@ -189,7 +189,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
           );
           onChange({ data: currentDataRef.current }, encodedUpdate);
         }
-      }, 3000),
+      }, 1000),
     [onChange, dsheetId]
   );
 
