@@ -57,7 +57,6 @@ export const useEditorData = (
     if (
       !portalContent?.length ||
       !ydocRef.current ||
-      !dsheetId ||
       portalContentProcessed.current
     ) {
       return;
@@ -72,8 +71,8 @@ export const useEditorData = (
       // Merge into main doc
       Y.applyUpdate(ydocRef.current, uint8Array);
 
-      const portalKey = [...tempDoc.share.keys()][0];
-      const sheetArray = tempDoc.getArray(portalKey);
+      const internalDsheetId = [...tempDoc.share.keys()][0];
+      const sheetArray = tempDoc.getArray(internalDsheetId);
 
       // Migrate legacy sheet array to Y.Map-based structure if needed
       migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
