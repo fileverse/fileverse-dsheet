@@ -24,7 +24,6 @@ export const useXLSXImport = ({
   currentDataRef: React.MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
 }) => {
-  // if (!sheetEditorRef || !currentDataRef) return
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [mergeInfo, setMergeInfo] = useState<Record<
     string,
@@ -120,7 +119,6 @@ export const useXLSXImport = ({
             }, {}) || null;
         transformExcelToLucky(
           file,
-          // luckysheetfile: object
           function (exportJson: { sheets: Sheet[] }) {
             let sheets = exportJson.sheets;
             for (const sheet of sheets) {
