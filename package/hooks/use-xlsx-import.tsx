@@ -356,6 +356,24 @@ export const useXLSXImport = ({
                           // malformed format string — leave cell as-is
                         }
                       }
+                      // luckyexcel stores numeric values as strings (e.g. "59.0"); parse to number and recompute m so integers don't display with a trailing ".0"
+                    } else if (
+                      typeof cell.v.v === 'string' &&
+                      cell.v.ct?.t !== 's'
+                    ) {
+                      const numV = parseFloat(cell.v.v as string);
+                      if (isFinite(numV)) {
+                        cell.v.v = numV;
+                        if (!fa || fa === 'General') {
+                          cell.v.m = String(numV);
+                        } else {
+                          try {
+                            cell.v.m = SSF.format(fa, numV);
+                          } catch {
+                            // malformed format string — leave m as-is
+                          }
+                        }
+                      }
                     }
                   }
                 }
