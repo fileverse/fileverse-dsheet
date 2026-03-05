@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SSF from 'ssf';
 import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
@@ -285,6 +286,7 @@ export const useXLSXImport = ({
             }
             const sheetArray = ydocRef.current.getArray(dsheetId);
             const localSheetsArray = Array.from(sheetArray) as Sheet[];
+            const isDateCache = new Map<string, boolean>();
             sheets = sheets.map((sheet, sheetIndex) => {
               const lastCell = sheet?.celldata?.[sheet.celldata.length - 1];
 
@@ -319,9 +321,10 @@ export const useXLSXImport = ({
                 };
               }
               // Apply cell formatting from exceljs (hyperlink styling, bold, italic, bg, etc.)
+              // Also fix date cells: set ct.t="d", coerce v to number, compute m
               const hlKeys = hyperlinksBySheet[sheetIndex];
               const styleKeys = cellStylesBySheet[sheetIndex];
-              if ((hlKeys || styleKeys) && sheet.celldata) {
+              if (sheet.celldata) {
                 for (const cell of sheet.celldata) {
                   const key = `${cell.r}_${cell.c}`;
                   if (cell.v) {
@@ -333,6 +336,26 @@ export const useXLSXImport = ({
                     if (hlKeys?.[key]) {
                       cell.v.fc = 'rgb(0, 0, 255)';
                       cell.v.un = 1;
+                    }
+                    // Fix date cells: luckyexcel leaves ct.t unset and v as a string
+                    const fa = cell.v.ct?.fa;
+                    if (fa && !isDateCache.has(fa)) {
+                      isDateCache.set(fa, SSF.is_date(fa));
+                    }
+                    if (fa && isDateCache.get(fa)) {
+                      const numV =
+                        typeof cell.v.v === 'string'
+                          ? parseFloat(cell.v.v)
+                          : cell.v.v;
+                      if (typeof numV === 'number' && !isNaN(numV)) {
+                        try {
+                          cell.v.v = numV;
+                          cell.v.m = SSF.format(fa, numV);
+                          cell.v.ct = { ...cell.v.ct, t: 'd' };
+                        } catch {
+                          // malformed format string — leave cell as-is
+                        }
+                      }
                     }
                   }
                 }
