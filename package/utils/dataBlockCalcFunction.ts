@@ -30,7 +30,7 @@ export const dataBlockCalcFunctionHandler = ({
         const dataBlockValue =
           //@ts-expect-error later
           sheetEditorRef?.current?.getSheet().data[dataBlock.row][
-          dataBlock.column
+            dataBlock.column
           ];
         const currentFormulaName = dataBlockValue?.f
           ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
@@ -55,15 +55,31 @@ export const dataBlockCalcFunctionHandler = ({
           dataBlockColumn: dataBlock.column,
           newValue: dataBlockValue,
           handleSmartContractQuery,
-        }).then((result) => {
-          formulaResponseUiSync({
-            row: dataBlock.row,
-            column: dataBlock.column,
-            newValue: dataBlockValue as Record<string, string>,
-            apiData: result as Array<Record<string, object>>,
-            sheetEditorRef,
+        })
+          .then((result) => {
+            if (!result) return; // executeStringFunction already handled the error on the cell
+            formulaResponseUiSync({
+              row: dataBlock.row,
+              column: dataBlock.column,
+              newValue: dataBlockValue as Record<string, string>,
+              apiData: result as Array<Record<string, object>>,
+              sheetEditorRef,
+            });
+          })
+          .catch((error) => {
+            // Safety net: surface any unexpected rejection as a cell-level error.
+            sheetEditorRef.current?.setCellError(
+              dataBlock.row,
+              dataBlock.column,
+              {
+                title: 'Formula Error',
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : 'Invalid function call format',
+              },
+            );
           });
-        });
       },
     );
   }
