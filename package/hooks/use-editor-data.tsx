@@ -130,8 +130,7 @@ export const useEditorData = (
                 row.forEach((cell: any, colIndex: number) => {
                   if (cell) {
                     // @ts-expect-error later
-                    const comment =
-                      commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
+                    const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
                     if (comment) {
                       cell.ps = allowComments
                         ? CELL_COMMENT_DEFAULT_VALUE

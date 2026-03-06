@@ -350,5 +350,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     commentData,
     syncStatus,
     isAuthorized,
+    dataBlockCalcFunction,
   ]);
 };
