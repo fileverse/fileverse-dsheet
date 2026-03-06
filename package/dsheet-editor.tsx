@@ -1,6 +1,7 @@
-import React, { ComponentProps, useState } from 'react';
+import React, { ComponentProps, useEffect, useState } from 'react';
 import cn from 'classnames';
-
+import * as Y from 'yjs';
+import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
 import { useFortuneDocumentStyle } from './hooks/use-document-style';
 import {
   DsheetProps,
@@ -14,10 +15,6 @@ import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
 import { PermissionChip } from './components/permission-chip';
-// import { FLVURL } from '@fileverse-dev/formulajs';
-// import { formulaResponseUiSync } from './utils/formula-ui-sync';
-
-// import { Button, TextField, LucideIcon, Toggle } from '@fileverse/ui';
 
 import '@fileverse-dev/fortune-react/lib/index.css';
 import './styles/index.css';
@@ -121,6 +118,71 @@ const EditorContent = ({
     ydocRef,
   };
   const shouldRenderSheet = currentDataRef.current.length > 0 || isNewSheet;
+
+  const cellArrayToYMap = (celldata: any[] = []) => {
+    const yCellMap = new Y.Map();
+
+    celldata.forEach((cell) => {
+      yCellMap.set(`${cell.r}_${cell.c}`, cell);
+    });
+
+    return yCellMap;
+  };
+
+  const plainSheetToYMap = (sheet: any, index = 0) => {
+    const ySheet = new Y.Map();
+
+    ySheet.set('id', sheet.id ?? crypto.randomUUID());
+    ySheet.set('name', sheet.name ?? `Sheet${index + 1}`);
+    ySheet.set('order', sheet.order ?? index);
+    ySheet.set('row', sheet.row ?? 500);
+    ySheet.set('column', sheet.column ?? 36);
+    ySheet.set('status', sheet.status ?? (index === 0 ? 1 : 0));
+    ySheet.set('config', sheet.config ?? {});
+    ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
+    ySheet.set('calcChain', cellArrayToYMap(sheet.calcChain ?? []));
+    ySheet.set('dataBlockCalcFunction', sheet.dataBlockCalcFunction ?? {});
+    const yDataBlockList = new Y.Map();
+    ySheet.set('dataBlockCalcFunction', yDataBlockList);
+    const yLiveQueryList = new Y.Map();
+    ySheet.set('liveQueryList', yLiveQueryList);
+    const dataVerification = new Y.Map();
+    ySheet.set('dataVerification', dataVerification);
+    const conditionRules = new Y.Map();
+    ySheet.set('conditionRules', conditionRules);
+
+    const luckysheet_conditionformat_save = new Y.Array();
+    ySheet.set('luckysheet_conditionformat_save', luckysheet_conditionformat_save);
+
+
+    return ySheet;
+  };
+
+  useEffect(() => {
+    if (isNewSheet) {
+      ydocRef.current?.transact(() => {
+        const sheetArray =
+          ydocRef.current?.getArray(dsheetId);
+        //@ts-ignore
+        const sData: any = []
+        if (sheetArray?.toArray().length === 0 && ydocRef.current) {
+          DEFAULT_SHEET_DATA.forEach((sheet, index) => {
+            const id = crypto.randomUUID();
+            sheet = {
+              ...sheet,
+              id,
+            }
+            sheetArray?.insert(0, [
+              plainSheetToYMap(sheet, index),
+            ]);
+            sData.push(sheet);
+          });
+          //@ts-ignore
+          currentDataRef.current = sData;
+        }
+      });
+    }
+  }, [isNewSheet, shouldRenderSheet, loading]);
 
   return (
     <div

@@ -1,5 +1,4 @@
 import { utils as XLSXUtil, writeFile as XLSXWriteFile } from "xlsx-js-style";
-import { Sheet } from "@fileverse-dev/fortune-react";
 import * as Y from "yjs";
 import { WorkbookInstance } from "@fileverse-dev/fortune-react";
 import { MutableRefObject } from "react";
@@ -69,14 +68,12 @@ export const handleExportToXLSX = async (
 
   try {
     const ydoc = ydocRef.current;
-
-    const sheetArray = ydoc.getArray(dsheetId);
-    const sheetData = Array.from(sheetArray) as Sheet[];
+    ydoc.getArray(dsheetId);
 
     const sheetWithData = workbookRef.current.getAllSheets();
     const workbook = XLSXUtil.book_new();
 
-    sheetData.forEach((sheet, index) => {
+    sheetWithData.forEach((sheet, index) => {
       const rows = sheetWithData[index]?.data || [];
 
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);
@@ -141,7 +138,6 @@ export const handleExportToXLSX = async (
         newCell.s = newCell.s || {};
 
         // ============ FILL ============
-        console.log(v.bg);
         if (v.bg) {
           const hex = parseColorToHex(v.bg);
           if (hex) {

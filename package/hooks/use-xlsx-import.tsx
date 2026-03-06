@@ -3,6 +3,9 @@ import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
 import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
+
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 
@@ -102,12 +105,12 @@ export const useXLSXImport = ({
           number,
           {
             type:
-              | 'row'
-              | 'column'
-              | 'both'
-              | 'rangeRow'
-              | 'rangeColumn'
-              | 'rangeBoth';
+            | 'row'
+            | 'column'
+            | 'both'
+            | 'rangeRow'
+            | 'rangeColumn'
+            | 'rangeBoth';
             range: { row_focus: number; column_focus: number };
           }
         > = {};
@@ -247,7 +250,6 @@ export const useXLSXImport = ({
             }, {}) || null;
         transformExcelToLucky(
           file,
-          // luckysheetfile: object
           function (exportJson: { sheets: Sheet[] }) {
             let sheets = exportJson.sheets;
             for (const sheet of sheets) {
@@ -354,14 +356,29 @@ export const useXLSXImport = ({
             });
 
             setSheetData(combinedSheets);
-            ydocRef.current.transact(() => {
-              sheetArray.delete(0, sheetArray.length);
-              sheetArray.insert(0, combinedSheets);
-              currentDataRef.current = combinedSheets;
+            const ydoc = ydocRef.current;
+            ydoc.transact(() => {
+              if (importType !== 'merge-current-dsheet') {
+                sheetArray.delete(0, sheetArray.length);
+              }
+
+              combinedSheets.forEach((sheet) => {
+                if (sheet instanceof Y.Map) return;
+
+                const factory = migrateSheetFactoryForImport(sheet);
+                sheetArray.push([factory()]);
+              });
             });
+
+            // Update UI immediately so sync handler sees correct count before it can run
+            if (ydocRef?.current) {
+              const arr = ydocRef.current.getArray(dsheetId);
+              const plain = ySheetArrayToPlain(arr);
+              currentDataRef.current = plain;
+              setForceSheetRender((prev: number) => prev + 1);
+            }
             // @ts-expect-error later
             updateDocumentTitle?.(exportJson.info?.name);
-            setForceSheetRender((prev: number) => prev + 1);
           },
         );
       } catch (error) {
