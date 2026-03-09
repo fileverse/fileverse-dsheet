@@ -72,7 +72,10 @@ export const useEditorData = (
       Y.applyUpdate(ydocRef.current, uint8Array);
 
       const internalDsheetId = [...tempDoc.share.keys()][0];
-      const sheetArray = tempDoc.getArray(internalDsheetId);
+      // Use main ydoc's sheet array so migration persists; migrating tempDoc's
+      // array left the main doc unmigrated and caused "t.forEach is not a function"
+      // when the library read plain-object sheet items.
+      const sheetArray = ydocRef.current.getArray(internalDsheetId);
 
       // Migrate legacy sheet array to Y.Map-based structure if needed
       migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);

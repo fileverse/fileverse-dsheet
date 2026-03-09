@@ -189,8 +189,14 @@ export function ySheetArrayToPlain(
   return sheetArray.toArray().map((sheetMap) => {
     const obj: any = {};
 
-    // @ts-ignore
-    sheetMap.forEach((value, key) => {
+    // Handle legacy plain-object sheets (e.g. before migration) so we never call .forEach on a non-Map
+    const iterate = (sheetMap instanceof Y.Map)
+      ? (fn: (value: any, key: string) => void) => { sheetMap.forEach(fn); }
+      : (fn: (value: any, key: string) => void) => {
+          Object.entries(sheetMap as Record<string, any>).forEach(([key, value]) => fn(value, key));
+        };
+
+    iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format
       if (key === 'celldata' && value instanceof Y.Map) {
         obj.celldata = value.toJSON();
@@ -253,6 +259,7 @@ export function ySheetArrayToPlain(
       }
     });
 
+    // Ensure celldata/calcChain are arrays (legacy may have them as objects keyed by r_c)
     let cellDataArray;
     cellDataArray = obj.celldata ? Object.values(obj.celldata) : [];
     obj.celldata = cellDataArray;
