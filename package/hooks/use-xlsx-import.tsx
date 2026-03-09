@@ -9,6 +9,84 @@ import { ySheetArrayToPlain } from '../utils/update-ydoc';
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
 
+/** Predefined option colors for data validation dropdowns (when XLSX has no color). */
+const DATA_VERIFICATION_OPTION_COLORS = [
+  '228, 232, 237', // Light Gray
+  '219, 233, 236', // White
+  '244, 217, 227', // Pink
+  '247, 229, 207', // Peach
+  '217, 234, 244', // Blue
+  '222, 239, 222', // Green
+  '239, 239, 239', // Light Green
+  '244, 230, 230', // Rose
+  '247, 239, 217', // Yellow
+  '230, 230, 244', // Purple
+  '217, 244, 244', // Cyan
+  '244, 239, 234', // Cream
+];
+const DEFAULT_OPTION_COLOR = DATA_VERIFICATION_OPTION_COLORS[0]; // Light Gray
+
+/** Build dataVerification color string from option count: use color list only when options ≤ 12; if more, use only grey (first) repeated. */
+function buildDataVerificationColor(optionCount: number): string {
+  if (optionCount <= 0) return DEFAULT_OPTION_COLOR;
+  if (optionCount > DATA_VERIFICATION_OPTION_COLORS.length) {
+    return Array(optionCount).fill(DEFAULT_OPTION_COLOR).join(', ');
+  }
+  return DATA_VERIFICATION_OPTION_COLORS.slice(0, optionCount).join(', ');
+}
+
+/** Parse Excel A1-style address to 0-based row and column. e.g. "A1" -> { row: 0, col: 0 }, "B10" -> { row: 9, col: 1 } */
+function parseA1Address(address: string): { row: number; col: number } | null {
+  const match = address.match(/^([A-Z]+)(\d+)$/i);
+  if (!match) return null;
+  const letters = match[1].toUpperCase();
+  const digits = match[2];
+  let col1Based = 0;
+  for (let i = 0; i < letters.length; i++) {
+    col1Based = col1Based * 26 + (letters.charCodeAt(i) - 64);
+  }
+  const row = parseInt(digits, 10) - 1;
+  const col = col1Based - 1;
+  return { row, col };
+}
+
+/** Map ExcelJS DataValidation to project dataVerification entry (row_column key format) */
+function excelDataValidationToSheetEntry(
+  address: string,
+  dv: { type?: string; formulae?: any[]; prompt?: string; showInputMessage?: boolean; allowBlank?: boolean },
+): { rowColKey: string; entry: Record<string, unknown> } | null {
+  const parsed = parseA1Address(address);
+  if (!parsed) return null;
+  const { row, col } = parsed;
+  const rowColKey = `${row}_${col}`;
+
+  const type = dv.type === 'list' ? 'dropdown' : (dv.type || 'dropdown');
+  const value1 =
+    Array.isArray(dv.formulae) && dv.formulae.length > 0
+      ? String(dv.formulae[0]).replace(/^["']|["']$/g, '').replace(/["']/g, '')
+      : '';
+
+  // When no color is preset (e.g. from XLSX): one color per option; use predefined list up to 12, then Light Gray for the rest
+  const optionCount = value1 ? value1.split(',').length : 0;
+  const color = buildDataVerificationColor(optionCount || 1);
+
+  const entry: Record<string, unknown> = {
+    type,
+    type2: '',
+    rangeTxt: address,
+    value1,
+    value2: '',
+    validity: '',
+    remote: false,
+    prohibitInput: dv.type === 'list',
+    hintShow: Boolean(dv.showInputMessage),
+    hintValue: dv.prompt ?? '',
+    color,
+    checked: false,
+  };
+  return { rowColKey, entry };
+}
+
 export const useXLSXImport = ({
   sheetEditorRef,
   ydocRef,
@@ -76,13 +154,11 @@ export const useXLSXImport = ({
       return;
     }
     const file = input?.files?.[0] || fileArg;
-    let dropdownInfo: Record<
-      string,
-      {
-        type?: string;
-        formulae?: { replace: (a: RegExp, b: string) => string }[];
-      }
-    > | null = null;
+    /** dataVerification per sheet: sheetIndex -> { row_column: entry } */
+    let dataVerificationBySheet: Record<
+      number,
+      Record<string, Record<string, unknown>>
+    > = {};
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -95,8 +171,7 @@ export const useXLSXImport = ({
       try {
         //@ts-expect-error, later
         await workbook.xlsx.load(arrayBuffer);
-        const worksheet = workbook.getWorksheet(1);
-        // Extract hyperlinks, freeze info, and cell formatting from all worksheets
+        // Extract hyperlinks, freeze info, cell formatting, and data validation from all worksheets
         const hyperlinksBySheet: Record<
           number,
           Record<string, { linkType: string; linkAddress: string }>
@@ -225,61 +300,39 @@ export const useXLSXImport = ({
           if (Object.keys(styles).length > 0) {
             cellStylesBySheet[idx] = styles;
           }
+
+          // Extract data validation for this sheet (row_column keys for dataVerification)
+          const dvModel = (ws as { dataValidations?: { model?: Record<string, unknown> } }).dataValidations?.model;
+          console.log('dvModel', dvModel);
+          if (dvModel && typeof dvModel === 'object') {
+            const sheetDv: Record<string, Record<string, unknown>> = {};
+            for (const [address, dv] of Object.entries(dvModel)) {
+              const dvObj = dv as {
+                type?: string;
+                formulae?: unknown[];
+                prompt?: string;
+                showInputMessage?: boolean;
+                allowBlank?: boolean;
+              };
+              const result = excelDataValidationToSheetEntry(address, dvObj);
+              if (result) sheetDv[result.rowColKey] = result.entry;
+            }
+            if (Object.keys(sheetDv).length > 0) {
+              dataVerificationBySheet[idx] = sheetDv;
+            }
+          }
         });
 
-        dropdownInfo =
-          worksheet
-            ?.getSheetValues()
-            ?.reduce<Record<string, object>>((acc = {}, row, rowIndex) => {
-              if (row) {
-                Array.isArray(row) &&
-                  row.forEach((cell, colIndex) => {
-                    if (
-                      cell &&
-                      typeof cell === 'object' &&
-                      'dataValidation' in cell
-                    ) {
-                      const cellAddress = `${String.fromCharCode(65 + colIndex)}${rowIndex}`;
-                      acc[cellAddress] =
-                        (cell as { dataValidation?: object | undefined })
-                          .dataValidation ?? {};
-                    }
-                  });
-              }
-              return acc;
-            }, {}) || null;
         transformExcelToLucky(
           file,
           function (exportJson: { sheets: Sheet[] }) {
             let sheets = exportJson.sheets;
-            for (const sheet of sheets) {
-              if (dropdownInfo && Object.keys(dropdownInfo).length > 0) {
-                const dataVerification: Record<string, object> = {};
-                for (const key of Object.keys(dropdownInfo)) {
-                  const value = dropdownInfo[key];
-                  if (value.type === 'list') {
-                    const splited = key.split('');
-                    const col_ = splited[0].charCodeAt(0) - 65;
-                    const row_ = Number(splited[1]) - 1;
-                    const f_key = `${row_}_${col_}`;
-                    dataVerification[f_key] = {
-                      type: 'dropdown',
-                      type2: '',
-                      rangeTxt: key,
-                      value1: value.formulae?.[0]?.replace(/["']/g, '') || '',
-                      value2: '',
-                      validity: '',
-                      remote: false,
-                      prohibitInput: true,
-                      hintShow: false,
-                      hintValue: '',
-                      checked: false,
-                    };
-                  }
-                }
-                sheet.dataVerification = dataVerification;
+            sheets.forEach((sheet, sheetIndex) => {
+              const sheetDv = dataVerificationBySheet[sheetIndex];
+              if (sheetDv && Object.keys(sheetDv).length > 0) {
+                sheet.dataVerification = sheetDv;
               }
-            }
+            });
 
             if (!ydocRef.current) {
               console.error('ydocRef.current is null');
