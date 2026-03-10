@@ -87,6 +87,203 @@ function excelDataValidationToSheetEntry(
   return { rowColKey, entry };
 }
 
+/** Parse Excel range ref (e.g. "A1:A500" or "A1") to 0-based row/column ranges */
+function parseRefToRange(ref: string): { row: [number, number]; column: [number, number] } | null {
+  const parts = ref.split(':');
+  const start = parseA1Address(parts[0].trim());
+  if (!start) return null;
+  const end = parts.length > 1 ? parseA1Address(parts[1].trim()) : start;
+  if (!end) return null;
+  return {
+    row: [Math.min(start.row, end.row), Math.max(start.row, end.row)],
+    column: [Math.min(start.col, end.col), Math.max(start.col, end.col)],
+  };
+}
+
+/** Build project cellrange from ref (row/column 0-based). Format: array of one range with row/column as arrays. */
+function buildCellrange(ref: string): unknown[] | null {
+  const range = parseRefToRange(ref);
+  if (!range) return null;
+  const [r0, r1] = range.row;
+  const [c0, c1] = range.column;
+  return [
+    {
+      left: 0,
+      width: 104,
+      top: 0,
+      height: 23,
+      left_move: 0,
+      width_move: 104,
+      top_move: 0,
+      height_move: 11999,
+      row: [r0, r1],
+      column: [c0, c1],
+      row_focus: r0,
+      column_focus: c0,
+      column_select: true,
+    },
+  ];
+}
+
+/** Map ExcelJS dxf style to project format (textColor, cellColor, bold, italic, underline, strikethrough) */
+function dxfStyleToFormat(style: {
+  font?: { color?: { argb?: string }; bold?: boolean; italic?: boolean; underline?: boolean } | null;
+  fill?: { type?: string; pattern?: string; fgColor?: { argb?: string } } | null;
+}): { textColor: string; cellColor: string; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean } {
+  const defaultFormat = {
+    textColor: '#000000',
+    cellColor: '#ffffff',
+    bold: false,
+    italic: false,
+    underline: false,
+    strikethrough: false,
+  };
+  if (!style) return defaultFormat;
+  const font = style.font;
+  const fill = style.fill;
+  let textColor = defaultFormat.textColor;
+  let cellColor = defaultFormat.cellColor;
+  if (font?.color?.argb) {
+    const a = font.color.argb;
+    textColor = '#' + (a.length >= 6 ? a.slice(-6) : a);
+  }
+  if (fill?.type === 'pattern' && fill.pattern === 'solid' && fill.fgColor?.argb) {
+    const a = fill.fgColor.argb;
+    cellColor = '#' + (a.length >= 6 ? a.slice(-6) : a);
+  }
+  return {
+    textColor,
+    cellColor,
+    bold: Boolean(font?.bold),
+    italic: Boolean(font?.italic),
+    underline: Boolean(font?.underline),
+    strikethrough: false,
+  };
+}
+
+/**
+ * Extract the text argument from a SEARCH(...) formula (Google/Excel "text contains").
+ * Handles Google's SEARCH(("ab"),(C1)) and standard SEARCH("ab",A1). One regex pass, no loops.
+ */
+function extractTextFromSearchFormula(formula: string | undefined): string {
+  if (!formula || typeof formula !== 'string') return '';
+  const s = formula.trim();
+  // SEARCH(("text"), or SEARCH("text", or SEARCH( ( "text" ) , – allow optional parens/spaces before first quote
+  const m = s.match(/SEARCH\s*\([\s(]*"((?:[^"]|"")*)"/i);
+  if (m) return (m[1] ?? '').replace(/""/g, '"');
+  const m2 = s.match(/SEARCH\s*\([\s(]*'([^']*)'/i);
+  if (m2) return m2[1] ?? '';
+  return '';
+}
+
+/** Map ExcelJS cfRule type/operator to project conditionName; return null if unsupported */
+function excelCfTypeToConditionName(
+  type: string,
+  operator?: string,
+  opts?: { percent?: boolean; bottom?: boolean; rank?: number; aboveAverage?: boolean; text?: string; timePeriod?: string }
+): { conditionName: string; conditionValue: string[] } | null {
+  if (type === 'cellIs') {
+    const op = (operator || '').toLowerCase();
+    if (op === 'greaterthan') return { conditionName: 'greaterThan', conditionValue: [] };
+    if (op === 'greaterthanorequal') return { conditionName: 'greaterThanOrEqual', conditionValue: [] };
+    if (op === 'lessthan') return { conditionName: 'lessThan', conditionValue: [] };
+    if (op === 'lessthanorequal') return { conditionName: 'lessThanOrEqual', conditionValue: [] };
+    if (op === 'equal') return { conditionName: 'equal', conditionValue: [] };
+    if (op === 'between') return { conditionName: 'between', conditionValue: [] };
+    return null;
+  }
+  if (type === 'containsText' || type === 'notContainsText') {
+    const op = (operator ?? '').toLowerCase();
+    if (op === 'containsblanks') return { conditionName: 'empty', conditionValue: [''] };
+    const text = opts?.text ?? '';
+    return { conditionName: 'textContains', conditionValue: text ? [text] : [] };
+  }
+  if (type === 'duplicateValues') return { conditionName: 'duplicateValue', conditionValue: [] };
+  if (type === 'top10') {
+    const rank = opts?.rank ?? 10;
+    if (opts?.percent && opts?.bottom) return { conditionName: 'last10Percent', conditionValue: [String(rank)] };
+    if (opts?.percent) return { conditionName: 'top10Percent', conditionValue: [String(rank)] };
+    if (opts?.bottom) return { conditionName: 'last10', conditionValue: [String(rank)] };
+    return { conditionName: 'top10', conditionValue: [String(rank)] };
+  }
+  if (type === 'aboveAverage') {
+    if (opts?.aboveAverage === false) return { conditionName: 'belowAverage', conditionValue: [] };
+    return { conditionName: 'aboveAverage', conditionValue: [] };
+  }
+  if (type === 'timePeriod') return { conditionName: 'date', conditionValue: opts?.timePeriod ? [opts.timePeriod] : [] };
+  return null;
+}
+
+/** One ExcelJS conditional format rule -> one luckysheet_conditionformat_save entry, or null if unsupported */
+function excelCfRuleToLuckysheet(
+  ref: string,
+  rule: {
+    type?: string;
+    operator?: string;
+    formulae?: string[];
+    style?: Record<string, unknown>;
+    text?: string;
+    timePeriod?: string;
+    percent?: boolean;
+    bottom?: boolean;
+    rank?: number;
+    aboveAverage?: boolean;
+  }
+): Record<string, unknown> | null {
+  if (!rule.type) return null;
+  const range = parseRefToRange(ref);
+  if (!range) return null;
+
+  // Text-contains: Google puts text only in formula e.g. SEARCH(("ab"),(C1)) – resolve once
+  let resolvedText = (rule.text ?? '').trim();
+  if ((rule.type === 'containsText' || rule.type === 'notContainsText') && !resolvedText) {
+    const formula = Array.isArray(rule.formulae) && rule.formulae[0] ? rule.formulae[0] : undefined;
+    resolvedText = extractTextFromSearchFormula(formula);
+  }
+
+  const mapped = excelCfTypeToConditionName(rule.type, rule.operator, {
+    percent: rule.percent,
+    bottom: rule.bottom,
+    rank: rule.rank,
+    aboveAverage: rule.aboveAverage,
+    text: resolvedText || rule.text,
+    timePeriod: rule.timePeriod,
+  });
+  if (!mapped) return null;
+
+  let conditionValue: string[];
+  if (rule.type === 'cellIs' && Array.isArray(rule.formulae) && rule.formulae.length > 0) {
+    conditionValue = rule.formulae.map((f) => String(f ?? ''));
+  } else if (mapped.conditionName === 'empty') {
+    conditionValue = [''];
+  } else if (rule.type === 'containsText' || rule.type === 'notContainsText') {
+    conditionValue = resolvedText ? [resolvedText] : [];
+  } else {
+    conditionValue = mapped.conditionValue.map((v) => (v == null ? '' : String(v)));
+  }
+
+  const cellrange = buildCellrange(ref);
+  if (!cellrange) return null;
+
+  const format = dxfStyleToFormat(rule.style as any);
+
+  return {
+    type: 'default',
+    cellrange,
+    format: {
+      textColor: format.textColor,
+      cellColor: format.cellColor,
+      bold: format.bold,
+      italic: format.italic,
+      underline: format.underline,
+      strikethrough: format.strikethrough,
+    },
+    conditionName: mapped.conditionName,
+    conditionRange: [],
+    conditionValue,
+  };
+}
+
 export const useXLSXImport = ({
   sheetEditorRef,
   ydocRef,
@@ -144,14 +341,14 @@ export const useXLSXImport = ({
     }
   }, [mergeInfo]);
 
-  const handleFileUpload = async (
+  const handleFileUpload = (
     event: React.ChangeEvent<HTMLInputElement> | undefined,
     fileArg: File,
     importType?: 'new-dsheet' | 'merge-current-dsheet' | 'new-current-dsheet',
-  ) => {
+  ): Promise<void> => {
     const input = event?.target;
     if (!input?.files?.length && !fileArg) {
-      return;
+      return Promise.resolve();
     }
     const file = input?.files?.[0] || fileArg;
     /** dataVerification per sheet: sheetIndex -> { row_column: entry } */
@@ -159,13 +356,18 @@ export const useXLSXImport = ({
       number,
       Record<string, Record<string, unknown>>
     > = {};
+    /** conditional formatting per sheet: sheetIndex -> luckysheet_conditionformat_save array */
+    let conditionFormatBySheet: Record<number, Record<string, unknown>[]> = {};
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      if (!e.target) {
-        console.error('FileReader event target is null');
-        return;
-      }
+    return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onload = async (e) => {
+        if (!e.target) {
+          console.error('FileReader event target is null');
+          reject(new Error('FileReader event target is null'));
+          return;
+        }
       const arrayBuffer = e.target.result;
       const workbook = new Workbook();
       try {
@@ -205,6 +407,7 @@ export const useXLSXImport = ({
           >
         > = {};
         workbook.eachSheet((ws, sheetIndex) => {
+          console.log('ws', ws);
           const idx = sheetIndex - 1; // exceljs is 1-based
 
           // Hyperlinks
@@ -303,7 +506,6 @@ export const useXLSXImport = ({
 
           // Extract data validation for this sheet (row_column keys for dataVerification)
           const dvModel = (ws as { dataValidations?: { model?: Record<string, unknown> } }).dataValidations?.model;
-          console.log('dvModel', dvModel);
           if (dvModel && typeof dvModel === 'object') {
             const sheetDv: Record<string, Record<string, unknown>> = {};
             for (const [address, dv] of Object.entries(dvModel)) {
@@ -321,6 +523,36 @@ export const useXLSXImport = ({
               dataVerificationBySheet[idx] = sheetDv;
             }
           }
+
+          // Extract conditional formatting for this sheet (luckysheet_conditionformat_save)
+          const cfs = (ws as { conditionalFormattings?: { ref: string; rules: unknown[] }[] }).conditionalFormattings;
+          if (Array.isArray(cfs) && cfs.length > 0) {
+            const sheetCf: Record<string, unknown>[] = [];
+            for (const cf of cfs) {
+              console.log('cf', cf);
+              const ref = cf.ref;
+              const rules = cf.rules || [];
+              for (const rule of rules) {
+                const r = rule as {
+                  type?: string;
+                  operator?: string;
+                  formulae?: string[];
+                  style?: Record<string, unknown>;
+                  text?: string;
+                  timePeriod?: string;
+                  percent?: boolean;
+                  bottom?: boolean;
+                  rank?: number;
+                  aboveAverage?: boolean;
+                };
+                const entry = r.type ? excelCfRuleToLuckysheet(ref, r) : null;
+                if (entry) sheetCf.push(entry);
+              }
+            }
+            if (sheetCf.length > 0) {
+              conditionFormatBySheet[idx] = sheetCf;
+            }
+          }
         });
 
         transformExcelToLucky(
@@ -332,6 +564,11 @@ export const useXLSXImport = ({
               if (sheetDv && Object.keys(sheetDv).length > 0) {
                 sheet.dataVerification = sheetDv;
               }
+              // Always set condition format: use our imported rules or empty array. Avoids leaving
+              // stale/malformed rules from luckyexcel (e.g. type "colorGradation" with undefined format)
+              // which cause "Cannot read properties of undefined (reading '0')" in fortune-core ConditionFormat.js
+              const sheetCf = conditionFormatBySheet[sheetIndex];
+              sheet.luckysheet_conditionformat_save = Array.isArray(sheetCf) && sheetCf.length > 0 ? sheetCf : [];
             });
 
             if (!ydocRef.current) {
@@ -432,6 +669,7 @@ export const useXLSXImport = ({
             }
             // @ts-expect-error later
             updateDocumentTitle?.(exportJson.info?.name);
+            resolve();
           },
         );
       } catch (error) {
@@ -439,10 +677,12 @@ export const useXLSXImport = ({
         alert(
           'Error loading the workbook. Please ensure it is a valid .xlsx file.',
         );
+        reject(error);
       }
-    };
+      };
 
-    reader.readAsArrayBuffer(file);
+      reader.readAsArrayBuffer(file);
+    });
   };
 
   return { handleXLSXUpload: handleFileUpload };

@@ -44,12 +44,12 @@ export const getCustomToolbarItems = ({
     file?: File,
     importType?: string,
     handleContentPortal?: any
-  ) => void;
+  ) => void | Promise<void>;
   handleXLSXUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
     file?: File,
     importType?: string
-  ) => void;
+  ) => void | Promise<void>;
   handleExportToXLSX: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,

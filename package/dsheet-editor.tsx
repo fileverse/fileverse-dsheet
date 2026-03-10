@@ -150,11 +150,8 @@ const EditorContent = ({
     ySheet.set('dataVerification', dataVerification);
     const conditionRules = new Y.Map();
     ySheet.set('conditionRules', conditionRules);
-
     const luckysheet_conditionformat_save = new Y.Array();
     ySheet.set('luckysheet_conditionformat_save', luckysheet_conditionformat_save);
-
-
     return ySheet;
   };
 
