@@ -48,6 +48,8 @@ export const conditionFormatYdocUpdate = ({
       },
     ];
 
+    console.log('Built condition format changes for Y.Doc:', changes);
+
     applyYdocSheetChanges({
       ydoc: syncContext.ydoc,
       dsheetId,

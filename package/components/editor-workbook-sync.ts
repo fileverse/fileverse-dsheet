@@ -1,5 +1,6 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
+import { SheetChangePath, updateYdocSheetData } from '../utils/update-ydoc';
 
 type SyncContext = {
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
@@ -148,5 +149,69 @@ export const createAfterColRowChangesHandler = ({
       currentYdocSheet?.set('row', currentSheet?.row);
       handleOnChangePortalUpdate();
     }
+  };
+};
+
+export const createUpdateAllCellHandler = ({
+  sheetEditorRef,
+  ydocRef,
+  dsheetId,
+  handleOnChangePortalUpdate,
+}: SyncContext) => {
+  console.log('Creating update all cell handler with context:', {
+    sheetEditorRef,
+    ydocRef,
+    dsheetId,
+  });
+  return () => {
+    const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
+    const currentSheetId =
+      workbookContext?.currentSheetId?.toString?.() ||
+      sheetEditorRef.current?.getSheet?.()?.id?.toString?.();
+    if (!currentSheetId) return;
+    console.log('Current sheet ID for update all cell handler:', workbookContext);
+
+    const sheet = sheetEditorRef.current?.getSheet?.();
+    if (!sheet) return;
+
+    let dataMatrix = (sheet as any).data as any[][] | undefined;
+    if (
+      !dataMatrix &&
+      Array.isArray((sheet as any).celldata) &&
+      sheetEditorRef.current?.celldataToData
+    ) {
+      dataMatrix =
+        sheetEditorRef.current.celldataToData(
+          (sheet as any).celldata,
+          (sheet as any).row,
+          (sheet as any).column,
+        ) ?? undefined;
+    }
+    if (!Array.isArray(dataMatrix)) return;
+
+    const changes: SheetChangePath[] = [];
+    for (let r = 0; r < dataMatrix.length; r++) {
+      const row = dataMatrix[r];
+      if (!Array.isArray(row)) continue;
+      for (let c = 0; c < row.length; c++) {
+        changes.push({
+          sheetId: currentSheetId,
+          path: ['celldata'],
+          value: { r, c, v: row[c] },
+          key: `${r}_${c}`,
+          type: 'update',
+        });
+      }
+    }
+
+    console.log(' IIIIIMMMMMM Built celldata changes for Y.Doc:', changes);
+
+    updateYdocSheetData(
+      // @ts-ignore Y.Doc present at runtime
+      ydocRef.current,
+      dsheetId,
+      changes,
+      handleOnChangePortalUpdate,
+    );
   };
 };

@@ -37,6 +37,7 @@ export const dataVerificationYdocUpdate = ({
     oldData,
     newData,
   });
+  console.log('yoo Built dataVerification changes for Y.Doc:', changes);
 
   applyYdocSheetChanges({
     ydoc: syncContext.ydoc,

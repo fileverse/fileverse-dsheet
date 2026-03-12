@@ -31,6 +31,7 @@ import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 import {
   createAfterColRowChangesHandler,
   createAfterOrderChangesHandler,
+  createUpdateAllCellHandler,
   createSheetLengthChangeHandler,
   syncCurrentSheetField,
 } from './editor-workbook-sync';
@@ -166,6 +167,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   });
   const handleAfterOrderChanges = createAfterOrderChangesHandler(syncContext);
   const handleAfterColRowChanges = createAfterColRowChangesHandler(syncContext);
+  //@ts-ignore
+  const handleUpdateAllCell = createUpdateAllCellHandler(syncContext);
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -306,6 +309,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             })
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
+            console.log('updateCellYdoc', changes);
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,
@@ -313,6 +317,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleOnChangePortalUpdate
             )
           },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          //updateAllCell: handleUpdateAllCell,
           afterImagesChange: () => {
             syncCurrentSheetField(syncContext, 'images');
           },

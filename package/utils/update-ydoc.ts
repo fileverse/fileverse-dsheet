@@ -26,9 +26,13 @@ export const updateYdocSheetData = (
   changes: SheetChangePath[],
   handleContentPortal: any,
 ) => {
+  console.log('Applying changes to Y.Doc:', changes);
   if (!ydoc || !changes.length) return;
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
+
+  console.log('starting to applying changes to Y.Doc', ySheetArrayToPlain(sheetArray as Y.Array<any>));
+
 
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
@@ -137,8 +141,8 @@ export const updateYdocSheetData = (
         return;
       }
 
-      // luckysheet_conditionformat_save (array)
-      if (path.length === 1 && path[0] === 'luckysheet_conditionformat_save' && key) {
+      // luckysheet_conditionformat_save (array) - replace entire array payload
+      if (path.length === 1 && path[0] === 'luckysheet_conditionformat_save') {
         let cellArray = sheet.get('luckysheet_conditionformat_save');
         if (!(cellArray instanceof Y.Array)) {
           cellArray = new Y.Array();
@@ -146,7 +150,10 @@ export const updateYdocSheetData = (
         }
 
         cellArray.delete(0, cellArray.length);
-        cellArray.insert(0, [toPlain(value)]);
+        if (type === 'delete') return;
+
+        const plainValue = toPlain(value);
+        cellArray.insert(0, Array.isArray(plainValue) ? plainValue : [plainValue]);
         return;
       }
 
@@ -176,6 +183,8 @@ export const updateYdocSheetData = (
     });
   });
 
+  console.log('Finished applying changes to Y.Doc', ySheetArrayToPlain(sheetArray as Y.Array<any>));
+
   if (handleContentPortal) {
     handleContentPortal();
   }
@@ -193,8 +202,8 @@ export function ySheetArrayToPlain(
     const iterate = (sheetMap instanceof Y.Map)
       ? (fn: (value: any, key: string) => void) => { sheetMap.forEach(fn); }
       : (fn: (value: any, key: string) => void) => {
-          Object.entries(sheetMap as Record<string, any>).forEach(([key, value]) => fn(value, key));
-        };
+        Object.entries(sheetMap as Record<string, any>).forEach(([key, value]) => fn(value, key));
+      };
 
     iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format
@@ -210,10 +219,10 @@ export function ySheetArrayToPlain(
         return;
       }
 
-      if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Map) {
-        let conditionRules = value.toJSON();
-        if (conditionRules.length === 0) return
-        obj.conditionRules = conditionRules;
+      if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Array) {
+        const conditionFormatRules = value.toJSON();
+        if (conditionFormatRules.length === 0) return;
+        obj.luckysheet_conditionformat_save = conditionFormatRules;
         return;
       }
 

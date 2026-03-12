@@ -126,21 +126,22 @@ export function diffObjectMap<T extends Record<string, any>>(
 
     (Object.keys(newVal) as Array<keyof T>).forEach(prop => {
       if (newVal[prop] !== oldVal[prop]) {
-        changes[prop] = {
-          from: oldVal[prop],
-          to: newVal[prop],
-        };
+        added[key] = newVal;
+        // changes[prop] = {
+        //   from: oldVal[prop],
+        //   to: newVal[prop],
+        // };
       }
     });
 
-    if (Object.keys(changes).length > 0) {
-      updated.push({
-        key,
-        before: oldVal,
-        after: newVal,
-        changes,
-      });
-    }
+    // if (Object.keys(changes).length > 0) {
+    //   updated.push({
+    //     key,
+    //     before: oldVal,
+    //     after: newVal,
+    //     changes,
+    //   });
+    // }
   }
 
   // Removed
