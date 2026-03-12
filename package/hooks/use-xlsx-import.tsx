@@ -301,14 +301,6 @@ export const useXLSXImport = ({
                   ?.getSettings()
                   .generateSheetId();
               }
-              if (sheet.calcChain) {
-                sheet.calcChain = sheet.calcChain.map((chain) => {
-                  delete chain.id;
-                  delete chain.index;
-                  chain.id = sheet.id;
-                  return chain;
-                });
-              }
               // Attach freeze pane info
               if (frozenBySheet[sheetIndex]) {
                 sheet.frozen = frozenBySheet[sheetIndex];
@@ -324,10 +316,20 @@ export const useXLSXImport = ({
               // Also fix date cells: set ct.t="d", coerce v to number, compute m
               const hlKeys = hyperlinksBySheet[sheetIndex];
               const styleKeys = cellStylesBySheet[sheetIndex];
+              const calcChain: { r: number; c: number; id: string }[] = [];
               if (sheet.celldata) {
                 for (const cell of sheet.celldata) {
                   const key = `${cell.r}_${cell.c}`;
                   if (cell.v) {
+                    // Mark formula cells so FortuneSheet recalculates them on dependency change
+                    if (cell.v.f && cell.v.ct?.t !== 'd') {
+                      cell.v.ct = { ...(cell.v.ct ?? {}), t: 'str' };
+                      calcChain.push({
+                        r: cell.r,
+                        c: cell.c,
+                        id: sheet.id as string,
+                      });
+                    }
                     // Apply formatting extracted from exceljs
                     if (styleKeys?.[key]) {
                       Object.assign(cell.v, styleKeys[key]);
@@ -378,6 +380,9 @@ export const useXLSXImport = ({
                   }
                 }
               }
+
+              sheet.calcChain = calcChain;
+
               return sheet;
             });
 
