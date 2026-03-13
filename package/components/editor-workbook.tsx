@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { ComponentProps, useEffect, useMemo } from 'react';
+import React, { ComponentProps, useCallback, useEffect, useMemo } from 'react';
 import { Workbook } from '@fileverse-dev/fortune-react';
 import { Cell } from '@fileverse-dev/fortune-react';
 import {
@@ -30,10 +30,12 @@ import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
 import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
 import {
   createAfterColRowChangesHandler,
+  createAfterColorChangesHandler,
+  createAfterHideChangesHandler,
   createAfterOrderChangesHandler,
-  createUpdateAllCellHandler,
   createSheetLengthChangeHandler,
   syncCurrentSheetField,
+  updateAllCell,
 } from './editor-workbook-sync';
 
 // Use the types defined in types.ts
@@ -166,9 +168,13 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     currentDataRef,
   });
   const handleAfterOrderChanges = createAfterOrderChangesHandler(syncContext);
+  const handleAfterColorChanges = createAfterColorChangesHandler(syncContext);
+  const handleAfterHideChanges = createAfterHideChangesHandler(syncContext);
   const handleAfterColRowChanges = createAfterColRowChangesHandler(syncContext);
-  //@ts-ignore
-  const handleUpdateAllCell = createUpdateAllCellHandler(syncContext);
+  const handleUpdateAllCell = useCallback(
+    () => updateAllCell(syncContext),
+    [dsheetId, handleOnChangePortalUpdate],
+  );
 
   // Memoized workbook component to avoid unnecessary re-renders
   return useMemo(() => {
@@ -335,6 +341,15 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           afterConfigChanges: () => {
             syncCurrentSheetField(syncContext, 'config');
           },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          updateAllCell: () => {
+            console.log('handleUpdateAllCell called from hook');
+            handleUpdateAllCell();
+          },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          afterColorChanges: handleAfterColorChanges,
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          afterHideChanges: handleAfterHideChanges,
           afterColRowChanges: handleAfterColRowChanges,
           afterShowGridLinesChange: () => {
             syncCurrentSheetField(syncContext, 'showGridLines');
