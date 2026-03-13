@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React from 'react';
 import SSF from 'ssf';
 import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
@@ -22,48 +22,6 @@ export const useXLSXImport = ({
   currentDataRef: React.MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
 }) => {
-  const [sheetData, setSheetData] = useState<Sheet[]>([]);
-  const [mergeInfo, setMergeInfo] = useState<Record<
-    string,
-    { r: number; c: number; rs: number; cs: number }
-  > | null>(null);
-
-  useEffect(() => {
-    if (sheetEditorRef && sheetEditorRef.current) {
-      if (sheetData.length > 0) {
-        setMergeInfo(sheetData[0].config?.merge ?? null);
-      }
-    }
-  }, [sheetData]);
-
-  useEffect(() => {
-    if (mergeInfo) {
-      Object.keys(mergeInfo).forEach((key) => {
-        const merge = mergeInfo[key] as {
-          r: number;
-          c: number;
-          rs: number;
-          cs: number;
-        };
-        const startCellAddressR = merge.r;
-        const startCellAddressC = merge.c;
-        const endCellAddressR = merge.r + merge.rs - 1;
-        const endCellAddressC = merge.c + merge.cs - 1;
-        if (sheetEditorRef && sheetEditorRef.current) {
-          sheetEditorRef.current.mergeCells(
-            [
-              {
-                row: [startCellAddressR, endCellAddressR],
-                column: [startCellAddressC, endCellAddressC],
-              },
-            ],
-            'merge-horizontal',
-          );
-        }
-      });
-    }
-  }, [mergeInfo]);
-
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement> | undefined,
     fileArg: File,
@@ -317,9 +275,24 @@ export const useXLSXImport = ({
               const hlKeys = hyperlinksBySheet[sheetIndex];
               const styleKeys = cellStylesBySheet[sheetIndex];
               const calcChain: { r: number; c: number; id: string }[] = [];
+              // Built during the celldata loop below; only allocated when merges exist
+              const celldataMap = sheet.config?.merge
+                ? new Map<
+                    string,
+                    { r: number; c: number; v: Record<string, unknown> }
+                  >()
+                : null;
               if (sheet.celldata) {
                 for (const cell of sheet.celldata) {
                   const key = `${cell.r}_${cell.c}`;
+                  celldataMap?.set(
+                    key,
+                    cell as {
+                      r: number;
+                      c: number;
+                      v: Record<string, unknown>;
+                    },
+                  );
                   if (cell.v) {
                     // Mark formula cells so FortuneSheet recalculates them on dependency change
                     if (cell.v.f && cell.v.ct?.t !== 'd') {
@@ -383,6 +356,34 @@ export const useXLSXImport = ({
 
               sheet.calcChain = calcChain;
 
+              // luckyexcel only sets config.merge but not cell-level mc properties.
+              // FortuneSheet's canvas renderer needs mc on each cell in the merge range.
+              // celldataMap was built during the celldata loop above (single pass).
+              if (celldataMap && sheet.config?.merge && sheet.celldata) {
+                for (const merge of Object.values(sheet.config.merge) as {
+                  r: number;
+                  c: number;
+                  rs: number;
+                  cs: number;
+                }[]) {
+                  const { r, c, rs, cs } = merge;
+                  for (let dr = 0; dr < rs; dr++) {
+                    for (let dc = 0; dc < cs; dc++) {
+                      const key = `${r + dr}_${c + dc}`;
+                      let cell = celldataMap.get(key);
+                      if (!cell) {
+                        cell = { r: r + dr, c: c + dc, v: {} };
+                        sheet.celldata.push(cell as never);
+                        celldataMap.set(key, cell);
+                      }
+                      if (!cell.v) cell.v = {};
+                      cell.v.mc =
+                        dr === 0 && dc === 0 ? { r, c, rs, cs } : { r, c };
+                    }
+                  }
+                }
+              }
+
               return sheet;
             });
 
@@ -399,7 +400,6 @@ export const useXLSXImport = ({
               return sheet;
             });
 
-            setSheetData(combinedSheets);
             ydocRef.current.transact(() => {
               sheetArray.delete(0, sheetArray.length);
               sheetArray.insert(0, combinedSheets);
