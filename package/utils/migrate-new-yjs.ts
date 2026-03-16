@@ -119,6 +119,22 @@ export function migrateSheetArrayIfNeeded(
           return;
         }
 
+        if (key === 'filter_select') {
+          const filterSelect = new Y.Map();
+          const fS = value ? value : {};
+          Object.entries(fS as object).forEach(([k, v]) => filterSelect.set(k, v));
+          sheetMap.set('filter_select', filterSelect);
+          return;
+        }
+
+        if (key === 'filter') {
+          const filter = new Y.Map();
+          const f = value ? value : {};
+          Object.entries(f as object).forEach(([k, v]) => filter.set(k, v));
+          sheetMap.set('filter', filter);
+          return;
+        }
+
         if (key === 'config') {
           sheetMap.set('config', value);
           return
@@ -189,5 +205,4 @@ export function migrateSheetFactoryForImport(
     return sheetMap;
   };
 }
-
 

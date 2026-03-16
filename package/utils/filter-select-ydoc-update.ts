@@ -7,23 +7,20 @@ import {
 } from './sheet-ydoc-sync-utils';
 
 /**
- * Sync dataBlockCalcFunction map for the active sheet to Yjs.
+ * Sync `filter_select` for active sheet.
+ * Stored as a Y.Map for granular updates (keys: "row", "column").
  */
-export const dataBlockListYdocUpdate = ({
+export const filterSelectYdocUpdate = ({
   sheetEditorRef,
   ydocRef,
   dsheetId,
   handleContentPortal,
-  dataBlockCalcFunction
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
   dsheetId: string;
-  handleContentPortal?: any,
-  dataBlockCalcFunction?: any
-}
-) => {
-  console.log('Updating dataBlockCalcFunction to Y.Doc with data:', dataBlockCalcFunction);
+  handleContentPortal?: any;
+}) => {
   const syncContext = getSheetYdocSyncContext({
     sheetEditorRef,
     ydocRef,
@@ -31,14 +28,14 @@ export const dataBlockListYdocUpdate = ({
   });
   if (!syncContext) return;
 
-  const newData = dataBlockCalcFunction?.[syncContext.currentSheetId] || {};
-  const oldData = syncContext.oldSheet.dataBlockCalcFunction || {};
+  const newData = (sheetEditorRef.current?.getSheet() as any)?.filter_select || {};
+  const oldData = syncContext.oldSheet.filter_select || {};
 
   const changes = buildMapFieldChanges({
     sheetId: syncContext.currentSheetId,
-    fieldPath: 'dataBlockCalcFunction',
-    oldData,
-    newData,
+    fieldPath: 'filter_select',
+    oldData: oldData || {},
+    newData: newData || {},
   });
 
   applyYdocSheetChanges({
@@ -48,3 +45,4 @@ export const dataBlockListYdocUpdate = ({
     handleContentPortal,
   });
 };
+

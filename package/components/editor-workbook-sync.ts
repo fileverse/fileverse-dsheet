@@ -94,6 +94,16 @@ export const createSheetLengthChangeHandler = ({
           sheetArray.push([ySheet]);
         });
 
+        updateAllCell(
+          {
+            sheetEditorRef,
+            ydocRef,
+            dsheetId,
+            handleOnChangePortalUpdate,
+          },
+          sheet.id as string,
+        );
+
         sheetEditorRef.current?.activateSheet({ id: sheet.id });
         handleOnChangePortalUpdate();
       }, 50);
@@ -218,28 +228,29 @@ export const createAfterColRowChangesHandler = ({
   };
 };
 
-export const createUpdateAllCellHandler = ({
-  sheetEditorRef,
-  ydocRef,
-  dsheetId,
-  handleOnChangePortalUpdate,
-}: SyncContext) => {
-  return () =>
-    updateAllCell({
-      sheetEditorRef,
-      ydocRef,
-      dsheetId,
-      handleOnChangePortalUpdate,
-    });
-};
+// export const createUpdateAllCellHandler = ({
+//   sheetEditorRef,
+//   ydocRef,
+//   dsheetId,
+//   handleOnChangePortalUpdate,
+// }: SyncContext) => {
+//   return () =>
+//     updateAllCell({
+//       sheetEditorRef,
+//       ydocRef,
+//       dsheetId,
+//       handleOnChangePortalUpdate,
+//     });
+// };
 
 export const updateAllCell = ({
   sheetEditorRef,
   ydocRef,
   dsheetId,
   handleOnChangePortalUpdate,
-}: SyncContext) => {
+}: SyncContext, subSheetId: string) => {
   const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
+  console.log('updateAllCell', workbookContext, subSheetId);
   const currentSheetId =
     workbookContext?.currentSheetId?.toString?.() ||
     sheetEditorRef.current?.getSheet?.()?.id?.toString?.();
@@ -270,7 +281,7 @@ export const updateAllCell = ({
     if (!Array.isArray(row)) continue;
     for (let c = 0; c < row.length; c++) {
       changes.push({
-        sheetId: currentSheetId,
+        sheetId: subSheetId,
         path: ['celldata'],
         value: { r, c, v: row[c] },
         key: `${r}_${c}`,

@@ -130,11 +130,13 @@ export const useEditorData = (
           setContext?.((ctx: any) => {
             const files = ctx.luckysheetfile;
             files.forEach((file: any, fileIndex: number) => {
+              const sheetKey = (file?.id ?? fileIndex)?.toString?.() ?? String(fileIndex);
               file.data?.forEach((row: any, rowIndex: number) => {
                 row.forEach((cell: any, colIndex: number) => {
                   if (cell) {
-                    // @ts-expect-error later
-                    const comment = commentData[`${fileIndex}_${rowIndex}_${colIndex}`];
+                    const comment =
+                      (commentData as any)?.[`${sheetKey}_${rowIndex}_${colIndex}`] ??
+                      (commentData as any)?.[`${fileIndex}_${rowIndex}_${colIndex}`];
                     if (comment) {
                       cell.ps = allowComments
                         ? CELL_COMMENT_DEFAULT_VALUE
@@ -150,28 +152,31 @@ export const useEditorData = (
         }
         //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
         if (sheetEditorRef.current === null && syncStatus === 'synced') {
-          currentData.forEach((sheet, index) => {
-            const sheetCellData = sheet.celldata;
-            sheetCellData?.forEach((cell) => {
-              // @ts-expect-error later
-              const comment = commentData[`${index}_${cell.r}_${cell.c}`];
-              if (comment) {
-                if (cell.v) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: !allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE,
-                  };
-                }
-              } else {
-                if (cell.v) {
-                  cell.v = {
-                    ...cell.v,
-                    ps: undefined,
-                  };
-                }
-              }
+          const updatedSheets = currentData.map((sheet, index) => {
+            const sheetKey = (sheet as any)?.id?.toString?.() ?? String(index);
+            const updatedCelldata = (sheet.celldata || []).map((cell: any) => {
+              const comment =
+                (commentData as any)?.[`${sheetKey}_${cell.r}_${cell.c}`] ??
+                (commentData as any)?.[`${index}_${cell.r}_${cell.c}`];
+              if (!cell?.v) return cell;
+              return {
+                ...cell,
+                v: {
+                  ...cell.v,
+                  ps: comment
+                    ? (!allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE)
+                    : undefined,
+                },
+              };
             });
+
+            return { ...sheet, celldata: updatedCelldata };
           });
+
+          currentDataRef.current = updatedSheets;
+          if (setForceSheetRender) {
+            setForceSheetRender((prev) => prev + 1);
+          }
         }
       }
     } catch (error) {

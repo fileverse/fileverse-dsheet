@@ -19,6 +19,8 @@ import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
 import { calcChainYdocUpdate } from '../utils/calc-chain-ydoc-update';
 import { conditionFormatYdocUpdate } from '../utils/condition-format-ydoc-update';
 import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
+import { filterSelectYdocUpdate } from '../utils/filter-select-ydoc-update';
+import { filterYdocUpdate } from '../utils/filter-ydoc-update';
 import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
 import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
 import { handleCSVUpload } from '../utils/csv-import';
@@ -109,6 +111,18 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   } = useEditor();
 
   useEffect(() => {
+    if (dataBlockCalcFunction) {
+      console.log('dataBlockCalcFunction changed, updating Y.Doc', dataBlockCalcFunction);
+      dataBlockListYdocUpdate({
+        sheetEditorRef,
+        ydocRef,
+        dsheetId,
+        dataBlockCalcFunction
+      });
+    }
+  }, [dataBlockCalcFunction]);
+
+  useEffect(() => {
     // @ts-ignore
     window.editorRef = sheetEditorRef.current;
     // @ts-ignore
@@ -171,8 +185,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   const handleAfterColorChanges = createAfterColorChangesHandler(syncContext);
   const handleAfterHideChanges = createAfterHideChangesHandler(syncContext);
   const handleAfterColRowChanges = createAfterColRowChangesHandler(syncContext);
+
+  //@ts-ignore
   const handleUpdateAllCell = useCallback(
-    () => updateAllCell(syncContext),
+    (subSheetId: string) => updateAllCell(syncContext, subSheetId),
     [dsheetId, handleOnChangePortalUpdate],
   );
 
@@ -285,17 +301,12 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             })
           },
           calcChainChange: () => {
+            console.log('Updating calcChain to Y.Doc');
             calcChainYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate
-            })
-            dataBlockListYdocUpdate({
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              dataBlockCalcFunction
             })
           },
           conditionFormatChange: () => {
@@ -305,6 +316,24 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate
             })
+          },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          filterSelectChange: () => {
+            filterSelectYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
+          },
+          // @ts-ignore Fortune Hooks type misses this runtime hook.
+          filterChange: () => {
+            filterYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           },
           hyperlinkChange: () => {
             hyperlinkYdocUpdate({
@@ -342,10 +371,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             syncCurrentSheetField(syncContext, 'config');
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          updateAllCell: () => {
-            console.log('handleUpdateAllCell called from hook');
-            handleUpdateAllCell();
-          },
+          updateAllCell: (subSheetId: string) => { },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           afterColorChanges: handleAfterColorChanges,
           // @ts-ignore Fortune Hooks type misses this runtime hook.
