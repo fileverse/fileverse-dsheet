@@ -827,6 +827,7 @@ export const useXLSXImport = ({
               }
               // @ts-expect-error later
               updateDocumentTitle?.(exportJson.info?.name);
+              resolve();
             },
           );
         } catch (error) {
