@@ -14,9 +14,16 @@ export const CustomButton = ({
   handleExportToJSON,
 }: {
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  handleCSVUpload:
-  (event: ChangeEventHandler<HTMLInputElement> | undefined, file: any, importType: string) => void;
-  handleXLSXUpload: (event: ChangeEventHandler<HTMLInputElement> | undefined, file: any, importType: string) => void;
+  handleCSVUpload: (
+    event: ChangeEventHandler<HTMLInputElement> | undefined,
+    file: any,
+    importType: string
+  ) => void | Promise<void>;
+  handleXLSXUpload: (
+    event: ChangeEventHandler<HTMLInputElement> | undefined,
+    file: any,
+    importType: string
+  ) => void | Promise<void>;
   handleExportToXLSX: () => void;
   handleExportToCSV: () => void;
   handleExportToJSON: () => void;
@@ -26,8 +33,9 @@ export const CustomButton = ({
   const [importType, setImportType] = useState('new-dsheet');
   const [file, setFile] = useState<any>(null);
   const [extension, setExtension] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
-  const handleApplyData = () => {
+  const handleApplyData = async () => {
     if (extension === 'xlsx') {
       if (file && importType === 'new-dsheet') {
         const url = URL.createObjectURL(file);
@@ -37,8 +45,15 @@ export const CustomButton = ({
             '_blank'
           );
         }, 0);
+        setOpenImportTypeModal(false);
       } else {
-        handleXLSXUpload(undefined, file, importType);
+        setIsImporting(true);
+        try {
+          await Promise.resolve(handleXLSXUpload(undefined, file, importType));
+        } finally {
+          setIsImporting(false);
+          setOpenImportTypeModal(false);
+        }
       }
     } else {
       if (file && importType === 'new-dsheet') {
@@ -49,12 +64,18 @@ export const CustomButton = ({
             '_blank'
           );
         }, 0);
+        setOpenImportTypeModal(false);
       } else {
-        handleCSVUpload(undefined, file, importType);
+        setIsImporting(true);
+        try {
+          await Promise.resolve(handleCSVUpload(undefined, file, importType));
+        } finally {
+          setIsImporting(false);
+          setOpenImportTypeModal(false);
+        }
       }
     }
-    setOpenImportTypeModal(false);
-  }
+  };
 
   return (
     <Popover
@@ -188,7 +209,10 @@ export const CustomButton = ({
       <DynamicModal
         hasCloseIcon
         open={openImportTypeModal}
-        onOpenChange={setOpenImportTypeModal}
+        onOpenChange={(open) => {
+          if (isImporting && !open) return;
+          setOpenImportTypeModal(open);
+        }}
         className="dsheet-modal dsheet-modal--import rounded-lg max-w-[420px]"
         contentClassName="!pt-4 px-6"
         title={
@@ -237,7 +261,8 @@ export const CustomButton = ({
                 Cancel
               </Button>
               <Button
-                disabled={!file || file?.size > MAX_FILE_SIZE}
+                disabled={!file || file?.size > MAX_FILE_SIZE || isImporting}
+                isLoading={isImporting}
                 className="dsheet-btn dsheet-btn--primary font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
                 size="md"
                 onClick={handleApplyData}

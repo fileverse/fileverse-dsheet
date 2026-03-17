@@ -34,7 +34,7 @@ import {
   createSheetLengthChangeHandler,
   syncCurrentSheetField,
 } from './editor-workbook-sync';
-
+// import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
@@ -103,7 +103,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     getDocumentTitle,
     updateDocumentTitle,
     handleLiveQuery,
+    setIsDataLoaded,
   } = useEditor();
+
+  // const { setIsDataLoaded } = useEditorData();
 
   useEffect(() => {
     // @ts-ignore
@@ -127,6 +130,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   });
 
   usehandleHomepageRedirect({
+    setIsDataLoaded,
     setSelectedTemplate,
     handleXLSXUpload,
     handleCSVUpload,

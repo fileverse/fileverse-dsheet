@@ -20,32 +20,36 @@ export const handleCSVUpload = (
   fileArg?: File,
   importType?: string,
   handleContentPortal?: any
-) => {
+): Promise<void> => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
-    return;
+    return Promise.resolve();
   }
   const file = input?.files[0] || fileArg;
 
-  const reader = new FileReader({ encoded: 'UTF-8' });
-  reader.onload = (e) => {
-    if (!e.target) {
-      console.error('FileReader event target is null');
-      return;
-    }
-    const csvContent = e.target.result;
+  return new Promise<void>((resolve, reject) => {
+    const reader = new FileReader({ encoded: 'UTF-8' });
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.onload = (e) => {
+      if (!e.target) {
+        console.error('FileReader event target is null');
+        reject(new Error('FileReader event target is null'));
+        return;
+      }
+      const csvContent = e.target.result;
 
-    if (typeof csvContent === 'string') {
-      Papa.parse(csvContent, {
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.errors.length > 0 && results.data.length === 0) {
-            console.error('CSV Parsing errors:', results.errors);
-            alert('Error parsing CSV file');
-            return;
-          }
+      if (typeof csvContent === 'string') {
+        Papa.parse(csvContent, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            if (results.errors.length > 0 && results.data.length === 0) {
+              console.error('CSV Parsing errors:', results.errors);
+              alert('Error parsing CSV file');
+              reject(new Error('Error parsing CSV file'));
+              return;
+            }
 
           // Convert CSV data to fortune-sheet format
           const cellData: {
@@ -135,6 +139,7 @@ export const handleCSVUpload = (
 
           if (!ydoc) {
             console.error('ydocRef.current is null');
+            reject(new Error('ydocRef.current is null'));
             return;
           }
 
@@ -191,10 +196,14 @@ export const handleCSVUpload = (
               index: finalData.length - 1,
             });
           }, 500);
-        },
-      });
-    }
-  };
+            resolve();
+          },
+        });
+      } else {
+        reject(new Error('Invalid file content'));
+      }
+    };
 
-  reader.readAsText(file);
+    reader.readAsText(file);
+  });
 };

@@ -2,6 +2,7 @@ import { utils as XLSXUtil, writeFile as XLSXWriteFile } from 'xlsx-js-style';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
+import { getExportFilenameBase } from './export-filename';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -191,8 +192,14 @@ export const handleExportToXLSX = async (
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
-    let title = (await getDocumentTitle?.()) || 'Sheet';
-    title = title.length > 30 ? title.slice(0, 30) : title;
+    const activeSheetName = workbookRef.current.getSheet()?.name;
+    const title = getExportFilenameBase({
+      getDocumentTitle: () => getDocumentTitle?.() ?? '',
+      documentTitleFallback:
+        typeof document !== 'undefined' ? document.title : '',
+      sheetNameFallback: activeSheetName,
+      defaultBase: 'Sheet',
+    });
 
     XLSXWriteFile(workbook, `${title}.xlsx`, {
       bookType: 'xlsx',
