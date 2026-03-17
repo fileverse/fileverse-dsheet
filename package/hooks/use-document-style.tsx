@@ -58,19 +58,11 @@ export const useFortuneDocumentStyle = ({
             mutation.type === 'attributes' &&
             mutation.attributeName === 'contenteditable'
           ) {
-            const element = mutation.target as HTMLElement; // Type the target as HTMLElement
-            const oldValue = mutation.oldValue;
+            const element = mutation.target as HTMLElement;
 
-            console.log(
-              `contenteditable changed from '${oldValue}' to '${element.contentEditable}'`,
-            );
-
-            // If contenteditable was set to true, force it back to false
+            // Read-only: prevent contenteditable from being set to true
             if (element.contentEditable === 'true') {
-              console.log(
-                'Attempted to set contenteditable to true, forcing it to false.',
-              );
-              element.contentEditable = 'false'; // Force it back to false
+              element.contentEditable = 'false';
             }
           }
         }
