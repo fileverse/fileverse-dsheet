@@ -6,6 +6,11 @@ import { Sheet } from '@fileverse-dev/fortune-react';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 // @ts-expect-error, type is not available from package
 import { transformExcelToLucky } from 'luckyexcel';
+import {
+  extractImagesFromWorksheet,
+  convertRawImagesToFortuneSheet,
+  RawSheetImage,
+} from '../utils/xlsx-image-utils';
 
 export const useXLSXImport = ({
   sheetEditorRef,
@@ -85,6 +90,11 @@ export const useXLSXImport = ({
             }
           >
         > = {};
+        // Raw image data keyed by 0-based sheet index.
+        // Pixel positions are deferred to sheets.map where FortuneSheet
+        // column/row dimensions are available.
+        const imagesBySheet: Record<number, RawSheetImage[]> = {};
+
         workbook.eachSheet((ws, sheetIndex) => {
           const idx = sheetIndex - 1; // exceljs is 1-based
 
@@ -181,6 +191,10 @@ export const useXLSXImport = ({
           if (Object.keys(styles).length > 0) {
             cellStylesBySheet[idx] = styles;
           }
+
+          // Extract images — pixel positions are deferred to sheets.map
+          const sheetImages = extractImagesFromWorksheet(ws, workbook);
+          if (sheetImages.length > 0) imagesBySheet[idx] = sheetImages;
         });
 
         dropdownInfo =
@@ -269,6 +283,28 @@ export const useXLSXImport = ({
                   ...(sheet.hyperlink || {}),
                   ...hyperlinksBySheet[sheetIndex],
                 };
+              }
+              // Attach images — convert fractional col/row to pixels using
+              // FortuneSheet's actual column/row dimensions so positions match.
+              if (imagesBySheet[sheetIndex]) {
+                const defaultColPx =
+                  Number(sheet.defaultColWidth) ||
+                  Number(
+                    sheetEditorRef.current?.getSettings?.()?.defaultColWidth,
+                  ) ||
+                  99;
+                const defaultRowPx =
+                  Number(sheet.defaultRowHeight) ||
+                  Number(
+                    sheetEditorRef.current?.getSettings?.()?.defaultRowHeight,
+                  ) ||
+                  21;
+                sheet.images = convertRawImagesToFortuneSheet(
+                  imagesBySheet[sheetIndex],
+                  sheet,
+                  defaultColPx,
+                  defaultRowPx,
+                );
               }
               // Apply cell formatting from exceljs (hyperlink styling, bold, italic, bg, etc.)
               // Also fix date cells: set ct.t="d", coerce v to number, compute m
