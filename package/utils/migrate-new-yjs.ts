@@ -39,6 +39,11 @@ export function migrateSheetArrayIfNeeded(
       const sheetMap = new Y.Map();
 
       Object.entries(item).forEach(([key, value]) => {
+        if (value === undefined || value === null) {
+          console.warn(`[DSheet] Skipping property '${key}' as its value is undefined or null.`);
+          return;
+        }
+
         // celldata array → Y.Map keyed by r_c for efficient Yjs updates
         if (key === 'celldata' && Array.isArray(value)) {
           const cellMap = new Y.Map();
@@ -53,6 +58,7 @@ export function migrateSheetArrayIfNeeded(
           sheetMap.set('celldata', cellMap);
           return;
         }
+
         if (key === 'calcChain' && Array.isArray(value)) {
           const calcChainMap = new Y.Map();
           const normalized = normalizeCelldataArray(value);
