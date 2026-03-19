@@ -1,4 +1,5 @@
-import { utils as XLSXUtil, writeFile as XLSXWriteFile } from 'xlsx-js-style';
+import { utils as XLSXUtil, write as XLSXWrite } from 'xlsx-js-style';
+import { Workbook as ExcelJSWorkbook } from 'exceljs';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
@@ -201,10 +202,110 @@ export const handleExportToXLSX = async (
       defaultBase: 'Sheet',
     });
 
-    XLSXWriteFile(workbook, `${title}.xlsx`, {
+    // Pass 1: write to buffer with xlsx-js-style (preserves all cell styling)
+    const xlsxBuffer: ArrayBuffer = XLSXWrite(workbook, {
       bookType: 'xlsx',
+      type: 'array',
       compression: true,
     });
+
+    // Pass 2: ExcelJS reads the buffer and adds data validations
+    const excelWorkbook = new ExcelJSWorkbook();
+    await excelWorkbook.xlsx.load(xlsxBuffer);
+
+    sheetWithData.forEach((sheet, index) => {
+      if (!sheet.dataVerification) return;
+      const ws = excelWorkbook.worksheets[index];
+      if (!ws) return;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wsAny = ws as any;
+      if (!wsAny.dataValidations) wsAny.dataValidations = { model: {} };
+      if (!wsAny.dataValidations.model) wsAny.dataValidations.model = {};
+      const dvModel: Record<string, unknown> = wsAny.dataValidations.model;
+
+      let cfPriority = 1;
+      Object.entries(sheet.dataVerification).forEach(([rowColKey, dvRaw]) => {
+        const dv = dvRaw as {
+          type?: string;
+          value1?: string;
+          color?: string;
+          hintShow?: boolean;
+          hintValue?: string;
+          prohibitInput?: boolean;
+        };
+        if (dv.type !== 'dropdown') return;
+        const [row, col] = rowColKey.split('_').map(Number);
+        const cellAddress = XLSXUtil.encode_cell({ r: row, c: col });
+        const options = (dv.value1 || '')
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+        if (options.length === 0) return;
+
+        // Write directly to the model in the same format the import reads it
+        dvModel[cellAddress] = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`"${options.join(',')}"`],
+          showInputMessage: Boolean(dv.hintShow),
+          prompt: dv.hintValue || '',
+          showErrorMessage: Boolean(dv.prohibitInput),
+        };
+
+        // Add conditional formatting so option colors persist in Google Sheets / Excel.
+        // color is a flat comma-separated string of R, G, B triplets (one per option).
+        if (dv.color) {
+          const colorNums = dv.color
+            .split(',')
+            .map((s: string) => parseInt(s.trim(), 10));
+          const toHex2 = (n: number) =>
+            Math.max(0, Math.min(255, n))
+              .toString(16)
+              .padStart(2, '0')
+              .toUpperCase();
+          const cfRules = options
+            .map((option, i) => {
+              const r = colorNums[i * 3];
+              const g = colorNums[i * 3 + 1];
+              const b = colorNums[i * 3 + 2];
+              if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+              const argb = `FF${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+              return {
+                type: 'cellIs',
+                operator: 'equal',
+                formulae: [`"${option}"`],
+                priority: cfPriority++,
+                style: {
+                  fill: {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb },
+                  },
+                },
+              };
+            })
+            .filter(Boolean);
+          if (cfRules.length > 0) {
+            wsAny.addConditionalFormatting({
+              ref: cellAddress,
+              rules: cfRules,
+            });
+          }
+        }
+      });
+    });
+
+    const finalBuffer = await excelWorkbook.xlsx.writeBuffer();
+    const blob = new Blob([finalBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Export failed:', error);
   }
