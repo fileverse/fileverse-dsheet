@@ -23,7 +23,6 @@ export const dataBlockListYdocUpdate = ({
   dataBlockCalcFunction?: any
 }
 ) => {
-  console.log('Updating dataBlockCalcFunction to Y.Doc with data:', dataBlockCalcFunction);
   const syncContext = getSheetYdocSyncContext({
     sheetEditorRef,
     ydocRef,

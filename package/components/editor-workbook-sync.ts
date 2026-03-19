@@ -228,21 +228,6 @@ export const createAfterColRowChangesHandler = ({
   };
 };
 
-// export const createUpdateAllCellHandler = ({
-//   sheetEditorRef,
-//   ydocRef,
-//   dsheetId,
-//   handleOnChangePortalUpdate,
-// }: SyncContext) => {
-//   return () =>
-//     updateAllCell({
-//       sheetEditorRef,
-//       ydocRef,
-//       dsheetId,
-//       handleOnChangePortalUpdate,
-//     });
-// };
-
 export const updateAllCell = ({
   sheetEditorRef,
   ydocRef,
@@ -250,14 +235,12 @@ export const updateAllCell = ({
   handleOnChangePortalUpdate,
 }: SyncContext, subSheetId: string) => {
   const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
-  console.log('updateAllCell', workbookContext, subSheetId);
   const currentSheetId =
     workbookContext?.currentSheetId?.toString?.() ||
     sheetEditorRef.current?.getSheet?.()?.id?.toString?.();
   if (!currentSheetId) return;
 
   const sheet = sheetEditorRef.current?.getSheet?.();
-  console.log('Updating all cells for sheet:', sheet?.name);
   if (!sheet) return;
 
   let dataMatrix = (sheet as any).data as any[][] | undefined;

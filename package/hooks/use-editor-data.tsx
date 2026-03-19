@@ -85,7 +85,6 @@ export const useEditorData = (
         // @ts-ignore
         sheetArray as Y.Array<Y.Map>,
       );
-      console.log('yoo Processed portal content into sheet data', newSheetData);
 
       currentDataRef.current = newSheetData;
       initialiseLiveQueryData(newSheetData);

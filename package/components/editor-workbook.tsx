@@ -112,7 +112,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
   useEffect(() => {
     if (dataBlockCalcFunction) {
-      console.log('dataBlockCalcFunction changed, updating Y.Doc', dataBlockCalcFunction);
       dataBlockListYdocUpdate({
         sheetEditorRef,
         ydocRef,
@@ -301,7 +300,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             })
           },
           calcChainChange: () => {
-            console.log('Updating calcChain to Y.Doc');
             calcChainYdocUpdate({
               sheetEditorRef,
               ydocRef,
@@ -344,7 +342,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             })
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
-            console.log('updateCellYdoc', changes);
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,
@@ -352,8 +349,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleOnChangePortalUpdate
             )
           },
-          // @ts-ignore Fortune Hooks type misses this runtime hook.
-          //updateAllCell: handleUpdateAllCell,
           afterImagesChange: () => {
             syncCurrentSheetField(syncContext, 'images');
           },

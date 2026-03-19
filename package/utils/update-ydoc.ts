@@ -26,13 +26,9 @@ export const updateYdocSheetData = (
   changes: SheetChangePath[],
   handleContentPortal: any,
 ) => {
-  console.log('Applying changes to Y.Doc:', changes);
   if (!ydoc || !changes.length) return;
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
-
-  console.log('starting to applying changes to Y.Doc', ySheetArrayToPlain(sheetArray as Y.Array<any>));
-
 
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
@@ -216,8 +212,6 @@ export const updateYdocSheetData = (
       sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
     });
   });
-
-  console.log('Finished applying changes to Y.Doc', ySheetArrayToPlain(sheetArray as Y.Array<any>));
 
   if (handleContentPortal) {
     handleContentPortal();
