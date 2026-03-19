@@ -237,7 +237,7 @@ export const CustomButton = ({
                 Cancel
               </Button>
               <Button
-                disabled={!file || file?.size > MAX_FILE_SIZE}
+                // disabled={!file || file?.size > MAX_FILE_SIZE}
                 className="dsheet-btn dsheet-btn--primary font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[100px] h-10 h-[36px] max-h-10 rounded"
                 size="md"
                 onClick={handleApplyData}
