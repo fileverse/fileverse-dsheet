@@ -1,5 +1,6 @@
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import * as Y from 'yjs';
+import { SheetChangePath, updateYdocSheetData } from '../utils/update-ydoc';
 
 type SyncContext = {
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
@@ -20,7 +21,15 @@ const getCurrentYdocSheet = ({
 
 export const syncCurrentSheetField = (
   context: SyncContext,
-  field: 'images' | 'iframes' | 'frozen' | 'name' | 'config' | 'showGridLines',
+  field:
+    | 'images'
+    | 'iframes'
+    | 'frozen'
+    | 'name'
+    | 'config'
+    | 'showGridLines'
+    | 'color'
+    | 'hide',
 ) => {
   const { sheetEditorRef, handleOnChangePortalUpdate } = context;
   const currentSheet = sheetEditorRef?.current?.getSheet() as any;
@@ -85,6 +94,16 @@ export const createSheetLengthChangeHandler = ({
           sheetArray.push([ySheet]);
         });
 
+        updateAllCell(
+          {
+            sheetEditorRef,
+            ydocRef,
+            dsheetId,
+            handleOnChangePortalUpdate,
+          },
+          sheet.id as string,
+        );
+
         sheetEditorRef.current?.activateSheet({ id: sheet.id });
         handleOnChangePortalUpdate();
       }, 50);
@@ -120,14 +139,72 @@ export const createAfterOrderChangesHandler = ({
   return () => {
     const allSheets = sheetEditorRef?.current?.getAllSheets();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    let changed = false;
     allSheets?.forEach((sheet) => {
       const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === sheet?.id) as any;
       const ydocOrder = currentYdocSheet?.get('order');
       if (ydocOrder !== sheet?.order) {
         currentYdocSheet?.set('order', sheet?.order);
-        handleOnChangePortalUpdate();
+        changed = true;
       }
     });
+    if (changed) handleOnChangePortalUpdate();
+  };
+};
+
+export const createAfterColorChangesHandler = ({
+  sheetEditorRef,
+  ydocRef,
+  dsheetId,
+  handleOnChangePortalUpdate,
+}: SyncContext) => {
+  return () => {
+    const allSheets = sheetEditorRef?.current?.getAllSheets();
+    const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    let changed = false;
+
+    allSheets?.forEach((sheet) => {
+      const currentYdocSheet = oldSheets
+        ?.toArray()
+        .find((s: any) => s.get('id') === sheet?.id) as any;
+      if (!currentYdocSheet) return;
+
+      const ydocColor = currentYdocSheet?.get('color');
+      if (ydocColor !== (sheet as any)?.color) {
+        currentYdocSheet?.set('color', (sheet as any)?.color);
+        changed = true;
+      }
+    });
+
+    if (changed) handleOnChangePortalUpdate();
+  };
+};
+
+export const createAfterHideChangesHandler = ({
+  sheetEditorRef,
+  ydocRef,
+  dsheetId,
+  handleOnChangePortalUpdate,
+}: SyncContext) => {
+  return () => {
+    const allSheets = sheetEditorRef?.current?.getAllSheets();
+    const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    let changed = false;
+
+    allSheets?.forEach((sheet) => {
+      const currentYdocSheet = oldSheets
+        ?.toArray()
+        .find((s: any) => s.get('id') === sheet?.id) as any;
+      if (!currentYdocSheet) return;
+
+      const ydocHide = currentYdocSheet?.get('hide');
+      if (ydocHide !== (sheet as any)?.hide) {
+        currentYdocSheet?.set('hide', (sheet as any)?.hide);
+        changed = true;
+      }
+    });
+
+    if (changed) handleOnChangePortalUpdate();
   };
 };
 
@@ -149,4 +226,58 @@ export const createAfterColRowChangesHandler = ({
       handleOnChangePortalUpdate();
     }
   };
+};
+
+export const updateAllCell = ({
+  sheetEditorRef,
+  ydocRef,
+  dsheetId,
+  handleOnChangePortalUpdate,
+}: SyncContext, subSheetId: string) => {
+  const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
+  const currentSheetId =
+    workbookContext?.currentSheetId?.toString?.() ||
+    sheetEditorRef.current?.getSheet?.()?.id?.toString?.();
+  if (!currentSheetId) return;
+
+  const sheet = sheetEditorRef.current?.getSheet?.();
+  if (!sheet) return;
+
+  let dataMatrix = (sheet as any).data as any[][] | undefined;
+  if (
+    !dataMatrix &&
+    Array.isArray((sheet as any).celldata) &&
+    sheetEditorRef.current?.celldataToData
+  ) {
+    dataMatrix =
+      sheetEditorRef.current.celldataToData(
+        (sheet as any).celldata,
+        (sheet as any).row,
+        (sheet as any).column,
+      ) ?? undefined;
+  }
+  if (!Array.isArray(dataMatrix)) return;
+
+  const changes: SheetChangePath[] = [];
+  for (let r = 0; r < dataMatrix.length; r++) {
+    const row = dataMatrix[r];
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < row.length; c++) {
+      changes.push({
+        sheetId: subSheetId,
+        path: ['celldata'],
+        value: { r, c, v: row[c] },
+        key: `${r}_${c}`,
+        type: 'update',
+      });
+    }
+  }
+
+  updateYdocSheetData(
+    // @ts-ignore Y.Doc present at runtime
+    ydocRef.current,
+    dsheetId,
+    changes,
+    handleOnChangePortalUpdate,
+  );
 };

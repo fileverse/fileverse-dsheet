@@ -137,8 +137,42 @@ export const updateYdocSheetData = (
         return;
       }
 
-      // luckysheet_conditionformat_save (array)
-      if (path.length === 1 && path[0] === 'luckysheet_conditionformat_save' && key) {
+      // filter_select
+      if (path.length === 1 && path[0] === 'filter_select' && key) {
+        let cellMap = sheet.get('filter_select');
+        if (!(cellMap instanceof Y.Map)) {
+          cellMap = new Y.Map();
+          sheet.set('filter_select', cellMap);
+        }
+
+        type === 'delete' ? cellMap.delete(key) : cellMap.set(key, toPlain(value));
+        return;
+      }
+
+      // filter (object) - replace entire object payload
+      if (path.length === 1 && path[0] === 'filter') {
+        let filterMap = sheet.get('filter');
+        if (!(filterMap instanceof Y.Map)) {
+          filterMap = new Y.Map();
+          sheet.set('filter', filterMap);
+        }
+
+        // clear existing keys
+        (filterMap as Y.Map<any>).forEach((_v: any, k: string) => {
+          filterMap.delete(k);
+        });
+
+        if (type === 'delete') return;
+
+        const plainValue = toPlain(value) || {};
+        if (plainValue && typeof plainValue === 'object' && !Array.isArray(plainValue)) {
+          Object.entries(plainValue).forEach(([k, v]) => filterMap.set(k, toPlain(v)));
+        }
+        return;
+      }
+
+      // luckysheet_conditionformat_save (array) - replace entire array payload
+      if (path.length === 1 && path[0] === 'luckysheet_conditionformat_save') {
         let cellArray = sheet.get('luckysheet_conditionformat_save');
         if (!(cellArray instanceof Y.Array)) {
           cellArray = new Y.Array();
@@ -146,7 +180,10 @@ export const updateYdocSheetData = (
         }
 
         cellArray.delete(0, cellArray.length);
-        cellArray.insert(0, [toPlain(value)]);
+        if (type === 'delete') return;
+
+        const plainValue = toPlain(value);
+        cellArray.insert(0, Array.isArray(plainValue) ? plainValue : [plainValue]);
         return;
       }
 
@@ -193,8 +230,8 @@ export function ySheetArrayToPlain(
     const iterate = (sheetMap instanceof Y.Map)
       ? (fn: (value: any, key: string) => void) => { sheetMap.forEach(fn); }
       : (fn: (value: any, key: string) => void) => {
-          Object.entries(sheetMap as Record<string, any>).forEach(([key, value]) => fn(value, key));
-        };
+        Object.entries(sheetMap as Record<string, any>).forEach(([key, value]) => fn(value, key));
+      };
 
     iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format
@@ -210,10 +247,10 @@ export function ySheetArrayToPlain(
         return;
       }
 
-      if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Map) {
-        let conditionRules = value.toJSON();
-        if (conditionRules.length === 0) return
-        obj.conditionRules = conditionRules;
+      if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Array) {
+        const conditionFormatRules = value.toJSON();
+        if (conditionFormatRules.length === 0) return;
+        obj.luckysheet_conditionformat_save = conditionFormatRules;
         return;
       }
 
@@ -249,6 +286,20 @@ export function ySheetArrayToPlain(
         let conditionRules = value.toJSON();
         if (Object.keys(conditionRules).length === 0) return
         obj.conditionRules = conditionRules;
+        return;
+      }
+
+      if (key === 'filter_select' && value instanceof Y.Map) {
+        const filterSelect = value.toJSON();
+        if (Object.keys(filterSelect).length === 0) return;
+        obj.filter_select = filterSelect;
+        return;
+      }
+
+      if (key === 'filter' && value instanceof Y.Map) {
+        const filter = value.toJSON();
+        if (Object.keys(filter).length === 0) return;
+        obj.filter = filter;
         return;
       }
 

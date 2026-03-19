@@ -1,6 +1,16 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
 import { ChangeEventHandler, useState } from 'react';
-import { LucideIcon, IconButton, DynamicModal, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@fileverse/ui';
+import {
+  LucideIcon,
+  IconButton,
+  DynamicModal,
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@fileverse/ui';
 
 import './import-button.scss';
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
@@ -17,12 +27,12 @@ export const CustomButton = ({
   handleCSVUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
     file: any,
-    importType: string
+    importType: string,
   ) => void | Promise<void>;
   handleXLSXUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
     file: any,
-    importType: string
+    importType: string,
   ) => void | Promise<void>;
   handleExportToXLSX: () => void;
   handleExportToCSV: () => void;
@@ -42,7 +52,7 @@ export const CustomButton = ({
         setTimeout(() => {
           window.open(
             `/sheet/create?xlsx=${encodeURIComponent(url)}`,
-            '_blank'
+            '_blank',
           );
         }, 0);
         setOpenImportTypeModal(false);
@@ -59,10 +69,7 @@ export const CustomButton = ({
       if (file && importType === 'new-dsheet') {
         const url = URL.createObjectURL(file);
         setTimeout(() => {
-          window.open(
-            `/sheet/create?csv=${encodeURIComponent(url)}`,
-            '_blank'
-          );
+          window.open(`/sheet/create?csv=${encodeURIComponent(url)}`, '_blank');
         }, 0);
         setOpenImportTypeModal(false);
       } else {
@@ -113,7 +120,10 @@ export const CustomButton = ({
           className="p-2 color-text-default dsheet-export-section"
           data-testid="export-section"
         >
-          <h2 className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2" data-testid="export-heading">
+          <h2
+            className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2"
+            data-testid="export-heading"
+          >
             Export
           </h2>
           <button
@@ -123,7 +133,9 @@ export const CustomButton = ({
             data-testid="export-json-button"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
-            <span className="dsheet-text dsheet-text--body text-body-sm">Export to .json</span>
+            <span className="dsheet-text dsheet-text--body text-body-sm">
+              Export to .json
+            </span>
           </button>
 
           <button
@@ -133,7 +145,9 @@ export const CustomButton = ({
             data-testid="export-xlsx-button"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
-            <span className="dsheet-text dsheet-text--body text-body-sm">Export to .xlsx</span>
+            <span className="dsheet-text dsheet-text--body text-body-sm">
+              Export to .xlsx
+            </span>
           </button>
 
           <button
@@ -143,25 +157,36 @@ export const CustomButton = ({
             data-testid="export-csv-button"
           >
             <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
-            <span className="dsheet-text dsheet-text--body text-body-sm">Export to .csv</span>
+            <span className="dsheet-text dsheet-text--body text-body-sm">
+              Export to .csv
+            </span>
           </button>
         </div>
         <div
           className="p-2 color-text-default dsheet-import-section"
           data-testid="import-section"
-        // onClick={() => setIsOpen(false)}
+          // onClick={() => setIsOpen(false)}
         >
-          <h2 className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2" data-testid="import-heading">
+          <h2
+            className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2"
+            data-testid="import-heading"
+          >
             Import
           </h2>
           <div className="btn dsheet-import-actions">
-            <button type="button" className="dsheet-btn dsheet-btn--import-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition" data-testid="import-xlsx-button">
+            <button
+              type="button"
+              className="dsheet-btn dsheet-btn--import-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+              data-testid="import-xlsx-button"
+            >
               <LucideIcon name="FileImport" />
               <label
                 htmlFor="xlsx-upload"
                 className="dsheet-label text-body-sm w-full cursor-pointer"
               >
-                <span className="dsheet-text dsheet-text--body">Import .xlsx</span>
+                <span className="dsheet-text dsheet-text--body">
+                  Import .xlsx
+                </span>
               </label>
             </button>
             <input
@@ -194,13 +219,19 @@ export const CustomButton = ({
               }}
               style={{ display: 'none' }}
             />
-            <button type="button" className="dsheet-btn dsheet-btn--import-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition" data-testid="import-csv-button">
+            <button
+              type="button"
+              className="dsheet-btn dsheet-btn--import-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
+              data-testid="import-csv-button"
+            >
               <LucideIcon width={18} height={18} name="FileImport" />
               <label
                 htmlFor="csv-upload"
                 className="dsheet-label text-body-sm w-full cursor-pointer"
               >
-                <span className="dsheet-text dsheet-text--body">Import .csv</span>
+                <span className="dsheet-text dsheet-text--body">
+                  Import .csv
+                </span>
               </label>
             </button>
           </div>
@@ -216,33 +247,68 @@ export const CustomButton = ({
         className="dsheet-modal dsheet-modal--import rounded-lg max-w-[420px]"
         contentClassName="!pt-4 px-6"
         title={
-          <div className="dsheet-heading dsheet-heading--modal font-medium text-lg leading-6" data-testid="import-modal-title">Import file</div>
+          <div
+            className="dsheet-heading dsheet-heading--modal font-medium text-lg leading-6"
+            data-testid="import-modal-title"
+          >
+            Import file
+          </div>
         }
         content={
-          <div className="dsheet-modal-content flex flex-col gap-4 font-normal text-sm leading-5" data-testid="import-modal-content">
-            <div className="dsheet-modal-field" data-testid="import-modal-filename-field">
-              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">File name</div>
+          <div
+            className="dsheet-modal-content flex flex-col gap-4 font-normal text-sm leading-5"
+            data-testid="import-modal-content"
+          >
+            <div
+              className="dsheet-modal-field"
+              data-testid="import-modal-filename-field"
+            >
+              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">
+                File name
+              </div>
               <div className="dsheet-input-wrap h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center">
-                <p className="dsheet-text dsheet-text--body text-body-sm color-text-disabled truncate-text" data-testid="import-modal-filename">{file?.name}</p>
+                <p
+                  className="dsheet-text dsheet-text--body text-body-sm color-text-disabled truncate-text"
+                  data-testid="import-modal-filename"
+                >
+                  {file?.name}
+                </p>
               </div>
               {file?.size > MAX_FILE_SIZE && (
-                <p className="dsheet-text dsheet-text--error text-[hsla(var(--color-text-danger))] font-[`Helvetica_Neue`] text-[14px] font-normal mt-[4px] leading-[20px]" data-testid="import-modal-file-size-error">
+                <p
+                  className="dsheet-text dsheet-text--error text-[hsla(var(--color-text-danger))] font-[`Helvetica_Neue`] text-[14px] font-normal mt-[4px] leading-[20px]"
+                  data-testid="import-modal-file-size-error"
+                >
                   Can't import this file right now. Try again later.
                 </p>
               )}
             </div>
 
-            <div className="dsheet-modal-field" data-testid="import-modal-location-field">
-              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">Import location</div>
+            <div
+              className="dsheet-modal-field"
+              data-testid="import-modal-location-field"
+            >
+              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">
+                Import location
+              </div>
 
-              <Select onValueChange={(value) => {
-                setImportType(value);
-              }}>
+              <Select
+                onValueChange={(value) => {
+                  setImportType(value);
+                }}
+              >
                 <SelectTrigger data-testid="import-location-trigger">
                   <SelectValue placeholder="Create new dSheet" />
                 </SelectTrigger>
                 <SelectContent id="publish-category">
-                  {[{ id: 'new-dsheet', label: 'Create new dSheet' }, { id: 'merge-current-dsheet', label: 'Insert new sheet(s)' }, { id: 'new-current-dsheet', label: 'Replace sheet(s)' }].map((cat) => (
+                  {[
+                    { id: 'new-dsheet', label: 'Create new dSheet' },
+                    {
+                      id: 'merge-current-dsheet',
+                      label: 'Insert new sheet(s)',
+                    },
+                    { id: 'new-current-dsheet', label: 'Replace sheet(s)' },
+                  ].map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.label}
                     </SelectItem>
@@ -250,7 +316,10 @@ export const CustomButton = ({
                 </SelectContent>
               </Select>
             </div>
-            <div className="dsheet-modal-actions flex justify-end items-center gap-2" data-testid="import-modal-actions">
+            <div
+              className="dsheet-modal-actions flex justify-end items-center gap-2"
+              data-testid="import-modal-actions"
+            >
               <Button
                 className="dsheet-btn dsheet-btn--secondary font-medium text-sm leading-5 px-3 py-2 w-20 min-w-[80px] h-10 h-[36px] max-h-10 rounded"
                 size="md"
