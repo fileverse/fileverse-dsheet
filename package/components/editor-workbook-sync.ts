@@ -94,16 +94,6 @@ export const createSheetLengthChangeHandler = ({
           sheetArray.push([ySheet]);
         });
 
-        updateAllCell(
-          {
-            sheetEditorRef,
-            ydocRef,
-            dsheetId,
-            handleOnChangePortalUpdate,
-          },
-          sheet.id as string,
-        );
-
         sheetEditorRef.current?.activateSheet({ id: sheet.id });
         handleOnChangePortalUpdate();
       }, 50);
