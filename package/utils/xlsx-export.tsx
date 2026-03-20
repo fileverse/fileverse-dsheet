@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
 import { getExportFilenameBase } from './export-filename';
+import { applyBordersToWorksheet } from './xlsx-border-utils';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -186,6 +187,11 @@ export const handleExportToXLSX = async (
 
         worksheet[cellRef] = newCell;
       });
+
+      // APPLY BORDERS
+      if (sheet.config?.borderInfo) {
+        applyBordersToWorksheet(worksheet, sheet.config.borderInfo);
+      }
 
       const subSheetName =
         sheet.name.length > 30 ? sheet.name.slice(0, 30) : sheet.name;
