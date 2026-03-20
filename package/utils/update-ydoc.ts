@@ -29,6 +29,7 @@ export const updateYdocSheetData = (
   if (!ydoc || !changes.length) return;
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
+  console.log('Applying sheet changes to Y.Doc:', changes, sheetArray.toJSON());
 
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
@@ -212,6 +213,8 @@ export const updateYdocSheetData = (
       sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
     });
   });
+
+  console.log('Finished applying changes to Y.Doc. New state:', sheetArray.toJSON());
 
   if (handleContentPortal) {
     handleContentPortal();

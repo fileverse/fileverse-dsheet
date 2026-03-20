@@ -366,7 +366,19 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             syncCurrentSheetField(syncContext, 'config');
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          updateAllCell: (subSheetId: string) => { },
+          updateAllCell: (subSheetId: string) => {
+            setTimeout(() => {
+              updateAllCell(
+                {
+                  sheetEditorRef,
+                  ydocRef,
+                  dsheetId,
+                  handleOnChangePortalUpdate,
+                },
+                subSheetId,
+              )
+            }, 500)
+          },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           afterColorChanges: handleAfterColorChanges,
           // @ts-ignore Fortune Hooks type misses this runtime hook.
