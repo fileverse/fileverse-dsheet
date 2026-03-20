@@ -5,6 +5,7 @@ import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
 import { getExportFilenameBase } from './export-filename';
 import { applyBordersToWorksheet } from './xlsx-border-utils';
+import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -300,6 +301,22 @@ export const handleExportToXLSX = async (
           }
         }
       });
+    });
+
+    sheetWithData.forEach((sheet, index) => {
+      if (!sheet.images?.length) return;
+      const ws = excelWorkbook.worksheets[index];
+      if (!ws) return;
+      const defaultColPx = Number(sheet.defaultColWidth) || 99;
+      const defaultRowPx = Number(sheet.defaultRowHeight) || 21;
+      addFortuneImagesToWorksheet(
+        ws,
+        excelWorkbook,
+        sheet.images,
+        sheet,
+        defaultColPx,
+        defaultRowPx,
+      );
     });
 
     const finalBuffer = await excelWorkbook.xlsx.writeBuffer();

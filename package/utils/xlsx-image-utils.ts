@@ -76,6 +76,112 @@ const EMU_TO_PX = 9525;
 const COL_GRIDLINE_PX = 1;
 const ROW_GRIDLINE_PX = 2;
 
+/** Convert a pixel offset to native column index + EMU offset (inverse of nativeColToPx). */
+function pxToNativeCol(
+  px: number,
+  sheet: Sheet,
+  defaultColPx: number,
+): { nativeCol: number; nativeColOff: number } {
+  let cumPx = 0;
+  let col = 0;
+  while (col < 10000) {
+    const colWidth =
+      (sheet.config?.columnlen?.[col] ?? defaultColPx) + COL_GRIDLINE_PX;
+    if (cumPx + colWidth > px) {
+      return {
+        nativeCol: col,
+        nativeColOff: Math.round((px - cumPx) * EMU_TO_PX),
+      };
+    }
+    cumPx += colWidth;
+    col++;
+  }
+  return { nativeCol: col, nativeColOff: 0 };
+}
+
+/** Convert a pixel offset to native row index + EMU offset (inverse of nativeRowToPx). */
+function pxToNativeRow(
+  px: number,
+  sheet: Sheet,
+  defaultRowPx: number,
+): { nativeRow: number; nativeRowOff: number } {
+  let cumPx = 0;
+  let row = 0;
+  while (row < 100000) {
+    const rowHeight =
+      (sheet.config?.rowlen?.[row] ?? defaultRowPx) + ROW_GRIDLINE_PX;
+    if (cumPx + rowHeight > px) {
+      return {
+        nativeRow: row,
+        nativeRowOff: Math.round((px - cumPx) * EMU_TO_PX),
+      };
+    }
+    cumPx += rowHeight;
+    row++;
+  }
+  return { nativeRow: row, nativeRowOff: 0 };
+}
+
+/**
+ * Embed Fortune sheet images into an ExcelJS worksheet.
+ * This is the inverse of convertRawImagesToFortuneSheet: converts pixel-based
+ * Image objects back to ExcelJS native cell + EMU positioning.
+ */
+export function addFortuneImagesToWorksheet(
+  ws: Worksheet,
+  workbook: Workbook,
+  images: {
+    id: string;
+    src: string;
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  }[],
+  sheet: Sheet,
+  defaultColPx: number,
+  defaultRowPx: number,
+): void {
+  for (const img of images) {
+    try {
+      const match = img.src.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      if (!match) continue;
+
+      const rawExt = match[1].toLowerCase();
+      const extension = (
+        rawExt === 'jpeg' || rawExt === 'jpg'
+          ? 'jpeg'
+          : rawExt === 'gif'
+            ? 'gif'
+            : rawExt === 'bmp'
+              ? 'bmp'
+              : 'png'
+      ) as 'png' | 'jpeg' | 'gif' | 'bmp';
+      const base64 = match[2];
+
+      const imageId = workbook.addImage({ base64, extension });
+      const { nativeCol, nativeColOff } = pxToNativeCol(
+        img.left,
+        sheet,
+        defaultColPx,
+      );
+      const { nativeRow, nativeRowOff } = pxToNativeRow(
+        img.top,
+        sheet,
+        defaultRowPx,
+      );
+
+      ws.addImage(imageId, {
+        tl: { nativeCol, nativeColOff, nativeRow, nativeRowOff } as never,
+        ext: { width: img.width, height: img.height },
+        editAs: 'oneCell',
+      });
+    } catch {
+      // skip unembeddable images
+    }
+  }
+}
+
 export function convertRawImagesToFortuneSheet(
   rawImages: RawSheetImage[],
   sheet: Sheet,
