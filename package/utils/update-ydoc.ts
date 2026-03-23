@@ -20,6 +20,19 @@ function toPlain<T>(value: T): T {
   }
 }
 
+const getSheetId = (sheet: Y.Map<any> | Record<string, any>) => {
+  if (sheet instanceof Y.Map) return sheet.get('id');
+  return (sheet as Record<string, any>)?.id;
+};
+
+const logYdocWarning = (
+  context: string,
+  details: Record<string, unknown>,
+) => {
+  // eslint-disable-next-line no-console
+  console.warn(`[updateYdocSheetData] ${context}`, details);
+};
+
 export const updateYdocSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
@@ -33,11 +46,35 @@ export const updateYdocSheetData = (
 
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
-      const sheet = sheetArray
-        .toArray()
-        .find((s: Y.Map<any>) => s.get('id') === sheetId) as Y.Map<any> | undefined;
+      const allSheets = sheetArray.toArray();
+      const sheet = allSheets
+        .find((s: Y.Map<any> | Record<string, any>) => getSheetId(s) === sheetId);
 
-      if (!sheet) return;
+      if (!sheet) {
+        logYdocWarning('sheet not found for change', {
+          dsheetId,
+          sheetId,
+          path,
+          key,
+          type,
+          value,
+          allSheets,
+        });
+        return;
+      }
+
+      if (!(sheet instanceof Y.Map)) {
+        logYdocWarning('matched sheet is not Y.Map, skipping change', {
+          dsheetId,
+          sheetId,
+          path,
+          key,
+          type,
+          value,
+          sheet,
+        });
+        return;
+      }
 
       // Sheet fields stored as Y.Map use path + key for granular updates
       // celldata
@@ -209,8 +246,16 @@ export const updateYdocSheetData = (
     });
 
     // Keep a single active sheet by order after applying updates
-    sheetArray.forEach((sheet: Y.Map<any>) => {
-      sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
+    sheetArray.forEach((sheet: Y.Map<any> | Record<string, any>) => {
+      if (sheet instanceof Y.Map) {
+        sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
+        return;
+      }
+
+      logYdocWarning('status sync encountered non-Y.Map sheet', {
+        dsheetId,
+        sheet,
+      });
     });
   });
 

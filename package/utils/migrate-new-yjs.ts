@@ -18,6 +18,12 @@ function normalizeCelldataArray(
 
   return result;
 }
+
+const setMigrationStatusOnWindow = (isMigrated: boolean) => {
+  if (typeof window === 'undefined') return;
+  (window as any).__DSHEET_MIGRATION__ = { isMigrated };
+};
+
 export function migrateSheetArrayIfNeeded(
   ydoc: Y.Doc,
   sheetArray: Y.Array<any>,
@@ -30,7 +36,10 @@ export function migrateSheetArrayIfNeeded(
     }
   });
 
-  if (!needsMigration) return;
+  if (!needsMigration) {
+    setMigrationStatusOnWindow(false);
+    return false;
+  }
 
   ydoc.transact(() => {
     sheetArray.forEach((item, index) => {
@@ -170,6 +179,9 @@ export function migrateSheetArrayIfNeeded(
       }
     });
   });
+  setMigrationStatusOnWindow(true);
+
+  return true;
 }
 
 type SheetFactory = () => Y.Map<any>;
