@@ -25,6 +25,14 @@ const getSheetId = (sheet: Y.Map<any> | Record<string, any>) => {
   return (sheet as Record<string, any>)?.id;
 };
 
+const logYdocWarning = (
+  context: string,
+  details: Record<string, unknown>,
+) => {
+  // eslint-disable-next-line no-console
+  console.warn(`[updateYdocSheetData] ${context}`, details);
+};
+
 export const updateYdocSheetData = (
   ydoc: Y.Doc | null,
   dsheetId: string,
@@ -38,11 +46,35 @@ export const updateYdocSheetData = (
 
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
-      const sheet = sheetArray
-        .toArray()
+      const allSheets = sheetArray.toArray();
+      const sheet = allSheets
         .find((s: Y.Map<any> | Record<string, any>) => getSheetId(s) === sheetId);
 
-      if (!(sheet instanceof Y.Map)) return;
+      if (!sheet) {
+        logYdocWarning('sheet not found for change', {
+          dsheetId,
+          sheetId,
+          path,
+          key,
+          type,
+          value,
+          allSheets,
+        });
+        return;
+      }
+
+      if (!(sheet instanceof Y.Map)) {
+        logYdocWarning('matched sheet is not Y.Map, skipping change', {
+          dsheetId,
+          sheetId,
+          path,
+          key,
+          type,
+          value,
+          sheet,
+        });
+        return;
+      }
 
       // Sheet fields stored as Y.Map use path + key for granular updates
       // celldata
@@ -219,6 +251,11 @@ export const updateYdocSheetData = (
         sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
         return;
       }
+
+      logYdocWarning('status sync encountered non-Y.Map sheet', {
+        dsheetId,
+        sheet,
+      });
     });
   });
 

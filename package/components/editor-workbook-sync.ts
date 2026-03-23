@@ -9,6 +9,14 @@ type SyncContext = {
   handleOnChangePortalUpdate: () => void;
 };
 
+const logSyncWarning = (
+  context: string,
+  details: Record<string, unknown>,
+) => {
+  // eslint-disable-next-line no-console
+  console.warn(`[WorkbookSync] ${context}`, details);
+};
+
 const getSheetField = (sheet: any, field: string) => {
   if (!sheet) return undefined;
   if (typeof sheet.get === 'function') return sheet.get(field);
@@ -25,6 +33,12 @@ const setSheetField = (sheet: any, field: string, value: unknown) => {
     sheet[field] = value;
     return true;
   }
+  logSyncWarning('setSheetField failed: unsupported sheet type', {
+    field,
+    value,
+    sheet,
+    sheetType: typeof sheet,
+  });
   return false;
 };
 
@@ -154,13 +168,22 @@ export const createAfterOrderChangesHandler = ({
     console.log('createAfterOrderChangesHandler');
     const allSheets = sheetEditorRef?.current?.getAllSheets();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
     let changed = false;
     allSheets?.forEach((sheet) => {
       const currentYdocSheet = findSheetById(
-        oldSheets?.toArray() as any[] | undefined,
+        oldSheetsList,
         sheet?.id,
       ) as any;
-      if (!currentYdocSheet) return;
+      if (!currentYdocSheet) {
+        logSyncWarning('afterOrderChanges: matching sheet not found', {
+          dsheetId,
+          targetSheetId: sheet?.id,
+          currentSheet: sheet,
+          ydocSheets: oldSheetsList,
+        });
+        return;
+      }
 
       const ydocOrder = getSheetField(currentYdocSheet, 'order');
       if (ydocOrder !== sheet?.order) {
@@ -181,14 +204,23 @@ export const createAfterColorChangesHandler = ({
   return () => {
     const allSheets = sheetEditorRef?.current?.getAllSheets();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
     let changed = false;
 
     allSheets?.forEach((sheet) => {
       const currentYdocSheet = findSheetById(
-        oldSheets?.toArray() as any[] | undefined,
+        oldSheetsList,
         sheet?.id,
       ) as any;
-      if (!currentYdocSheet) return;
+      if (!currentYdocSheet) {
+        logSyncWarning('afterColorChanges: matching sheet not found', {
+          dsheetId,
+          targetSheetId: sheet?.id,
+          currentSheet: sheet,
+          ydocSheets: oldSheetsList,
+        });
+        return;
+      }
 
       const ydocColor = getSheetField(currentYdocSheet, 'color');
       if (ydocColor !== (sheet as any)?.color) {
@@ -210,14 +242,23 @@ export const createAfterHideChangesHandler = ({
   return () => {
     const allSheets = sheetEditorRef?.current?.getAllSheets();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
     let changed = false;
 
     allSheets?.forEach((sheet) => {
       const currentYdocSheet = findSheetById(
-        oldSheets?.toArray() as any[] | undefined,
+        oldSheetsList,
         sheet?.id,
       ) as any;
-      if (!currentYdocSheet) return;
+      if (!currentYdocSheet) {
+        logSyncWarning('afterHideChanges: matching sheet not found', {
+          dsheetId,
+          targetSheetId: sheet?.id,
+          currentSheet: sheet,
+          ydocSheets: oldSheetsList,
+        });
+        return;
+      }
 
       const ydocHide = getSheetField(currentYdocSheet, 'hide');
       if (ydocHide !== (sheet as any)?.hide) {
@@ -239,11 +280,24 @@ export const createAfterColRowChangesHandler = ({
   return () => {
     const currentSheet = sheetEditorRef?.current?.getSheet();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
+    const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
     const currentYdocSheet = findSheetById(
-      oldSheets?.toArray() as any[] | undefined,
+      oldSheetsList,
       currentSheet?.id,
     ) as any;
-    if (!currentSheet || !currentYdocSheet) return;
+    if (!currentSheet) {
+      logSyncWarning('afterColRowChanges: current sheet missing', { dsheetId });
+      return;
+    }
+    if (!currentYdocSheet) {
+      logSyncWarning('afterColRowChanges: matching sheet not found', {
+        dsheetId,
+        targetSheetId: currentSheet?.id,
+        currentSheet,
+        ydocSheets: oldSheetsList,
+      });
+      return;
+    }
 
     const ydocCol = getSheetField(currentYdocSheet, 'column');
     const ydocRow = getSheetField(currentYdocSheet, 'row');
