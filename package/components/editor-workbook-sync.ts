@@ -17,7 +17,6 @@ const reportSyncWarning = (
   const error = new Error(`[WorkbookSync] ${context}`);
   (error as any).details = details;
 
-  // Forward to global error pipeline (Sentry in parent app can capture this).
   if (typeof (window as any).reportError === 'function') {
     (window as any).reportError(error);
   }

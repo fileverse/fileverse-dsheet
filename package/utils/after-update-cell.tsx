@@ -73,8 +73,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -661,7 +661,6 @@ const updateDataCalcFunc = ({
     });
   } catch (error: any) {
     const formulaName = getFormulaName(params.newValue);
-    // send error message to dsheet.new to commit to sentry
     params?.dataBlockApiKeyHandler?.({
       data: {
         message: `ERROR from updateDataCalcFunc ${error?.message}`,
