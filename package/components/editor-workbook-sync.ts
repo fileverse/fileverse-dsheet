@@ -13,8 +13,37 @@ const logSyncWarning = (
   context: string,
   details: Record<string, unknown>,
 ) => {
+  const isMigrated = typeof window !== 'undefined'
+    ? Boolean((window as any).__DSHEET_MIGRATION__?.isMigrated)
+    : false;
+  const warningDetails = {
+    ...details,
+    isMigrated,
+  };
   // eslint-disable-next-line no-console
-  console.warn(`[WorkbookSync] ${context}`, details);
+  console.warn(`[WorkbookSync] ${context}`, warningDetails);
+
+  if (typeof window !== 'undefined') {
+    const sentry = (window as any).Sentry;
+    if (
+      sentry &&
+      typeof sentry.withScope === 'function' &&
+      typeof sentry.captureMessage === 'function'
+    ) {
+      sentry.withScope((scope: any) => {
+        if (typeof scope.setLevel === 'function') scope.setLevel('warning');
+        Object.entries(warningDetails).forEach(([key, value]) => {
+          if (typeof scope.setExtra === 'function') scope.setExtra(key, value);
+        });
+        sentry.captureMessage(`[WorkbookSync] ${context}`);
+      });
+      return;
+    }
+
+    if (sentry && typeof sentry.captureMessage === 'function') {
+      sentry.captureMessage(`[WorkbookSync] ${context}`);
+    }
+  }
 };
 
 const getSheetField = (sheet: any, field: string) => {
@@ -165,7 +194,6 @@ export const createAfterOrderChangesHandler = ({
   handleOnChangePortalUpdate,
 }: SyncContext) => {
   return () => {
-    console.log('createAfterOrderChangesHandler');
     const allSheets = sheetEditorRef?.current?.getAllSheets();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
     const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
@@ -179,8 +207,16 @@ export const createAfterOrderChangesHandler = ({
         logSyncWarning('afterOrderChanges: matching sheet not found', {
           dsheetId,
           targetSheetId: sheet?.id,
-          currentSheet: sheet,
-          ydocSheets: oldSheetsList,
+          currentSheet: {
+            id: getSheetField(sheet, 'id'),
+            name: getSheetField(sheet, 'name'),
+            hasCelldata: getSheetField(sheet, 'celldata') != null,
+          },
+          ydocSheets: (oldSheetsList ?? []).map((ydocSheet) => ({
+            id: getSheetField(ydocSheet, 'id'),
+            name: getSheetField(ydocSheet, 'name'),
+            hasCelldata: getSheetField(ydocSheet, 'celldata') != null,
+          })),
         });
         return;
       }
@@ -216,8 +252,16 @@ export const createAfterColorChangesHandler = ({
         logSyncWarning('afterColorChanges: matching sheet not found', {
           dsheetId,
           targetSheetId: sheet?.id,
-          currentSheet: sheet,
-          ydocSheets: oldSheetsList,
+          currentSheet: {
+            id: getSheetField(sheet, 'id'),
+            name: getSheetField(sheet, 'name'),
+            hasCelldata: getSheetField(sheet, 'celldata') != null,
+          },
+          ydocSheets: (oldSheetsList ?? []).map((ydocSheet) => ({
+            id: getSheetField(ydocSheet, 'id'),
+            name: getSheetField(ydocSheet, 'name'),
+            hasCelldata: getSheetField(ydocSheet, 'celldata') != null,
+          })),
         });
         return;
       }
@@ -254,8 +298,16 @@ export const createAfterHideChangesHandler = ({
         logSyncWarning('afterHideChanges: matching sheet not found', {
           dsheetId,
           targetSheetId: sheet?.id,
-          currentSheet: sheet,
-          ydocSheets: oldSheetsList,
+          currentSheet: {
+            id: getSheetField(sheet, 'id'),
+            name: getSheetField(sheet, 'name'),
+            hasCelldata: getSheetField(sheet, 'celldata') != null,
+          },
+          ydocSheets: (oldSheetsList ?? []).map((ydocSheet) => ({
+            id: getSheetField(ydocSheet, 'id'),
+            name: getSheetField(ydocSheet, 'name'),
+            hasCelldata: getSheetField(ydocSheet, 'celldata') != null,
+          })),
         });
         return;
       }
@@ -293,8 +345,16 @@ export const createAfterColRowChangesHandler = ({
       logSyncWarning('afterColRowChanges: matching sheet not found', {
         dsheetId,
         targetSheetId: currentSheet?.id,
-        currentSheet,
-        ydocSheets: oldSheetsList,
+        currentSheet: {
+          id: getSheetField(currentSheet, 'id'),
+          name: getSheetField(currentSheet, 'name'),
+          hasCelldata: getSheetField(currentSheet, 'celldata') != null,
+        },
+        ydocSheets: (oldSheetsList ?? []).map((ydocSheet) => ({
+          id: getSheetField(ydocSheet, 'id'),
+          name: getSheetField(ydocSheet, 'name'),
+          hasCelldata: getSheetField(ydocSheet, 'celldata') != null,
+        })),
       });
       return;
     }
