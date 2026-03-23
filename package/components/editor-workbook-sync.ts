@@ -9,6 +9,20 @@ type SyncContext = {
   handleOnChangePortalUpdate: () => void;
 };
 
+const reportSyncWarning = (
+  context: string,
+  details: Record<string, unknown>,
+) => {
+  if (typeof window === 'undefined') return;
+  const error = new Error(`[WorkbookSync] ${context}`);
+  (error as any).details = details;
+
+  // Forward to global error pipeline (Sentry in parent app can capture this).
+  if (typeof (window as any).reportError === 'function') {
+    (window as any).reportError(error);
+  }
+};
+
 const logSyncWarning = (
   context: string,
   details: Record<string, unknown>,
@@ -22,28 +36,7 @@ const logSyncWarning = (
   };
   // eslint-disable-next-line no-console
   console.warn(`[WorkbookSync] ${context}`, warningDetails);
-
-  if (typeof window !== 'undefined') {
-    const sentry = (window as any).Sentry;
-    if (
-      sentry &&
-      typeof sentry.withScope === 'function' &&
-      typeof sentry.captureMessage === 'function'
-    ) {
-      sentry.withScope((scope: any) => {
-        if (typeof scope.setLevel === 'function') scope.setLevel('warning');
-        Object.entries(warningDetails).forEach(([key, value]) => {
-          if (typeof scope.setExtra === 'function') scope.setExtra(key, value);
-        });
-        sentry.captureMessage(`[WorkbookSync] ${context}`);
-      });
-      return;
-    }
-
-    if (sentry && typeof sentry.captureMessage === 'function') {
-      sentry.captureMessage(`[WorkbookSync] ${context}`);
-    }
-  }
+  reportSyncWarning(context, warningDetails);
 };
 
 const getSheetField = (sheet: any, field: string) => {
