@@ -9,6 +9,30 @@ type SyncContext = {
   handleOnChangePortalUpdate: () => void;
 };
 
+const getSheetField = (sheet: any, field: string) => {
+  if (!sheet) return undefined;
+  if (typeof sheet.get === 'function') return sheet.get(field);
+  return sheet[field];
+};
+
+const setSheetField = (sheet: any, field: string, value: unknown) => {
+  if (!sheet) return false;
+  if (typeof sheet.set === 'function') {
+    sheet.set(field, value);
+    return true;
+  }
+  if (typeof sheet === 'object') {
+    sheet[field] = value;
+    return true;
+  }
+  return false;
+};
+
+const findSheetById = (sheets: any[] | undefined, sheetId: unknown) => {
+  if (!Array.isArray(sheets)) return undefined;
+  return sheets.find((sheet) => getSheetField(sheet, 'id') === sheetId);
+};
+
 const getCurrentYdocSheet = ({
   sheetEditorRef,
   ydocRef,
@@ -16,7 +40,7 @@ const getCurrentYdocSheet = ({
 }: Omit<SyncContext, 'handleOnChangePortalUpdate'>) => {
   const currentSheet = sheetEditorRef?.current?.getSheet();
   const oldSheets = ydocRef?.current?.getArray(dsheetId);
-  return oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
+  return findSheetById(oldSheets?.toArray() as any[] | undefined, currentSheet?.id) as any;
 };
 
 export const syncCurrentSheetField = (
@@ -36,9 +60,9 @@ export const syncCurrentSheetField = (
   const currentYdocSheet = getCurrentYdocSheet(context);
   if (!currentSheet || !currentYdocSheet) return;
 
-  const ydocValue = currentYdocSheet.get(field);
+  const ydocValue = getSheetField(currentYdocSheet, field);
   if (ydocValue !== currentSheet[field]) {
-    currentYdocSheet.set(field, currentSheet[field]);
+    setSheetField(currentYdocSheet, field, currentSheet[field]);
     handleOnChangePortalUpdate();
   }
 };
@@ -104,7 +128,7 @@ export const createSheetLengthChangeHandler = ({
     if (docSheetLength > editorSheetLength && editorSheetLength > 0) {
       const editorSheetIds = new Set(sheets.map((s) => s.id));
       const removedIndex = docSheets.findIndex(
-        (ySheet) => !editorSheetIds.has(ySheet.get('id')),
+        (ySheet) => !editorSheetIds.has(getSheetField(ySheet, 'id')),
       );
 
       if (removedIndex !== -1) {
@@ -127,14 +151,20 @@ export const createAfterOrderChangesHandler = ({
   handleOnChangePortalUpdate,
 }: SyncContext) => {
   return () => {
+    console.log('createAfterOrderChangesHandler');
     const allSheets = sheetEditorRef?.current?.getAllSheets();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
     let changed = false;
     allSheets?.forEach((sheet) => {
-      const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === sheet?.id) as any;
-      const ydocOrder = currentYdocSheet?.get('order');
+      const currentYdocSheet = findSheetById(
+        oldSheets?.toArray() as any[] | undefined,
+        sheet?.id,
+      ) as any;
+      if (!currentYdocSheet) return;
+
+      const ydocOrder = getSheetField(currentYdocSheet, 'order');
       if (ydocOrder !== sheet?.order) {
-        currentYdocSheet?.set('order', sheet?.order);
+        setSheetField(currentYdocSheet, 'order', sheet?.order);
         changed = true;
       }
     });
@@ -154,14 +184,15 @@ export const createAfterColorChangesHandler = ({
     let changed = false;
 
     allSheets?.forEach((sheet) => {
-      const currentYdocSheet = oldSheets
-        ?.toArray()
-        .find((s: any) => s.get('id') === sheet?.id) as any;
+      const currentYdocSheet = findSheetById(
+        oldSheets?.toArray() as any[] | undefined,
+        sheet?.id,
+      ) as any;
       if (!currentYdocSheet) return;
 
-      const ydocColor = currentYdocSheet?.get('color');
+      const ydocColor = getSheetField(currentYdocSheet, 'color');
       if (ydocColor !== (sheet as any)?.color) {
-        currentYdocSheet?.set('color', (sheet as any)?.color);
+        setSheetField(currentYdocSheet, 'color', (sheet as any)?.color);
         changed = true;
       }
     });
@@ -182,14 +213,15 @@ export const createAfterHideChangesHandler = ({
     let changed = false;
 
     allSheets?.forEach((sheet) => {
-      const currentYdocSheet = oldSheets
-        ?.toArray()
-        .find((s: any) => s.get('id') === sheet?.id) as any;
+      const currentYdocSheet = findSheetById(
+        oldSheets?.toArray() as any[] | undefined,
+        sheet?.id,
+      ) as any;
       if (!currentYdocSheet) return;
 
-      const ydocHide = currentYdocSheet?.get('hide');
+      const ydocHide = getSheetField(currentYdocSheet, 'hide');
       if (ydocHide !== (sheet as any)?.hide) {
-        currentYdocSheet?.set('hide', (sheet as any)?.hide);
+        setSheetField(currentYdocSheet, 'hide', (sheet as any)?.hide);
         changed = true;
       }
     });
@@ -207,12 +239,17 @@ export const createAfterColRowChangesHandler = ({
   return () => {
     const currentSheet = sheetEditorRef?.current?.getSheet();
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
-    const currentYdocSheet = oldSheets?.toArray().find((s: any) => s.get('id') === currentSheet?.id) as any;
-    const ydocCol = currentYdocSheet?.get('column');
-    const ydocRow = currentYdocSheet?.get('row');
+    const currentYdocSheet = findSheetById(
+      oldSheets?.toArray() as any[] | undefined,
+      currentSheet?.id,
+    ) as any;
+    if (!currentSheet || !currentYdocSheet) return;
+
+    const ydocCol = getSheetField(currentYdocSheet, 'column');
+    const ydocRow = getSheetField(currentYdocSheet, 'row');
     if (ydocCol !== currentSheet?.column || ydocRow !== currentSheet?.row) {
-      currentYdocSheet?.set('column', currentSheet?.column);
-      currentYdocSheet?.set('row', currentSheet?.row);
+      setSheetField(currentYdocSheet, 'column', currentSheet?.column);
+      setSheetField(currentYdocSheet, 'row', currentSheet?.row);
       handleOnChangePortalUpdate();
     }
   };
