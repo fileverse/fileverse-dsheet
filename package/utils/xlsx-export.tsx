@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { utils as XLSXUtil, write as XLSXWrite } from 'xlsx-js-style';
 import { Workbook as ExcelJSWorkbook } from 'exceljs';
 import * as Y from 'yjs';
@@ -6,6 +7,8 @@ import { MutableRefObject } from 'react';
 import { getExportFilenameBase } from './export-filename';
 import { applyBordersToWorksheet } from './xlsx-border-utils';
 import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
+import { exportConditionalFormatting } from './xlsx-cf-export-utils';
+import { patchXlsxCf, type SheetCfPatch } from './xlsx-cf-postprocess';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -220,18 +223,27 @@ export const handleExportToXLSX = async (
     const excelWorkbook = new ExcelJSWorkbook();
     await excelWorkbook.xlsx.load(xlsxBuffer);
 
+    const sheetCfPatches: SheetCfPatch[] = sheetWithData.map(() => ({
+      duplicateValues: [],
+    }));
+
     sheetWithData.forEach((sheet, index) => {
-      if (!sheet.dataVerification) return;
       const ws = excelWorkbook.worksheets[index];
       if (!ws) return;
+
+      // Export real conditional formatting first so dropdown-color CF priorities don't conflict
+      const { nextPriority, pendingDuplicateValues } =
+        exportConditionalFormatting(ws, sheet, 1);
+      sheetCfPatches[index] = { duplicateValues: pendingDuplicateValues };
+      let cfPriority = nextPriority;
+
+      if (!sheet.dataVerification) return;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wsAny = ws as any;
       if (!wsAny.dataValidations) wsAny.dataValidations = { model: {} };
       if (!wsAny.dataValidations.model) wsAny.dataValidations.model = {};
       const dvModel: Record<string, unknown> = wsAny.dataValidations.model;
-
-      let cfPriority = 1;
       Object.entries(sheet.dataVerification).forEach(([rowColKey, dvRaw]) => {
         const dv = dvRaw as {
           type?: string;
@@ -319,7 +331,8 @@ export const handleExportToXLSX = async (
       );
     });
 
-    const finalBuffer = await excelWorkbook.xlsx.writeBuffer();
+    const rawBuffer = await excelWorkbook.xlsx.writeBuffer();
+    const finalBuffer = await patchXlsxCf(rawBuffer, sheetCfPatches);
     const blob = new Blob([finalBuffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
