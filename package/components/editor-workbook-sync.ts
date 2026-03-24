@@ -68,12 +68,26 @@ const findSheetById = (sheets: any[] | undefined, sheetId: unknown) => {
   return sheets.find((sheet) => getSheetField(sheet, 'id') === sheetId);
 };
 
+const getCurrentSheetSafe = (
+  sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
+  source: string,
+) => {
+  try {
+    return sheetEditorRef?.current?.getSheet?.() as any;
+  } catch (error) {
+    logSyncWarning(`${source}: getSheet failed`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+};
+
 const getCurrentYdocSheet = ({
   sheetEditorRef,
   ydocRef,
   dsheetId,
 }: Omit<SyncContext, 'handleOnChangePortalUpdate'>) => {
-  const currentSheet = sheetEditorRef?.current?.getSheet();
+  const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'getCurrentYdocSheet');
   const oldSheets = ydocRef?.current?.getArray(dsheetId);
   return findSheetById(oldSheets?.toArray() as any[] | undefined, currentSheet?.id) as any;
 };
@@ -91,7 +105,7 @@ export const syncCurrentSheetField = (
     | 'hide',
 ) => {
   const { sheetEditorRef, handleOnChangePortalUpdate } = context;
-  const currentSheet = sheetEditorRef?.current?.getSheet() as any;
+  const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'syncCurrentSheetField') as any;
   const currentYdocSheet = getCurrentYdocSheet(context);
   if (!currentSheet || !currentYdocSheet) return;
 
@@ -322,7 +336,10 @@ export const createAfterColRowChangesHandler = ({
   handleOnChangePortalUpdate,
 }: SyncContext) => {
   return () => {
-    const currentSheet = sheetEditorRef?.current?.getSheet();
+    const currentSheet = getCurrentSheetSafe(
+      sheetEditorRef,
+      'createAfterColRowChangesHandler',
+    );
     const oldSheets = ydocRef?.current?.getArray(dsheetId);
     const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
     const currentYdocSheet = findSheetById(
@@ -368,12 +385,13 @@ export const updateAllCell = ({
   handleOnChangePortalUpdate,
 }: SyncContext, subSheetId: string) => {
   const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
+  const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'updateAllCell');
   const currentSheetId =
     workbookContext?.currentSheetId?.toString?.() ||
-    sheetEditorRef.current?.getSheet?.()?.id?.toString?.();
+    currentSheet?.id?.toString?.();
   if (!currentSheetId) return;
 
-  const sheet = sheetEditorRef.current?.getSheet?.();
+  const sheet = currentSheet;
   if (!sheet) return;
 
   let dataMatrix = (sheet as any).data as any[][] | undefined;
