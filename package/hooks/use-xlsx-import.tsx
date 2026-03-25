@@ -445,7 +445,6 @@ export const useXLSXImport = ({
           const imagesBySheet: Record<number, RawSheetImage[]> = {};
 
           workbook.eachSheet((ws, sheetIndex) => {
-            console.log('ws', ws);
             const idx = sheetIndex - 1; // exceljs is 1-based
 
             // Hyperlinks
@@ -578,7 +577,6 @@ export const useXLSXImport = ({
             if (Array.isArray(cfs) && cfs.length > 0) {
               const sheetCf: Record<string, unknown>[] = [];
               for (const cf of cfs) {
-                console.log('cf', cf);
                 const ref = cf.ref;
                 const rules = cf.rules || [];
                 for (const rule of rules) {
