@@ -9,6 +9,11 @@ import { applyBordersToWorksheet } from './xlsx-border-utils';
 import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
 import { exportConditionalFormatting } from './xlsx-cf-export-utils';
 import { patchXlsxCf, type SheetCfPatch } from './xlsx-cf-postprocess';
+import {
+  buildExcelJsRichText,
+  applyRichTextToWorksheet,
+  type CellRichTextValue,
+} from './xlsx-richtext-utils';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -75,6 +80,8 @@ export const handleExportToXLSX = async (
 
     const sheetWithData = workbookRef.current.getAllSheets();
     const workbook = XLSXUtil.book_new();
+    const sheetRichTextMaps: Map<string, CellRichTextValue>[] =
+      sheetWithData.map(() => new Map());
 
     sheetWithData.forEach((sheet, index) => {
       const rows = sheetWithData[index]?.data || [];
@@ -92,9 +99,6 @@ export const handleExportToXLSX = async (
           cell.v !== '' &&
           !isNaN(Number(cell.v))
         ) {
-          console.log(
-            `[xlsx-export] converting cell ${key} from string "${cell.v}" to number`,
-          );
           worksheet[key] = { ...cell, v: Number(cell.v), t: 'n' };
         }
       });
@@ -127,6 +131,17 @@ export const handleExportToXLSX = async (
       }
 
       // PROCESS CELL DATA
+      // Log first non-null cell from data to inspect format
+      outer: for (let ri = 0; ri < (sheet.data?.length ?? 0); ri++) {
+        const row = (sheet.data as any)?.[ri];
+        if (!Array.isArray(row)) continue;
+        for (let ci = 0; ci < row.length; ci++) {
+          const cv = row[ci];
+          if (cv && typeof cv === 'object') {
+            break outer;
+          }
+        }
+      }
       (sheet.celldata ?? []).forEach((cell: any) => {
         const r = cell.r;
         const c = cell.c;
@@ -141,16 +156,32 @@ export const handleExportToXLSX = async (
         // VALUE + FORMULA
         // -----------------------------
         if (v.f) newCell.f = v.f.replace(/^=/, '');
-        newCell.v = v.v ?? v?.ct?.s?.[0]?.v;
+
+        // For inlineStr (rich text), concatenate all runs as the plain-text fallback.
+        // Pass 2 (ExcelJS) will overwrite with the real rich text value.
+        if (!v.f && v.ct?.t === 'inlineStr' && Array.isArray(v.ct.s)) {
+          newCell.v = v.ct.s.map((seg: any) => seg.v ?? '').join('');
+          newCell.t = 's';
+        } else {
+          newCell.v = v.v ?? v?.ct?.s?.[0]?.v;
+        }
         if (v.m) newCell.w = v.m;
+
+        // COLLECT RICH TEXT (skip formula cells — they have no display runs)
+        if (!v.f && v.ct?.t === 'inlineStr' && Array.isArray(v.ct.s)) {
+          const rt = buildExcelJsRichText(v.ct.s);
+          if (rt) sheetRichTextMaps[index].set(cellRef, rt);
+        }
 
         // -----------------------------
         // NUMBER FORMAT
         // -----------------------------
         if (v.ct) {
           if (v.ct.fa) newCell.z = v.ct.fa;
-          //xlsx needs date to be in number format, so we set type to 'n' for date cells. this fixes exporting date from dsheets
-          if (v.ct.t) newCell.t = v.ct.t === 'd' ? 'n' : v.ct.t;
+          // inlineStr is handled above; map 'd' → 'n' for dates; pass through other types
+          if (v.ct.t && v.ct.t !== 'inlineStr') {
+            newCell.t = v.ct.t === 'd' ? 'n' : v.ct.t;
+          }
         }
 
         // Ensure numeric values are typed as 'n' so Google Sheets / Excel
@@ -216,6 +247,25 @@ export const handleExportToXLSX = async (
         worksheet[cellRef] = newCell;
       });
 
+      // RICH TEXT from sheet.data (celldata is often empty for live sheets)
+      // aoa_to_sheet leaves inlineStr cells empty since v.v is undefined;
+      // set plain-text fallback here and collect runs for Pass 2.
+      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+        if (!Array.isArray(row)) return;
+        row.forEach((v: any, c: number) => {
+          if (!v || v.ct?.t !== 'inlineStr' || !Array.isArray(v.ct.s)) return;
+          const cellRef = XLSXUtil.encode_cell({ r, c });
+          const plainText = v.ct.s.map((seg: any) => seg.v ?? '').join('');
+          worksheet[cellRef] = {
+            ...(worksheet[cellRef] || {}),
+            v: plainText,
+            t: 's',
+          };
+          const rt = buildExcelJsRichText(v.ct.s);
+          if (rt) sheetRichTextMaps[index].set(cellRef, rt);
+        });
+      });
+
       // APPLY BORDERS
       if (sheet.config?.borderInfo) {
         applyBordersToWorksheet(worksheet, sheet.config.borderInfo);
@@ -254,6 +304,9 @@ export const handleExportToXLSX = async (
     sheetWithData.forEach((sheet, index) => {
       const ws = excelWorkbook.worksheets[index];
       if (!ws) return;
+
+      // Apply rich text collected during Pass 1
+      applyRichTextToWorksheet(ws, sheetRichTextMaps[index]);
 
       // Export real conditional formatting first so dropdown-color CF priorities don't conflict
       const { nextPriority, pendingDuplicateValues } =
