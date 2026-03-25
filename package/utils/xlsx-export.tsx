@@ -81,6 +81,24 @@ export const handleExportToXLSX = async (
 
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);
 
+      // FIX: aoa_to_sheet may type numeric-looking strings as 's'.
+      // Convert them to proper numeric cells so Google Sheets / Excel don't treat them as text.
+      Object.keys(worksheet).forEach((key) => {
+        if (key.startsWith('!')) return;
+        const cell = worksheet[key];
+        if (
+          cell &&
+          (cell.t === 's' || cell.t === undefined) &&
+          cell.v !== '' &&
+          !isNaN(Number(cell.v))
+        ) {
+          console.log(
+            `[xlsx-export] converting cell ${key} from string "${cell.v}" to number`,
+          );
+          worksheet[key] = { ...cell, v: Number(cell.v), t: 'n' };
+        }
+      });
+
       // APPLY MERGED CELLS
       worksheet['!merges'] = [];
       if (sheet.config?.merge) {
@@ -123,7 +141,7 @@ export const handleExportToXLSX = async (
         // VALUE + FORMULA
         // -----------------------------
         if (v.f) newCell.f = v.f.replace(/^=/, '');
-        newCell.v = v.v || v?.ct?.s?.[0]?.v;
+        newCell.v = v.v ?? v?.ct?.s?.[0]?.v;
         if (v.m) newCell.w = v.m;
 
         // -----------------------------
@@ -133,6 +151,12 @@ export const handleExportToXLSX = async (
           if (v.ct.fa) newCell.z = v.ct.fa;
           //xlsx needs date to be in number format, so we set type to 'n' for date cells. this fixes exporting date from dsheets
           if (v.ct.t) newCell.t = v.ct.t === 'd' ? 'n' : v.ct.t;
+        }
+
+        // Ensure numeric values are typed as 'n' so Google Sheets / Excel
+        // don't import them as text (happens when ct.t is absent)
+        if (typeof newCell.v === 'number' && !newCell.t) {
+          newCell.t = 'n';
         }
 
         // -----------------------------
