@@ -142,6 +142,8 @@ export const handleExportToXLSX = async (
           }
         }
       }
+      // Track cells styled via celldata so the sheet.data fallback loop below skips them
+      const celldataStyled = new Set<string>();
       (sheet.celldata ?? []).forEach((cell: any) => {
         const r = cell.r;
         const c = cell.c;
@@ -217,7 +219,10 @@ export const handleExportToXLSX = async (
           sz: v.fs ?? undefined,
           name: v.ff ?? undefined,
 
-          color: v.fc ? { rgb: v.fc.replace('#', '') } : undefined,
+          color: (() => {
+            const hex = parseColorToHex(v.fc);
+            return hex ? { rgb: hex } : undefined;
+          })(),
         };
 
         // ============ ALIGNMENT ============
@@ -244,7 +249,79 @@ export const handleExportToXLSX = async (
           // "0" → overflow → do nothing
         }
 
+        celldataStyled.add(cellRef);
         worksheet[cellRef] = newCell;
+      });
+
+      // FORMATTING FALLBACK from sheet.data
+      // celldata is often empty for live/collaborative sheets. For any cell not
+      // already styled above, read formatting properties directly from sheet.data.
+      // Rich text (inlineStr) cells are handled separately below — skip them here
+      // so we don't interfere with the rich-text pipeline.
+      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+        if (!Array.isArray(row)) return;
+        row.forEach((v: any, c: number) => {
+          if (!v || typeof v !== 'object') return;
+          // Skip cells already styled via celldata
+          const cellRef = XLSXUtil.encode_cell({ r, c });
+          if (celldataStyled.has(cellRef)) return;
+          // Only process if there is at least one formatting property
+          const hasFormatting =
+            v.bg ||
+            v.bl ||
+            v.it ||
+            v.cl ||
+            v.un ||
+            v.fs ||
+            v.ff ||
+            v.fc ||
+            v.ht !== undefined ||
+            v.vt !== undefined ||
+            v.tb !== undefined ||
+            v.tr !== undefined;
+          if (!hasFormatting) return;
+
+          let cell: any = worksheet[cellRef] || {};
+          cell = { ...cell };
+          cell.s = cell.s || {};
+
+          // FILL
+          if (v.bg) {
+            const hex = parseColorToHex(v.bg);
+            if (hex) {
+              cell.s.fill = { patternType: 'solid', fgColor: { rgb: hex } };
+            }
+          }
+
+          // FONT
+          cell.s.font = {
+            ...(cell.s.font || {}),
+            bold: v.bl === 1 || undefined,
+            italic: v.it === 1 || undefined,
+            strike: v.cl === 1 || undefined,
+            underline: v.un === 1 || undefined,
+            sz: v.fs ?? undefined,
+            name: v.ff ?? undefined,
+            color: (() => {
+              const hex = parseColorToHex(v.fc);
+              return hex ? { rgb: hex } : undefined;
+            })(),
+          };
+
+          // ALIGNMENT
+          const HT_MAP: any = { '0': 'center', '1': 'left', '2': 'right' };
+          const VT_MAP: any = { '0': 'center', '1': 'top', '2': 'bottom' };
+          cell.s.alignment = {
+            ...(cell.s.alignment || {}),
+            horizontal: HT_MAP[v.ht] || undefined,
+            vertical: VT_MAP[v.vt] || undefined,
+            textRotation: v.tr !== undefined ? v.tr : undefined,
+          };
+          if (v.tb === '1') cell.s.alignment.wrapText = true;
+          else if (v.tb === '2') cell.s.alignment.shrinkToFit = true;
+
+          worksheet[cellRef] = cell;
+        });
       });
 
       // RICH TEXT from sheet.data (celldata is often empty for live sheets)
