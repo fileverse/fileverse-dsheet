@@ -35,8 +35,14 @@ export function diffObjectArrays<T extends Record<string, any>>(
   const oldMap = new Map<string, T>();
   const newMap = new Map<string, T>();
 
-  oldArr?.forEach((item, index) => oldMap.set(getKey ? getKey(item) : index, item));
-  newArr?.forEach((item, index) => newMap.set(getKey ? getKey(item) : index, item));
+  oldArr?.forEach((item, index) => {
+    if (item)
+      oldMap.set(getKey ? getKey(item) : index, item)
+  });
+  newArr?.forEach((item, index) => {
+    if (item)
+      newMap.set(getKey ? getKey(item) : index, item)
+  });
 
   const added: T[] = [];
   const removed: T[] = [];
