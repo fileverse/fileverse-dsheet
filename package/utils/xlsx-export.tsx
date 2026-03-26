@@ -402,14 +402,30 @@ export const handleExportToXLSX = async (
         const dv = dvRaw as {
           type?: string;
           value1?: string;
+          value2?: string;
           color?: string;
           hintShow?: boolean;
           hintValue?: string;
           prohibitInput?: boolean;
         };
-        if (dv.type !== 'dropdown') return;
+        if (dv.type !== 'dropdown' && dv.type !== 'checkbox') return;
         const [row, col] = rowColKey.split('_').map(Number);
         const cellAddress = XLSXUtil.encode_cell({ r: row, c: col });
+
+        if (dv.type === 'checkbox') {
+          const selectedVal = (dv.value1 || 'TRUE').trim();
+          const unselectedVal = (dv.value2 || 'FALSE').trim();
+          const opts = [selectedVal, unselectedVal].filter(Boolean);
+          dvModel[cellAddress] = {
+            type: 'list',
+            allowBlank: true,
+            formulae: [`"${opts.join(',')}"`],
+            showInputMessage: Boolean(dv.hintShow),
+            prompt: dv.hintValue || '',
+            showErrorMessage: Boolean(dv.prohibitInput),
+          };
+          return;
+        }
         const options = (dv.value1 || '')
           .split(',')
           .map((s: string) => s.trim())

@@ -33,6 +33,18 @@ const DATA_VERIFICATION_OPTION_COLORS = [
 ];
 const DEFAULT_OPTION_COLOR = DATA_VERIFICATION_OPTION_COLORS[0]; // Light Gray
 
+const CHECKBOX_PAIRS: [string, string][] = [
+  ['true', 'false'],
+  ['yes', 'no'],
+  ['1', '0'],
+];
+
+function isCheckboxPair(a: string, b: string): boolean {
+  const la = a.toLowerCase();
+  const lb = b.toLowerCase();
+  return CHECKBOX_PAIRS.some(([x, y]) => la === x && lb === y);
+}
+
 /** Build dataVerification color string from option count: use color list only when options ≤ 12; if more, use only grey (first) repeated. */
 function buildDataVerificationColor(optionCount: number): string {
   if (optionCount <= 0) return DEFAULT_OPTION_COLOR;
@@ -73,16 +85,29 @@ function excelDataValidationToSheetEntry(
   const { row, col } = parsed;
   const rowColKey = `${row}_${col}`;
 
-  const type = dv.type === 'list' ? 'dropdown' : dv.type || 'dropdown';
-  const value1 =
+  const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
           .replace(/^["']|["']$/g, '')
           .replace(/["']/g, '')
       : '';
+  const parts = rawFormula
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+
+  let type = dv.type === 'list' ? 'dropdown' : dv.type || 'dropdown';
+  let value1 = rawFormula;
+  let value2 = '';
+
+  if (dv.type === 'list' && parts.length === 2 && isCheckboxPair(parts[0], parts[1])) {
+    type = 'checkbox';
+    value1 = parts[0];
+    value2 = parts[1];
+  }
 
   // When no color is preset (e.g. from XLSX): one color per option; use predefined list up to 12, then Light Gray for the rest
-  const optionCount = value1 ? value1.split(',').length : 0;
+  const optionCount = type === 'checkbox' ? 1 : value1 ? value1.split(',').length : 0;
   const color = buildDataVerificationColor(optionCount || 1);
 
   const entry: Record<string, unknown> = {
@@ -90,7 +115,7 @@ function excelDataValidationToSheetEntry(
     type2: '',
     rangeTxt: address,
     value1,
-    value2: '',
+    value2,
     validity: '',
     remote: false,
     prohibitInput: dv.type === 'list',
