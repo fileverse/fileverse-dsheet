@@ -153,10 +153,8 @@ export function addFortuneImagesToWorksheet(
           ? 'jpeg'
           : rawExt === 'gif'
             ? 'gif'
-            : rawExt === 'bmp'
-              ? 'bmp'
-              : 'png'
-      ) as 'png' | 'jpeg' | 'gif' | 'bmp';
+            : 'png'
+      ) as 'png' | 'jpeg' | 'gif';
       const base64 = match[2];
 
       const imageId = workbook.addImage({ base64, extension });
