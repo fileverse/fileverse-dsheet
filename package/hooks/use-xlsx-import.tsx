@@ -100,14 +100,19 @@ function excelDataValidationToSheetEntry(
   let value1 = rawFormula;
   let value2 = '';
 
-  if (dv.type === 'list' && parts.length === 2 && isCheckboxPair(parts[0], parts[1])) {
+  if (
+    dv.type === 'list' &&
+    parts.length === 2 &&
+    isCheckboxPair(parts[0], parts[1])
+  ) {
     type = 'checkbox';
     value1 = parts[0];
     value2 = parts[1];
   }
 
   // When no color is preset (e.g. from XLSX): one color per option; use predefined list up to 12, then Light Gray for the rest
-  const optionCount = type === 'checkbox' ? 1 : value1 ? value1.split(',').length : 0;
+  const optionCount =
+    type === 'checkbox' ? 1 : value1 ? value1.split(',').length : 0;
   const color = buildDataVerificationColor(optionCount || 1);
 
   const entry: Record<string, unknown> = {
@@ -431,6 +436,9 @@ export const useXLSXImport = ({
         try {
           //@ts-expect-error, later
           await workbook.xlsx.load(arrayBuffer);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const workbookDefaultFontSize: number | undefined = (workbook as any)
+            .model?.styles?.fonts?.[0]?.size;
           // Extract hyperlinks, freeze info, cell formatting, and data validation from all worksheets
           const hyperlinksBySheet: Record<
             number,
@@ -535,7 +543,9 @@ export const useXLSXImport = ({
                   if (font.bold) cellStyle.bl = 1;
                   if (font.italic) cellStyle.it = 1;
                   if (font.underline) cellStyle.un = 1;
-                  if (font.size) cellStyle.fs = font.size;
+                  const effectiveFontSize =
+                    font.size ?? workbookDefaultFontSize;
+                  if (effectiveFontSize) cellStyle.fs = effectiveFontSize;
                   if (font.name) cellStyle.ff = font.name;
                   if (font.color?.argb) {
                     const argb = font.color.argb;

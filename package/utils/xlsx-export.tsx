@@ -245,7 +245,7 @@ export const handleExportToXLSX = async (
           strike: v.cl === 1 || undefined,
           underline: v.un === 1 || undefined,
 
-          sz: v.fs ?? undefined,
+          sz: v.fs ?? 10,
           name: v.ff ?? undefined,
 
           color: (() => {
@@ -329,7 +329,7 @@ export const handleExportToXLSX = async (
             italic: v.it === 1 || undefined,
             strike: v.cl === 1 || undefined,
             underline: v.un === 1 || undefined,
-            sz: v.fs ?? undefined,
+            sz: v.fs ?? 10,
             name: v.ff ?? undefined,
             color: (() => {
               const hex = parseColorToHex(v.fc);
@@ -402,6 +402,11 @@ export const handleExportToXLSX = async (
     // Pass 2: ExcelJS reads the buffer and adds data validations
     const excelWorkbook = new ExcelJSWorkbook();
     await excelWorkbook.xlsx.load(xlsxBuffer);
+
+    const excelModel = (excelWorkbook as any).model;
+    if (excelModel?.styles?.fonts?.[0]) {
+      excelModel.styles.fonts[0] = { ...excelModel.styles.fonts[0], size: 10 };
+    }
 
     const sheetCfPatches: SheetCfPatch[] = sheetWithData.map(() => ({
       duplicateValues: [],
