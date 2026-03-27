@@ -115,19 +115,48 @@ export const handleExportToXLSX = async (
       }
 
       // APPLY COLUMN WIDTH
-      if (sheet.config?.columnlen) {
+      // Write wch (character units) using MDW=7 (Calibri 11pt at 96 DPI, matches Google Sheets:
+      // pixels = charWidth × 7 + 5). Write explicit widths for ALL columns so default-width
+      // columns don't fall back to Excel's built-in default (≈64px) in Google Sheets.
+      // DEFAULT_COL_WCH = (99 - 5) / 7 ≈ 13.43 (pre-computed for 99px default column width).
+      {
+        const MDW = 7;
+        const DEFAULT_COL_WCH = Math.round(((99 - 5) / MDW) * 256) / 256;
+        const colCount = sheet.column || 36;
         worksheet['!cols'] = [];
-        Object.entries(sheet.config.columnlen).forEach(([col, w]) => {
-          worksheet['!cols'][Number(col)] = { wpx: Number(w) };
-        });
+        for (let col = 0; col < colCount; col++) {
+          const explicitPx = sheet.config?.columnlen?.[col];
+          if (explicitPx !== undefined) {
+            const wch = Math.max(
+              0,
+              Math.round(((Number(explicitPx) - 5) / MDW) * 256) / 256,
+            );
+            worksheet['!cols'][col] = { wch };
+          } else {
+            worksheet['!cols'][col] = { wch: DEFAULT_COL_WCH };
+          }
+        }
       }
 
       // ROW HEIGHT
-      if (sheet.config?.rowlen) {
-        worksheet['!rows'] = [];
-        Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
-          worksheet['!rows'][Number(row)] = { hpx: Number(h) };
-        });
+      // Google Sheets renders XLSX row heights using 100 DPI (pt × 100/72),
+      // so we write pt using the inverse: pt = px × 72/100 = px × 0.72.
+      // This is slightly smaller than the standard 96 DPI factor (0.75) and
+      // compensates for Google Sheets rendering rows a bit taller than intended.
+      // DEFAULT_ROW_HPT = 21 × 0.72 = 15.12pt (pre-computed).
+      {
+        const DEFAULT_ROW_HPT = Math.round(21 * 0.72 * 4) / 4;
+        (worksheet as any).sheetFormat = {
+          ...((worksheet as any).sheetFormat || {}),
+          defaultRowHeight: String(DEFAULT_ROW_HPT),
+        };
+        if (sheet.config?.rowlen) {
+          worksheet['!rows'] = [];
+          Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
+            const hpt = Math.round(Number(h) * 0.72 * 4) / 4;
+            worksheet['!rows'][Number(row)] = { hpt };
+          });
+        }
       }
 
       // PROCESS CELL DATA

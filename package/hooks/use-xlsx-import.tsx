@@ -676,6 +676,36 @@ export const useXLSXImport = ({
                     ...hyperlinksBySheet[sheetIndex],
                   };
                 }
+                // Correct column widths before image position conversion so that
+                // nativeColToPx uses the same MDW=7 values the grid renders with.
+                if (sheet.config?.columnlen) {
+                  const corrected: Record<string, number> = {};
+                  Object.entries(sheet.config.columnlen).forEach(
+                    ([col, px]) => {
+                      const wch = (Number(px) - 5) / 8 + 0.83;
+                      corrected[col] = Math.round(wch * 7 + 5);
+                    },
+                  );
+                  sheet.config.columnlen = corrected;
+                }
+
+                // Drop rowlen entries at or near the default row height so Fortune
+                // uses its own default for rows the user never manually resized.
+                // Also done before image conversion so nativeRowToPx uses the
+                // same rowlen the grid renders with.
+                if (sheet.config?.rowlen) {
+                  const defaultRowPx = Math.round(
+                    Number(sheet.defaultRowHeight) || 21,
+                  );
+                  const filtered: Record<string, number> = {};
+                  Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
+                    if (Math.abs(Math.round(Number(h)) - defaultRowPx) > 1) {
+                      filtered[row] = Number(h);
+                    }
+                  });
+                  sheet.config.rowlen = filtered;
+                }
+
                 // Attach images — convert fractional col/row to pixels using
                 // FortuneSheet's actual column/row dimensions so positions match.
                 if (imagesBySheet[sheetIndex]) {
