@@ -44,12 +44,12 @@ export const getCustomToolbarItems = ({
     file?: File,
     importType?: string,
     handleContentPortal?: any
-  ) => void;
+  ) => void | Promise<void>;
   handleXLSXUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
     file?: File,
     importType?: string
-  ) => void;
+  ) => void | Promise<void>;
   handleExportToXLSX: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
@@ -60,6 +60,7 @@ export const getCustomToolbarItems = ({
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
     dsheetId: string,
+    getDocumentTitle?: () => string,
   ) => void;
   handleExportToJSON: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
@@ -127,7 +128,7 @@ export const getCustomToolbarItems = ({
             )
           }
           handleExportToCSV={() =>
-            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId)
+            handleExportToCSV(sheetEditorRef, ydocRef, dsheetId, getDocumentTitle)
           }
           handleExportToJSON={() =>
             handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)
