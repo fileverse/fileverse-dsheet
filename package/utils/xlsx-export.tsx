@@ -1,25 +1,25 @@
-import { utils as XLSXUtil, writeFile as XLSXWriteFile } from "xlsx-js-style";
-import * as Y from "yjs";
-import { WorkbookInstance } from "@fileverse-dev/fortune-react";
-import { MutableRefObject } from "react";
-
+import { utils as XLSXUtil, writeFile as XLSXWriteFile } from 'xlsx-js-style';
+import * as Y from 'yjs';
+import { WorkbookInstance } from '@fileverse-dev/fortune-react';
+import { MutableRefObject } from 'react';
+import { getExportFilenameBase } from './export-filename';
 
 const parseColorToHex = (color: string): string | null => {
-  if (!color || typeof color !== "string") return null;
+  if (!color || typeof color !== 'string') return null;
 
   // Trim & lowercase for detection
   const c = color.trim().toLowerCase();
 
   // CASE 1: Already HEX (#fff or #ffffff)
-  if (c.startsWith("#")) {
-    const hex = c.replace("#", "").toUpperCase();
+  if (c.startsWith('#')) {
+    const hex = c.replace('#', '').toUpperCase();
 
     if (hex.length === 3) {
       // Expand shortened hex (#f00 → #FF0000)
       return hex
-        .split("")
+        .split('')
         .map((x) => x + x)
-        .join("")
+        .join('')
         .toUpperCase();
     }
 
@@ -45,24 +45,21 @@ const parseColorToHex = (color: string): string | null => {
     const g = Math.min(255, Math.max(0, parseFloat(match[2])));
     const b = Math.min(255, Math.max(0, parseFloat(match[3])));
 
-    return (
-      ((1 << 24) + (r << 16) + (g << 8) + b)
-        .toString(16)
-        .slice(1)
-        .toUpperCase()
-    );
+    return ((1 << 24) + (r << 16) + (g << 8) + b)
+      .toString(16)
+      .slice(1)
+      .toUpperCase();
   }
 
   // Unknown format → ignore styling
   return null;
 };
 
-
 export const handleExportToXLSX = async (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
   dsheetId: string,
-  getDocumentTitle?: () => string
+  getDocumentTitle?: () => string,
 ) => {
   if (!workbookRef.current || !ydocRef.current) return;
 
@@ -79,10 +76,10 @@ export const handleExportToXLSX = async (
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);
 
       // APPLY MERGED CELLS
-      worksheet["!merges"] = [];
+      worksheet['!merges'] = [];
       if (sheet.config?.merge) {
         Object.values(sheet.config.merge).forEach((m: any) => {
-          worksheet["!merges"].push({
+          worksheet['!merges'].push({
             s: { r: m.r, c: m.c },
             e: { r: m.r + m.rs - 1, c: m.c + m.cs - 1 },
           });
@@ -91,17 +88,17 @@ export const handleExportToXLSX = async (
 
       // APPLY COLUMN WIDTH
       if (sheet.config?.columnlen) {
-        worksheet["!cols"] = [];
+        worksheet['!cols'] = [];
         Object.entries(sheet.config.columnlen).forEach(([col, w]) => {
-          worksheet["!cols"][Number(col)] = { wpx: Number(w) };
+          worksheet['!cols'][Number(col)] = { wpx: Number(w) };
         });
       }
 
       // ROW HEIGHT
       if (sheet.config?.rowlen) {
-        worksheet["!rows"] = [];
+        worksheet['!rows'] = [];
         Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
-          worksheet["!rows"][Number(row)] = { hpx: Number(h) };
+          worksheet['!rows'][Number(row)] = { hpx: Number(h) };
         });
       }
 
@@ -119,9 +116,8 @@ export const handleExportToXLSX = async (
         // -----------------------------
         // VALUE + FORMULA
         // -----------------------------
-        if (v.f) newCell.f = v.f.replace(/^=/, "");
+        if (v.f) newCell.f = v.f.replace(/^=/, '');
         newCell.v = v.v || v?.ct?.s?.[0]?.v;
-        ;
         if (v.m) newCell.w = v.m;
 
         // -----------------------------
@@ -129,7 +125,8 @@ export const handleExportToXLSX = async (
         // -----------------------------
         if (v.ct) {
           if (v.ct.fa) newCell.z = v.ct.fa;
-          if (v.ct.t) newCell.t = v.ct.t;
+          //xlsx needs date to be in number format, so we set type to 'n' for date cells. this fixes exporting date from dsheets
+          if (v.ct.t) newCell.t = v.ct.t === 'd' ? 'n' : v.ct.t;
         }
 
         // -----------------------------
@@ -142,7 +139,7 @@ export const handleExportToXLSX = async (
           const hex = parseColorToHex(v.bg);
           if (hex) {
             newCell.s.fill = {
-              patternType: "solid",
+              patternType: 'solid',
               fgColor: { rgb: hex },
             };
           }
@@ -159,16 +156,16 @@ export const handleExportToXLSX = async (
           sz: v.fs ?? undefined,
           name: v.ff ?? undefined,
 
-          color: v.fc ? { rgb: v.fc.replace("#", "") } : undefined,
+          color: v.fc ? { rgb: v.fc.replace('#', '') } : undefined,
         };
 
         // ============ ALIGNMENT ============
-        const HT_MAP: any = { "0": "center", "1": "left", "2": "right" };
-        const VT_MAP: any = { "0": "center", "1": "top", "2": "bottom" };
+        const HT_MAP: any = { '0': 'center', '1': 'left', '2': 'right' };
+        const VT_MAP: any = { '0': 'center', '1': 'top', '2': 'bottom' };
 
         newCell.s.alignment = {
           ...(newCell.s.alignment || {}),
-          wrapText: v.tb === "1" || v.tb === "2" ? true : undefined,
+          wrapText: v.tb === '1' || v.tb === '2' ? true : undefined,
           textRotation: v.tr !== undefined ? v.tr : undefined,
         };
 
@@ -178,14 +175,13 @@ export const handleExportToXLSX = async (
         if (v.tb !== undefined) {
           newCell.s.alignment = newCell.s.alignment || {};
 
-          if (v.tb === "1") {
-            newCell.s.alignment.wrapText = true;   // Wrap text
-          } else if (v.tb === "2") {
+          if (v.tb === '1') {
+            newCell.s.alignment.wrapText = true; // Wrap text
+          } else if (v.tb === '2') {
             newCell.s.alignment.shrinkToFit = true; // Clip text
           }
           // "0" → overflow → do nothing
         }
-
 
         worksheet[cellRef] = newCell;
       });
@@ -196,14 +192,20 @@ export const handleExportToXLSX = async (
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
-    let title = (await getDocumentTitle?.()) || "Sheet";
-    title = title.length > 30 ? title.slice(0, 30) : title;
+    const activeSheetName = workbookRef.current.getSheet()?.name;
+    const title = getExportFilenameBase({
+      getDocumentTitle: () => getDocumentTitle?.() ?? '',
+      documentTitleFallback:
+        typeof document !== 'undefined' ? document.title : '',
+      sheetNameFallback: activeSheetName,
+      defaultBase: 'Sheet',
+    });
 
     XLSXWriteFile(workbook, `${title}.xlsx`, {
-      bookType: "xlsx",
+      bookType: 'xlsx',
       compression: true,
     });
   } catch (error) {
-    console.error("Export failed:", error);
+    console.error('Export failed:', error);
   }
 };

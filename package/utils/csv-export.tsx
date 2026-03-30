@@ -1,10 +1,13 @@
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 import { MutableRefObject } from 'react';
+import { getExportFilenameBase } from './export-filename';
 
 export const handleExportToCSV = (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
+  _dsheetId?: string,
+  getDocumentTitle?: () => string,
 ) => {
   if (!workbookRef.current || !ydocRef.current) return;
 
@@ -69,7 +72,13 @@ export const handleExportToCSV = (
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `${activeSheet.name}.csv`);
+    const title = getExportFilenameBase({
+      getDocumentTitle,
+      documentTitleFallback: typeof document !== 'undefined' ? document.title : '',
+      sheetNameFallback: activeSheet.name,
+      defaultBase: 'Sheet',
+    });
+    link.setAttribute('download', `${activeSheet.name + ' - ' + title}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
