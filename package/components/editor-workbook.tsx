@@ -160,8 +160,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
   const cellContextMenu = isReadOnly
     ? allowComments
-      ? ['comment']
-      : []
+      ? ['comment', 'copy']
+      : ['copy']
     : CELL_CONTEXT_MENU_ITEMS;
   const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
   const toolbarItems = isReadOnly
