@@ -39,7 +39,7 @@ import {
   syncCurrentSheetField,
   updateAllCell,
 } from './editor-workbook-sync';
-
+// import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
@@ -108,7 +108,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     getDocumentTitle,
     updateDocumentTitle,
     handleLiveQuery,
+    setIsDataLoaded,
   } = useEditor();
+
+  // const { setIsDataLoaded } = useEditorData();
 
   useEffect(() => {
     if (dataBlockCalcFunction) {
@@ -143,6 +146,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   });
 
   usehandleHomepageRedirect({
+    setIsDataLoaded,
     setSelectedTemplate,
     handleXLSXUpload,
     handleCSVUpload,
@@ -156,8 +160,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
   const cellContextMenu = isReadOnly
     ? allowComments
-      ? ['comment']
-      : []
+      ? ['comment', 'copy']
+      : ['copy']
     : CELL_CONTEXT_MENU_ITEMS;
   const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
   const toolbarItems = isReadOnly

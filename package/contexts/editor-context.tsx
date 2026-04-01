@@ -24,6 +24,7 @@ import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 
 // Define the shape of the context
 export interface EditorContextType {
+  setIsDataLoaded: React.Dispatch<React.SetStateAction<boolean>>;
   handleOnChangePortalUpdate: () => void;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -214,6 +215,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     handleChange,
     handleLiveQuery,
     initialiseLiveQueryData,
+    setIsDataLoaded,
   } = useEditorData(
     ydocRef,
     dsheetId,
@@ -276,6 +278,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       remoteUpdateRef,
       handleChange,
       loading,
+      setIsDataLoaded,
       forceSheetRender,
       setForceSheetRender,
       activeUsers,
@@ -290,6 +293,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       handleOnChangePortalUpdate
     };
   }, [
+    setIsDataLoaded,
     setShowSmartContractModal,
     getDocumentTitle,
     updateDocumentTitle,
