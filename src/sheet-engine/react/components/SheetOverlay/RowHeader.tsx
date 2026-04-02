@@ -13,8 +13,8 @@ import {
   fixPositionOnFrozenCells,
   getFlowdata,
   api,
-} from "@sheet-engine/core";
-import _ from "lodash";
+} from '@sheet-engine/core';
+import _ from 'lodash';
 import React, {
   useContext,
   useState,
@@ -22,9 +22,9 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-} from "react";
-import WorkbookContext from "../../context";
-import { useRowDragAndDrop } from "./drag_and_drop/row-helpers";
+} from 'react';
+import WorkbookContext from '../../context';
+import { useRowDragAndDrop } from './drag_and_drop/row-helpers';
 
 type HoverLoc = { row: number; row_pre: number; row_index: number };
 type SelectedLoc = { row: number; row_pre: number; r1: number; r2: number };
@@ -47,15 +47,15 @@ const RowHeader: React.FC = () => {
 
   const freezeHandleTop = useMemo(() => {
     if (
-      sheet?.frozen?.type === "row" ||
-      sheet?.frozen?.type === "rangeRow" ||
-      sheet?.frozen?.type === "rangeBoth" ||
-      sheet?.frozen?.type === "both"
+      sheet?.frozen?.type === 'row' ||
+      sheet?.frozen?.type === 'rangeRow' ||
+      sheet?.frozen?.type === 'rangeBoth' ||
+      sheet?.frozen?.type === 'both'
     ) {
       return (
         rowLocationByIndex(
           sheet?.frozen?.range?.row_focus || 0,
-          context.visibledatarow
+          context.visibledatarow,
         )[1] + context.scrollTop
       );
     }
@@ -83,7 +83,7 @@ const RowHeader: React.FC = () => {
         0,
         _y,
         0,
-        mouseY
+        mouseY,
       );
       const [row_pre, row, row_index] = rowLocation(y, context.visibledatarow);
       if (row_pre !== hoverLocation.row_pre || row !== hoverLocation.row) {
@@ -98,7 +98,7 @@ const RowHeader: React.FC = () => {
       hoverLocation.row_pre,
       refs.globalCache.freezen,
       context.currentSheetId,
-    ]
+    ],
   );
 
   const { initiateDrag, getRowIndexClicked, isRowDoubleClicked, mouseDown } =
@@ -107,7 +107,7 @@ const RowHeader: React.FC = () => {
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       // @ts-expect-error
-      if ((e.button === 0 && e.target.tagName === "use") || e.button === 2) {
+      if ((e.button === 0 && e.target.tagName === 'use') || e.button === 2) {
         const { nativeEvent } = e;
         setContext((draft) => {
           handleRowHeaderMouseDown(
@@ -116,15 +116,15 @@ const RowHeader: React.FC = () => {
             nativeEvent,
             containerRef.current!,
             refs.cellInput.current!,
-            refs.fxInput.current!
+            refs.fxInput.current!,
           );
         });
       }
       if (e.button !== 0 || context.isFlvReadOnly) return; // left button only
       const targetEl = e.target as HTMLElement;
       if (
-        targetEl.closest(".fortune-rows-change-size") ||
-        targetEl.closest(".fortune-rows-freeze-handle")
+        targetEl.closest('.fortune-rows-change-size') ||
+        targetEl.closest('.fortune-rows-freeze-handle')
       )
         return;
 
@@ -138,7 +138,7 @@ const RowHeader: React.FC = () => {
       const lastSelectedCol = sel?.[0].column?.[1];
       let data = getFlowdata(context);
       if (!data) data = [];
-      // eslint-disable-next-line no-unsafe-optional-chaining
+
       const allRowSel = lastSelectedCol === data?.[0]?.length - 1;
 
       if (allRowSel) {
@@ -160,7 +160,7 @@ const RowHeader: React.FC = () => {
             nativeEvent,
             containerRef.current!,
             refs.cellInput.current!,
-            refs.fxInput.current!
+            refs.fxInput.current!,
           );
         });
         return;
@@ -179,7 +179,7 @@ const RowHeader: React.FC = () => {
       getRowIndexClicked,
       isRowDoubleClicked,
       initiateDrag,
-    ]
+    ],
   );
 
   const onMouseLeave = useCallback(() => {
@@ -197,12 +197,12 @@ const RowHeader: React.FC = () => {
           nativeEvent,
           containerRef.current!,
           refs.workbookContainer.current!,
-          refs.cellArea.current!
+          refs.cellArea.current!,
         );
       });
       e.stopPropagation();
     },
-    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext]
+    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext],
   );
 
   const onRowFreezeHandleMouseDown = useCallback(
@@ -215,12 +215,12 @@ const RowHeader: React.FC = () => {
           nativeEvent,
           containerRef.current!,
           refs.workbookContainer.current!,
-          refs.cellArea.current!
+          refs.cellArea.current!,
         );
       });
       e.stopPropagation();
     },
-    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext]
+    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext],
   );
 
   const onContextMenu = useCallback(
@@ -233,11 +233,11 @@ const RowHeader: React.FC = () => {
           nativeEvent,
           refs.workbookContainer.current!,
           refs.cellArea.current!,
-          "rowHeader"
+          'rowHeader',
         );
       });
     },
-    [refs.workbookContainer, setContext, settings, refs.cellArea]
+    [refs.workbookContainer, setContext, settings, refs.cellArea],
   );
 
   useEffect(() => {
@@ -287,7 +287,7 @@ const RowHeader: React.FC = () => {
 
   const showRow = (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    item: any
+    item: any,
   ) => {
     if (sheetIndex == null) return;
 
@@ -335,11 +335,11 @@ const RowHeader: React.FC = () => {
         ],
         {
           id: context.currentSheetId,
-        }
+        },
       );
     });
     setContext((ctx) => {
-      showSelected(ctx, "row");
+      showSelected(ctx, 'row');
     });
 
     setContext((ctx) => {
@@ -353,7 +353,7 @@ const RowHeader: React.FC = () => {
         ],
         {
           id: context.currentSheetId,
-        }
+        },
       );
     });
   };
@@ -363,12 +363,12 @@ const RowHeader: React.FC = () => {
   }, [context.scrollTop]);
 
   const getCursor = (rowIndex: any) => {
-    if (mouseDown) return "grabbing";
+    if (mouseDown) return 'grabbing';
     const sel = api.getSelection(context);
     const lastSelectedCol = sel?.[0].column?.[1];
     let data = getFlowdata(context);
     if (!data) data = [];
-    // eslint-disable-next-line no-unsafe-optional-chaining
+
     const allColSel = lastSelectedCol === data?.[0]?.length - 1;
     if (
       allColSel &&
@@ -376,9 +376,9 @@ const RowHeader: React.FC = () => {
       rowIndex >= sel?.[0].row?.[0] &&
       rowIndex <= sel?.[0].row?.[1]
     ) {
-      return "grab";
+      return 'grab';
     }
-    return "default";
+    return 'default';
   };
 
   return (
@@ -456,15 +456,15 @@ const RowHeader: React.FC = () => {
             {
               top: hoverLocation.row_pre,
               height: hoverLocation.row - hoverLocation.row_pre - 1,
-              display: "block",
+              display: 'block',
               cursor: getCursor(hoverLocation.row_index),
             },
             fixRowStyleOverflowInFreeze(
               context,
               hoverLocation.row_index,
               hoverLocation.row_index,
-              refs.globalCache.freezen?.[context.currentSheetId]
-            )
+              refs.globalCache.freezen?.[context.currentSheetId],
+            ),
           )}
         />
       ) : null}
@@ -476,15 +476,15 @@ const RowHeader: React.FC = () => {
             {
               top: row_pre,
               height: row - row_pre - 1,
-              display: "block",
-              mixBlendMode: "multiply" as any,
+              display: 'block',
+              mixBlendMode: 'multiply' as any,
             },
             fixRowStyleOverflowInFreeze(
               context,
               r1,
               r2,
-              refs.globalCache.freezen?.[context.currentSheetId]
-            )
+              refs.globalCache.freezen?.[context.currentSheetId],
+            ),
           )}
         />
       ))}

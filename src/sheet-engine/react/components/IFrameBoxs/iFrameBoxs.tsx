@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useRef, useMemo } from "react";
-import { IconButton } from "@fileverse/ui";
+import React, { useContext, useEffect, useRef, useMemo } from 'react';
+import { IconButton } from '@fileverse/ui';
 import {
   onIframeMoveStart,
   onIframeResizeStart,
@@ -7,9 +7,9 @@ import {
   onIframeMoveEnd,
   onIframeResize,
   onIframeResizeEnd,
-} from "@sheet-engine/core";
-import WorkbookContext from "../../context";
-import "./iFrameBoxs.css";
+} from '@sheet-engine/core';
+import WorkbookContext from '../../context';
+import './iFrameBoxs.css';
 
 const IframeBoxs: React.FC = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
@@ -18,7 +18,7 @@ const IframeBoxs: React.FC = () => {
   // Get current sheet's iframes
   const currentSheetIframes = useMemo(() => {
     const currentSheet = context.luckysheetfile.find(
-      (sheet) => sheet.id === context.currentSheetId
+      (sheet) => sheet.id === context.currentSheetId,
     );
     return currentSheet?.iframes || [];
   }, [context.luckysheetfile, context.currentSheetId]);
@@ -28,11 +28,11 @@ const IframeBoxs: React.FC = () => {
       if (!containerRef.current) return;
 
       const iframeBoxes = containerRef.current.querySelectorAll(
-        ".luckysheet-modal-dialog-iframe"
+        '.luckysheet-modal-dialog-iframe',
       );
 
       const clickedInsideSomeIframe = Array.from(iframeBoxes).some((el) =>
-        el.contains(e.target as Node)
+        el.contains(e.target as Node),
       );
 
       if (!clickedInsideSomeIframe && context.activeIframe !== undefined) {
@@ -42,9 +42,9 @@ const IframeBoxs: React.FC = () => {
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [context.activeIframe, setContext]);
 
@@ -57,7 +57,7 @@ const IframeBoxs: React.FC = () => {
           height: frame.height * context.zoomRatio,
           left: frame.left * context.zoomRatio,
           top: frame.top * context.zoomRatio,
-          position: "absolute" as const,
+          position: 'absolute' as const,
           padding: 0,
           zIndex: isActive ? 300 : 200,
         };
@@ -65,7 +65,7 @@ const IframeBoxs: React.FC = () => {
         return (
           <div
             key={frame.id}
-            id={isActive ? "fortune-modal-dialog-activeIframe" : frame.id}
+            id={isActive ? 'fortune-modal-dialog-activeIframe' : frame.id}
             className="luckysheet-modal-dialog luckysheet-modal-dialog-iframe"
             style={style}
             onClick={(e) => {
@@ -84,27 +84,27 @@ const IframeBoxs: React.FC = () => {
                 };
                 const handleMouseUp = () => {
                   onIframeMoveEnd(context, refs.globalCache);
-                  document.removeEventListener("mousemove", handleMouseMove);
-                  document.removeEventListener("mouseup", handleMouseUp);
+                  document.removeEventListener('mousemove', handleMouseMove);
+                  document.removeEventListener('mouseup', handleMouseUp);
                 };
-                document.addEventListener("mousemove", handleMouseMove);
-                document.addEventListener("mouseup", handleMouseUp);
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
               }
               e.stopPropagation();
             }}
           >
             <div
               className="luckysheet-modal-dialog-content"
-              style={{ width: "100%", height: "100%", overflow: "hidden" }}
+              style={{ width: '100%', height: '100%', overflow: 'hidden' }}
             >
               <iframe
                 title={`iframe-${frame.id}`}
                 src={frame.src}
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  pointerEvents: "none",
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  pointerEvents: 'none',
                 }}
               />
             </div>
@@ -114,7 +114,7 @@ const IframeBoxs: React.FC = () => {
             {isActive && (
               <>
                 <div className="luckysheet-modal-dialog-resize">
-                  {["lt", "mt", "lm", "rm", "rt", "lb", "mb", "rb"].map((v) => (
+                  {['lt', 'mt', 'lm', 'rm', 'rt', 'lb', 'mb', 'rb'].map((v) => (
                     <div
                       key={v}
                       className={`luckysheet-modal-dialog-resize-item luckysheet-modal-dialog-resize-item-${v}`}
@@ -124,7 +124,7 @@ const IframeBoxs: React.FC = () => {
                           context,
                           refs.globalCache,
                           e.nativeEvent,
-                          v
+                          v,
                         );
                         const handleMouseMove = (moveEvent: MouseEvent) => {
                           onIframeResize(context, refs.globalCache, moveEvent);
@@ -132,16 +132,16 @@ const IframeBoxs: React.FC = () => {
                         const handleMouseUp = () => {
                           onIframeResizeEnd(context, refs.globalCache);
                           document.removeEventListener(
-                            "mousemove",
-                            handleMouseMove
+                            'mousemove',
+                            handleMouseMove,
                           );
                           document.removeEventListener(
-                            "mouseup",
-                            handleMouseUp
+                            'mouseup',
+                            handleMouseUp,
                           );
                         };
-                        document.addEventListener("mousemove", handleMouseMove);
-                        document.addEventListener("mouseup", handleMouseUp);
+                        document.addEventListener('mousemove', handleMouseMove);
+                        document.addEventListener('mouseup', handleMouseUp);
                         e.stopPropagation();
                       }}
                     />
@@ -154,11 +154,11 @@ const IframeBoxs: React.FC = () => {
                     onClick={() => {
                       setContext((ctx) => {
                         const currentSheet = ctx.luckysheetfile.find(
-                          (sheet) => sheet.id === ctx.currentSheetId
+                          (sheet) => sheet.id === ctx.currentSheetId,
                         );
                         if (currentSheet) {
                           currentSheet.iframes = currentSheet.iframes?.filter(
-                            (f: any) => f.id !== frame.id
+                            (f: any) => f.id !== frame.id,
                           );
                         }
                         ctx.activeIframe = undefined;

@@ -1,18 +1,18 @@
-import _ from "lodash";
+import _ from 'lodash';
 
-import { Context, getFlowdata } from "../context";
-import { locale } from "../locale";
-import { CellMatrix, Selection, SearchResult, GlobalCache } from "../types";
+import { Context, getFlowdata } from '../context';
+import { locale } from '../locale';
+import { CellMatrix, Selection, SearchResult, GlobalCache } from '../types';
 import {
   chatatABC,
   getRegExpStr,
   getSheetIndex,
   isAllowEdit,
   replaceHtml,
-} from "../utils";
-import { setCellValue } from "./cell";
-import { valueShowEs } from "./format";
-import { normalizeSelection, scrollToHighlightCell } from "./selection";
+} from '../utils';
+import { setCellValue } from './cell';
+import { valueShowEs } from './format';
+import { normalizeSelection, scrollToHighlightCell } from './selection';
 
 export function getSearchIndexArr(
   searchText: string,
@@ -25,7 +25,7 @@ export function getSearchIndexArr(
     regCheck: false,
     wordCheck: false,
     caseCheck: false,
-  }
+  },
 ) {
   const arr = [];
   const obj = {};
@@ -47,7 +47,7 @@ export function getSearchIndexArr(
             value = value.toString();
           }
 
-          if (value != null && value !== "") {
+          if (value != null && value !== '') {
             value = value.toString();
 
             // 1. 勾选整词 直接匹配
@@ -77,9 +77,9 @@ export function getSearchIndexArr(
               let reg;
               // 是否区分大小写
               if (caseCheck) {
-                reg = new RegExp(getRegExpStr(searchText), "g");
+                reg = new RegExp(getRegExpStr(searchText), 'g');
               } else {
-                reg = new RegExp(getRegExpStr(searchText), "ig");
+                reg = new RegExp(getRegExpStr(searchText), 'ig');
               }
 
               if (reg.test(value)) {
@@ -121,11 +121,11 @@ export function searchNext(
     regCheck: boolean;
     wordCheck: boolean;
     caseCheck: boolean;
-  }
+  },
 ) {
   const { findAndReplace } = locale(ctx);
   const flowdata = getFlowdata(ctx);
-  if (searchText === "" || searchText == null || flowdata == null) {
+  if (searchText === '' || searchText == null || flowdata == null) {
     return findAndReplace.searchInputTip;
   }
   let range: Selection[];
@@ -153,7 +153,7 @@ export function searchNext(
     searchText,
     range,
     flowdata,
-    checkModes
+    checkModes,
   );
 
   if (searchIndexArr.length === 0) {
@@ -250,11 +250,11 @@ export function searchAll(
     regCheck: boolean;
     wordCheck: boolean;
     caseCheck: boolean;
-  }
+  },
 ): SearchResult[] {
   const flowdata = getFlowdata(ctx);
   const searchResult: SearchResult[] = [];
-  if (searchText === "" || searchText == null || flowdata == null) {
+  if (searchText === '' || searchText == null || flowdata == null) {
     return searchResult;
   }
 
@@ -281,7 +281,7 @@ export function searchAll(
     searchText,
     range,
     flowdata,
-    checkModes
+    checkModes,
   );
 
   if (searchIndexArr.length === 0) {
@@ -298,7 +298,7 @@ export function searchAll(
     const value_ShowEs = valueShowEs(
       searchIndexArr[i].r,
       searchIndexArr[i].c,
-      flowdata
+      flowdata,
     ).toString();
 
     // if (value_ShowEs.indexOf("</") > -1 && value_ShowEs.indexOf(">") > -1) {
@@ -342,9 +342,9 @@ export function searchAll(
 export function onSearchDialogMoveStart(
   globalCache: GlobalCache,
   e: MouseEvent,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
-  const box = document.getElementById("fortune-search-replace");
+  const box = document.getElementById('fortune-search-replace');
   if (!box) return;
   // eslint-disable-next-line prefer-const
   let { top, left, width, height } = box.getBoundingClientRect();
@@ -352,7 +352,7 @@ export function onSearchDialogMoveStart(
   left -= rect.left;
   top -= rect.top;
   const initialPosition = { left, top, width, height };
-  _.set(globalCache, "searchDialog.moveProps", {
+  _.set(globalCache, 'searchDialog.moveProps', {
     cursorMoveStartPosition: {
       x: e.pageX,
       y: e.pageY,
@@ -365,7 +365,7 @@ export function onSearchDialogMove(globalCache: GlobalCache, e: MouseEvent) {
   const searchDialog = globalCache?.searchDialog;
   const moveProps = searchDialog?.moveProps;
   if (moveProps == null) return;
-  const dialog = document.getElementById("fortune-search-replace");
+  const dialog = document.getElementById('fortune-search-replace');
   const { x: startX, y: startY } = moveProps.cursorMoveStartPosition!;
   let { top, left } = moveProps.initialPosition!;
   left += e.pageX - startX;
@@ -376,7 +376,7 @@ export function onSearchDialogMove(globalCache: GlobalCache, e: MouseEvent) {
 }
 
 export function onSearchDialogMoveEnd(globalCache: GlobalCache) {
-  _.set(globalCache, "searchDialog.moveProps", undefined);
+  _.set(globalCache, 'searchDialog.moveProps', undefined);
 }
 
 export function replace(
@@ -387,7 +387,7 @@ export function replace(
     regCheck: boolean;
     wordCheck: boolean;
     caseCheck: boolean;
-  }
+  },
 ) {
   const { findAndReplace } = locale(ctx);
   const allowEdit = isAllowEdit(ctx);
@@ -396,7 +396,7 @@ export function replace(
   }
 
   const flowdata = getFlowdata(ctx);
-  if (searchText === "" || searchText == null || flowdata == null) {
+  if (searchText === '' || searchText == null || flowdata == null) {
     return findAndReplace.searchInputTip;
   }
 
@@ -423,7 +423,7 @@ export function replace(
     searchText,
     range,
     flowdata,
-    checkModes
+    checkModes,
   );
 
   if (searchIndexArr.length === 0) {
@@ -471,19 +471,19 @@ export function replace(
       ctx.hooks.updateCellYdoc([
         {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r, c, v: d?.[r]?.[c] ?? null },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         },
       ]);
     }
   } else {
     let reg;
     if (checkModes.caseCheck) {
-      reg = new RegExp(getRegExpStr(searchText), "g");
+      reg = new RegExp(getRegExpStr(searchText), 'g');
     } else {
-      reg = new RegExp(getRegExpStr(searchText), "ig");
+      reg = new RegExp(getRegExpStr(searchText), 'ig');
     }
 
     r = searchIndexArr[count].r;
@@ -500,10 +500,10 @@ export function replace(
       ctx.hooks.updateCellYdoc([
         {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r, c, v: d?.[r]?.[c] ?? null },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         },
       ]);
     }
@@ -528,7 +528,7 @@ export function replaceAll(
     regCheck: boolean;
     wordCheck: boolean;
     caseCheck: boolean;
-  }
+  },
 ) {
   const { findAndReplace } = locale(ctx);
   const allowEdit = isAllowEdit(ctx);
@@ -537,7 +537,7 @@ export function replaceAll(
   }
 
   const flowdata = getFlowdata(ctx);
-  if (searchText === "" || searchText == null || flowdata == null) {
+  if (searchText === '' || searchText == null || flowdata == null) {
     return findAndReplace.searchInputTip;
   }
 
@@ -564,7 +564,7 @@ export function replaceAll(
     searchText,
     range,
     flowdata,
-    checkModes
+    checkModes,
   );
 
   if (searchIndexArr.length === 0) {
@@ -577,7 +577,7 @@ export function replaceAll(
     path: string[];
     key?: string;
     value: any;
-    type?: "update" | "delete";
+    type?: 'update' | 'delete';
   }[] = [];
   let replaceCount = 0;
   if (checkModes.wordCheck) {
@@ -595,10 +595,10 @@ export function replaceAll(
       if (ctx?.hooks?.updateCellYdoc) {
         cellChanges.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r, c, v: d?.[r]?.[c] ?? null },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         });
       }
 
@@ -608,9 +608,9 @@ export function replaceAll(
   } else {
     let reg;
     if (checkModes.caseCheck) {
-      reg = new RegExp(getRegExpStr(searchText), "g");
+      reg = new RegExp(getRegExpStr(searchText), 'g');
     } else {
-      reg = new RegExp(getRegExpStr(searchText), "ig");
+      reg = new RegExp(getRegExpStr(searchText), 'ig');
     }
 
     for (let i = 0; i < searchIndexArr.length; i += 1) {
@@ -627,10 +627,10 @@ export function replaceAll(
       if (ctx?.hooks?.updateCellYdoc) {
         cellChanges.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r, c, v: d?.[r]?.[c] ?? null },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         });
       }
 

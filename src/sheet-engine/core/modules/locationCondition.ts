@@ -1,10 +1,10 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { normalizeSelection } from "./selection";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { normalizeSelection } from './selection';
 
 export function deleteCellInSave(
   cellSave: Record<string, number>,
-  range: { row: any[]; column: any[] }
+  range: { row: any[]; column: any[] },
 ): Record<string, number> {
   for (let r = range.row[0]; r <= range.row[1]; r += 1) {
     for (let c = range.column[0]; c <= range.column[1]; c += 1) {
@@ -21,7 +21,7 @@ export function getRangeArr(
   maxC: number, // 选区列终点
   cellSave: Record<string, number>,
   rangeArr: { row: (number | null)[]; column: (number | null)[] }[],
-  ctx: Context
+  ctx: Context,
 ): any {
   // 判断有没有符合条件的cell，为0说明没有符合条件的，直接返回。
   if (Object.keys(cellSave).length === 0) {
@@ -109,34 +109,34 @@ export function getRangeArr(
 
 // 获取操作列表
 export function getOptionValue(
-  constants: Record<string, boolean>
+  constants: Record<string, boolean>,
 ): string | undefined {
   const tempConstans = _.cloneDeep(constants);
   const len = _.filter(tempConstans, (o) => o).length;
   let value;
   if (len === 0) {
-    value = "";
+    value = '';
   } else if (len === 5) {
-    value = "all";
+    value = 'all';
   } else {
     const arr: string[] = [];
     _.toPairs(constants).forEach((entry) => {
       const [k, v] = entry;
       if (v) {
-        if (k === "locationDate") {
-          arr.push("d");
-        } else if (k === "locationDigital") {
-          arr.push("n");
-        } else if (k === "locationString") {
-          arr.push("s,g");
-        } else if (k === "locationBool") {
-          arr.push("b");
-        } else if (k === "locationError") {
-          arr.push("e");
+        if (k === 'locationDate') {
+          arr.push('d');
+        } else if (k === 'locationDigital') {
+          arr.push('n');
+        } else if (k === 'locationString') {
+          arr.push('s,g');
+        } else if (k === 'locationBool') {
+          arr.push('b');
+        } else if (k === 'locationError') {
+          arr.push('e');
         }
       }
     });
-    value = arr.join(",");
+    value = arr.join(',');
   }
   return value;
 }
@@ -167,13 +167,13 @@ export function applyLocation(
   range: { row: any[]; column: any[] }[],
   type: string,
   value: string | undefined,
-  ctx: Context
+  ctx: Context,
 ) {
   let rangeArr: { column: any[]; row: any[] }[] = [];
   if (
-    type === "locationFormula" ||
-    type === "locationConstant" ||
-    type === "locationNull"
+    type === 'locationFormula' ||
+    type === 'locationConstant' ||
+    type === 'locationNull'
   ) {
     // 公式 常量 空值
     let minR = null;
@@ -212,11 +212,11 @@ export function applyLocation(
             cell = flowData[cell.mc.r][cell.mc.c];
           }
           if (
-            type === "locationFormula" &&
+            type === 'locationFormula' &&
             !!cell &&
             cell.v !== null &&
             !!cell.f &&
-            (value === "all" ||
+            (value === 'all' ||
               (!!cell.ct &&
                 !!value &&
                 !!cell.ct.t &&
@@ -224,13 +224,13 @@ export function applyLocation(
           ) {
             cellSave[`${r}_${c}`] = 0;
           } else if (
-            type === "locationConstant" &&
+            type === 'locationConstant' &&
             cell?.v &&
-            (value === "all" || (cell?.ct?.t && value!.indexOf(cell.ct.t) > -1))
+            (value === 'all' || (cell?.ct?.t && value!.indexOf(cell.ct.t) > -1))
           ) {
             cellSave[`${r}_${c}`] = 0;
           } else if (
-            type === "locationNull" &&
+            type === 'locationNull' &&
             (cell === null || cell.v === null)
           ) {
             cellSave[`${r}_${c}`] = 0;
@@ -239,7 +239,7 @@ export function applyLocation(
       }
     }
     rangeArr = getRangeArr(minR, maxR, minC, maxC, cellSave, rangeArr, ctx);
-  } else if (type === "locationCF") {
+  } else if (type === 'locationCF') {
     // TODO定位条件
     // 条件格式
     // const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
@@ -248,7 +248,7 @@ export function applyLocation(
     // if (ruleArr === null || ruleArr?.length === 0) {
     //   return [];
     // }
-  } else if (type === "locationRowSpan") {
+  } else if (type === 'locationRowSpan') {
     for (let s = 0; s < range.length; s += 1) {
       if (range[s].row[0] === range[s].row[1]) {
         continue;
@@ -263,7 +263,7 @@ export function applyLocation(
         }
       }
     }
-  } else if (type === "locationColumnSpan") {
+  } else if (type === 'locationColumnSpan') {
     // 间隔列
     for (let s = 0; s < range.length; s += 1) {
       if (range[s].column[0] === range[s].column[1]) {

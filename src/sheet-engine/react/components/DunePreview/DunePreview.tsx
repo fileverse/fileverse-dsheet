@@ -1,6 +1,6 @@
-import React from "react";
-import { sanitizeDuneUrl } from "@sheet-engine/core";
-import "./index.css";
+import React from 'react';
+import { sanitizeDuneUrl } from '@sheet-engine/core';
+import './index.css';
 
 interface DunePreviewProps {
   url: string;
@@ -40,9 +40,9 @@ const DunePreview: React.FC<DunePreviewProps> = ({
           src={embedUrl}
           title="Dune Chart Preview"
           style={{
-            width: "100%",
-            height: "100%",
-            border: "none",
+            width: '100%',
+            height: '100%',
+            border: 'none',
           }}
         />
       </div>

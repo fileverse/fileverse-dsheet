@@ -1,16 +1,16 @@
-import _ from "lodash";
-import { mergeBorder } from "./cell";
+import _ from 'lodash';
+import { mergeBorder } from './cell';
 
-import { Context, getFlowdata } from "../context";
-import { CellMatrix, GlobalCache } from "../types";
-import { colLocation, rowLocation } from "./location";
-import { isAllowEdit } from "../utils";
+import { Context, getFlowdata } from '../context';
+import { CellMatrix, GlobalCache } from '../types';
+import { colLocation, rowLocation } from './location';
+import { isAllowEdit } from '../utils';
 
 export function getArrowCanvasSize(
   fromX: number,
   fromY: number,
   toX: number,
-  toY: number
+  toY: number,
 ) {
   let left = toX - 5;
 
@@ -69,13 +69,13 @@ export function drawArrow(
   },
   color?: string,
   theta?: number,
-  headlen?: number
+  headlen?: number,
 ) {
   if (rc) return;
   const canvas = document.getElementById(
-    `arrowCanvas-${rc}`
+    `arrowCanvas-${rc}`,
   ) as HTMLCanvasElement;
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext('2d');
   if (!canvas || !ctx) return;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
@@ -90,7 +90,7 @@ export function drawArrow(
   headlen = headlen || 6;
   // width = width || 1;
   const arrowWidth = 1;
-  color = color || "#000";
+  color = color || '#000';
 
   // 计算各角度和对应的P2,P3坐标
   const angle = (Math.atan2(fromY - toY, fromX - toX) * 180) / Math.PI;
@@ -158,7 +158,7 @@ export function getCellTopRightPostion(
   ctx: Context,
   flowdata: CellMatrix,
   r: number,
-  c: number
+  c: number,
 ) {
   // let row = ctx.visibledatarow[r];
   let row_pre = r - 1 === -1 ? 0 : ctx.visibledatarow[r - 1];
@@ -182,7 +182,7 @@ export function getCommentBoxByRC(
   ctx: Context,
   flowdata: CellMatrix,
   r: number,
-  c: number
+  c: number,
 ) {
   const comment = flowdata[r][c]?.ps;
   const { toX, toY } = getCellTopRightPostion(ctx, flowdata, r, c);
@@ -211,7 +211,7 @@ export function getCommentBoxByRC(
     comment?.height == null
       ? commentBoxProps.defaultHeight * ctx.zoomRatio
       : comment.height * ctx.zoomRatio;
-  const value = comment?.value == null ? "" : comment.value;
+  const value = comment?.value == null ? '' : comment.value;
 
   if (top < 0) {
     top = 2;
@@ -225,7 +225,7 @@ export function setEditingComment(
   ctx: Context,
   flowdata: CellMatrix,
   r: number,
-  c: number
+  c: number,
 ) {
   ctx.editingCommentBox = getCommentBoxByRC(ctx, flowdata, r, c);
 }
@@ -238,7 +238,7 @@ export function removeEditingComment(ctx: Context, globalCache: GlobalCache) {
   if (!r || !c || !editingCommentBoxEle) return;
   r = parseInt(r, 10);
   c = parseInt(c, 10);
-  const value = editingCommentBoxEle.innerHTML || "";
+  const value = editingCommentBoxEle.innerHTML || '';
   const flowdata = getFlowdata(ctx);
   globalCache.editingCommentBoxEle = undefined;
   if (!flowdata) return;
@@ -261,10 +261,10 @@ export function removeEditingComment(ctx: Context, globalCache: GlobalCache) {
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: cell },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       },
     ]);
   }
@@ -280,7 +280,7 @@ export function newComment(
   ctx: Context,
   globalCache: GlobalCache | undefined,
   r: number,
-  c: number
+  c: number,
 ) {
   // if(!checkProtectionAuthorityNormal(Store.currentSheetId, "editObjects")){
   //     return;
@@ -306,7 +306,7 @@ export function newComment(
     top: null,
     width: null,
     height: null,
-    value: "",
+    value: '',
     isShow: false,
   };
   ctx.editingCommentBox = {
@@ -318,10 +318,10 @@ export function newComment(
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: flowdata[r][c] ?? null },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       },
     ]);
   }
@@ -337,7 +337,7 @@ export function editComment(
   ctx: Context,
   globalCache: GlobalCache,
   r: number,
-  c: number
+  c: number,
 ) {
   // if(!checkProtectionAuthorityNormal(Store.currentSheetId, "editObjects")){
   //     return;
@@ -351,7 +351,7 @@ export function editComment(
   const commentBoxes = _.concat(ctx.commentBoxes, ctx.editingCommentBox);
   if (_.findIndex(commentBoxes, (v) => v?.rc === `${r}_${c}`) !== -1) {
     const editCommentBox = document.getElementById(
-      `comment-editor-${r}_${c}`
+      `comment-editor-${r}_${c}`,
     ) as HTMLDivElement;
     editCommentBox?.focus();
   }
@@ -367,7 +367,7 @@ export function deleteComment(
   ctx: Context,
   globalCache: GlobalCache,
   r: number,
-  c: number
+  c: number,
 ) {
   // if(!checkProtectionAuthorityNormal(Store.currentSheetId, "editObjects")){
   //     return;
@@ -389,10 +389,10 @@ export function deleteComment(
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: cell },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       },
     ]);
   }
@@ -406,12 +406,12 @@ export function deleteComment(
 
 export function showComments(
   ctx: Context,
-  commentShowCells: { r: number; c: number }[]
+  commentShowCells: { r: number; c: number }[],
 ) {
   const flowdata = getFlowdata(ctx);
   if (flowdata) {
     const commentBoxes = commentShowCells.map(({ r, c }) =>
-      getCommentBoxByRC(ctx, flowdata, r, c)
+      getCommentBoxByRC(ctx, flowdata, r, c),
     );
     ctx.commentBoxes = commentBoxes;
   }
@@ -421,7 +421,7 @@ export function showHideComment(
   ctx: Context,
   globalCache: GlobalCache,
   r: number,
-  c: number
+  c: number,
 ) {
   const flowdata = getFlowdata(ctx);
   const comment = flowdata?.[r][c]?.ps;
@@ -441,10 +441,10 @@ export function showHideComment(
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: cell },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       },
     ]);
   }
@@ -477,7 +477,7 @@ export function showHideAllComments(ctx: Context) {
       path: string[];
       key?: string;
       value: any;
-      type?: "update" | "delete";
+      type?: 'update' | 'delete';
     }[] = [];
     if (isAllShow) {
       // 全部显示，操作为隐藏所有批注
@@ -490,10 +490,10 @@ export function showHideAllComments(ctx: Context) {
           rcs.push(`${r}_${c}`);
           cellChanges.push({
             sheetId: ctx.currentSheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c, v: flowdata[r][c] ?? null },
             key: `${r}_${c}`,
-            type: "update",
+            type: 'update',
           });
         }
       }
@@ -508,10 +508,10 @@ export function showHideAllComments(ctx: Context) {
           comment.isShow = true;
           cellChanges.push({
             sheetId: ctx.currentSheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c, v: flowdata[r][c] ?? null },
             key: `${r}_${c}`,
-            type: "update",
+            type: 'update',
           });
         }
       }
@@ -532,7 +532,7 @@ export function overShowComment(
   e: MouseEvent,
   scrollX: HTMLDivElement,
   scrollY: HTMLDivElement,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;
@@ -643,7 +643,7 @@ export function overShowComment(
       ? commentBoxProps.defaultHeight * ctx.zoomRatio
       : comment.height * ctx.zoomRatio;
   const size = getArrowCanvasSize(left, top, toX, toY);
-  const value = comment.value == null ? "" : comment.value;
+  const value = comment.value == null ? '' : comment.value;
 
   ctx.hoveredCommentBox = {
     r,
@@ -674,11 +674,11 @@ export function onCommentBoxResizeStart(
   e: MouseEvent,
   { r, c, rc }: { r: number; c: number; rc: string },
   resizingId: string,
-  resizingSide: string
+  resizingSide: string,
 ) {
   const position = getCommentBoxPosition(resizingId);
   if (position) {
-    _.set(globalCache, "commentBox", {
+    _.set(globalCache, 'commentBox', {
       cursorMoveStartPosition: {
         x: e.pageX,
         y: e.pageY,
@@ -694,7 +694,7 @@ export function onCommentBoxResizeStart(
 export function onCommentBoxResize(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   if (ctx.allowEdit === false) return false;
   const commentBox = globalCache?.commentBox;
@@ -706,7 +706,7 @@ export function onCommentBoxResize(
     const dy = e.pageY - startY;
     const minHeight = 60 * ctx.zoomRatio;
     const minWidth = 1.5 * 60 * ctx.zoomRatio;
-    if (["lm", "lt", "lb"].includes(commentBox.resizingSide)) {
+    if (['lm', 'lt', 'lb'].includes(commentBox.resizingSide)) {
       if (width - dx < minWidth) {
         left += width - minWidth;
         width = minWidth;
@@ -717,10 +717,10 @@ export function onCommentBoxResize(
       if (left < 0) left = 0;
       (box as HTMLDivElement).style.left = `${left}px`;
     }
-    if (["rm", "rt", "rb"].includes(commentBox.resizingSide)) {
+    if (['rm', 'rt', 'rb'].includes(commentBox.resizingSide)) {
       width = width + dx < minWidth ? minWidth : width + dx;
     }
-    if (["mt", "lt", "rt"].includes(commentBox.resizingSide)) {
+    if (['mt', 'lt', 'rt'].includes(commentBox.resizingSide)) {
       if (height - dy < minHeight) {
         top += height - minHeight;
         height = minHeight;
@@ -731,7 +731,7 @@ export function onCommentBoxResize(
       if (top < 0) top = 0;
       (box as HTMLDivElement).style.top = `${top}px`;
     }
-    if (["mb", "lb", "rb"].includes(commentBox.resizingSide)) {
+    if (['mb', 'lb', 'rb'].includes(commentBox.resizingSide)) {
       height = height + dy < minHeight ? minHeight : height + dy;
     }
     (box as HTMLDivElement).style.width = `${width}px`;
@@ -764,10 +764,10 @@ export function onCommentBoxResizeEnd(ctx: Context, globalCache: GlobalCache) {
         ctx.hooks.updateCellYdoc([
           {
             sheetId: ctx.currentSheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c, v: cell },
             key: `${r}_${c}`,
-            type: "update",
+            type: 'update',
           },
         ]);
       }
@@ -780,12 +780,12 @@ export function onCommentBoxMoveStart(
   globalCache: GlobalCache,
   e: MouseEvent,
   { r, c, rc }: { r: number; c: number; rc: string },
-  movingId: string
+  movingId: string,
 ) {
   const position = getCommentBoxPosition(movingId);
   if (position) {
     const { top, left } = position;
-    _.set(globalCache, "commentBox", {
+    _.set(globalCache, 'commentBox', {
       cursorMoveStartPosition: {
         x: e.pageX,
         y: e.pageY,
@@ -800,7 +800,7 @@ export function onCommentBoxMoveStart(
 export function onCommentBoxMove(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return false;
@@ -840,10 +840,10 @@ export function onCommentBoxMoveEnd(ctx: Context, globalCache: GlobalCache) {
         ctx.hooks.updateCellYdoc([
           {
             sheetId: ctx.currentSheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c, v: cell },
             key: `${r}_${c}`,
-            type: "update",
+            type: 'update',
           },
         ]);
       }

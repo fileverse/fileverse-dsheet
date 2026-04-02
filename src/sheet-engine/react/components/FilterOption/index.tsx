@@ -3,11 +3,11 @@ import {
   fixColumnStyleOverflowInFreeze,
   fixRowStyleOverflowInFreeze,
   getSheetIndex,
-} from "@sheet-engine/core";
-import _ from "lodash";
-import React, { useCallback, useContext, useEffect } from "react";
-import WorkbookContext from "../../context";
-import SVGIcon from "../SVGIcon";
+} from '@sheet-engine/core';
+import _ from 'lodash';
+import React, { useCallback, useContext, useEffect } from 'react';
+import WorkbookContext from '../../context';
+import SVGIcon from '../SVGIcon';
 
 const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
   getContainer,
@@ -47,7 +47,7 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
         left: number;
         top: number;
       },
-      i: number
+      i: number,
     ) => {
       if (filterOptions == null) return;
       setContext((draftCtx) => {
@@ -71,22 +71,22 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
           startCol: filterOptions.startCol,
           endCol: filterOptions.endCol,
           hiddenRows: _.keys(draftCtx.filter[i]?.rowhidden).map((r) =>
-            parseInt(r, 10)
+            parseInt(r, 10),
           ),
           listBoxMaxHeight: 400,
         };
       });
     },
-    [filterOptions, getContainer, refs.scrollbarX, refs.scrollbarY, setContext]
+    [filterOptions, getContainer, refs.scrollbarX, refs.scrollbarY, setContext],
   );
 
   const freezeType = frozen?.type;
   let frozenColumns = -1;
   let frozenRows = -1;
 
-  if (freezeType === "row") frozenRows = 0;
-  else if (freezeType === "column") frozenColumns = 0;
-  else if (freezeType === "both") {
+  if (freezeType === 'row') frozenRows = 0;
+  else if (freezeType === 'column') frozenColumns = 0;
+  else if (freezeType === 'both') {
     frozenColumns = 0;
     frozenRows = 0;
   } else {
@@ -107,20 +107,20 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
             width: filterOptions.width,
             top: filterOptions.top,
             height: filterOptions.height,
-            display: "block",
+            display: 'block',
           },
           fixRowStyleOverflowInFreeze(
             context,
             filterOptions.startRow,
             filterOptions.endRow,
-            refs.globalCache.freezen?.[context.currentSheetId]
+            refs.globalCache.freezen?.[context.currentSheetId],
           ),
           fixColumnStyleOverflowInFreeze(
             context,
             filterOptions.startCol,
             filterOptions.endCol,
-            refs.globalCache.freezen?.[context.currentSheetId]
-          )
+            refs.globalCache.freezen?.[context.currentSheetId],
+          ),
         )}
       />
       {filterOptions.items.map((v, i) => {
@@ -129,14 +129,14 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
           context,
           i + filterOptions.startCol,
           i + filterOptions.startCol,
-          refs.globalCache.freezen?.[context.currentSheetId]
+          refs.globalCache.freezen?.[context.currentSheetId],
         );
 
         const rowOverflowFreezeStyle = fixRowStyleOverflowInFreeze(
           context,
           filterOptions.startRow,
           filterOptions.startRow,
-          refs.globalCache.freezen?.[context.currentSheetId]
+          refs.globalCache.freezen?.[context.currentSheetId],
         );
 
         const col = visibledatacolumn[v.col];
@@ -171,7 +171,7 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
               width: undefined,
             })}
             className={`luckysheet-filter-options ${
-              filterParam == null ? "" : "luckysheet-filter-options-active"
+              filterParam == null ? '' : 'luckysheet-filter-options-active'
             }`}
           >
             <SVGIcon name="filter" width={15} height={15} />

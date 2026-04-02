@@ -72,7 +72,7 @@ export const formulaResponseUiSync = ({
         column,
         apiData,
         sheetEditorRef,
-        newValue
+        newValue,
       })
     ) {
       return;
@@ -104,7 +104,7 @@ export const formulaResponseUiSync = ({
           },
           key: row + '_' + (column + index),
           type: 'update',
-        })
+        });
         return finalData;
       }
       const existingHeader = getCellClone(row, column + index, sheetEditorRef);
@@ -126,7 +126,7 @@ export const formulaResponseUiSync = ({
         },
         key: row + '_' + (column + index),
         type: 'update',
-      })
+      });
       return finalData;
     });
     data.push(headerRow);
@@ -159,22 +159,22 @@ export const formulaResponseUiSync = ({
         });
         changesForYDoc.push({
           sheetId: currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r: i + row + 1,
             c: j + column,
             v: {
-              "v": cellValue,
-              "ct": {
-                "t": "n",
-                "fa": "General"
+              v: cellValue,
+              ct: {
+                t: 'n',
+                fa: 'General',
               },
-              "m": cellValue
-            }
+              m: cellValue,
+            },
           },
           key: `${i + row + 1}_${j + column}`,
-          type: "update",
-        })
+          type: 'update',
+        });
       });
       data.push(tempData);
     }
@@ -207,7 +207,7 @@ export const formulaResponseUiSync = ({
           },
           key: row + '_' + (column + index),
           type: 'update',
-        })
+        });
         return finalData;
       }
       const existingHeader = getCellClone(row, column + index, sheetEditorRef);
@@ -229,7 +229,7 @@ export const formulaResponseUiSync = ({
         },
         key: row + '_' + (column + index),
         type: 'update',
-      })
+      });
       return finalData;
     });
     data.push(headerRow);
@@ -253,22 +253,22 @@ export const formulaResponseUiSync = ({
         });
         changesForYDoc.push({
           sheetId: currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r: i + row + 1,
             c: j + column,
             v: {
-              "v": cellValue,
-              "ct": {
-                "t": "n",
-                "fa": "General"
+              v: cellValue,
+              ct: {
+                t: 'n',
+                fa: 'General',
               },
-              "m": cellValue
+              m: cellValue,
             },
           },
           key: `${i + row + 1}_${j + column}`,
-          type: "update",
-        })
+          type: 'update',
+        });
       });
       data.push(tempData);
     }
@@ -276,7 +276,8 @@ export const formulaResponseUiSync = ({
   if (range) {
     //@ts-ignore
     sheetEditorRef.current?.setCellValuesByRange(data, range, {}, false);
-    const workbookHooks = sheetEditorRef.current?.getWorkbookContext()?.hooks as any;
+    const workbookHooks = sheetEditorRef.current?.getWorkbookContext()
+      ?.hooks as any;
     workbookHooks?.updateCellYdoc?.(changesForYDoc);
   }
 };
@@ -344,7 +345,7 @@ const tryInsertSingleValueIntoFormulaCell = ({
   column,
   apiData,
   sheetEditorRef,
-  newValue
+  newValue,
 }: {
   row: number;
   column: number;
@@ -378,13 +379,18 @@ const tryInsertSingleValueIntoFormulaCell = ({
   };
 
   if (newValue.f) {
-    newCell.f = newValue.f
+    newCell.f = newValue.f;
   }
 
-  sheetEditorRef.current?.setCellValuesByRange([[newCell]], {
-    row: [row, row],
-    column: [column, column],
-  }, {}, true);
+  sheetEditorRef.current?.setCellValuesByRange(
+    [[newCell]],
+    {
+      row: [row, row],
+      column: [column, column],
+    },
+    {},
+    true,
+  );
 
   return true;
 };

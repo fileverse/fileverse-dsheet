@@ -1,6 +1,6 @@
-export { handleCopy } from "./copy";
+export { handleCopy } from './copy';
 
-export { handleGlobalKeyDown } from "./keyboard";
+export { handleGlobalKeyDown } from './keyboard';
 
 export {
   fixPositionOnFrozenCells,
@@ -17,6 +17,6 @@ export {
   handleRowSizeHandleMouseDown,
   handleColFreezeHandleMouseDown,
   handleRowFreezeHandleMouseDown,
-} from "./mouse";
+} from './mouse';
 
-export { handlePaste, handlePasteByClick } from "./paste";
+export { handlePaste, handlePasteByClick } from './paste';

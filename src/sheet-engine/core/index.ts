@@ -1,9 +1,9 @@
-import * as api from "./api";
+import * as api from './api';
 
 export { api };
 
 // canvas
-export { Canvas, defaultStyle } from "./canvas";
+export { Canvas, defaultStyle } from './canvas';
 
 // context
 export {
@@ -13,12 +13,12 @@ export {
   initSheetIndex,
   updateContextWithSheetData,
   updateContextWithCanvas,
-} from "./context";
-export type { Context } from "./context";
+} from './context';
+export type { Context } from './context';
 
 // settings
-export { defaultSettings } from "./settings";
-export type { Settings, Hooks } from "./settings";
+export { defaultSettings } from './settings';
+export type { Settings, Hooks } from './settings';
 
 // events
 export {
@@ -40,10 +40,10 @@ export {
   handleRowSizeHandleMouseDown,
   handleColFreezeHandleMouseDown,
   handleRowFreezeHandleMouseDown,
-} from "./events";
+} from './events';
 
 // locale
-export * from "./locale";
+export * from './locale';
 
 // modules
 export {
@@ -246,8 +246,8 @@ export {
   hideCRCount,
   // cell (internal)
   getdatabyselection,
-} from "./modules";
-export type { FilterDate, FilterValue, FilterColor } from "./modules";
+} from './modules';
+export type { FilterDate, FilterValue, FilterColor } from './modules';
 
 // utils
 export {
@@ -264,8 +264,8 @@ export {
   patchToOp,
   opToPatch,
   inverseRowColOptions,
-} from "./utils";
-export type { PatchOptions, ChangedSheet } from "./utils";
+} from './utils';
+export type { PatchOptions, ChangedSheet } from './utils';
 
 // types
 export type {
@@ -283,7 +283,7 @@ export type {
   LinkCardProps,
   LiveQueryData,
   Freezen,
-} from "./types";
+} from './types';
 
 // animate
-export { cellFadeAnimator, markCellChanged } from "./animate";
+export { cellFadeAnimator, markCellChanged } from './animate';

@@ -1,22 +1,22 @@
-import _ from "lodash";
-import { Context } from "../context";
-import { deleteRowCol, insertRowCol } from "../modules";
-import { CommonOptions, getSheet } from "./common";
-import { INVALID_PARAMS } from "./errors";
-import { getSheetIndex } from "../utils";
+import _ from 'lodash';
+import { Context } from '../context';
+import { deleteRowCol, insertRowCol } from '../modules';
+import { CommonOptions, getSheet } from './common';
+import { INVALID_PARAMS } from './errors';
+import { getSheetIndex } from '../utils';
 
 export function freeze(
   ctx: Context,
-  type: "row" | "column" | "both",
+  type: 'row' | 'column' | 'both',
   range: { row: number; column: number },
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   const sheet = getSheet(ctx, options);
 
   const typeMap = {
-    row: "rangeRow",
-    column: "rangeColumn",
-    both: "rangeBoth",
+    row: 'rangeRow',
+    column: 'rangeColumn',
+    both: 'rangeBoth',
   };
   const innerType = typeMap[type];
 
@@ -32,17 +32,17 @@ export function freeze(
 
 export function insertRowOrColumn(
   ctx: Context,
-  type: "row" | "column",
+  type: 'row' | 'column',
   index: number,
   count: number,
-  direction: "lefttop" | "rightbottom",
-  options: CommonOptions = {}
+  direction: 'lefttop' | 'rightbottom',
+  options: CommonOptions = {},
 ) {
   if (
-    !["row", "column"].includes(type) ||
+    !['row', 'column'].includes(type) ||
     !_.isNumber(index) ||
     !_.isNumber(count) ||
-    !["lefttop", "rightbottom"].includes(direction)
+    !['lefttop', 'rightbottom'].includes(direction)
   ) {
     throw INVALID_PARAMS;
   }
@@ -64,13 +64,13 @@ export function insertRowOrColumn(
 
 export function deleteRowOrColumn(
   ctx: Context,
-  type: "row" | "column",
+  type: 'row' | 'column',
   start: number,
   end: number,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   if (
-    !["row", "column"].includes(type) ||
+    !['row', 'column'].includes(type) ||
     !_.isNumber(start) ||
     !_.isNumber(end)
   ) {
@@ -85,9 +85,9 @@ export function deleteRowOrColumn(
 export function hideRowOrColumn(
   ctx: Context,
   rowColInfo: string[],
-  type: "row" | "column"
+  type: 'row' | 'column',
 ) {
-  if (!["row", "column"].includes(type)) {
+  if (!['row', 'column'].includes(type)) {
     throw INVALID_PARAMS;
   }
 
@@ -95,7 +95,7 @@ export function hideRowOrColumn(
 
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
 
-  if (type === "row") {
+  if (type === 'row') {
     /* TODO: 工作表保护判断
     if (
       !checkProtectionAuthorityNormal(Store.currentSheetIndex, "formatRows")
@@ -126,7 +126,7 @@ export function hideRowOrColumn(
      * 符合最后一列的条件：要隐藏的index===表格的长度-1 或者
      * 记录隐藏数组里面的数-1===要隐藏的index
      */
-  } else if (type === "column") {
+  } else if (type === 'column') {
     // 隐藏列
     const colhidden = ctx.config.colhidden ?? {};
 
@@ -143,9 +143,9 @@ export function hideRowOrColumn(
 export function showRowOrColumn(
   ctx: Context,
   rowColInfo: string[],
-  type: "row" | "column"
+  type: 'row' | 'column',
 ) {
-  if (!["row", "column"].includes(type)) {
+  if (!['row', 'column'].includes(type)) {
     throw INVALID_PARAMS;
   }
 
@@ -153,7 +153,7 @@ export function showRowOrColumn(
 
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
 
-  if (type === "row") {
+  if (type === 'row') {
     /* TODO: 工作表保护判断
     if (
       !checkProtectionAuthorityNormal(Store.currentSheetIndex, "formatRows")
@@ -184,7 +184,7 @@ export function showRowOrColumn(
      * 符合最后一列的条件：要隐藏的index===表格的长度-1 或者
      * 记录隐藏数组里面的数-1===要隐藏的index
      */
-  } else if (type === "column") {
+  } else if (type === 'column') {
     // 隐藏列
     const colhidden = ctx.config.colhidden ?? {};
 
@@ -202,7 +202,7 @@ export function setRowHeight(
   ctx: Context,
   rowInfo: Record<string, number>,
   options: CommonOptions = {},
-  custom: boolean = false
+  custom: boolean = false,
 ) {
   if (!_.isPlainObject(rowInfo)) {
     throw INVALID_PARAMS;
@@ -240,7 +240,7 @@ export function setColumnWidth(
   ctx: Context,
   columnInfo: Record<string, number>,
   options: CommonOptions = {},
-  custom: boolean = false
+  custom: boolean = false,
 ) {
   if (!_.isPlainObject(columnInfo)) {
     throw INVALID_PARAMS;
@@ -278,7 +278,7 @@ export function setColumnWidth(
 export function getRowHeight(
   ctx: Context,
   rows: number[],
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   if (!_.isArray(rows) || rows.length === 0) {
     throw INVALID_PARAMS;
@@ -304,7 +304,7 @@ export function getRowHeight(
 export function getColumnWidth(
   ctx: Context,
   columns: number[],
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   if (!_.isArray(columns) || columns.length === 0) {
     throw INVALID_PARAMS;

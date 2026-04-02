@@ -1,10 +1,7 @@
-import _ from "lodash";
-import {
-  onImageMoveStart,
-  onImageResizeStart,
-} from "@sheet-engine/core";
-import React, { useContext, useMemo } from "react";
-import WorkbookContext from "../../context";
+import _ from 'lodash';
+import { onImageMoveStart, onImageResizeStart } from '@sheet-engine/core';
+import React, { useContext, useMemo } from 'react';
+import WorkbookContext from '../../context';
 
 const ImgBoxs: React.FC = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
@@ -20,7 +17,7 @@ const ImgBoxs: React.FC = () => {
           className="luckysheet-modal-dialog"
           style={{
             padding: 0,
-            position: "absolute",
+            position: 'absolute',
             zIndex: 300,
             width: activeImg.width * context.zoomRatio,
             height: activeImg.height * context.zoomRatio,
@@ -30,7 +27,7 @@ const ImgBoxs: React.FC = () => {
         >
           <div
             className="luckysheet-modal-dialog-border"
-            style={{ position: "absolute" }}
+            style={{ position: 'absolute' }}
           />
           <div
             className="luckysheet-modal-dialog-content"
@@ -41,7 +38,7 @@ const ImgBoxs: React.FC = () => {
               backgroundSize: `${activeImg.width * context.zoomRatio}px ${
                 activeImg.height * context.zoomRatio
               }px`,
-              backgroundRepeat: "no-repeat",
+              backgroundRepeat: 'no-repeat',
               // context.activeImg.width * context.zoomRatio +
               // context.activeImg.height * context.zoomRatio,
             }}
@@ -52,7 +49,7 @@ const ImgBoxs: React.FC = () => {
             }}
           />
           <div className="luckysheet-modal-dialog-resize">
-            {["lt", "mt", "lm", "rm", "rt", "lb", "mb", "rb"].map((v) => (
+            {['lt', 'mt', 'lm', 'rm', 'rt', 'lb', 'mb', 'rb'].map((v) => (
               <div
                 key={v}
                 className={`luckysheet-modal-dialog-resize-item luckysheet-modal-dialog-resize-item-${v}`}
@@ -109,7 +106,7 @@ const ImgBoxs: React.FC = () => {
                 width: width * context.zoomRatio,
                 height: height * context.zoomRatio,
                 padding: 0,
-                position: "absolute",
+                position: 'absolute',
                 left: left * context.zoomRatio,
                 top: top * context.zoomRatio,
                 zIndex: 200,
@@ -126,10 +123,10 @@ const ImgBoxs: React.FC = () => {
               <div
                 className="luckysheet-modal-dialog-content"
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  overflow: "hidden",
-                  position: "relative",
+                  width: '100%',
+                  height: '100%',
+                  overflow: 'hidden',
+                  position: 'relative',
                 }}
               >
                 <img
@@ -150,9 +147,9 @@ const ImgBoxs: React.FC = () => {
         id="luckysheet-modal-dialog-cropping"
         className="luckysheet-modal-dialog"
         style={{
-          display: "none",
+          display: 'none',
           padding: 0,
-          position: "absolute",
+          position: 'absolute',
           zIndex: 300,
         }}
       >
@@ -160,7 +157,7 @@ const ImgBoxs: React.FC = () => {
         <div className="cropping-content" />
         <div
           className="luckysheet-modal-dialog-border"
-          style={{ position: "absolute" }}
+          style={{ position: 'absolute' }}
         />
         <div className="luckysheet-modal-dialog-resize">
           <div className="resize-item lt" data-type="lt" />

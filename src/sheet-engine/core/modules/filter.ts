@@ -1,14 +1,14 @@
-import _ from "lodash";
-import { locale } from "../locale";
-import { Context, getFlowdata } from "../context";
-import { Cell, CellMatrix } from "../types";
-import { getSheetIndex, isAllowEdit, rgbToHex } from "../utils";
-import { update } from "./format";
-import { normalizeSelection } from "./selection";
-import { isRealNull } from "./validation";
-import { normalizedAttr } from "./cell";
-import { sortDataRange } from "./sort";
-import { checkCF, getComputeMap } from "./ConditionFormat";
+import _ from 'lodash';
+import { locale } from '../locale';
+import { Context, getFlowdata } from '../context';
+import { Cell, CellMatrix } from '../types';
+import { getSheetIndex, isAllowEdit, rgbToHex } from '../utils';
+import { update } from './format';
+import { normalizeSelection } from './selection';
+import { isRealNull } from './validation';
+import { normalizedAttr } from './cell';
+import { sortDataRange } from './sort';
+import { checkCF, getComputeMap } from './ConditionFormat';
 
 // 筛选配置状态
 export function labelFilterOptionState(
@@ -21,7 +21,7 @@ export function labelFilterOptionState(
   cindex: number,
   stc: number,
   edc: number,
-  saveData: boolean
+  saveData: boolean,
 ) {
   const param = {
     caljs,
@@ -72,7 +72,7 @@ export function orderbydatafiler(
   edr: number,
   edc: number,
   curr: number,
-  asc: boolean
+  asc: boolean,
 ) {
   const d = getFlowdata(ctx);
   if (d == null) {
@@ -124,11 +124,11 @@ export function createFilterOptions(
     | undefined,
   sheetId: string | undefined,
   filterObj?: any,
-  saveData?: boolean
+  saveData?: boolean,
 ) {
   // $(`#luckysheet-filter-selected-sheet${ctx.currentSheetIndex}`).remove();
   // $(`#luckysheet-filter-options-sheet${ctx.currentSheetIndex}`).remove();
-  // eslint-disable-next-line no-undef
+
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
   if (sheetId != null && sheetId !== ctx.currentSheetId) return;
@@ -145,9 +145,9 @@ export function createFilterOptions(
   const c2 = luckysheet_filter_save.column[1];
 
   const row = ctx.visibledatarow[r2] ?? 0;
-  const row_pre = r1 - 1 === -1 ? 0 : ctx.visibledatarow[r1 - 1] ?? 0;
+  const row_pre = r1 - 1 === -1 ? 0 : (ctx.visibledatarow[r1 - 1] ?? 0);
   const col = ctx.visibledatacolumn[c2] ?? 0;
-  const col_pre = c1 - 1 === -1 ? 0 : ctx.visibledatacolumn[c1 - 1] ?? 0;
+  const col_pre = c1 - 1 === -1 ? 0 : (ctx.visibledatacolumn[c1 - 1] ?? 0);
   const options = {
     startRow: r1,
     endRow: r2,
@@ -190,7 +190,7 @@ export function clearFilter(ctx: Context) {
   const hiddenRows = _.reduce(
     ctx.filter,
     (pre, curr) => _.assign(pre, curr?.rowhidden || {}),
-    {}
+    {},
   );
   ctx.config.rowhidden = _.omit(ctx.config.rowhidden, _.keys(hiddenRows));
   ctx.luckysheet_filter_save = undefined;
@@ -274,7 +274,7 @@ export function createFilter(ctx: Context) {
 
   ctx.luckysheet_filter_save = _.assign(
     {},
-    filterSave?.[0] || ctx.luckysheet_select_save?.[0]
+    filterSave?.[0] || ctx.luckysheet_select_save?.[0],
   );
 
   createFilterOptions(ctx, ctx.luckysheet_filter_save, undefined, {}, true);
@@ -317,7 +317,7 @@ function getFilterHiddenRows(ctx: Context, col: number, startCol: number) {
     ctx.filter,
     (pre, curr) =>
       _.assign(pre, (curr?.cindex !== col && curr?.rowhidden) || {}),
-    {}
+    {},
   );
   const hiddenRows = ctx.filter[col - startCol]?.rowhidden || {};
   return { otherHiddenRows, hiddenRows };
@@ -328,12 +328,12 @@ export function getFilterColumnValues(
   col: number,
   startRow: number,
   endRow: number,
-  startCol: number
+  startCol: number,
 ) {
   const { otherHiddenRows, hiddenRows } = getFilterHiddenRows(
     ctx,
     col,
-    startCol
+    startCol,
   );
   const visibleRows: number[] = [];
   const flattenValues: string[] = [];
@@ -374,20 +374,20 @@ export function getFilterColumnValues(
       cell != null &&
       !isRealNull(cell.v) &&
       cell.ct != null &&
-      cell.ct.t === "d"
+      cell.ct.t === 'd'
     ) {
       // 单元格是日期
-      const dateStr: string = update("YYYY-MM-DD", cell.v);
+      const dateStr: string = update('YYYY-MM-DD', cell.v);
 
-      const y = dateStr.split("-")[0];
-      const m = dateStr.split("-")[1];
-      const d = dateStr.split("-")[2];
+      const y = dateStr.split('-')[0];
+      const m = dateStr.split('-')[1];
+      const d = dateStr.split('-')[2];
 
       let yearValue = _.find(dates, (v) => v.value === y);
       if (yearValue == null) {
         yearValue = {
           key: y,
-          type: "year",
+          type: 'year',
           value: y,
           text: y + filter.filiterYearText,
           children: [],
@@ -402,7 +402,7 @@ export function getFilterColumnValues(
       if (monthValue == null) {
         monthValue = {
           key: `${y}-${m}`,
-          type: "month",
+          type: 'month',
           value: m,
           text: m + filter.filiterMonthText,
           children: [],
@@ -416,7 +416,7 @@ export function getFilterColumnValues(
       if (dayValue == null) {
         dayValue = {
           key: dateStr,
-          type: "day",
+          type: 'day',
           value: d,
           text: d,
           children: [],
@@ -498,7 +498,7 @@ export function getFilterColumnColors(
   ctx: Context,
   col: number,
   startRow: number,
-  endRow: number
+  endRow: number,
 ) {
   // 遍历筛选列颜色
   const bgMap: Map<string, FilterColor> = new Map(); // 单元格颜色
@@ -513,10 +513,10 @@ export function getFilterColumnColors(
     const cell = flowdata[r][col];
 
     // 单元格颜色
-    let bg = normalizedAttr(flowdata, r, col, "bg");
+    let bg = normalizedAttr(flowdata, r, col, 'bg');
 
     if (bg == null) {
-      bg = "#ffffff";
+      bg = '#ffffff';
     }
 
     // const checksAF = alternateformat.checksAF(r, col, af_compute);
@@ -532,7 +532,7 @@ export function getFilterColumnColors(
       bg = checksCF.cellColor;
     }
 
-    if (bg.indexOf("rgb") > -1) {
+    if (bg.indexOf('rgb') > -1) {
       bg = rgbToHex(bg);
     }
 
@@ -545,7 +545,7 @@ export function getFilterColumnColors(
     }
 
     // 字体颜色
-    let fc = normalizedAttr(flowdata, r, col, "fc");
+    let fc = normalizedAttr(flowdata, r, col, 'fc');
 
     if (checksAF.length > 0) {
       // 若单元格有交替颜色
@@ -558,7 +558,7 @@ export function getFilterColumnColors(
     }
 
     if (fc != null) {
-      if (fc.indexOf("rgb") > -1) {
+      if (fc.indexOf('rgb') > -1) {
         fc = rgbToHex(fc);
       }
 
@@ -606,7 +606,7 @@ export function saveFilter(
   ed_r: number,
   cindex: number,
   st_c: number,
-  ed_c: number
+  ed_c: number,
 ) {
   const { otherHiddenRows } = getFilterHiddenRows(ctx, cindex, st_c);
   const rowHiddenAll = _.assign(otherHiddenRows, hiddenRows);
@@ -621,7 +621,7 @@ export function saveFilter(
     cindex,
     st_c,
     ed_c,
-    true
+    true,
   );
 
   const cfg = _.assign({}, ctx.config);

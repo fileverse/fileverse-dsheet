@@ -4,25 +4,25 @@ import {
   indexToColumnChar,
   locale,
   sortSelection,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 import React, {
   ChangeEvent,
   useCallback,
   useContext,
   useEffect,
   useState,
-} from "react";
-import WorkbookContext from "../../context";
-import "./index.css";
-import { useDialog } from "../../hooks/useDialog";
+} from 'react';
+import WorkbookContext from '../../context';
+import './index.css';
+import { useDialog } from '../../hooks/useDialog';
 
 type RadioChangeEvent = React.ChangeEvent<HTMLInputElement>;
 
 const CustomSort: React.FC<{}> = () => {
-  const [rangeColChar, setRangeColChar] = useState<String[]>([]);
+  const [rangeColChar, setRangeColChar] = useState<string[]>([]);
   const [ascOrDesc, setAscOrDesc] = useState(true);
   const { context, setContext } = useContext(WorkbookContext);
-  const [selectedValue, setSelectedValue] = useState<string>("0");
+  const [selectedValue, setSelectedValue] = useState<string>('0');
   const [isTitleChange, setIstitleChange] = useState(false);
   const { sort } = locale(context);
   const { hideDialog } = useDialog();
@@ -41,7 +41,7 @@ const CustomSort: React.FC<{}> = () => {
   // 改变排序方式
   const handleRadioChange = useCallback((e: RadioChangeEvent) => {
     const sortValue = e.target.value;
-    setAscOrDesc(sortValue === "asc");
+    setAscOrDesc(sortValue === 'asc');
   }, []);
 
   const handleTitleChange = useCallback(
@@ -49,7 +49,7 @@ const CustomSort: React.FC<{}> = () => {
       const value = e.target.checked;
       setIstitleChange(value);
     },
-    []
+    [],
   );
 
   // 获取排序列
@@ -112,7 +112,7 @@ const CustomSort: React.FC<{}> = () => {
             <table cellSpacing="0">
               <tbody>
                 <tr>
-                  <td style={{ width: "190px" }}>
+                  <td style={{ width: '190px' }}>
                     {sort.sortBy}
                     <select name="sort_0" onChange={handleSelectChange}>
                       {rangeColChar.map((col, index) => {

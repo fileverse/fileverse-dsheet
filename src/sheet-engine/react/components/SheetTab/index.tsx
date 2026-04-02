@@ -1,11 +1,11 @@
-import _ from "lodash";
+import _ from 'lodash';
 import React, {
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-} from "react";
+} from 'react';
 import {
   Popover,
   PopoverTrigger,
@@ -13,39 +13,35 @@ import {
   LucideIcon,
   Button,
   IconButton,
-} from "@fileverse/ui";
-import { useMediaQuery } from "usehooks-ts";
-import {
-  updateCell,
-  addSheet,
-  calcSelectionInfo,
-} from "@sheet-engine/core";
+} from '@fileverse/ui';
+import { useMediaQuery } from 'usehooks-ts';
+import { updateCell, addSheet, calcSelectionInfo } from '@sheet-engine/core';
 // @ts-ignore
-import WorkbookContext from "../../context";
-import "./index.css";
-import SheetItem from "./SheetItem";
-import ZoomControl from "../ZoomControl";
+import WorkbookContext from '../../context';
+import './index.css';
+import SheetItem from './SheetItem';
+import ZoomControl from '../ZoomControl';
 
 const STATS = [
-  { label: "Sum", value: "sum" },
-  { label: "Avg", value: "average" },
-  { label: "Min", value: "min" },
-  { label: "Max", value: "max" },
-  { label: "Count", value: "count" },
-  { label: "Count Numbers", value: "numberC" },
+  { label: 'Sum', value: 'sum' },
+  { label: 'Avg', value: 'average' },
+  { label: 'Min', value: 'min' },
+  { label: 'Max', value: 'max' },
+  { label: 'Count', value: 'count' },
+  { label: 'Count Numbers', value: 'numberC' },
 ];
 
 const STATS_LABELS = {
-  average: "Avg",
-  count: "Count",
-  max: "Max",
-  min: "Min",
-  numberC: "Count Numbers",
-  sum: "Sum",
+  average: 'Avg',
+  count: 'Count',
+  max: 'Max',
+  min: 'Min',
+  numberC: 'Count Numbers',
+  sum: 'Sum',
 };
 
 const SheetTab: React.FC = () => {
-  const isMobile = useMediaQuery("(max-width: 780px)", { defaultValue: true });
+  const isMobile = useMediaQuery('(max-width: 780px)', { defaultValue: true });
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
   const tabContainerRef = useRef<HTMLDivElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -65,10 +61,10 @@ const SheetTab: React.FC = () => {
     sum: 0,
     max: 0,
     min: 0,
-    average: "",
+    average: '',
   });
 
-  const [selectedStat, setSelectedStat] = useState<string>("sum");
+  const [selectedStat, setSelectedStat] = useState<string>('sum');
 
   const scrollDelta = 150;
 
@@ -85,7 +81,7 @@ const SheetTab: React.FC = () => {
 
     tabContainerRef.current?.scrollBy({
       left: amount,
-      behavior: "smooth",
+      behavior: 'smooth',
     });
   }, []);
 
@@ -115,32 +111,32 @@ const SheetTab: React.FC = () => {
                 draftCtx,
                 draftCtx.luckysheetCellUpdate[0],
                 draftCtx.luckysheetCellUpdate[1],
-                refs.cellInput.current!
+                refs.cellInput.current!,
               );
             }
             addSheet(draftCtx, settings);
           },
-          { addSheetOp: true }
+          { addSheetOp: true },
         );
         const tabCurrent = tabContainerRef.current;
         setIsShowScrollBtn(tabCurrent!.scrollWidth > tabCurrent!.clientWidth);
       }),
-    [refs.cellInput, setContext, settings]
+    [refs.cellInput, setContext, settings],
   );
 
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   const handleCloseDisclaimer = () => {
     setShowDisclaimer(false);
-    const cornerPlus = document.getElementById("corner-plus");
+    const cornerPlus = document.getElementById('corner-plus');
     if (cornerPlus) {
-      cornerPlus.style.display = "block";
+      cornerPlus.style.display = 'block';
     }
   };
 
   useEffect(() => {
-    const cornerPlus = document.getElementById("corner-plus");
+    const cornerPlus = document.getElementById('corner-plus');
     if (cornerPlus) {
-      cornerPlus.style.display = "none";
+      cornerPlus.style.display = 'none';
     }
   }, [isMobile]);
 
@@ -150,7 +146,7 @@ const SheetTab: React.FC = () => {
 
   const statsFilter = STATS.filter((stat) => {
     const statsValue = String(calInfo[stat.value as keyof typeof calInfo]);
-    return !statsValue.includes("NaN") && !statsValue.includes("Infinity");
+    return !statsValue.includes('NaN') && !statsValue.includes('Infinity');
   });
 
   const finalStats = statsFilter.length !== 6 ? [] : statsFilter;
@@ -164,26 +160,26 @@ const SheetTab: React.FC = () => {
           data-testid="sheettab-info-disclaimer"
           style={{
             zIndex: 1003,
-            position: "absolute",
-            display: "none",
-            bottom: "31px",
-            backgroundColor: "#F8F9FA",
-            borderBottom: "1px solid #E8EBEC",
-            color: "#77818A",
-            fontFamily: "Helvetica Neue",
-            fontSize: "var(--font-size-2xsm, 12px)",
-            fontStyle: "normal",
-            fontWeight: "400",
+            position: 'absolute',
+            display: 'none',
+            bottom: '31px',
+            backgroundColor: '#F8F9FA',
+            borderBottom: '1px solid #E8EBEC',
+            color: '#77818A',
+            fontFamily: 'Helvetica Neue',
+            fontSize: 'var(--font-size-2xsm, 12px)',
+            fontStyle: 'normal',
+            fontWeight: '400',
           }}
         >
           <div
             className={`max-w-7xl mx-auto px-4 py-1 ${
-              isMobile && "w-full flex justify-between"
+              isMobile && 'w-full flex justify-between'
             }`}
           >
             <p
               className={`fortune-sheettab__para ${
-                isMobile ? "text-left" : "text-center"
+                isMobile ? 'text-left' : 'text-center'
               } text-xsm`}
               data-testid="sheettab-para-disclaimer"
             >
@@ -195,7 +191,7 @@ const SheetTab: React.FC = () => {
               // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
               <p
                 className="fortune-sheettab__action fortune-sheettab__action--close-disclaimer ml-4 content-center cursor-pointer"
-                style={{ alignContent: "center" }}
+                style={{ alignContent: 'center' }}
                 onClick={handleCloseDisclaimer}
                 data-testid="sheettab-action-close-disclaimer"
               >
@@ -276,7 +272,7 @@ const SheetTab: React.FC = () => {
               {_.sortBy(context.luckysheetfile, (s) => Number(s.order)).map(
                 (sheet) => {
                   return <SheetItem key={sheet.id} sheet={sheet} />;
-                }
+                },
               )}
               {/* <SheetItem
               isDropPlaceholder
@@ -344,16 +340,16 @@ const SheetTab: React.FC = () => {
                 <Button
                   variant="ghost"
                   className="fortune-sheettab__info fortune-sheettab__info--stats w-full !h-6 p-2 m-1 text-left flex items-center justify-center transition mr-2 !rounded-[0px]"
-                  style={{ height: "24px !important" }}
+                  style={{ height: '24px !important' }}
                   data-testid="sheettab-info-stats"
                 >
                   <div className="flex items-center">
                     <p
                       className="fortune-sheettab__para fortune-sheettab__para--stats text-body-sm"
-                      style={{ fontWeight: "500", marginRight: "8px" }}
+                      style={{ fontWeight: '500', marginRight: '8px' }}
                       data-testid="sheettab-para-stats"
                     >
-                      {STATS_LABELS[selectedStat as keyof typeof STATS_LABELS]}:{" "}
+                      {STATS_LABELS[selectedStat as keyof typeof STATS_LABELS]}:{' '}
                       {calInfo[selectedStat as keyof typeof calInfo]}
                     </p>
                     <svg
@@ -377,14 +373,14 @@ const SheetTab: React.FC = () => {
                 align="end"
                 alignOffset={0}
                 className="stats-content color-border-default shadow-elevation-3"
-                style={{ width: "fit-content!important" }}
+                style={{ width: 'fit-content!important' }}
                 elevation={2}
                 side="bottom"
                 sideOffset={4}
               >
                 <div
                   className="p-2 color-text-default color-border-default"
-                  style={{ paddingRight: "15px" }}
+                  style={{ paddingRight: '15px' }}
                 >
                   {finalStats.map((option) => (
                     <Button
@@ -393,7 +389,7 @@ const SheetTab: React.FC = () => {
                       className={`fortune-sheettab__stats-option fortune-sheettab__stats-option--${
                         option.value
                       } w-full h-8 rounded p-2 m-1 text-left flex items-center justify-between transition mr-2 min-w-[50px] ${
-                        selectedStat === option.value && "bg-[#F8F9FA]"
+                        selectedStat === option.value && 'bg-[#F8F9FA]'
                       }`}
                       data-stat-value={option.value}
                       data-testid={`sheettab-stats-option-${option.value}`}
@@ -409,19 +405,19 @@ const SheetTab: React.FC = () => {
                           className="text-body-sm color-text-secondary"
                           style={{
                             marginLeft:
-                              selectedStat === option.value ? 0 : "24px",
-                            fontSize: "14px",
+                              selectedStat === option.value ? 0 : '24px',
+                            fontSize: '14px',
                           }}
                         >
-                          {option.label}:{" "}
+                          {option.label}:{' '}
                         </p>
                         <div className="flex w-full justify-end">
                           <p
                             className="font-body-sm-bold color-text-default"
                             style={{
                               marginLeft:
-                                selectedStat === option.value ? 0 : "24px",
-                              fontSize: "14px",
+                                selectedStat === option.value ? 0 : '24px',
+                              fontSize: '14px',
                               fontWeight: 500,
                             }}
                           >

@@ -1,10 +1,10 @@
-import _ from "lodash";
-import { isdatatypemulti } from ".";
-import type { Context } from "../context";
-import { locale } from "../locale";
-import { Cell } from "../types";
-import { normalizedCellAttr } from "./cell";
-import { isInlineStringCell } from "./inline-string";
+import _ from 'lodash';
+import { isdatatypemulti } from '.';
+import type { Context } from '../context';
+import { locale } from '../locale';
+import { Cell } from '../types';
+import { normalizedCellAttr } from './cell';
+import { isInlineStringCell } from './inline-string';
 
 function checkWordByteLength(value: string) {
   return Math.ceil(value.charCodeAt(0).toString(2).length / 8);
@@ -33,12 +33,12 @@ function getTextSize(text: string, font: string) {
     return textHeightCache[font];
   }
 
-  const ele = document.createElement("span");
-  ele.style.float = "left";
-  ele.style.whiteSpace = "nowrap";
-  ele.style.visibility = "hidden";
-  ele.style.margin = "0";
-  ele.style.padding = "0";
+  const ele = document.createElement('span');
+  ele.style.float = 'left';
+  ele.style.whiteSpace = 'nowrap';
+  ele.style.visibility = 'hidden';
+  ele.style.margin = '0';
+  ele.style.padding = '0';
   ele.innerHTML = text;
   document.body.append(ele);
 
@@ -58,26 +58,26 @@ export function defaultFont(defaultFontSize: number) {
 export function getFontSet(
   format: any,
   defaultFontSize: number,
-  ctx?: Context
+  ctx?: Context,
 ) {
   if (_.isPlainObject(format)) {
     const fontAttr: string[] = [];
 
     // font-style
-    if (format.it === "0" || format.it === 0 || _.isNil(format.it)) {
-      fontAttr.push("normal");
+    if (format.it === '0' || format.it === 0 || _.isNil(format.it)) {
+      fontAttr.push('normal');
     } else {
-      fontAttr.push("italic");
+      fontAttr.push('italic');
     }
 
     // font-variant
-    fontAttr.push("normal");
+    fontAttr.push('normal');
 
     // font-weight
-    if (format.bl === "0" || format.bl === 0 || _.isNil(format.bl)) {
-      fontAttr.push("normal");
+    if (format.bl === '0' || format.bl === 0 || _.isNil(format.bl)) {
+      fontAttr.push('normal');
     } else {
-      fontAttr.push("bold");
+      fontAttr.push('bold');
     }
 
     // font-size/line-height
@@ -101,9 +101,9 @@ export function getFontSet(
             // fontfamily = fontarray[fontjson[format.ff]];
             fontfamily = format.ff;
 
-            fontfamily = fontfamily.replace(/"/g, "").replace(/'/g, "");
+            fontfamily = fontfamily.replace(/"/g, '').replace(/'/g, '');
 
-            if (fontfamily.indexOf(" ") > -1) {
+            if (fontfamily.indexOf(' ') > -1) {
               fontfamily = `"${fontfamily}"`;
             }
 
@@ -124,7 +124,7 @@ export function getFontSet(
         fontSet = `${fontfamily},${fontSet}`;
       }
     }
-    return `${fontAttr.join(" ")} ${fontSet}`;
+    return `${fontAttr.join(' ')} ${fontSet}`;
   }
   return defaultFont(defaultFontSize);
 }
@@ -135,7 +135,7 @@ export function getMeasureText(
   value: any,
   renderCtx: CanvasRenderingContext2D,
   sheetCtx: Context,
-  fontset?: string
+  fontset?: string,
 ) {
   let mtc = measureTextCache[`${value}_${renderCtx.font}`];
   if (fontset) {
@@ -175,15 +175,15 @@ export function getMeasureText(
     Number.isNaN(cache.actualBoundingBoxDescent) ||
     Number.isNaN(cache.actualBoundingBoxAscent)
   ) {
-    let commonWord = "M";
+    let commonWord = 'M';
     if (hasChinaword(value)) {
-      commonWord = "田";
+      commonWord = '田';
     }
     const oneLineTextHeight = getTextSize(commonWord, renderCtx.font)[1] * 0.8;
-    if (renderCtx.textBaseline === "top") {
+    if (renderCtx.textBaseline === 'top') {
       cache.actualBoundingBoxDescent = oneLineTextHeight;
       cache.actualBoundingBoxAscent = 0;
-    } else if (renderCtx.textBaseline === "middle") {
+    } else if (renderCtx.textBaseline === 'middle') {
       cache.actualBoundingBoxDescent = oneLineTextHeight / 2;
       cache.actualBoundingBoxAscent = oneLineTextHeight / 2;
     } else {
@@ -194,9 +194,9 @@ export function getMeasureText(
     // console.log(value, oneLineTextHeight, measureText.actualBoundingBoxDescent+measureText.actualBoundingBoxAscent,ctx.font);
   }
 
-  if (renderCtx.textBaseline === "alphabetic") {
-    const descText = "gjpqy";
-    const matchText = "abcdABCD";
+  if (renderCtx.textBaseline === 'alphabetic') {
+    const descText = 'gjpqy';
+    const matchText = 'abcdABCD';
     let descTextMeasure = measureTextCache[`${descText}_${renderCtx.font}`];
     if (fontset) {
       descTextMeasure = measureTextCache[`${descText}_${fontset}`];
@@ -235,7 +235,7 @@ export function getMeasureText(
 }
 
 export function isSupportBoundingBox(ctx: CanvasRenderingContext2D) {
-  const measureText = ctx.measureText("田");
+  const measureText = ctx.measureText('田');
   if (_.isNil(measureText.actualBoundingBoxAscent)) {
     return false;
   }
@@ -246,7 +246,7 @@ export function drawLineInfo(
   wordGroup: any,
   cancelLine: string,
   underLine: string,
-  option: any
+  option: any,
 ) {
   const { left } = option;
   const { top } = option;
@@ -340,16 +340,16 @@ export function getCellTextInfo(
   renderCtx: CanvasRenderingContext2D,
   sheetCtx: Context,
   option: any,
-  ctx?: Context
+  ctx?: Context,
 ): any {
   const { cellWidth } = option;
   const { cellHeight } = option;
-  let isMode = "";
-  let isModeSplit = "";
+  let isMode = '';
+  let isModeSplit = '';
   // console.log("initialinfo", cell, option);
   if (cellWidth == null) {
-    isMode = "onlyWidth";
-    isModeSplit = "_";
+    isMode = 'onlyWidth';
+    isModeSplit = '_';
   }
   const textInfo =
     measureTextCellInfoCache[`${option.r}_${option.c}${isModeSplit}${isMode}`];
@@ -370,26 +370,26 @@ export function getCellTextInfo(
   }
 
   // 水平对齐
-  const horizonAlign = normalizedCellAttr(cell, "ht");
+  const horizonAlign = normalizedCellAttr(cell, 'ht');
   // 垂直对齐
-  const verticalAlign = normalizedCellAttr(cell, "vt");
+  const verticalAlign = normalizedCellAttr(cell, 'vt');
 
-  const tb = normalizedCellAttr(cell, "tb"); // wrap overflow
-  const tr = normalizedCellAttr(cell, "tr"); // rotate
-  let rt = normalizedCellAttr(cell, "rt"); // rotate angle
+  const tb = normalizedCellAttr(cell, 'tb'); // wrap overflow
+  const tr = normalizedCellAttr(cell, 'tr'); // rotate
+  let rt = normalizedCellAttr(cell, 'rt'); // rotate angle
 
   let isRotateUp = 1;
 
   if (_.isNil(rt)) {
-    if (tr === "0") {
+    if (tr === '0') {
       rt = 0;
-    } else if (tr === "1") {
+    } else if (tr === '1') {
       rt = 45;
-    } else if (tr === "4") {
+    } else if (tr === '4') {
       rt = 90;
-    } else if (tr === "2") {
+    } else if (tr === '2') {
       rt = 135;
-    } else if (tr === "5") {
+    } else if (tr === '5') {
       rt = 180;
     }
 
@@ -408,14 +408,14 @@ export function getCellTextInfo(
     isRotateUp = 0;
   }
 
-  renderCtx.textAlign = "start";
+  renderCtx.textAlign = 'start';
 
   const textContent: any = {};
   textContent.values = [];
 
   let fontset;
-  let cancelLine = "0";
-  let underLine = "0";
+  let cancelLine = '0';
+  let underLine = '0';
   let fontSize = 11;
   let isInline = false;
   let value: any;
@@ -442,11 +442,11 @@ export function getCellTextInfo(
       let { v } = shareCell;
       const { fs } = shareCell;
       v = v
-        .replace(/\r\n/g, "_x000D_")
-        .replace(/&#13;&#10;/g, "_x000D_")
-        .replace(/\r/g, "_x000D_")
-        .replace(/\n/g, "_x000D_");
-      const splitArr = v.split("_x000D_");
+        .replace(/\r\n/g, '_x000D_')
+        .replace(/&#13;&#10;/g, '_x000D_')
+        .replace(/\r/g, '_x000D_')
+        .replace(/\n/g, '_x000D_');
+      const splitArr = v.split('_x000D_');
       for (let x = 0; x < splitArr.length; x += 1) {
         const newValue = splitArr[x];
 
@@ -462,10 +462,10 @@ export function getCellTextInfo(
         //     fs: !fs ? 11 : fs,
         //   });
         // } else
-        if (newValue === "" && x !== splitArr.length - 1) {
+        if (newValue === '' && x !== splitArr.length - 1) {
           inlineStringArr.push({
             fontset: scfontset,
-            fc: !fc ? "#000" : fc,
+            fc: !fc ? '#000' : fc,
             cl: !cl ? 0 : cl,
             un: !un ? 0 : un,
             wrap: true,
@@ -477,14 +477,14 @@ export function getCellTextInfo(
             // @ts-ignore
             new Intl.Segmenter().segment(newValue),
             // @ts-ignore
-            (s) => s.segment
+            (s) => s.segment,
           );
           for (let n = 0; n < newValueArray.length; n += 1) {
             const nv = newValueArray[n];
 
             inlineStringArr.push({
               fontset: scfontset,
-              fc: !fc ? "#000" : fc,
+              fc: !fc ? '#000' : fc,
               cl: !cl ? 0 : cl,
               un: !un ? 0 : un,
               v: nv,
@@ -496,7 +496,7 @@ export function getCellTextInfo(
           if (x !== splitArr.length - 1) {
             inlineStringArr.push({
               fontset: scfontset,
-              fc: !fc ? "#000" : fc,
+              fc: !fc ? '#000' : fc,
               cl: !cl ? 0 : cl,
               un: !un ? 0 : un,
               wrap: true,
@@ -514,9 +514,9 @@ export function getCellTextInfo(
     fontset = getFontSet(cell, sheetCtx.defaultFontSize, ctx);
     renderCtx.font = fontset;
 
-    cancelLine = normalizedCellAttr(cell, "cl"); // cancelLine
-    underLine = normalizedCellAttr(cell, "un"); // underLine
-    fontSize = normalizedCellAttr(cell, "fs");
+    cancelLine = normalizedCellAttr(cell, 'cl'); // cancelLine
+    underLine = normalizedCellAttr(cell, 'un'); // underLine
+    fontSize = normalizedCellAttr(cell, 'fs');
 
     if (cell instanceof Object) {
       value = cell.m;
@@ -532,9 +532,9 @@ export function getCellTextInfo(
     }
   }
 
-  if (tr === "3") {
+  if (tr === '3') {
     // vertical text
-    renderCtx.textBaseline = "top";
+    renderCtx.textBaseline = 'top';
 
     let textW_all = 0; // 拆分后宽高度合计
     let textH_all = 0;
@@ -549,8 +549,8 @@ export function getCellTextInfo(
         let value1 = shareCell.v;
         let showValue = shareCell.v;
         if (shareCell.wrap === true) {
-          value1 = "M";
-          showValue = "";
+          value1 = 'M';
+          showValue = '';
 
           if (
             !_.isNil(preShareCell) &&
@@ -571,7 +571,7 @@ export function getCellTextInfo(
           value1,
           renderCtx,
           sheetCtx,
-          shareCell.fontset
+          shareCell.fontset,
         );
 
         const textW = measureText.width + space_width;
@@ -583,7 +583,7 @@ export function getCellTextInfo(
         // textW_all += textW;
         textH_all_cache += textH;
 
-        if (tb === "2" && !shareCell.wrap) {
+        if (tb === '2' && !shareCell.wrap) {
           if (
             textH_all_cache > cellHeight &&
             !_.isNil(textH_all_Column[colIndex])
@@ -636,7 +636,7 @@ export function getCellTextInfo(
 
       let vArr = [];
       if (value.length > 1) {
-        vArr = value.split("");
+        vArr = value.split('');
       } else {
         vArr.push(value);
       }
@@ -649,7 +649,7 @@ export function getCellTextInfo(
         // textW_all += textW;
         textH_all_cache += textH;
 
-        if (tb === "2") {
+        if (tb === '2') {
           if (
             textH_all_cache > cellHeight &&
             !_.isNil(textH_all_Column[colIndex])
@@ -698,11 +698,11 @@ export function getCellTextInfo(
       textH_all = Math.max(textH_all, columnHeight);
     }
 
-    textContent.type = "verticalWrap";
+    textContent.type = 'verticalWrap';
     textContent.textWidthAll = textW_all;
     textContent.textHeightAll = textH_all;
 
-    if (isMode === "onlyWidth") {
+    if (isMode === 'onlyWidth') {
       // console.log("verticalWrap", textContent,cell, option);
       return textContent;
     }
@@ -718,20 +718,20 @@ export function getCellTextInfo(
         const word = col[c];
 
         let left = space_width + cumColumnWidth;
-        if (horizonAlign === "0") {
+        if (horizonAlign === '0') {
           left =
             cellWidth / 2 +
             cumColumnWidth -
             textW_all / 2 +
             space_width * textH_all_ColumnHeight.length;
-        } else if (horizonAlign === "2") {
+        } else if (horizonAlign === '2') {
           left = cellWidth + cumColumnWidth - textW_all + space_width;
         }
 
         let top = cellHeight - space_height + cumWordHeight - columnHeight;
-        if (verticalAlign === "0") {
+        if (verticalAlign === '0') {
           top = cellHeight / 2 + cumWordHeight - columnHeight / 2;
-        } else if (verticalAlign === "1") {
+        } else if (verticalAlign === '1') {
           top = space_height + cumWordHeight;
         }
 
@@ -758,12 +758,12 @@ export function getCellTextInfo(
   } else {
     const supportBoundBox = isSupportBoundingBox(renderCtx);
     if (supportBoundBox) {
-      renderCtx.textBaseline = "alphabetic";
+      renderCtx.textBaseline = 'alphabetic';
     } else {
-      renderCtx.textBaseline = "bottom";
+      renderCtx.textBaseline = 'bottom';
     }
 
-    if (tb === "2" || isInline) {
+    if (tb === '2' || isInline) {
       // wrap
 
       let textW_all = 0; // 拆分后宽高度合计
@@ -822,16 +822,16 @@ export function getCellTextInfo(
             if (shareCells.length === 1) {
               const sc = shareCells[0];
               const measureText = getMeasureText(
-                "M",
+                'M',
                 renderCtx,
                 sheetCtx,
-                sc.fontset
+                sc.fontset,
               );
               if (_.isNil(text_all_split[splitIndex])) {
                 text_all_split[splitIndex] = [];
               }
               text_all_split[splitIndex].push({
-                content: "",
+                content: '',
                 style: sc,
                 width: measureText.width,
                 height:
@@ -864,13 +864,13 @@ export function getCellTextInfo(
                 sc.v,
                 renderCtx,
                 sheetCtx,
-                sc.fontset
+                sc.fontset,
               );
             }
             textWidth += sc.measureText.width;
             textHeight = Math.max(
               sc.measureText.actualBoundingBoxAscent +
-                sc.measureText.actualBoundingBoxDescent
+                sc.measureText.actualBoundingBoxDescent,
             );
             // console.log(sc.v,sc.measureText.width,sc.measureText.actualBoundingBoxAscent,sc.measureText.actualBoundingBoxDescent);
           }
@@ -886,7 +886,7 @@ export function getCellTextInfo(
           // textW_all += textW;
 
           const lastWord = shareCells[shareCells.length - 1];
-          if (lastWord.v === " " || checkWordByteLength(lastWord.v) === 2) {
+          if (lastWord.v === ' ' || checkWordByteLength(lastWord.v) === 2) {
             spaceOrTwoByteIndex = i;
           }
 
@@ -896,7 +896,7 @@ export function getCellTextInfo(
             if (
               height + space_height > cellHeight &&
               !_.isNil(text_all_split[splitIndex]) &&
-              tb === "2"
+              tb === '2'
             ) {
               // console.log("cut",anchor, i , str);
 
@@ -985,7 +985,7 @@ export function getCellTextInfo(
             if (
               width + space_width > cellWidth &&
               !_.isNil(text_all_split[splitIndex]) &&
-              tb === "2"
+              tb === '2'
             ) {
               if (!_.isNil(spaceOrTwoByteIndex) && spaceOrTwoByteIndex < i) {
                 for (let s = 0; s < spaceOrTwoByteIndex - anchor; s += 1) {
@@ -1088,7 +1088,7 @@ export function getCellTextInfo(
             textWidth * Math.sin((rt * Math.PI) / 180) +
             textHeight * Math.cos((rt * Math.PI) / 180); // consider text box wdith and line height
           const lastWord = str.substr(str.length - 1, 1);
-          if (lastWord === " " || checkWordByteLength(lastWord) === 2) {
+          if (lastWord === ' ' || checkWordByteLength(lastWord) === 2) {
             spaceOrTwoByte = {
               index: i,
               str,
@@ -1281,14 +1281,14 @@ export function getCellTextInfo(
             sWidth += sp.width;
             sHeight = Math.max(
               sHeight,
-              sp.height - (supportBoundBox ? sp.desc : 0)
+              sp.height - (supportBoundBox ? sp.desc : 0),
             );
           } else {
             // plain
             sWidth += sp.width;
             sHeight = Math.max(
               sHeight,
-              sp.height - (supportBoundBox ? sp.desc : 0)
+              sp.height - (supportBoundBox ? sp.desc : 0),
             );
           }
           maxDesc = Math.max(maxDesc, supportBoundBox ? sp.desc : 0);
@@ -1347,13 +1347,13 @@ export function getCellTextInfo(
         textContent.textHeightAll = textH_all;
       }
 
-      if (isMode === "onlyWidth") {
+      if (isMode === 'onlyWidth') {
         // console.log("plainWrap", textContent,cell, option);
         return textContent;
       }
 
       if (rt !== 0 && Number(isRotateUp) === 1) {
-        renderCtx.textAlign = "end";
+        renderCtx.textAlign = 'end';
         for (let j = 0; j < splitLen; j += 1) {
           const splitLists = text_all_split[j];
           if (_.isNil(splitLists)) {
@@ -1374,9 +1374,9 @@ export function getCellTextInfo(
                 cumWordHeight / Math.tan(rtPI) -
                 cumColumnWidth +
                 textW_all_inner;
-              if (horizonAlign === "0") {
+              if (horizonAlign === '0') {
                 // center
-                if (verticalAlign === "0") {
+                if (verticalAlign === '0') {
                   // mid
 
                   left =
@@ -1389,11 +1389,11 @@ export function getCellTextInfo(
                     cellHeight / 2 -
                     textH_all / 2 -
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "1") {
+                } else if (verticalAlign === '1') {
                   // top
                   left = x + cellWidth / 2 - textW_all / 2;
                   top = y - (textH_all / 2 - rh / 2);
-                } else if (verticalAlign === "2") {
+                } else if (verticalAlign === '2') {
                   // bottom
                   left =
                     x +
@@ -1407,9 +1407,9 @@ export function getCellTextInfo(
                     textH_all / 2 -
                     lastLineSpaceHeight * Math.cos(rtPI);
                 }
-              } else if (horizonAlign === "1") {
+              } else if (horizonAlign === '1') {
                 // left
-                if (verticalAlign === "0") {
+                if (verticalAlign === '0') {
                   // mid
                   left =
                     x -
@@ -1420,18 +1420,18 @@ export function getCellTextInfo(
                     cellHeight / 2 +
                     (rh * Math.cos(rtPI)) / 2 -
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "1") {
+                } else if (verticalAlign === '1') {
                   // top
                   left = x - rh * Math.sin(rtPI);
                   top = y + rh * Math.cos(rtPI);
-                } else if (verticalAlign === "2") {
+                } else if (verticalAlign === '2') {
                   // bottom
                   left = x + lastLineSpaceHeight * Math.cos(rtPI);
                   top = y + cellHeight - lastLineSpaceHeight * Math.cos(rtPI);
                 }
-              } else if (horizonAlign === "2") {
+              } else if (horizonAlign === '2') {
                 // right
-                if (verticalAlign === "0") {
+                if (verticalAlign === '0') {
                   // mid
                   left =
                     x +
@@ -1444,11 +1444,11 @@ export function getCellTextInfo(
                     cellHeight / 2 -
                     textH_all / 2 -
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "1") {
+                } else if (verticalAlign === '1') {
                   // top fixOneLineLeft
                   left = x + cellWidth - textW_all + fixOneLineLeft;
                   top = y - textH_all;
-                } else if (verticalAlign === "2") {
+                } else if (verticalAlign === '2') {
                   // bottom
                   left =
                     x +
@@ -1506,9 +1506,9 @@ export function getCellTextInfo(
               const x =
                 (textH_all - cumWordHeight) / Math.tan(rtPI) + cumColumnWidth;
 
-              if (horizonAlign === "0") {
+              if (horizonAlign === '0') {
                 // center
-                if (verticalAlign === "0") {
+                if (verticalAlign === '0') {
                   // mid
 
                   left =
@@ -1521,7 +1521,7 @@ export function getCellTextInfo(
                     cellHeight / 2 -
                     textH_all / 2 +
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "1") {
+                } else if (verticalAlign === '1') {
                   // top
                   left =
                     x +
@@ -1532,7 +1532,7 @@ export function getCellTextInfo(
                     y -
                     (textH_all / 2 - rh / 2) +
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "2") {
+                } else if (verticalAlign === '2') {
                   // bottom
                   left =
                     x +
@@ -1546,9 +1546,9 @@ export function getCellTextInfo(
                     textH_all / 2 -
                     lastLineSpaceHeight * Math.cos(rtPI);
                 }
-              } else if (horizonAlign === "1") {
+              } else if (horizonAlign === '1') {
                 // left
-                if (verticalAlign === "0") {
+                if (verticalAlign === '0') {
                   // mid
                   left =
                     x -
@@ -1560,11 +1560,11 @@ export function getCellTextInfo(
                     cellHeight / 2 -
                     (rh * Math.cos(rtPI)) / 2 -
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "1") {
+                } else if (verticalAlign === '1') {
                   // top
                   left = x;
                   top = y - textH_all;
-                } else if (verticalAlign === "2") {
+                } else if (verticalAlign === '2') {
                   // bottom
                   left =
                     x -
@@ -1577,9 +1577,9 @@ export function getCellTextInfo(
                     rh * Math.cos(rtPI) -
                     lastLineSpaceHeight * Math.cos(rtPI);
                 }
-              } else if (horizonAlign === "2") {
+              } else if (horizonAlign === '2') {
                 // right
-                if (verticalAlign === "0") {
+                if (verticalAlign === '0') {
                   // mid
                   left =
                     x +
@@ -1592,11 +1592,11 @@ export function getCellTextInfo(
                     cellHeight / 2 -
                     textH_all / 2 -
                     (lastLineSpaceHeight * Math.cos(rtPI)) / 2;
-                } else if (verticalAlign === "1") {
+                } else if (verticalAlign === '1') {
                   // top fixOneLineLeft
                   left = x + cellWidth - rw * Math.cos(rtPI);
                   top = y + rh * Math.cos(rtPI);
-                } else if (verticalAlign === "2") {
+                } else if (verticalAlign === '2') {
                   // bottom
                   left =
                     x +
@@ -1620,10 +1620,10 @@ export function getCellTextInfo(
             } else {
               // plain
               left = space_width + cumColumnWidth;
-              if (horizonAlign === "0") {
+              if (horizonAlign === '0') {
                 // + space_width*textH_all_ColumnHeight.length
                 left = cellWidth / 2 + cumColumnWidth - size.width / 2;
-              } else if (horizonAlign === "2") {
+              } else if (horizonAlign === '2') {
                 left = cellWidth + cumColumnWidth - size.width;
               }
 
@@ -1633,9 +1633,9 @@ export function getCellTextInfo(
                 cumWordHeight +
                 size.asc -
                 textH_all;
-              if (verticalAlign === "0") {
+              if (verticalAlign === '0') {
                 top = cellHeight / 2 + cumWordHeight - textH_all / 2 + size.asc;
-              } else if (verticalAlign === "1") {
+              } else if (verticalAlign === '1') {
                 top = space_height + cumWordHeight + size.asc;
               }
 
@@ -1662,7 +1662,7 @@ export function getCellTextInfo(
         }
       }
 
-      textContent.type = "plainWrap";
+      textContent.type = 'plainWrap';
 
       if (rt !== 0) {
         // let leftCenter = (textW_all + textH_all/Math.tan(rt*Math.PI/180))/2;
@@ -1677,45 +1677,45 @@ export function getCellTextInfo(
         //     textContent.textTopAll -= topCenter;
         // }
 
-        if (horizonAlign === "0") {
+        if (horizonAlign === '0') {
           // center
           textContent.textLeftAll = cellWidth / 2;
-          if (verticalAlign === "0") {
+          if (verticalAlign === '0') {
             // mid
             textContent.textTopAll = cellHeight / 2;
-          } else if (verticalAlign === "1") {
+          } else if (verticalAlign === '1') {
             // top
             textContent.textTopAll = rh / 2;
-          } else if (verticalAlign === "2") {
+          } else if (verticalAlign === '2') {
             // bottom
             textContent.textTopAll = cellHeight - rh / 2;
           }
-        } else if (horizonAlign === "1") {
+        } else if (horizonAlign === '1') {
           // left
-          if (verticalAlign === "0") {
+          if (verticalAlign === '0') {
             // mid
             textContent.textLeftAll = 0;
             textContent.textTopAll = cellHeight / 2;
-          } else if (verticalAlign === "1") {
+          } else if (verticalAlign === '1') {
             // top
             textContent.textLeftAll = 0;
             textContent.textTopAll = 0;
-          } else if (verticalAlign === "2") {
+          } else if (verticalAlign === '2') {
             // bottom
             textContent.textLeftAll = 0;
             textContent.textTopAll = cellHeight;
           }
-        } else if (horizonAlign === "2") {
+        } else if (horizonAlign === '2') {
           // right
-          if (verticalAlign === "0") {
+          if (verticalAlign === '0') {
             // mid
             textContent.textLeftAll = cellWidth - rw / 2;
             textContent.textTopAll = cellHeight / 2;
-          } else if (verticalAlign === "1") {
+          } else if (verticalAlign === '1') {
             // top
             textContent.textLeftAll = cellWidth;
             textContent.textTopAll = 0;
-          } else if (verticalAlign === "2") {
+          } else if (verticalAlign === '2') {
             // bottom
             textContent.textLeftAll = cellWidth;
             textContent.textTopAll = cellHeight;
@@ -1756,7 +1756,7 @@ export function getCellTextInfo(
       textContent.textWidthAll = textWidthAll;
 
       // console.log(textContent.textWidthAll , textContent.textHeightAll);
-      if (isMode === "onlyWidth") {
+      if (isMode === 'onlyWidth') {
         // console.log("plain", textContent,cell, option);
         return textContent;
       }
@@ -1765,11 +1765,11 @@ export function getCellTextInfo(
       const height = textHeightAll;
 
       let left = space_width + textHeight * Math.sin(rtPI) * isRotateUp; // 默认为1，左对齐
-      if (horizonAlign === "0") {
+      if (horizonAlign === '0') {
         // 居中对齐
         left =
           cellWidth / 2 - width / 2 + textHeight * Math.sin(rtPI) * isRotateUp;
-      } else if (horizonAlign === "2") {
+      } else if (horizonAlign === '2') {
         // 右对齐
         left =
           cellWidth -
@@ -1784,14 +1784,14 @@ export function getCellTextInfo(
         height +
         measureText.actualBoundingBoxAscent * Math.cos(rtPI) +
         textWidth * Math.sin(rtPI) * isRotateUp; // 默认为2，下对齐
-      if (verticalAlign === "0") {
+      if (verticalAlign === '0') {
         // 居中对齐
         top =
           cellHeight / 2 -
           height / 2 +
           measureText.actualBoundingBoxAscent * Math.cos(rtPI) +
           textWidth * Math.sin(rtPI) * isRotateUp;
-      } else if (verticalAlign === "1") {
+      } else if (verticalAlign === '1') {
         // 上对齐
         top =
           space_height +
@@ -1799,7 +1799,7 @@ export function getCellTextInfo(
           textWidth * Math.sin(rtPI) * isRotateUp;
       }
 
-      textContent.type = "plain";
+      textContent.type = 'plain';
 
       const wordGroup = {
         content: value,

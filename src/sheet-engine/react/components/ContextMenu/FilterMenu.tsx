@@ -9,7 +9,7 @@ import {
   FilterDate,
   FilterColor,
   Context,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 import React, {
   useCallback,
   useContext,
@@ -18,21 +18,21 @@ import React, {
   useMemo,
   useRef,
   useState,
-} from "react";
-import _ from "lodash";
-import produce from "immer";
+} from 'react';
+import _ from 'lodash';
+import produce from 'immer';
 import {
   Button,
   Checkbox,
   Divider,
   LucideIcon,
   TextField,
-} from "@fileverse/ui";
-import WorkbookContext from "../../context";
-import Menu from "./Menu";
-import SVGIcon from "../SVGIcon";
-import { useAlert } from "../../hooks/useAlert";
-import { useOutsideClick } from "../../hooks/useOutsideClick";
+} from '@fileverse/ui';
+import WorkbookContext from '../../context';
+import Menu from './Menu';
+import SVGIcon from '../SVGIcon';
+import { useAlert } from '../../hooks/useAlert';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
 
 const SelectItem: React.FC<{
   item: FilterValue;
@@ -94,7 +94,7 @@ const DateSelectTreeItem: React.FC<{
             <div style={{ width: 10 }} />
           ) : (
             <LucideIcon
-              name={expand ? "ChevronDown" : "ChevronRight"}
+              name={expand ? 'ChevronDown' : 'ChevronRight'}
               className="cursor-pointer"
               size="sm"
               onClick={() => {
@@ -191,7 +191,7 @@ const FilterMenu: React.FC = () => {
   const dateTreeExpandState = useRef<Record<string, boolean>>({});
   const hiddenRows = useRef<number[]>([]);
   const [showValues, setShowValues] = useState<string[]>([]);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
   const [subMenuPos, setSubMenuPos] = useState<{
     left?: number;
     top: number;
@@ -234,11 +234,11 @@ const FilterMenu: React.FC = () => {
         setShowValues(
           _.filter(
             data.flattenValues,
-            (v) => v.toLowerCase().indexOf(text.toLowerCase()) > -1
-          )
+            (v) => v.toLowerCase().indexOf(text.toLowerCase()) > -1,
+          ),
         );
       }, 300),
-    [data.flattenValues]
+    [data.flattenValues],
   );
 
   // const selectAll = useCallback(() => {
@@ -267,10 +267,10 @@ const FilterMenu: React.FC = () => {
         produce((draft) => {
           const colorData = _.find(_.get(draft, key), (v) => v.color === color);
           colorData.checked = checked;
-        })
+        }),
       );
     },
-    []
+    [],
   );
 
   const delayHideSubMenu = useMemo(
@@ -279,7 +279,7 @@ const FilterMenu: React.FC = () => {
         if (mouseHoverSubMenu.current) return;
         setShowSubMenu(false);
       }, 200),
-    []
+    [],
   );
 
   const sortData = useCallback(
@@ -293,12 +293,12 @@ const FilterMenu: React.FC = () => {
           endRow,
           endCol,
           col,
-          asc
+          asc,
         );
         if (errMsg != null) showAlert(errMsg);
       });
     },
-    [col, setContext, startRow, startCol, endRow, endCol, showAlert]
+    [col, setContext, startRow, startCol, endRow, endCol, showAlert],
   );
 
   const renderColorList = useCallback(
@@ -306,7 +306,11 @@ const FilterMenu: React.FC = () => {
       key: string,
       title: string,
       colors: FilterColor[],
-      onSelectChange: (datakey: string, color: string, checked: boolean) => void
+      onSelectChange: (
+        datakey: string,
+        color: string,
+        checked: boolean,
+      ) => void,
     ) =>
       colors.length > 1 ? (
         <div key={key}>
@@ -334,7 +338,7 @@ const FilterMenu: React.FC = () => {
           </div>
         </div>
       ) : null,
-    []
+    [],
   );
 
   useLayoutEffect(() => {
@@ -384,10 +388,10 @@ const FilterMenu: React.FC = () => {
     }
     setContext((draftCtx) => {
       if (hasOverflow) {
-        _.set(draftCtx, "filterContextMenu.x", left);
-        _.set(draftCtx, "filterContextMenu.y", top);
+        _.set(draftCtx, 'filterContextMenu.x', left);
+        _.set(draftCtx, 'filterContextMenu.y', top);
       }
-      _.set(draftCtx, "filterContextMenu.listBoxMaxHeight", containerH);
+      _.set(draftCtx, 'filterContextMenu.listBoxMaxHeight', containerH);
     });
   }, [filterContextMenu, refs.workbookContainer, setContext]);
 
@@ -408,7 +412,7 @@ const FilterMenu: React.FC = () => {
 
   useEffect(() => {
     if (col == null) return;
-    setSearchText("");
+    setSearchText('');
     setShowSubMenu(false);
     dateTreeExpandState.current = {};
     hiddenRows.current = filterContextMenu?.hiddenRows || [];
@@ -417,9 +421,9 @@ const FilterMenu: React.FC = () => {
       col,
       startRow,
       endRow,
-      startCol
+      startCol,
     );
-    setData(_.omit(res, ["datesUncheck", "valuesUncheck"]));
+    setData(_.omit(res, ['datesUncheck', 'valuesUncheck']));
     setDatesUncheck(res.datesUncheck);
     setValuesUncheck(res.valuesUncheck);
     setShowValues(res.flattenValues);
@@ -435,7 +439,7 @@ const FilterMenu: React.FC = () => {
   useEffect(() => {
     if (col == null) return;
     setFilterColors(
-      getFilterColumnColors(contextRef.current, col, startRow, endRow)
+      getFilterColumnColors(contextRef.current, col, startRow, endRow),
     );
   }, [col, endRow, startRow]);
 
@@ -450,14 +454,14 @@ const FilterMenu: React.FC = () => {
         style={{
           left: filterContextMenu.x,
           top: filterContextMenu.y,
-          minWidth: "280px !important",
+          minWidth: '280px !important',
         }}
       >
         {settings.filterContextMenu?.map((name, i) => {
-          if (name === "|") {
+          if (name === '|') {
             return <Divider key={`divider-${i}`} />;
           }
-          if (name === "sort-by-asc") {
+          if (name === 'sort-by-asc') {
             return (
               <Menu key={name} onClick={() => sortData(true)}>
                 <div className="context-item w-full">
@@ -465,14 +469,14 @@ const FilterMenu: React.FC = () => {
                     name="sort-asc"
                     width={24}
                     height={18}
-                    style={{ marginRight: "4px" }}
+                    style={{ marginRight: '4px' }}
                   />
                   <p>{filter.sortByAsc}</p>
                 </div>
               </Menu>
             );
           }
-          if (name === "sort-by-desc") {
+          if (name === 'sort-by-desc') {
             return (
               <Menu key={name} onClick={() => sortData(false)}>
                 <div className="context-item w-full">
@@ -480,14 +484,14 @@ const FilterMenu: React.FC = () => {
                     name="sort-desc"
                     width={24}
                     height={18}
-                    style={{ marginRight: "4px" }}
+                    style={{ marginRight: '4px' }}
                   />
                   <p>{filter.sortByDesc}</p>
                 </div>
               </Menu>
             );
           }
-          if (name === "filter-by-color") {
+          if (name === 'filter-by-color') {
             return (
               <div
                 key={name}
@@ -563,7 +567,7 @@ const FilterMenu: React.FC = () => {
           //     </div>
           //   );
           // }
-          if (name === "filter-by-value") {
+          if (name === 'filter-by-value') {
             return (
               <div key={name}>
                 <div className="luckysheet-filter-byvalue flex flex-col gap-2 mt-2">
@@ -588,7 +592,7 @@ const FilterMenu: React.FC = () => {
                       isChecked={(key: string) =>
                         _.find(
                           datesUncheck,
-                          (v: string) => v.match(key) != null
+                          (v: string) => v.match(key) != null,
                         ) == null
                       }
                       onChange={(item: FilterDate, checked: boolean) => {
@@ -601,7 +605,7 @@ const FilterMenu: React.FC = () => {
                             return checked
                               ? _.without(draft, ...item.dateValues)
                               : _.union(draft, item.dateValues);
-                          })
+                          }),
                         );
                       }}
                       isItemVisible={(item) => {
@@ -609,16 +613,16 @@ const FilterMenu: React.FC = () => {
                           ? true
                           : _.findIndex(
                               showValues,
-                              (v) => v.match(item.key) != null
+                              (v) => v.match(item.key) != null,
                             ) > -1;
                       }}
                     />
                     <SelectItem
                       item={{
-                        key: "all",
+                        key: 'all',
                         text: filter.filterValueByAllBtn,
-                        value: "",
-                        mask: "",
+                        value: '',
+                        mask: '',
                         rows: data.values
                           .filter((v) => showValues.includes(v.text))
                           .flatMap((v) => v.rows),
@@ -659,7 +663,7 @@ const FilterMenu: React.FC = () => {
                             setValuesUncheck(
                               produce((draft) => {
                                 _.pull(draft, item.key);
-                              })
+                              }),
                             );
                           } else {
                             // If unchecking an item, add it to uncheck arrays and hidden rows
@@ -667,7 +671,7 @@ const FilterMenu: React.FC = () => {
                             setValuesUncheck(
                               produce((draft) => {
                                 draft.push(item.key);
-                              })
+                              }),
                             );
                           }
                         }}
@@ -688,7 +692,7 @@ const FilterMenu: React.FC = () => {
         <div className="fortune-menuitem-row mt-2">
           <Button
             variant="ghost"
-            style={{ minWidth: "80px" }}
+            style={{ minWidth: '80px' }}
             onClick={() => {
               setContext((draftCtx) => {
                 clearFilter(draftCtx);
@@ -700,7 +704,7 @@ const FilterMenu: React.FC = () => {
           </Button>
           <Button
             variant="secondary"
-            style={{ minWidth: "80px" }}
+            style={{ minWidth: '80px' }}
             onClick={() => {
               setContext((draftCtx) => {
                 draftCtx.filterContextMenu = undefined;
@@ -712,7 +716,7 @@ const FilterMenu: React.FC = () => {
           </Button>
           <Button
             variant="default"
-            style={{ minWidth: "80px" }}
+            style={{ minWidth: '80px' }}
             onClick={() => {
               if (col == null) return;
               setContext((draftCtx) => {
@@ -722,7 +726,7 @@ const FilterMenu: React.FC = () => {
                     pre[curr] = 0;
                     return pre;
                   },
-                  {} as Record<string, number>
+                  {} as Record<string, number>,
                 );
                 saveFilter(
                   draftCtx,
@@ -733,7 +737,7 @@ const FilterMenu: React.FC = () => {
                   endRow,
                   col,
                   startCol,
-                  endCol
+                  endCol,
                 );
                 hiddenRows.current = [];
                 draftCtx.filterContextMenu = undefined;
@@ -767,17 +771,17 @@ const FilterMenu: React.FC = () => {
             <>
               {[
                 {
-                  key: "bgColors",
+                  key: 'bgColors',
                   title: filter.filiterByColorTip,
                   colors: filterColors.bgColors,
                 },
                 {
-                  key: "fcColors",
+                  key: 'fcColors',
                   title: filter.filiterByTextColorTip,
                   colors: filterColors.fcColors,
                 },
               ].map((v) =>
-                renderColorList(v.key, v.title, v.colors, onColorSelectChange)
+                renderColorList(v.key, v.title, v.colors, onColorSelectChange),
               )}
               <div
                 className="button-basic button-primary"
@@ -795,7 +799,7 @@ const FilterMenu: React.FC = () => {
                         pre[curr] = 0;
                         return pre;
                       },
-                      {} as Record<string, number>
+                      {} as Record<string, number>,
                     );
                     saveFilter(
                       draftCtx,
@@ -806,7 +810,7 @@ const FilterMenu: React.FC = () => {
                       endRow,
                       col,
                       startCol,
-                      endCol
+                      endCol,
                     );
                     hiddenRows.current = [];
                     draftCtx.filterContextMenu = undefined;

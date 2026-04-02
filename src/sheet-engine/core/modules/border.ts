@@ -1,7 +1,7 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { CellMatrix } from "../types";
-import { getSheetIndex } from "../utils";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { CellMatrix } from '../types';
+import { getSheetIndex } from '../utils';
 
 // 获取表格边框数据计算值
 export function getBorderInfoComputeRange(
@@ -10,7 +10,7 @@ export function getBorderInfoComputeRange(
   dataset_row_ed: number,
   dataset_col_st: number,
   dataset_col_ed: number,
-  sheetId?: string
+  sheetId?: string,
 ) {
   const borderInfoCompute: Record<string, any> = {};
   const flowdata = getFlowdata(ctx);
@@ -38,7 +38,7 @@ export function getBorderInfoComputeRange(
   for (let i = 0; i < borderInfo.length; i += 1) {
     const { rangeType } = borderInfo[i];
 
-    if (rangeType === "range") {
+    if (rangeType === 'range') {
       const { borderType } = borderInfo[i];
       const borderColor = borderInfo[i].color;
       const borderStyle = borderInfo[i].style;
@@ -67,7 +67,7 @@ export function getBorderInfoComputeRange(
           bd_c2 = dataset_col_ed;
         }
 
-        if (borderType === "border-slash") {
+        if (borderType === 'border-slash') {
           const bd_r = borderRange[0].row_focus;
           const bd_c = borderRange[0].column_focus;
           if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
@@ -83,7 +83,7 @@ export function getBorderInfoComputeRange(
             style: borderStyle,
           };
         }
-        if (borderType === "border-left") {
+        if (borderType === 'border-left') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -134,7 +134,7 @@ export function getBorderInfoComputeRange(
               }
             });
           }
-        } else if (borderType === "border-right") {
+        } else if (borderType === 'border-right') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -187,7 +187,7 @@ export function getBorderInfoComputeRange(
               }
             });
           }
-        } else if (borderType === "border-top") {
+        } else if (borderType === 'border-top') {
           if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r1])) {
             continue;
           }
@@ -237,7 +237,7 @@ export function getBorderInfoComputeRange(
               }
             });
           }
-        } else if (borderType === "border-bottom") {
+        } else if (borderType === 'border-bottom') {
           if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r2])) {
             continue;
           }
@@ -291,7 +291,7 @@ export function getBorderInfoComputeRange(
               }
             });
           }
-        } else if (borderType === "border-all") {
+        } else if (borderType === 'border-all') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -481,7 +481,7 @@ export function getBorderInfoComputeRange(
               }
             }
           }
-        } else if (borderType === "border-outside") {
+        } else if (borderType === 'border-outside') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -647,7 +647,7 @@ export function getBorderInfoComputeRange(
               }
             }
           }
-        } else if (borderType === "border-inside") {
+        } else if (borderType === 'border-inside') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -995,7 +995,7 @@ export function getBorderInfoComputeRange(
               }
             }
           }
-        } else if (borderType === "border-horizontal") {
+        } else if (borderType === 'border-horizontal') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -1068,7 +1068,7 @@ export function getBorderInfoComputeRange(
               }
             }
           }
-        } else if (borderType === "border-vertical") {
+        } else if (borderType === 'border-vertical') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -1141,7 +1141,7 @@ export function getBorderInfoComputeRange(
               }
             }
           }
-        } else if (borderType === "border-none") {
+        } else if (borderType === 'border-none') {
           for (let bd_r = bd_r1; bd_r <= bd_r2; bd_r += 1) {
             if (!_.isNil(cfg.rowhidden) && !_.isNil(cfg.rowhidden[bd_r])) {
               continue;
@@ -1196,7 +1196,7 @@ export function getBorderInfoComputeRange(
           }
         }
       }
-    } else if (rangeType === "cell") {
+    } else if (rangeType === 'cell') {
       const { value } = borderInfo[i] as any;
 
       const bd_r = value.row_index;
@@ -1540,7 +1540,7 @@ export function getBorderInfoCompute(ctx: Context, sheetId?: string) {
     data.length,
     0,
     data[0].length,
-    sheetId
+    sheetId,
   );
 
   return borderInfoCompute;

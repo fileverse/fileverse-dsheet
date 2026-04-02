@@ -1,15 +1,15 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { colLocation, rowLocation } from "./location";
-import { mergeBorder } from "./cell";
-import { CellError } from "../types";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { colLocation, rowLocation } from './location';
+import { mergeBorder } from './cell';
+import { CellError } from '../types';
 
 export function overShowError(
   ctx: Context,
   e: MouseEvent,
   scrollX: HTMLDivElement,
   scrollY: HTMLDivElement,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;
@@ -74,8 +74,8 @@ export function overShowError(
     row_column,
     left,
     top,
-    title: cell.error?.title || "Error",
-    message: cell.error?.message || "Default error message",
+    title: cell.error?.title || 'Error',
+    message: cell.error?.message || 'Default error message',
   };
 }
 
@@ -83,7 +83,7 @@ export function setCellError(
   ctx: Context,
   r: number,
   c: number,
-  err: CellError
+  err: CellError,
 ) {
   const flow = getFlowdata(ctx);
   if (!flow) return;

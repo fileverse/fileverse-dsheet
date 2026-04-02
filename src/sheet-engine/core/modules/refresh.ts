@@ -1,12 +1,12 @@
-import { Context, getFlowdata } from "../context";
-import { CellMatrix, Selection } from "../types";
-import { execFunctionGroup } from "./formula";
+import { Context, getFlowdata } from '../context';
+import { CellMatrix, Selection } from '../types';
+import { execFunctionGroup } from './formula';
 
 function runExecFunction(
   ctx: Context,
   range: Selection[],
   index: string,
-  data: any
+  data: any,
 ) {
   ctx.formulaCache.execFunctionExist = [];
   for (let s = 0; s < range.length; s += 1) {
@@ -26,7 +26,7 @@ export function jfrefreshgrid(
   ctx: Context,
   data: CellMatrix | null,
   range: Selection[] | undefined,
-  isRunExecFunction = true
+  isRunExecFunction = true,
 ) {
   if (data == null) {
     data = getFlowdata(ctx)!;

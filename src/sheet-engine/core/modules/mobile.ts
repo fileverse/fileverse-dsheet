@@ -1,5 +1,5 @@
-import { Context } from "..";
-import { GlobalCache } from "../types";
+import { Context } from '..';
+import { GlobalCache } from '../types';
 
 // export default function mobileinit(ctx: Context) {
 //   ctx.cellMainSrollBarSize = 0;
@@ -11,7 +11,7 @@ import { GlobalCache } from "../types";
 export function handleOverlayTouchStart(
   ctx: Context,
   e: TouchEvent,
-  globalCache: GlobalCache
+  globalCache: GlobalCache,
 ) {
   globalCache.touchMoveStatus = true;
   const touch = e.targetTouches[0];
@@ -19,7 +19,7 @@ export function handleOverlayTouchStart(
     x: touch.pageX,
     y: touch.pageY,
     vy: 0,
-    moveType: "y",
+    moveType: 'y',
   };
 }
 
@@ -28,7 +28,7 @@ export function handleOverlayTouchMove(
   e: TouchEvent,
   globalCache: GlobalCache,
   scrollbarX: HTMLDivElement,
-  scrollbarY: HTMLDivElement
+  scrollbarY: HTMLDivElement,
 ) {
   if (e.targetTouches.length > 1) return;
   const touch = e.targetTouches[0];

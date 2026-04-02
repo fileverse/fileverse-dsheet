@@ -1,7 +1,11 @@
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import { diffObjectMap } from './diff-sheet';
-import { SheetChangePath, updateYdocSheetData, ySheetArrayToPlain } from './update-ydoc';
+import {
+  SheetChangePath,
+  updateYdocSheetData,
+  ySheetArrayToPlain,
+} from './update-ydoc';
 
 type SyncContext = {
   currentSheetId: string;

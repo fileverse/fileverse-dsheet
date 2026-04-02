@@ -15,8 +15,8 @@ import {
   fixPositionOnFrozenCells,
   showSelected,
   api,
-} from "@sheet-engine/core";
-import _ from "lodash";
+} from '@sheet-engine/core';
+import _ from 'lodash';
 import React, {
   useContext,
   useState,
@@ -24,10 +24,10 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-} from "react";
-import WorkbookContext from "../../context";
-import SVGIcon from "../SVGIcon";
-import { useColumnDragAndDrop } from "./drag_and_drop/column-helpers";
+} from 'react';
+import WorkbookContext from '../../context';
+import SVGIcon from '../SVGIcon';
+import { useColumnDragAndDrop } from './drag_and_drop/column-helpers';
 
 const ColumnHeader: React.FC = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
@@ -48,15 +48,15 @@ const ColumnHeader: React.FC = () => {
 
   const freezeHandleLeft = useMemo(() => {
     if (
-      sheet?.frozen?.type === "column" ||
-      sheet?.frozen?.type === "rangeColumn" ||
-      sheet?.frozen?.type === "rangeBoth" ||
-      sheet?.frozen?.type === "both"
+      sheet?.frozen?.type === 'column' ||
+      sheet?.frozen?.type === 'rangeColumn' ||
+      sheet?.frozen?.type === 'rangeBoth' ||
+      sheet?.frozen?.type === 'both'
     ) {
       return (
         colLocationByIndex(
           sheet?.frozen?.range?.column_focus || 0,
-          context.visibledatacolumn
+          context.visibledatacolumn,
         )[1] -
         2 +
         context.scrollLeft
@@ -89,7 +89,7 @@ const ColumnHeader: React.FC = () => {
         _x,
         0,
         mouseX,
-        0
+        0,
       );
       const col_location = colLocation(x, context.visibledatacolumn);
       const [col_pre, col, col_index] = col_location;
@@ -108,13 +108,13 @@ const ColumnHeader: React.FC = () => {
             },
           ]);
     },
-    [context, hoverLocation.col_index, refs.globalCache.freezen]
+    [context, hoverLocation.col_index, refs.globalCache.freezen],
   );
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       // @ts-expect-error
-      if ((e.button === 0 && e.target.tagName === "use") || e.button === 2) {
+      if ((e.button === 0 && e.target.tagName === 'use') || e.button === 2) {
         const { nativeEvent } = e;
         setContext((draft) => {
           handleColumnHeaderMouseDown(
@@ -123,16 +123,16 @@ const ColumnHeader: React.FC = () => {
             nativeEvent,
             containerRef.current!,
             refs.cellInput.current!,
-            refs.fxInput.current!
+            refs.fxInput.current!,
           );
         });
       }
       if (e.button !== 0 || context.isFlvReadOnly) return; // left button only
       const targetEl = e.target as HTMLElement;
       if (
-        targetEl.closest(".fortune-cols-change-size") ||
-        targetEl.closest(".fortune-cols-freeze-handle") ||
-        targetEl.closest(".header-arrow")
+        targetEl.closest('.fortune-cols-change-size') ||
+        targetEl.closest('.fortune-cols-freeze-handle') ||
+        targetEl.closest('.header-arrow')
       )
         return;
 
@@ -146,7 +146,7 @@ const ColumnHeader: React.FC = () => {
       const lastSelectedRow = sel?.[0].row?.[1];
       let data = getFlowdata(context);
       if (!data) data = [];
-      // eslint-disable-next-line no-unsafe-optional-chaining
+
       const allColSel = lastSelectedRow === data?.length - 1;
       if (allColSel) {
         setContext((draft) => {
@@ -167,7 +167,7 @@ const ColumnHeader: React.FC = () => {
             nativeEvent,
             containerRef.current!,
             refs.cellInput.current!,
-            refs.fxInput.current!
+            refs.fxInput.current!,
           );
         });
         return;
@@ -186,7 +186,7 @@ const ColumnHeader: React.FC = () => {
       getColIndexClicked,
       isColDoubleClicked,
       initiateDrag,
-    ]
+    ],
   );
 
   const onMouseLeave = useCallback(() => {
@@ -206,12 +206,12 @@ const ColumnHeader: React.FC = () => {
           nativeEvent,
           containerRef.current!,
           refs.workbookContainer.current!,
-          refs.cellArea.current!
+          refs.cellArea.current!,
         );
       });
       e.stopPropagation();
     },
-    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext]
+    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext],
   );
 
   const onColSizeHandleDoubleClick = useCallback(
@@ -222,12 +222,12 @@ const ColumnHeader: React.FC = () => {
           draftCtx,
           refs.globalCache,
           nativeEvent,
-          containerRef.current!
+          containerRef.current!,
         );
       });
       e.stopPropagation();
     },
-    [refs.globalCache, setContext]
+    [refs.globalCache, setContext],
   );
 
   const onColFreezeHandleMouseDown = useCallback(
@@ -240,12 +240,12 @@ const ColumnHeader: React.FC = () => {
           nativeEvent,
           containerRef.current!,
           refs.workbookContainer.current!,
-          refs.cellArea.current!
+          refs.cellArea.current!,
         );
       });
       e.stopPropagation();
     },
-    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext]
+    [refs.cellArea, refs.globalCache, refs.workbookContainer, setContext],
   );
 
   // const onContextMenu = useCallback(
@@ -316,7 +316,7 @@ const ColumnHeader: React.FC = () => {
 
   const showColumn = (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    item: any
+    item: any,
   ) => {
     if (sheetIndex == null) return;
 
@@ -364,11 +364,11 @@ const ColumnHeader: React.FC = () => {
         ],
         {
           id: context.currentSheetId,
-        }
+        },
       );
     });
     setContext((ctx) => {
-      showSelected(ctx, "column");
+      showSelected(ctx, 'column');
     });
 
     setContext((ctx) => {
@@ -382,7 +382,7 @@ const ColumnHeader: React.FC = () => {
         ],
         {
           id: context.currentSheetId,
-        }
+        },
       );
     });
   };
@@ -392,12 +392,12 @@ const ColumnHeader: React.FC = () => {
   }, [context.scrollLeft]);
 
   const getCursor = (colIndex: any) => {
-    if (mouseDown) return "grabbing";
+    if (mouseDown) return 'grabbing';
     const sel = api.getSelection(context);
     const lastSelectedRow = sel?.[0].row?.[1];
     let data = getFlowdata(context);
     if (!data) data = [];
-    // eslint-disable-next-line no-unsafe-optional-chaining
+
     const allColSel = lastSelectedRow === data?.length - 1;
     if (
       allColSel &&
@@ -405,9 +405,9 @@ const ColumnHeader: React.FC = () => {
       colIndex >= sel?.[0].column[0] &&
       colIndex <= sel?.[0].column[1]
     ) {
-      return "grab";
+      return 'grab';
     }
-    return "default";
+    return 'default';
   };
 
   return (
@@ -498,15 +498,15 @@ const ColumnHeader: React.FC = () => {
             {
               left: hoverLocation.col_pre,
               width: hoverLocation.col - hoverLocation.col_pre - 1,
-              display: "block",
+              display: 'block',
               cursor: getCursor(hoverLocation.col_index),
             },
             fixColumnStyleOverflowInFreeze(
               context,
               hoverLocation.col_index,
               hoverLocation.col_index,
-              refs.globalCache.freezen?.[context.currentSheetId]
-            )
+              refs.globalCache.freezen?.[context.currentSheetId],
+            ),
           )}
         >
           {allowEditRef.current && (
@@ -526,7 +526,7 @@ const ColumnHeader: React.FC = () => {
               <SVGIcon
                 name="headDownArrow"
                 width={12}
-                style={{ marginBottom: "3px" }}
+                style={{ marginBottom: '3px' }}
               />
             </span>
           )}
@@ -540,16 +540,16 @@ const ColumnHeader: React.FC = () => {
             {
               left: col_pre,
               width: col - col_pre - 1,
-              display: "block",
+              display: 'block',
               // backgroundColor: "#EFC703",
-              mixBlendMode: "multiply" as any,
+              mixBlendMode: 'multiply' as any,
             },
             fixColumnStyleOverflowInFreeze(
               context,
               c1,
               c2,
-              refs.globalCache.freezen?.[context.currentSheetId]
-            )
+              refs.globalCache.freezen?.[context.currentSheetId],
+            ),
           )}
         />
       ))}

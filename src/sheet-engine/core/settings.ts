@@ -1,13 +1,13 @@
-import { v4 as uuidv4 } from "uuid";
-import React from "react";
-import { Sheet, Selection, CellMatrix, Cell } from "./types";
+import { v4 as uuidv4 } from 'uuid';
+import React from 'react';
+import { Sheet, Selection, CellMatrix, Cell } from './types';
 
 type SheetChangePath = {
   sheetId: string;
   path: string[]; // ['name'], ['config', 'merge'], ['celldata']
   key?: string; // 👈 only for celldata
   value: any;
-  type?: "update" | "delete";
+  type?: 'update' | 'delete';
 };
 export type Hooks = {
   calcChainChange?: () => void;
@@ -29,7 +29,7 @@ export type Hooks = {
     row: number,
     column: number,
     oldValue: any,
-    newValue: any
+    newValue: any,
   ) => void;
   afterSelectionChange?: (sheetId: string, selection: Selection) => void;
   beforeRenderRowHeaderCell?: (
@@ -38,7 +38,7 @@ export type Hooks = {
     top: number,
     width: number,
     height: number,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => boolean;
   afterRenderRowHeaderCell?: (
     rowNumber: string,
@@ -46,7 +46,7 @@ export type Hooks = {
     top: number,
     width: number,
     height: number,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => void;
   beforeRenderColumnHeaderCell?: (
     columnChar: string,
@@ -54,7 +54,7 @@ export type Hooks = {
     left: number,
     width: number,
     height: number,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => boolean;
   afterRenderColumnHeaderCell?: (
     columnChar: string,
@@ -62,11 +62,11 @@ export type Hooks = {
     left: number,
     width: number,
     height: number,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => void;
   beforeRenderCellArea?: (
     cells: CellMatrix,
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => boolean;
   beforeRenderCell?: (
     cell: Cell | null,
@@ -78,7 +78,7 @@ export type Hooks = {
       endX: number;
       endY: number;
     },
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => boolean;
   afterRenderCell?: (
     cell: Cell | null,
@@ -90,7 +90,7 @@ export type Hooks = {
       endX: number;
       endY: number;
     },
-    ctx: CanvasRenderingContext2D
+    ctx: CanvasRenderingContext2D,
   ) => void;
   beforeCellMouseDown?: (
     cell: Cell | null,
@@ -101,7 +101,7 @@ export type Hooks = {
       startColumn: number;
       endRow: number;
       endColumn: number;
-    }
+    },
   ) => boolean;
   afterCellMouseDown?: (
     cell: Cell | null,
@@ -112,18 +112,18 @@ export type Hooks = {
       startColumn: number;
       endRow: number;
       endColumn: number;
-    }
+    },
   ) => void;
   beforePaste?: (
     selection: Selection[] | undefined,
-    content: string
+    content: string,
   ) => boolean;
   beforeUpdateComment?: (row: number, column: number, value: any) => boolean;
   afterUpdateComment?: (
     row: number,
     column: number,
     oldValue: any,
-    value: any
+    value: any,
   ) => void;
   beforeInsertComment?: (row: number, column: number) => boolean;
   afterInsertComment?: (row: number, column: number) => void;
@@ -138,7 +138,7 @@ export type Hooks = {
   beforeUpdateSheetName?: (
     id: string,
     oldName: string,
-    newName: string
+    newName: string,
   ) => boolean;
   afterUpdateSheetName?: (id: string, oldName: string, newName: string) => void;
   afterImagesChange?: () => void;
@@ -155,7 +155,7 @@ export type Hooks = {
 };
 
 type CommentUIDragFn = (
-  e: React.MouseEvent<HTMLDivElement, MouseEvent>
+  e: React.MouseEvent<HTMLDivElement, MouseEvent>,
 ) => void;
 export type Settings = {
   column?: number;
@@ -184,7 +184,7 @@ export type Settings = {
     | ((
         row: number,
         column: number,
-        dragHandler: CommentUIDragFn
+        dragHandler: CommentUIDragFn,
       ) => React.ReactNode)
     | null;
   generateSheetId?: () => string;
@@ -223,131 +223,131 @@ export const defaultSettings: Required<Settings> = {
   defaultRowHeight: 19,
   defaultFontSize: 10,
   toolbarItems: [
-    "undo",
-    "redo",
-    "format-painter",
-    "clear-format",
-    "|",
-    "currency",
-    "percentage-format",
-    "number-decrease",
-    "number-increase",
-    "format",
-    "|",
-    "font",
-    "|",
-    "font-size",
-    "|",
-    "bold",
-    "italic",
-    "strike-through",
-    "underline",
-    "|",
-    "font-color",
-    "background",
-    "border",
-    "merge-cell",
-    "|",
-    "horizontal-align",
-    "vertical-align",
-    "text-wrap",
-    "text-rotation",
-    "|",
-    "freeze",
-    "conditionFormat",
-    "filter",
-    "link",
-    "image",
-    "comment",
-    "quick-formula",
-    "dataVerification",
-    "splitColumn",
-    "locationCondition",
-    "screenshot",
-    "search",
+    'undo',
+    'redo',
+    'format-painter',
+    'clear-format',
+    '|',
+    'currency',
+    'percentage-format',
+    'number-decrease',
+    'number-increase',
+    'format',
+    '|',
+    'font',
+    '|',
+    'font-size',
+    '|',
+    'bold',
+    'italic',
+    'strike-through',
+    'underline',
+    '|',
+    'font-color',
+    'background',
+    'border',
+    'merge-cell',
+    '|',
+    'horizontal-align',
+    'vertical-align',
+    'text-wrap',
+    'text-rotation',
+    '|',
+    'freeze',
+    'conditionFormat',
+    'filter',
+    'link',
+    'image',
+    'comment',
+    'quick-formula',
+    'dataVerification',
+    'splitColumn',
+    'locationCondition',
+    'screenshot',
+    'search',
   ], // 自定义工具栏
   cellContextMenu: [
-    "split-text",
-    "cut",
-    "copy", // 复制
-    "paste", // 粘贴
-    "clear", // 清除内容
-    "|",
-    "insert-row", // 插入行
-    "insert-column", // 插入列
-    "cell-delete-row", // 删除选中行
-    "cell-delete-column", // 删除选中列
-    "delete-cell", // 删除单元格
-    "hide-row", // 隐藏选中行和显示选中行
-    "hide-column", // 隐藏选中列和显示选中列
-    "set-row-height", // 设置行高
-    "set-column-width", // 设置列宽
-    "|",
-    "conditionFormat",
-    "sort", // 排序选区
-    "ascSort",
-    "desSort",
-    "orderAZ", // 升序
-    "orderZA", // 降序
-    "filter", // 筛选选区
-    "searchReplace",
-    "dataVerification",
-    "|",
-    "chart", // 图表生成
+    'split-text',
+    'cut',
+    'copy', // 复制
+    'paste', // 粘贴
+    'clear', // 清除内容
+    '|',
+    'insert-row', // 插入行
+    'insert-column', // 插入列
+    'cell-delete-row', // 删除选中行
+    'cell-delete-column', // 删除选中列
+    'delete-cell', // 删除单元格
+    'hide-row', // 隐藏选中行和显示选中行
+    'hide-column', // 隐藏选中列和显示选中列
+    'set-row-height', // 设置行高
+    'set-column-width', // 设置列宽
+    '|',
+    'conditionFormat',
+    'sort', // 排序选区
+    'ascSort',
+    'desSort',
+    'orderAZ', // 升序
+    'orderZA', // 降序
+    'filter', // 筛选选区
+    'searchReplace',
+    'dataVerification',
+    '|',
+    'chart', // 图表生成
     // "image", // 插入图片
-    "link", // 插入链接
-    "data", // 数据验证
-    "cell-format", // 设置单元格格式
-    "comment", // 添加注释
-    "|",
-    "clear-format",
+    'link', // 插入链接
+    'data', // 数据验证
+    'cell-format', // 设置单元格格式
+    'comment', // 添加注释
+    '|',
+    'clear-format',
   ], // 自定义单元格右键菜单
   headerContextMenu: [
-    "copy", // 复制
-    "paste", // 粘贴
-    "|",
-    "insert-row", // 插入行
-    "insert-column", // 插入列
-    "delete-row", // 删除选中行
-    "delete-column", // 删除选中列
-    "delete-cell", // 删除单元格
-    "hide-row", // 隐藏选中行和显示选中行
-    "hide-column", // 隐藏选中列和显示选中列
-    "set-row-height", // 设置行高
-    "set-column-width", // 设置列宽
-    "|",
-    "split-text",
-    "clear", // 清除内容
-    "sort", // 排序选区
-    "orderAZ", // 升序
-    "orderZA", // 降序
-    "|",
-    "clear-format",
+    'copy', // 复制
+    'paste', // 粘贴
+    '|',
+    'insert-row', // 插入行
+    'insert-column', // 插入列
+    'delete-row', // 删除选中行
+    'delete-column', // 删除选中列
+    'delete-cell', // 删除单元格
+    'hide-row', // 隐藏选中行和显示选中行
+    'hide-column', // 隐藏选中列和显示选中列
+    'set-row-height', // 设置行高
+    'set-column-width', // 设置列宽
+    '|',
+    'split-text',
+    'clear', // 清除内容
+    'sort', // 排序选区
+    'orderAZ', // 升序
+    'orderZA', // 降序
+    '|',
+    'clear-format',
   ], // header菜单
   sheetTabContextMenu: [
-    "delete",
-    "copy",
-    "rename",
-    "color",
-    "hide",
-    "|",
-    "move",
+    'delete',
+    'copy',
+    'rename',
+    'color',
+    'hide',
+    '|',
+    'move',
     // "focus",
   ], // 自定义底部sheet页右击菜单
   filterContextMenu: [
-    "sort-by-asc",
-    "sort-by-desc",
+    'sort-by-asc',
+    'sort-by-desc',
     // "|",
     // "filter-by-color",
     // "|",
     // "filter-by-condition",
     // "|",
-    "filter-by-value",
+    'filter-by-value',
   ], // 筛选菜单
   generateSheetId: () => uuidv4(),
   hooks: {},
   customToolbarItems: [],
-  currency: "$",
+  currency: '$',
   getCommentCellUI: null,
   onDuneChartEmbed: () => {},
   onSheetCountChange: () => {},

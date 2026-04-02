@@ -1,7 +1,7 @@
 export function moveToEnd(obj: HTMLDivElement) {
   if (document.createRange) {
     // chrome, firefox, opera, safari, ie9+
-    if (obj.innerHTML !== obj.innerText || obj.innerHTML === "") {
+    if (obj.innerHTML !== obj.innerText || obj.innerHTML === '') {
       obj.focus(); // 解决ff不获取焦点无法定位问题
       const range = window.getSelection(); // 创建range
       range?.selectAllChildren(obj); // range 选择obj下所有子内容
@@ -71,7 +71,7 @@ export function selectTextContentCross(sEle: HTMLElement, eEle: HTMLElement) {
 
 /** Returns character offsets of the current selection within the element, or null if collapsed/outside. */
 export function getSelectionCharacterOffsets(
-  element: Node
+  element: Node,
 ): { start: number; end: number } | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -94,7 +94,7 @@ export function getSelectionCharacterOffsets(
 export function setSelectionByCharacterOffset(
   element: HTMLDivElement,
   start: number,
-  end: number
+  end: number,
 ) {
   element.focus();
   const sel = window.getSelection();
@@ -107,7 +107,7 @@ export function setSelectionByCharacterOffset(
 
   function walk(node: Node): boolean {
     if (node.nodeType === Node.TEXT_NODE) {
-      const len = (node.textContent || "").length;
+      const len = (node.textContent || '').length;
       if (startNode == null && charIndex + len > start) {
         startNode = node;
         startOffset = start - charIndex;
@@ -143,7 +143,7 @@ export function setSelectionByCharacterOffset(
 export function getRangeRectsByCharacterOffset(
   element: HTMLDivElement,
   start: number,
-  end: number
+  end: number,
 ): DOMRect[] {
   if (start >= end) return [];
   let charIndex = 0;
@@ -154,7 +154,7 @@ export function getRangeRectsByCharacterOffset(
 
   function walk(node: Node): boolean {
     if (node.nodeType === Node.TEXT_NODE) {
-      const len = (node.textContent || "").length;
+      const len = (node.textContent || '').length;
       if (startNode == null && charIndex + len > start) {
         startNode = node;
         startOffset = start - charIndex;

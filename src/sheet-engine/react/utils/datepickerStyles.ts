@@ -51,8 +51,8 @@ export const datepickerStyles = `
 `;
 
 export const injectDatepickerStyles = () => {
-  if (typeof document !== "undefined") {
-    const styleSheet = document.createElement("style");
+  if (typeof document !== 'undefined') {
+    const styleSheet = document.createElement('style');
     styleSheet.textContent = datepickerStyles;
     document.head.appendChild(styleSheet);
   }

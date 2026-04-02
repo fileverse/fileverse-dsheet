@@ -129,13 +129,18 @@ export const useEditorData = (
           setContext?.((ctx: any) => {
             const files = ctx.luckysheetfile;
             files.forEach((file: any, fileIndex: number) => {
-              const sheetKey = (file?.id ?? fileIndex)?.toString?.() ?? String(fileIndex);
+              const sheetKey =
+                (file?.id ?? fileIndex)?.toString?.() ?? String(fileIndex);
               file.data?.forEach((row: any, rowIndex: number) => {
                 row.forEach((cell: any, colIndex: number) => {
                   if (cell) {
                     const comment =
-                      (commentData as any)?.[`${sheetKey}_${rowIndex}_${colIndex}`] ??
-                      (commentData as any)?.[`${fileIndex}_${rowIndex}_${colIndex}`];
+                      (commentData as any)?.[
+                        `${sheetKey}_${rowIndex}_${colIndex}`
+                      ] ??
+                      (commentData as any)?.[
+                        `${fileIndex}_${rowIndex}_${colIndex}`
+                      ];
                     if (comment) {
                       cell.ps = allowComments
                         ? CELL_COMMENT_DEFAULT_VALUE
@@ -163,7 +168,9 @@ export const useEditorData = (
                 v: {
                   ...cell.v,
                   ps: comment
-                    ? (!allowComments ? undefined : CELL_COMMENT_DEFAULT_VALUE)
+                    ? !allowComments
+                      ? undefined
+                      : CELL_COMMENT_DEFAULT_VALUE
                     : undefined,
                 },
               };

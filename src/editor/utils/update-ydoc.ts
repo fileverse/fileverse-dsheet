@@ -3,8 +3,8 @@ import { Sheet } from '@sheet-engine/react';
 
 export type SheetChangePath = {
   sheetId: string;
-  path: string[];        // ['name'], ['config', 'merge'], ['celldata']
-  key?: string;          // 👈 only for celldata
+  path: string[]; // ['name'], ['config', 'merge'], ['celldata']
+  key?: string; // 👈 only for celldata
   value: any;
   type?: 'update' | 'delete';
 };
@@ -25,11 +25,7 @@ const getSheetId = (sheet: Y.Map<any> | Record<string, any>) => {
   return (sheet as Record<string, any>)?.id;
 };
 
-const logYdocWarning = (
-  context: string,
-  details: Record<string, unknown>,
-) => {
-  // eslint-disable-next-line no-console
+const logYdocWarning = (context: string, details: Record<string, unknown>) => {
   console.warn(`[updateYdocSheetData] ${context}`, details);
 };
 
@@ -47,8 +43,9 @@ export const updateYdocSheetData = (
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
       const allSheets = sheetArray.toArray();
-      const sheet = allSheets
-        .find((s: Y.Map<any> | Record<string, any>) => getSheetId(s) === sheetId);
+      const sheet = allSheets.find(
+        (s: Y.Map<any> | Record<string, any>) => getSheetId(s) === sheetId,
+      );
 
       if (!sheet) {
         logYdocWarning('sheet not found for change', {
@@ -183,7 +180,9 @@ export const updateYdocSheetData = (
           sheet.set('filter_select', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : cellMap.set(key, toPlain(value));
+        type === 'delete'
+          ? cellMap.delete(key)
+          : cellMap.set(key, toPlain(value));
         return;
       }
 
@@ -203,8 +202,14 @@ export const updateYdocSheetData = (
         if (type === 'delete') return;
 
         const plainValue = toPlain(value) || {};
-        if (plainValue && typeof plainValue === 'object' && !Array.isArray(plainValue)) {
-          Object.entries(plainValue).forEach(([k, v]) => filterMap.set(k, toPlain(v)));
+        if (
+          plainValue &&
+          typeof plainValue === 'object' &&
+          !Array.isArray(plainValue)
+        ) {
+          Object.entries(plainValue).forEach(([k, v]) =>
+            filterMap.set(k, toPlain(v)),
+          );
         }
         return;
       }
@@ -221,7 +226,10 @@ export const updateYdocSheetData = (
         if (type === 'delete') return;
 
         const plainValue = toPlain(value);
-        cellArray.insert(0, Array.isArray(plainValue) ? plainValue : [plainValue]);
+        cellArray.insert(
+          0,
+          Array.isArray(plainValue) ? plainValue : [plainValue],
+        );
         return;
       }
 
@@ -259,13 +267,15 @@ export const updateYdocSheetData = (
     });
   });
 
-  console.log('Finished applying changes to Y.Doc. New state:', sheetArray.toJSON());
+  console.log(
+    'Finished applying changes to Y.Doc. New state:',
+    sheetArray.toJSON(),
+  );
 
   if (handleContentPortal) {
     handleContentPortal();
   }
 };
-
 
 export function ySheetArrayToPlain(
   // @ts-ignore
@@ -275,11 +285,16 @@ export function ySheetArrayToPlain(
     const obj: any = {};
 
     // Handle legacy plain-object sheets (e.g. before migration) so we never call .forEach on a non-Map
-    const iterate = (sheetMap instanceof Y.Map)
-      ? (fn: (value: any, key: string) => void) => { sheetMap.forEach(fn); }
-      : (fn: (value: any, key: string) => void) => {
-        Object.entries(sheetMap as Record<string, any>).forEach(([key, value]) => fn(value, key));
-      };
+    const iterate =
+      sheetMap instanceof Y.Map
+        ? (fn: (value: any, key: string) => void) => {
+            sheetMap.forEach(fn);
+          }
+        : (fn: (value: any, key: string) => void) => {
+            Object.entries(sheetMap as Record<string, any>).forEach(
+              ([key, value]) => fn(value, key),
+            );
+          };
 
     iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format
@@ -289,13 +304,16 @@ export function ySheetArrayToPlain(
       }
 
       if (key === 'calcChain' && value instanceof Y.Map) {
-        let calcChain = value.toJSON();
-        if (Object.keys(calcChain).length === 0) return
+        const calcChain = value.toJSON();
+        if (Object.keys(calcChain).length === 0) return;
         obj.calcChain = calcChain;
         return;
       }
 
-      if (key === 'luckysheet_conditionformat_save' && value instanceof Y.Array) {
+      if (
+        key === 'luckysheet_conditionformat_save' &&
+        value instanceof Y.Array
+      ) {
         const conditionFormatRules = value.toJSON();
         if (conditionFormatRules.length === 0) return;
         obj.luckysheet_conditionformat_save = conditionFormatRules;
@@ -303,36 +321,36 @@ export function ySheetArrayToPlain(
       }
 
       if (key === 'dataBlockCalcFunction' && value instanceof Y.Map) {
-        let dataBlockCalcFunction = value.toJSON();
-        if (Object.keys(dataBlockCalcFunction).length === 0) return
+        const dataBlockCalcFunction = value.toJSON();
+        if (Object.keys(dataBlockCalcFunction).length === 0) return;
         obj.dataBlockCalcFunction = dataBlockCalcFunction;
         return;
       }
 
       if (key === 'liveQueryList' && value instanceof Y.Map) {
-        let liveQueryList = value.toJSON();
-        if (Object.keys(liveQueryList).length === 0) return
+        const liveQueryList = value.toJSON();
+        if (Object.keys(liveQueryList).length === 0) return;
         obj.liveQueryList = liveQueryList;
         return;
       }
 
       if (key === 'dataVerification' && value instanceof Y.Map) {
-        let dataVerification = value.toJSON();
-        if (Object.keys(dataVerification).length === 0) return
+        const dataVerification = value.toJSON();
+        if (Object.keys(dataVerification).length === 0) return;
         obj.dataVerification = dataVerification;
         return;
       }
 
       if (key === 'hyperlink' && value instanceof Y.Map) {
-        let hyperlink = value.toJSON();
-        if (Object.keys(hyperlink).length === 0) return
+        const hyperlink = value.toJSON();
+        if (Object.keys(hyperlink).length === 0) return;
         obj.hyperlink = hyperlink;
         return;
       }
 
       if (key === 'conditionRules' && value instanceof Y.Map) {
-        let conditionRules = value.toJSON();
-        if (Object.keys(conditionRules).length === 0) return
+        const conditionRules = value.toJSON();
+        if (Object.keys(conditionRules).length === 0) return;
         obj.conditionRules = conditionRules;
         return;
       }

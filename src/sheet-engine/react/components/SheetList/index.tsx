@@ -1,9 +1,9 @@
-import _ from "lodash";
-import React, { useContext, useRef, useCallback } from "react";
-import WorkbookContext from "../../context";
-import { useOutsideClick } from "../../hooks/useOutsideClick";
-import "./index.css";
-import SheetListItem from "./SheetListItem";
+import _ from 'lodash';
+import React, { useContext, useRef, useCallback } from 'react';
+import WorkbookContext from '../../context';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
+import './index.css';
+import SheetListItem from './SheetListItem';
 
 const SheetList: React.FC = () => {
   const { context, setContext } = useContext(WorkbookContext);
@@ -24,7 +24,7 @@ const SheetList: React.FC = () => {
       {_.sortBy(context.luckysheetfile, (s) => Number(s.order)).map(
         (singleSheet) => {
           return <SheetListItem sheet={singleSheet} key={singleSheet.id} />;
-        }
+        },
       )}
     </div>
   );

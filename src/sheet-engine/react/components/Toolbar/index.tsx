@@ -184,7 +184,7 @@ export const CurrencySelector = ({
       // Try to match with crypto or fiat
       const allOptions = [
         ...CRYPTO_OPTIONS,
-        ...locale(context).currencyDetail.map((c) => ({
+        ...locale(context).currencyDetail.map((c: { name: string; value: string; pos: string; geckoId: string }) => ({
           label: c.name,
           value: c.value,
           icon: undefined,
@@ -787,7 +787,7 @@ const Toolbar: React.FC<{
           >
             {(setOpen) => (
               <Select>
-                {defaultFormat.map(({ text, value, example }, ii) => {
+                {defaultFormat.map(({ text, value, example }: { text: string; value: string; example: string }, ii: number) => {
                   if (value === 'split') {
                     return <MenuDivider key={ii} />;
                   }
@@ -877,7 +877,7 @@ const Toolbar: React.FC<{
           <Combo text={current} key={name} tooltip={tooltip} showArrow={false}>
             {(setOpen) => (
               <Select>
-                {fontarray.map((o) => (
+                {fontarray.map((o: string) => (
                   <Option
                     key={o}
                     onClick={() => {

@@ -1,6 +1,7 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { getCellValue, setCellValue } from "./cell";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { getCellValue, setCellValue } from './cell';
 
 // 生成二维数组
 export function getNullData(rlen: number, clen: number) {
@@ -9,7 +10,7 @@ export function getNullData(rlen: number, clen: number) {
     const rowArr = [];
 
     for (let c = 0; c < clen; c += 1) {
-      rowArr.push("");
+      rowArr.push('');
     }
     arr.push(rowArr);
   }
@@ -21,7 +22,7 @@ export function updateMoreCell(
   r: number,
   c: number,
   dataMatrix: string[][],
-  ctx: Context
+  ctx: Context,
 ) {
   if (ctx.allowEdit === false) return;
   const flowdata = getFlowdata(ctx);
@@ -30,7 +31,7 @@ export function updateMoreCell(
     path: string[];
     key?: string;
     value: any;
-    type?: "update" | "delete";
+    type?: 'update' | 'delete';
   }[] = [];
   dataMatrix.forEach((datas, i) => {
     datas.forEach((data, j) => {
@@ -41,10 +42,10 @@ export function updateMoreCell(
         const cc = c + j;
         cellChanges.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r: rr, c: cc, v: flowdata?.[rr]?.[cc] ?? null },
           key: `${rr}_${cc}`,
-          type: "update",
+          type: 'update',
         });
       }
     });
@@ -58,48 +59,48 @@ export function updateMoreCell(
 
 // 处理分隔符
 export function getRegStr(regStr: string, splitSymbols: any) {
-  regStr = "";
+  regStr = '';
   let mark = 0;
   for (let i = 0; i < splitSymbols.length; i += 1) {
     const split = splitSymbols[i];
     const inputNode = split.childNodes[0];
     if (inputNode.checked) {
       const { id } = inputNode;
-      if (id === "Tab") {
+      if (id === 'Tab') {
         // Tab键
-        regStr += "\\t";
+        regStr += '\\t';
         mark += 1;
-      } else if (id === "semicolon") {
+      } else if (id === 'semicolon') {
         // 分号
         if (mark > 0) {
-          regStr += "|";
+          regStr += '|';
         }
-        regStr += ";";
+        regStr += ';';
         mark = 1;
-      } else if (id === "comma") {
+      } else if (id === 'comma') {
         // 逗号
         if (mark > 0) {
-          regStr += "|";
+          regStr += '|';
         }
-        regStr += ",";
+        regStr += ',';
         mark += 1;
-      } else if (id === "space") {
+      } else if (id === 'space') {
         // 空格
         if (mark > 0) {
-          regStr += "|";
+          regStr += '|';
         }
 
-        regStr += "\\s";
+        regStr += '\\s';
         mark += 1;
-      } else if (id === "splitsimple") {
+      } else if (id === 'splitsimple') {
         // 连续分隔符号视为单个处理
         regStr = `[${regStr}]+`;
-      } else if (id === "other") {
+      } else if (id === 'other') {
         // 其他
         const txt = split.childNodes[2].value;
-        if (txt !== "") {
+        if (txt !== '') {
           if (mark > 0) {
-            regStr += "|";
+            regStr += '|';
           }
           regStr += txt;
         }
@@ -116,8 +117,8 @@ export function getDataArr(regStr: string, ctx: Context) {
   const r2 = ctx.luckysheet_select_save![0].row[1];
   const c = ctx.luckysheet_select_save![0].column[0];
   const data = getFlowdata(ctx);
-  if (!_.isNull(regStr) && regStr !== "") {
-    const reg = new RegExp(regStr, "g");
+  if (!_.isNull(regStr) && regStr !== '') {
+    const reg = new RegExp(regStr, 'g');
     const dataArr = [];
     for (let r = r1; r <= r2; r += 1) {
       let rowArr = [];
@@ -129,7 +130,7 @@ export function getDataArr(regStr: string, ctx: Context) {
         value = getCellValue(r, c, data!);
       }
       if (_.isNull(value) || _.isUndefined(value)) {
-        value = "";
+        value = '';
       }
       rowArr = value.toString().split(reg);
       dataArr.push(rowArr);
@@ -161,7 +162,7 @@ export function getDataArr(regStr: string, ctx: Context) {
       }
 
       if (_.isNull(value)) {
-        value = "";
+        value = '';
       }
 
       rowArr.push(value);

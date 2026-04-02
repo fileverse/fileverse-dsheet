@@ -1,6 +1,6 @@
-import React from "react";
-import { Tooltip } from "@fileverse/ui";
-import CustomIcon from "./CustomIcon";
+import React from 'react';
+import { Tooltip } from '@fileverse/ui';
+import CustomIcon from './CustomIcon';
 
 type Props = {
   tooltip?: string;
@@ -13,8 +13,8 @@ type Props = {
 
 const toCssId = (s: string) =>
   String(s)
-    .replace(/[^a-zA-Z0-9-]/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-');
 
 const CustomButton: React.FC<Props> = ({
   tooltip,
@@ -24,7 +24,7 @@ const CustomButton: React.FC<Props> = ({
   iconName,
   icon,
 }) => {
-  const iconNameClass = iconName ? toCssId(iconName) : "custom";
+  const iconNameClass = iconName ? toCssId(iconName) : 'custom';
   return (
     <Tooltip text={tooltip} position="bottom">
       <div
@@ -33,8 +33,8 @@ const CustomButton: React.FC<Props> = ({
         onClick={onClick}
         tabIndex={0}
         role="button"
-        style={selected ? { backgroundColor: "#FFDF0A" } : {}}
-        data-testid={`toolbar-cta-${iconName ?? "custom"}`}
+        style={selected ? { backgroundColor: '#FFDF0A' } : {}}
+        data-testid={`toolbar-cta-${iconName ?? 'custom'}`}
       >
         <span
           className={`fortune-toolbar-button__icon fortune-toolbar-button__icon--${iconNameClass}`}

@@ -3,18 +3,18 @@ import {
   editSheetName,
   cancelNormalSelected,
   cancelActiveImgItem,
-} from "@sheet-engine/core";
-import _ from "lodash";
+} from '@sheet-engine/core';
+import _ from 'lodash';
 import React, {
   useContext,
   useState,
   useEffect,
   useRef,
   useCallback,
-} from "react";
-import WorkbookContext from "../../context";
-import { useAlert } from "../../hooks/useAlert";
-import SVGIcon from "../SVGIcon";
+} from 'react';
+import WorkbookContext from '../../context';
+import { useAlert } from '../../hooks/useAlert';
+import SVGIcon from '../SVGIcon';
 
 type Props = {
   sheet: Sheet;
@@ -23,8 +23,8 @@ type Props = {
 
 const toCssId = (s: string) =>
   String(s)
-    .replace(/[^a-zA-Z0-9-]/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-');
 
 const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
   const { context, setContext, refs } = useContext(WorkbookContext);
@@ -34,8 +34,8 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
   const [dragOver, setDragOver] = useState(false);
   const { showAlert } = useAlert();
   const sheetIdClass =
-    sheet.id != null ? toCssId(String(sheet.id)) : "placeholder";
-  const sheetNameClass = sheet.name ? toCssId(sheet.name) : "";
+    sheet.id != null ? toCssId(String(sheet.id)) : 'placeholder';
+  const sheetNameClass = sheet.name ? toCssId(sheet.name) : '';
 
   useEffect(() => {
     setContext((draftCtx) => {
@@ -95,7 +95,7 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
   }, [setContext, showAlert]);
 
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLSpanElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       editable.current?.blur();
     }
     e.stopPropagation();
@@ -104,21 +104,21 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
   const onDragStart = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       if (context.allowEdit === true && !context.isFlvReadOnly)
-        e.dataTransfer.setData("sheetId", `${sheet.id}`);
+        e.dataTransfer.setData('sheetId', `${sheet.id}`);
       e.stopPropagation();
     },
-    [context.allowEdit, sheet.id]
+    [context.allowEdit, sheet.id],
   );
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       if (context.allowEdit === false) return;
-      const draggingId = e.dataTransfer.getData("sheetId");
+      const draggingId = e.dataTransfer.getData('sheetId');
       setContext((draftCtx) => {
         const droppingId = sheet.id;
         let draggingSheet: Sheet | undefined;
         let droppingSheet: Sheet | undefined;
-        _.sortBy(draftCtx.luckysheetfile, ["order"]).forEach((f, i) => {
+        _.sortBy(draftCtx.luckysheetfile, ['order']).forEach((f, i) => {
           f.order = i;
           if (f.id === draggingId) {
             draggingSheet = f;
@@ -129,7 +129,7 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         if (draggingSheet && droppingSheet) {
           draggingSheet.order = droppingSheet.order! - 0.1;
           // re-order all sheets
-          _.sortBy(draftCtx.luckysheetfile, ["order"]).forEach((f, i) => {
+          _.sortBy(draftCtx.luckysheetfile, ['order']).forEach((f, i) => {
             f.order = i;
           });
         } else if (draggingSheet && isDropPlaceholder) {
@@ -139,7 +139,7 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
       setDragOver(false);
       e.stopPropagation();
     },
-    [context.allowEdit, isDropPlaceholder, setContext, sheet.id]
+    [context.allowEdit, isDropPlaceholder, setContext, sheet.id],
   );
 
   return (
@@ -167,20 +167,20 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
       ref={containerRef}
       className={
         isDropPlaceholder
-          ? "fortune-sheettab-item fortune-sheettab-placeholder"
+          ? 'fortune-sheettab-item fortune-sheettab-placeholder'
           : `fortune-sheettab-item fortune-sheettab-item--${sheetIdClass}${
               sheetNameClass
                 ? ` fortune-sheettab-item--name-${sheetNameClass}`
-                : ""
+                : ''
             } luckysheet-sheets-item${
               context.currentSheetId === sheet.id
-                ? " luckysheet-sheets-item-active"
-                : ""
+                ? ' luckysheet-sheets-item-active'
+                : ''
             }`
       }
       data-sheet-id={sheet.id != null ? String(sheet.id) : undefined}
       data-sheet-name={sheet.name || undefined}
-      data-testid={`sheettab-item-${sheet.id ?? "placeholder"}`}
+      data-testid={`sheettab-item-${sheet.id ?? 'placeholder'}`}
       onClick={() => {
         if (isDropPlaceholder) return;
         setContext((draftCtx) => {
@@ -218,8 +218,8 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         });
       }}
       style={{
-        borderLeft: dragOver ? "2px solid #0188fb" : "",
-        display: sheet.hide === 1 ? "none" : "",
+        borderLeft: dragOver ? '2px solid #0188fb' : '',
+        display: sheet.hide === 1 ? 'none' : '',
       }}
     >
       {editing === false && (
@@ -229,7 +229,7 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
             if (context.isFlvReadOnly) return;
             setEditing(true);
           }}
-          data-testid={`sheettab-item-para-${sheet.id ?? "placeholder"}`}
+          data-testid={`sheettab-item-para-${sheet.id ?? 'placeholder'}`}
         >
           {sheet.name}
         </p>
@@ -247,9 +247,9 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
           onBlur={onBlur}
           onKeyDown={onKeyDown}
           ref={editable}
-          style={dragOver ? { pointerEvents: "none" } : {}}
+          style={dragOver ? { pointerEvents: 'none' } : {}}
           data-testid={`sheettab-item-para-editable-${
-            sheet.id ?? "placeholder"
+            sheet.id ?? 'placeholder'
           }`}
         >
           {sheet.name}
@@ -258,11 +258,11 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
       <span
         className="fortune-sheettab-item__icon fortune-sheettab-item__action fortune-sheettab-item__icon--menu luckysheet-sheets-item-function"
         style={{
-          marginRight: "4px",
-          marginLeft: "4px",
+          marginRight: '4px',
+          marginLeft: '4px',
         }}
         data-sheet-id={sheet.id != null ? String(sheet.id) : undefined}
-        data-testid={`sheettab-item-icon-menu-${sheet.id ?? "placeholder"}`}
+        data-testid={`sheettab-item-icon-menu-${sheet.id ?? 'placeholder'}`}
         onClick={(e) => {
           if (isDropPlaceholder || context.allowEdit === false) return;
           const rect = refs.workbookContainer.current!.getBoundingClientRect();
@@ -280,7 +280,7 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         }}
         tabIndex={0}
       >
-        <SVGIcon name="downArrow" width={12} style={{ fill: "#363B3F" }} />
+        <SVGIcon name="downArrow" width={12} style={{ fill: '#363B3F' }} />
       </span>
       {!!sheet.color && (
         <div

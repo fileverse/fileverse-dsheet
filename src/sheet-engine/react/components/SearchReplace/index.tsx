@@ -7,7 +7,7 @@ import {
   replace,
   replaceAll,
   scrollToHighlightCell,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 import {
   Button,
   Checkbox,
@@ -21,21 +21,21 @@ import {
   TableHeader,
   TableRow,
   TextField,
-} from "@fileverse/ui";
-import produce from "immer";
-import React, { useContext, useState, useCallback, useRef } from "react";
-import _ from "lodash";
-import WorkbookContext from "../../context";
-import { useAlert } from "../../hooks/useAlert";
-import "./index.css";
+} from '@fileverse/ui';
+import produce from 'immer';
+import React, { useContext, useState, useCallback, useRef } from 'react';
+import _ from 'lodash';
+import WorkbookContext from '../../context';
+import { useAlert } from '../../hooks/useAlert';
+import './index.css';
 
 const SearchReplace: React.FC<{
   getContainer: () => HTMLDivElement;
 }> = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
   const { findAndReplace } = locale(context);
-  const [searchText, setSearchText] = useState("");
-  const [replaceText, setReplaceText] = useState("");
+  const [searchText, setSearchText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResult[]>([]);
   const [selectedCell, setSelectedCell] = useState<{ r: number; c: number }>();
   const { showAlert } = useAlert();
@@ -49,7 +49,7 @@ const SearchReplace: React.FC<{
   });
 
   const closeDialog = useCallback(() => {
-    _.set(refs.globalCache, "searchDialog.mouseEnter", false);
+    _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
     setContext((draftCtx) => {
       draftCtx.showSearch = false;
       draftCtx.showReplace = false;
@@ -61,9 +61,9 @@ const SearchReplace: React.FC<{
       checkModeReplace(
         produce((draft) => {
           _.set(draft, mode, value);
-        })
+        }),
       ),
-    []
+    [],
   );
 
   // const getInitialPosition = useCallback((container: HTMLDivElement) => {
@@ -79,15 +79,15 @@ const SearchReplace: React.FC<{
       id="fortune-search-replace"
       className="fortune-search-replace fortune-dialog"
       style={{
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
       }}
       onMouseEnter={() => {
-        _.set(refs.globalCache, "searchDialog.mouseEnter", true);
+        _.set(refs.globalCache, 'searchDialog.mouseEnter', true);
       }}
       onMouseLeave={() => {
-        _.set(refs.globalCache, "searchDialog.mouseEnter", false);
+        _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
       }}
       // onMouseDown={(e) => {
       //   const { nativeEvent } = e;
@@ -171,7 +171,7 @@ const SearchReplace: React.FC<{
                     className="border-2"
                     checked={checkMode.regCheck}
                     onCheckedChange={(e) =>
-                      setCheckMode("regCheck", e.target.checked)
+                      setCheckMode('regCheck', e.target.checked)
                     }
                   />
                   <span>{findAndReplace.regexTextbox}</span>
@@ -184,7 +184,7 @@ const SearchReplace: React.FC<{
                     className="border-2"
                     checked={checkMode.caseCheck}
                     onCheckedChange={(e) =>
-                      setCheckMode("caseCheck", e.target.checked)
+                      setCheckMode('caseCheck', e.target.checked)
                     }
                   />
                   <span>{findAndReplace.distinguishTextbox}</span>
@@ -197,7 +197,7 @@ const SearchReplace: React.FC<{
                     className="border-2"
                     checked={checkMode.wordCheck}
                     onCheckedChange={(e) =>
-                      setCheckMode("wordCheck", e.target.checked)
+                      setCheckMode('wordCheck', e.target.checked)
                     }
                   />
                   <span>{findAndReplace.wholeTextbox}</span>
@@ -217,7 +217,7 @@ const SearchReplace: React.FC<{
                       draftCtx,
                       searchText,
                       replaceText,
-                      checkMode
+                      checkMode,
                     );
                     showAlert(alertMsg);
                   });
@@ -238,7 +238,7 @@ const SearchReplace: React.FC<{
                       draftCtx,
                       searchText,
                       replaceText,
-                      checkMode
+                      checkMode,
                     );
                     if (alertMsg != null) {
                       showAlert(alertMsg);
@@ -278,7 +278,7 @@ const SearchReplace: React.FC<{
                     const alertMsg = searchNext(
                       draftCtx,
                       searchText,
-                      checkMode
+                      checkMode,
                     );
                     if (alertMsg != null) showAlert(alertMsg);
                   })
@@ -340,8 +340,8 @@ const SearchReplace: React.FC<{
                         <TableRow
                           className={cn(
                             _.isEqual(selectedCell, { r: v.r, c: v.c })
-                              ? "color-bg-default-selected"
-                              : ""
+                              ? 'color-bg-default-selected'
+                              : '',
                           )}
                           key={v.cellPosition}
                           onClick={() => {

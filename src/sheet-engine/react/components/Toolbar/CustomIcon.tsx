@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo } from 'react';
 
 type Props = {
   iconName?: string;
@@ -36,9 +36,9 @@ const CustomIcon: React.FC<Props> = ({
       style={{
         width,
         height,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
       }}
     >
       {innrContent}

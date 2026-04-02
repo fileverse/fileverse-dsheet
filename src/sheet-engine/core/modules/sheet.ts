@@ -1,11 +1,11 @@
-import _ from "lodash";
-import { v4 as uuidv4 } from "uuid";
-import { initSheetData } from "../api/sheet";
-import { Context } from "../context";
-import { locale } from "../locale";
-import { Settings } from "../settings";
-import { CellMatrix, Sheet } from "../types";
-import { generateRandomSheetName, getSheetIndex } from "../utils";
+import _ from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
+import { initSheetData } from '../api/sheet';
+import { Context } from '../context';
+import { locale } from '../locale';
+import { Settings } from '../settings';
+import { CellMatrix, Sheet } from '../types';
+import { generateRandomSheetName, getSheetIndex } from '../utils';
 
 function storeSheetParam(ctx: Context) {
   const index = getSheetIndex(ctx, ctx.currentSheetId);
@@ -36,7 +36,7 @@ export function changeSheet(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isNewSheet?: boolean,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  isCopySheet?: boolean
+  isCopySheet?: boolean,
 ) {
   //   if (isEditMode()) {
   //     // alert("非编辑模式下不允许该操作！");
@@ -79,7 +79,7 @@ export function addSheet(
   newSheetID: string | undefined = undefined, // if action is from websocket, there will be a new sheetID
   isPivotTable = false,
   sheetName: string | undefined = undefined,
-  sheetData: Sheet | undefined = undefined
+  sheetData: Sheet | undefined = undefined,
 ) {
   if (/* isEditMode() || */ ctx.allowEdit === false) {
     // alert("非编辑模式下不允许该操作！");
@@ -163,7 +163,8 @@ export function deleteSheet(ctx: Context, id: string) {
   // server.saveParam("shd", null, { deleIndex: index });
   if (id === ctx.currentSheetId) {
     const shownSheets = _.cloneDeep(ctx.luckysheetfile).filter(
-      (singleSheet) => _.isUndefined(singleSheet.hide) || singleSheet.hide !== 1
+      (singleSheet) =>
+        _.isUndefined(singleSheet.hide) || singleSheet.hide !== 1,
     );
     const orderSheets = _.sortBy(shownSheets, (sheet) => sheet.order);
     ctx.currentSheetId = orderSheets?.[0]?.id as string;
@@ -189,8 +190,8 @@ export function updateSheet(ctx: Context, newData: Sheet[]) {
         lastRowNum = Math.max(lastRowNum, ctx.defaultrowNum);
         lastColNum = Math.max(lastColNum, ctx.defaultcolumnNum);
       }
-      const expandedData: Sheet["data"] = _.times(lastRowNum, () =>
-        _.times(lastColNum, () => null)
+      const expandedData: Sheet['data'] = _.times(lastRowNum, () =>
+        _.times(lastColNum, () => null),
       );
       for (let i = 0; i < data.length; i += 1) {
         for (let j = 0; j < data[i].length; j += 1) {
@@ -217,7 +218,7 @@ export function editSheetName(ctx: Context, editable: HTMLSpanElement) {
     return;
   }
   const { sheetconfig } = locale(ctx);
-  const oldtxt = editable.dataset.oldText || "";
+  const oldtxt = editable.dataset.oldText || '';
   const txt = editable.innerText;
 
   if (
@@ -273,7 +274,7 @@ export function editSheetName(ctx: Context, editable: HTMLSpanElement) {
 export function expandRowsAndColumns(
   data: CellMatrix,
   rowsToAdd: number,
-  columnsToAdd: number
+  columnsToAdd: number,
 ) {
   if (rowsToAdd <= 0 && columnsToAdd <= 0) {
     return data;
@@ -281,13 +282,13 @@ export function expandRowsAndColumns(
 
   if (data.length + rowsToAdd >= 10000) {
     throw new Error(
-      "This action would increase the number of rows in the workbook above the limit of 10000."
+      'This action would increase the number of rows in the workbook above the limit of 10000.',
     );
   }
 
   if (data[0].length + columnsToAdd >= 1000) {
     throw new Error(
-      "This action would increase the number of columns in the workbook above the limit of 1000."
+      'This action would increase the number of columns in the workbook above the limit of 1000.',
     );
   }
   if (rowsToAdd <= 0) {

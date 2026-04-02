@@ -1,4 +1,4 @@
-import React, { CSSProperties, useMemo, useRef, useState } from "react";
+import React, { CSSProperties, useMemo, useRef, useState } from 'react';
 import {
   IconButton,
   Tooltip,
@@ -8,9 +8,9 @@ import {
   cn,
   Button,
   LucideIcon,
-} from "@fileverse/ui";
-import SVGIcon from "../SVGIcon";
-import { getLucideIcon } from ".";
+} from '@fileverse/ui';
+import SVGIcon from '../SVGIcon';
+import { getLucideIcon } from '.';
 
 type Props = {
   tooltip: string;
@@ -19,7 +19,7 @@ type Props = {
   showArrow?: boolean;
   onClick?: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
   children: (
-    setOpen: React.Dispatch<React.SetStateAction<boolean>>
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>,
   ) => React.ReactNode;
   fillColor?: string;
   triggerRef?: React.RefObject<HTMLButtonElement | null>;
@@ -27,8 +27,8 @@ type Props = {
 
 const toCssId = (s: string) =>
   String(s)
-    .replace(/[^a-zA-Z0-9-]/g, "-")
-    .replace(/-+/g, "-");
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-');
 
 const Combo: React.FC<Props> = ({
   tooltip,
@@ -40,11 +40,11 @@ const Combo: React.FC<Props> = ({
   fillColor,
   triggerRef,
 }) => {
-  const style: CSSProperties = { userSelect: "none" };
+  const style: CSSProperties = { userSelect: 'none' };
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLButtonElement>(null);
-  const iconIdClass = iconId ? toCssId(iconId) : "combo";
+  const iconIdClass = iconId ? toCssId(iconId) : 'combo';
 
   if (!triggerRef) {
     triggerRef = ref;
@@ -58,26 +58,26 @@ const Combo: React.FC<Props> = ({
   };
   const isLucideIcon = useMemo(() => {
     return (
-      iconId?.startsWith("align-") ||
+      iconId?.startsWith('align-') ||
       [
-        "text-overflow",
-        "text-wrap",
-        "text-clip",
-        "font-color",
-        "background",
-        "border-all",
-        "merge-all",
-        "format",
-        "conditionFormat",
-        "filter",
-        "comment",
-        "image",
-        "formula-sum",
-        "dune",
-        "template",
-        "font-color",
-        "background",
-        "currency",
+        'text-overflow',
+        'text-wrap',
+        'text-clip',
+        'font-color',
+        'background',
+        'border-all',
+        'merge-all',
+        'format',
+        'conditionFormat',
+        'filter',
+        'comment',
+        'image',
+        'formula-sum',
+        'dune',
+        'template',
+        'font-color',
+        'background',
+        'currency',
       ].includes(iconId as string)
     );
   }, [iconId]);
@@ -87,7 +87,7 @@ const Combo: React.FC<Props> = ({
       <div
         className={`fortune-toolbar-combo-button fortune-toolbar-combo-button--${iconIdClass}`}
         data-icon-id={iconId ?? undefined}
-        data-testid={`toolbar-combo-${iconId ?? "combo"}`}
+        data-testid={`toolbar-combo-${iconId ?? 'combo'}`}
         onClick={(e) => {
           if (onClick) {
             onClick(e);
@@ -103,7 +103,7 @@ const Combo: React.FC<Props> = ({
           <SVGIcon name={iconId} width={16} height={16} />
         ) : (
           <span className="fortune-toolbar-combo-text">
-            {text !== undefined ? text : ""}
+            {text !== undefined ? text : ''}
           </span>
         )}
         <LucideIcon className="w-[16px] h-[16px]" name="ChevronDown" />
@@ -111,12 +111,12 @@ const Combo: React.FC<Props> = ({
     </Tooltip>
   ) : (
     <span>
-      {iconId === "font-color" ? (
+      {iconId === 'font-color' ? (
         <Tooltip text={tooltip} position="bottom">
           <Button
             variant="ghost"
             onClick={() => setOpen(!open)}
-            className={cn("fortune-toolbar-combo-button !min-w-fit !px-0", {})}
+            className={cn('fortune-toolbar-combo-button !min-w-fit !px-0', {})}
             style={{
               width: 30,
               height: 30,
@@ -144,12 +144,12 @@ const Combo: React.FC<Props> = ({
             onClick={() => {
               setOpen(!open);
             }}
-            className={cn("fortune-toolbar-combo-button", {
-              "custom-color-button": iconId === "font-color" && fillColor,
-              "min-w-fit rounded-l-none": iconId === "currency",
+            className={cn('fortune-toolbar-combo-button', {
+              'custom-color-button': iconId === 'font-color' && fillColor,
+              'min-w-fit rounded-l-none': iconId === 'currency',
             })}
             style={{
-              color: iconId === "font-color" ? fillColor : undefined,
+              color: iconId === 'font-color' ? fillColor : undefined,
             }}
           />
         </Tooltip>
@@ -162,13 +162,16 @@ const Combo: React.FC<Props> = ({
       ref={buttonRef}
       className={`fortune-toolbar-item fortune-toolbar-combo fortune-toolbar-combo--${iconIdClass}`}
       data-icon-id={iconId ?? undefined}
-      data-testid={`toolbar-combo-${iconId ?? "combo"}`}
+      data-testid={`toolbar-combo-${iconId ?? 'combo'}`}
       onKeyDown={(e) => {
         e.stopPropagation();
       }}
     >
       <Popover open={open} onOpenChange={handleOpenChange} modal>
-        <PopoverTrigger ref={triggerRef as React.Ref<HTMLButtonElement>} asChild>
+        <PopoverTrigger
+          ref={triggerRef as React.Ref<HTMLButtonElement>}
+          asChild
+        >
           <div className="flex items-center">{trigger}</div>
         </PopoverTrigger>
         <PopoverContent

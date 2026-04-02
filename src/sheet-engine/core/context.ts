@@ -1,8 +1,8 @@
-import _ from "lodash";
-import { SheetConfig } from ".";
-import { FormulaCache } from "./modules";
-import { normalizeSelection } from "./modules/selection";
-import { Hooks } from "./settings";
+import _ from 'lodash';
+import { SheetConfig } from './types';
+import { FormulaCache } from './modules';
+import { normalizeSelection } from './modules/selection';
+import { Hooks } from './settings';
 import {
   Sheet,
   Selection,
@@ -18,8 +18,8 @@ import {
   ConditionRulesProps,
   GlobalCache,
   CellError,
-} from "./types";
-import { getSheetIndex } from "./utils";
+} from './types';
+import { getSheetIndex } from './utils';
 
 interface MutableRefObject<T> {
   current: T;
@@ -75,7 +75,7 @@ export type Context = {
     optionLabel_es: any; // 中文提示消息
     optionLabel_hi: any;
     dataRegulation?: DataRegulationProps; // 数据验证规则
-    updateScope?: "current" | "all"; // Track whether to update just current cell or all matching cells
+    updateScope?: 'current' | 'all'; // Track whether to update just current cell or all matching cells
     sourceCell?: { row: number; col: number }; // Store the original cell that triggered the edit modal
   };
   // 数据验证下拉列表
@@ -137,8 +137,8 @@ export type Context = {
   sheetScrollRecord: Record<string, any>;
 
   luckysheet_select_status: boolean;
-  luckysheet_select_save: Sheet["luckysheet_select_save"];
-  luckysheet_selection_range: Sheet["luckysheet_selection_range"];
+  luckysheet_select_save: Sheet['luckysheet_select_save'];
+  luckysheet_selection_range: Sheet['luckysheet_selection_range'];
   formulaRangeHighlight: ({
     rangeIndex: number;
     backgroundColor: string;
@@ -230,9 +230,9 @@ export type Context = {
   groupValuesRefreshData: any[];
   formulaCache: FormulaCache;
   hooks: Hooks;
-  showSheetList?: Boolean;
+  showSheetList?: boolean;
   // 只读模式公式被引用单元格强制高光
-  forceFormulaRef?: Boolean;
+  forceFormulaRef?: boolean;
 
   getRefs: () => RefValues;
   showDunePreview?: {
@@ -253,7 +253,7 @@ export function defaultContext(refs: RefValues): Context {
     fullscreenmode: true,
     devicePixelRatio: (globalThis || window).devicePixelRatio,
     showDunePreview: {
-      url: "",
+      url: '',
       position: {
         left: 0,
         top: 0,
@@ -263,16 +263,16 @@ export function defaultContext(refs: RefValues): Context {
     contextMenu: {},
     sheetTabContextMenu: {},
 
-    currentSheetId: "",
-    calculateSheetId: "",
+    currentSheetId: '',
+    calculateSheetId: '',
     config: {},
     // 提醒弹窗
     warnDialog: undefined,
-    currency: "¥",
+    currency: '¥',
     rangeDialog: {
       show: false,
-      rangeTxt: "",
-      type: "",
+      rangeTxt: '',
+      type: '',
       singleSelect: false,
     },
 
@@ -280,121 +280,121 @@ export function defaultContext(refs: RefValues): Context {
       selectStatus: false,
       selectRange: [],
       optionLabel_en: {
-        number: "numeric",
-        number_integer: "integer",
-        number_decimal: "decimal",
-        between: "between",
-        notBetween: "not between",
-        equal: "equal to",
-        notEqualTo: "not equal to",
-        moreThanThe: "greater",
-        lessThan: "less than",
-        greaterOrEqualTo: "greater or equal to",
-        lessThanOrEqualTo: "less than or equal to",
-        include: "include",
-        exclude: "not include",
-        earlierThan: "earlier than",
-        noEarlierThan: "not earlier than",
-        laterThan: "later than",
-        noLaterThan: "not later than",
-        identificationNumber: "identification number",
-        phoneNumber: "phone number",
+        number: 'numeric',
+        number_integer: 'integer',
+        number_decimal: 'decimal',
+        between: 'between',
+        notBetween: 'not between',
+        equal: 'equal to',
+        notEqualTo: 'not equal to',
+        moreThanThe: 'greater',
+        lessThan: 'less than',
+        greaterOrEqualTo: 'greater or equal to',
+        lessThanOrEqualTo: 'less than or equal to',
+        include: 'include',
+        exclude: 'not include',
+        earlierThan: 'earlier than',
+        noEarlierThan: 'not earlier than',
+        laterThan: 'later than',
+        noLaterThan: 'not later than',
+        identificationNumber: 'identification number',
+        phoneNumber: 'phone number',
       },
       optionLabel_hi: {
-        number: "संख्यात्मक",
-        number_integer: "पूर्णांक",
-        number_decimal: "दशमलव",
-        between: "के बीच",
-        notBetween: "के बीच नहीं",
-        equal: "के बराबर",
-        notEqualTo: "के बराबर नहीं",
-        moreThanThe: "से अधिक",
-        lessThan: "से कम",
-        greaterOrEqualTo: "के बराबर या अधिक",
-        lessThanOrEqualTo: "के बराबर या कम",
-        include: "शामिल",
-        exclude: "शामिल नहीं",
-        earlierThan: "से पहले",
-        noEarlierThan: "से पहले नहीं",
-        laterThan: "के बाद",
-        noLaterThan: "के बाद नहीं",
-        identificationNumber: "पहचान संख्या",
-        phoneNumber: "फोन नंबर",
+        number: 'संख्यात्मक',
+        number_integer: 'पूर्णांक',
+        number_decimal: 'दशमलव',
+        between: 'के बीच',
+        notBetween: 'के बीच नहीं',
+        equal: 'के बराबर',
+        notEqualTo: 'के बराबर नहीं',
+        moreThanThe: 'से अधिक',
+        lessThan: 'से कम',
+        greaterOrEqualTo: 'के बराबर या अधिक',
+        lessThanOrEqualTo: 'के बराबर या कम',
+        include: 'शामिल',
+        exclude: 'शामिल नहीं',
+        earlierThan: 'से पहले',
+        noEarlierThan: 'से पहले नहीं',
+        laterThan: 'के बाद',
+        noLaterThan: 'के बाद नहीं',
+        identificationNumber: 'पहचान संख्या',
+        phoneNumber: 'फोन नंबर',
       },
       optionLabel_zh: {
-        number: "数值",
-        number_integer: "整数",
-        number_decimal: "小数",
-        between: "介于",
-        notBetween: "不介于",
-        equal: "等于",
-        notEqualTo: "不等于",
-        moreThanThe: "大于",
-        lessThan: "小于",
-        greaterOrEqualTo: "大于等于",
-        lessThanOrEqualTo: "小于等于",
-        include: "包括",
-        exclude: "不包括",
-        earlierThan: "早于",
-        noEarlierThan: "不早于",
-        laterThan: "晚于",
-        noLaterThan: "不晚于",
-        identificationNumber: "身份证号码",
-        phoneNumber: "手机号",
+        number: '数值',
+        number_integer: '整数',
+        number_decimal: '小数',
+        between: '介于',
+        notBetween: '不介于',
+        equal: '等于',
+        notEqualTo: '不等于',
+        moreThanThe: '大于',
+        lessThan: '小于',
+        greaterOrEqualTo: '大于等于',
+        lessThanOrEqualTo: '小于等于',
+        include: '包括',
+        exclude: '不包括',
+        earlierThan: '早于',
+        noEarlierThan: '不早于',
+        laterThan: '晚于',
+        noLaterThan: '不晚于',
+        identificationNumber: '身份证号码',
+        phoneNumber: '手机号',
       },
       optionLabel_zh_tw: {
-        number: "數位",
-        number_integer: "數位-整數",
-        number_decimal: "數位-小數",
-        between: "介於",
-        notBetween: "不介於",
-        equal: "等於",
-        notEqualTo: "不等於",
-        moreThanThe: "大於",
-        lessThan: "小於",
-        greaterOrEqualTo: "大於等於",
-        lessThanOrEqualTo: "小於等於",
-        include: "包括",
-        exclude: "不包括",
-        earlierThan: "早於",
-        noEarlierThan: "不早於",
-        laterThan: "晚於",
-        noLaterThan: "不晚於",
-        identificationNumber: "身份證號碼",
-        phoneNumber: "手機號",
+        number: '數位',
+        number_integer: '數位-整數',
+        number_decimal: '數位-小數',
+        between: '介於',
+        notBetween: '不介於',
+        equal: '等於',
+        notEqualTo: '不等於',
+        moreThanThe: '大於',
+        lessThan: '小於',
+        greaterOrEqualTo: '大於等於',
+        lessThanOrEqualTo: '小於等於',
+        include: '包括',
+        exclude: '不包括',
+        earlierThan: '早於',
+        noEarlierThan: '不早於',
+        laterThan: '晚於',
+        noLaterThan: '不晚於',
+        identificationNumber: '身份證號碼',
+        phoneNumber: '手機號',
       },
       optionLabel_es: {
-        number: "Número",
-        number_integer: "Número entero",
-        number_decimal: "Número decimal",
-        between: "Entre",
-        notBetween: "No entre",
-        equal: "Iqual",
-        notEqualTo: "No iqual a",
-        moreThanThe: "Más que el",
-        lessThan: "Menos que",
-        greaterOrEqualTo: "Mayor o igual a",
-        lessThanOrEqualTo: "Menor o igual a",
-        include: "Incluir",
-        exclude: "Excluir",
-        earlierThan: "Antes de",
-        noEarlierThan: "No antes de",
-        laterThan: "Después de",
-        noLaterThan: "No después de",
-        identificationNumber: "Número de identificación",
-        phoneNumber: "Número de teléfono",
+        number: 'Número',
+        number_integer: 'Número entero',
+        number_decimal: 'Número decimal',
+        between: 'Entre',
+        notBetween: 'No entre',
+        equal: 'Iqual',
+        notEqualTo: 'No iqual a',
+        moreThanThe: 'Más que el',
+        lessThan: 'Menos que',
+        greaterOrEqualTo: 'Mayor o igual a',
+        lessThanOrEqualTo: 'Menor o igual a',
+        include: 'Incluir',
+        exclude: 'Excluir',
+        earlierThan: 'Antes de',
+        noEarlierThan: 'No antes de',
+        laterThan: 'Después de',
+        noLaterThan: 'No después de',
+        identificationNumber: 'Número de identificación',
+        phoneNumber: 'Número de teléfono',
       },
       dataRegulation: {
-        type: "",
-        type2: "",
-        rangeTxt: "",
-        value1: "",
-        value2: "",
-        validity: "",
+        type: '',
+        type2: '',
+        rangeTxt: '',
+        value1: '',
+        value2: '',
+        validity: '',
         remote: false,
         prohibitInput: false,
         hintShow: false,
-        hintValue: "",
+        hintValue: '',
       },
     },
 
@@ -402,20 +402,20 @@ export function defaultContext(refs: RefValues): Context {
 
     conditionRules: {
       editKey: null,
-      rulesType: "",
-      rulesValue: "",
-      textColor: { check: true, color: "#000000" },
-      cellColor: { check: true, color: "#000000" },
+      rulesType: '',
+      rulesValue: '',
+      textColor: { check: true, color: '#000000' },
+      cellColor: { check: true, color: '#000000' },
       font: {
         bold: false,
         italic: false,
         underline: false,
         strikethrough: false,
       },
-      betweenValue: { value1: "", value2: "" },
-      dateValue: "",
-      repeatValue: "0",
-      projectValue: "10",
+      betweenValue: { value1: '', value2: '' },
+      dateValue: '',
+      repeatValue: '0',
+      projectValue: '10',
     },
 
     visibledatarow: [],
@@ -512,15 +512,15 @@ export function defaultContext(refs: RefValues): Context {
     // 默认单元格
     defaultCell: {
       bl: 0,
-      ct: { fa: "General", t: "n" },
-      fc: "rgb(51, 51, 51)",
+      ct: { fa: 'General', t: 'n' },
+      fc: 'rgb(51, 51, 51)',
       ff: 0,
       fs: 11,
       ht: 1,
       it: 0,
       vt: 1,
-      m: "",
-      v: "",
+      m: '',
+      v: '',
     },
 
     groupValuesRefreshData: [],
@@ -618,7 +618,7 @@ function calcRowColSize(ctx: Context, rowCount: number, colCount: number) {
     //   );
     // }
     ctx.ch_width += Math.round(
-      ((firstcolumnlen as number) + 1) * ctx.zoomRatio
+      ((firstcolumnlen as number) + 1) * ctx.zoomRatio,
     );
 
     ctx.visibledatacolumn.push(ctx.ch_width); // 列的临时长度分布
@@ -661,7 +661,7 @@ export function ensureSheetIndex(data: Sheet[], generateSheetId: () => string) {
 export function initSheetIndex(ctx: Context) {
   // get current sheet
   const shownSheets = ctx.luckysheetfile.filter(
-    (singleSheet) => _.isUndefined(singleSheet.hide) || singleSheet.hide !== 1
+    (singleSheet) => _.isUndefined(singleSheet.hide) || singleSheet.hide !== 1,
   );
   ctx.currentSheetId = _.sortBy(shownSheets, (sheet) => sheet.order)[0]
     .id as string;
@@ -687,7 +687,7 @@ export function updateContextWithSheetData(ctx: Context, data: any[][]) {
 export function updateContextWithCanvas(
   ctx: Context,
   canvas: HTMLCanvasElement,
-  placeholder: HTMLDivElement
+  placeholder: HTMLDivElement,
 ) {
   ctx.luckysheetTableContentHW = [
     placeholder.clientWidth,
@@ -700,9 +700,9 @@ export function updateContextWithCanvas(
   canvas.style.height = `${ctx.luckysheetTableContentHW[1]}px`;
 
   canvas.width = Math.ceil(
-    ctx.luckysheetTableContentHW[0] * ctx.devicePixelRatio
+    ctx.luckysheetTableContentHW[0] * ctx.devicePixelRatio,
   );
   canvas.height = Math.ceil(
-    ctx.luckysheetTableContentHW[1] * ctx.devicePixelRatio
+    ctx.luckysheetTableContentHW[1] * ctx.devicePixelRatio,
   );
 }

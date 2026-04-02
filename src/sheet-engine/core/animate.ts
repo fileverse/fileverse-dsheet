@@ -25,7 +25,7 @@ class CellFadeAnimator {
     const animationProgress = Math.min(
       1,
       (performance.now() - activeCellAnimationData.start) /
-        activeCellAnimationData.dur
+        activeCellAnimationData.dur,
     );
     if (animationProgress >= 1) {
       this.active.delete(`${sheetId}:${r}:${c}`);

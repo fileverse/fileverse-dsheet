@@ -1,7 +1,7 @@
-import { Sheet, api } from "@sheet-engine/core";
-import React, { CSSProperties, useCallback, useContext } from "react";
-import SVGIcon from "../SVGIcon";
-import WorkbookContext from "../../context";
+import { Sheet, api } from '@sheet-engine/core';
+import React, { CSSProperties, useCallback, useContext } from 'react';
+import SVGIcon from '../SVGIcon';
+import WorkbookContext from '../../context';
 
 type Props = {
   style?: CSSProperties;
@@ -34,11 +34,11 @@ const SheetHiddenButton: React.FC<Props> = ({ style, sheet }) => {
           width={16}
           height={16}
           style={{
-            marginTop: "7px",
+            marginTop: '7px',
           }}
         />
       ) : (
-        ""
+        ''
       )}
     </div>
   );

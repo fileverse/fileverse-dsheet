@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef, useState } from "react";
-import { Button, cn, TextField, IconButton } from "@fileverse/ui";
-import { ColorSection as ColorPicker } from "./ColorPicker";
+import React, { useEffect, useRef, useState } from 'react';
+import { Button, cn, TextField, IconButton } from '@fileverse/ui';
+import { ColorSection as ColorPicker } from './ColorPicker';
 
 type Item = { id: string; value: string; color?: string | null };
 
@@ -20,8 +20,8 @@ const DynamicInputList = ({
   // Drag state
   const dragFromIndexRef = useRef<number | null>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [overPosition, setOverPosition] = useState<"before" | "after" | null>(
-    null
+  const [overPosition, setOverPosition] = useState<'before' | 'after' | null>(
+    null,
   );
   const dragPreviewRef = useRef<HTMLElement | null>(null);
 
@@ -29,7 +29,7 @@ const DynamicInputList = ({
     const nextNum = optionItems.length + 1;
     setOptionItems((prev) => [
       ...prev,
-      { id: createId(), value: `Option ${nextNum}`, color: "228, 232, 237" },
+      { id: createId(), value: `Option ${nextNum}`, color: '228, 232, 237' },
     ]);
   };
 
@@ -38,11 +38,11 @@ const DynamicInputList = ({
       const nextNum = 1;
       setOptionItems((prev) => [
         ...prev,
-        { id: createId(), value: `Option ${nextNum}`, color: "228, 232, 237" },
+        { id: createId(), value: `Option ${nextNum}`, color: '228, 232, 237' },
         {
           id: createId(),
           value: `Option ${nextNum + 1}`,
-          color: "228, 232, 237",
+          color: '228, 232, 237',
         },
       ]);
     }
@@ -64,21 +64,21 @@ const DynamicInputList = ({
   function createDragPreview(node: HTMLElement, cursorX = 20, cursorY = 10) {
     const rect = node.getBoundingClientRect();
     const clone = node.cloneNode(true) as HTMLElement;
-    clone.style.position = "fixed";
+    clone.style.position = 'fixed';
     clone.style.top = `${rect.top}px`;
     clone.style.left = `${rect.left}px`;
     clone.style.width = `${rect.width}px`;
-    clone.style.pointerEvents = "none";
-    clone.style.zIndex = "9999";
-    clone.style.transform = "scale(0.98)";
-    clone.style.borderRadius = "12px";
+    clone.style.pointerEvents = 'none';
+    clone.style.zIndex = '9999';
+    clone.style.transform = 'scale(0.98)';
+    clone.style.borderRadius = '12px';
     clone.style.background =
       getComputedStyle(document.documentElement).getPropertyValue(
-        "--color-card"
-      ) || "white";
+        '--color-card',
+      ) || 'white';
     clone.style.boxShadow =
-      "0 8px 24px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.08)";
-    clone.style.opacity = "0.95";
+      '0 8px 24px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.08)';
+    clone.style.opacity = '0.95';
     document.body.appendChild(clone);
     return { clone, offsetX: cursorX, offsetY: cursorY };
   }
@@ -86,11 +86,11 @@ const DynamicInputList = ({
   const onDragStart = (index: number, e: React.DragEvent) => {
     dragFromIndexRef.current = index;
     setDraggingIndex(index);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", String(index));
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
 
     const handle = e.currentTarget as HTMLElement;
-    const row = handle.closest("li") as HTMLElement | null;
+    const row = handle.closest('li') as HTMLElement | null;
     if (row) {
       const preview = createDragPreview(row);
       dragPreviewRef.current = preview.clone;
@@ -98,7 +98,7 @@ const DynamicInputList = ({
         e.dataTransfer.setDragImage(
           preview.clone,
           preview.offsetX,
-          preview.offsetY
+          preview.offsetY,
         );
       } catch {
         // Some environments may block setDragImage; ignore gracefully
@@ -118,11 +118,11 @@ const DynamicInputList = ({
 
   const onDragOverRow = (index: number, e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    e.dataTransfer.dropEffect = 'move';
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
     const halfway = rect.top + rect.height / 2;
-    const pos = e.clientY < halfway ? "before" : "after";
+    const pos = e.clientY < halfway ? 'before' : 'after';
     setOverPosition(pos);
   };
 
@@ -139,7 +139,7 @@ const DynamicInputList = ({
 
   const onDropRow = (index: number, e: React.DragEvent) => {
     e.preventDefault();
-    const fromText = e.dataTransfer.getData("text/plain");
+    const fromText = e.dataTransfer.getData('text/plain');
     const fromIndex = Number.isNaN(Number(fromText))
       ? dragFromIndexRef.current
       : Number(fromText);
@@ -151,7 +151,7 @@ const DynamicInputList = ({
 
     // Determine destination index
     let dest = index;
-    if (overPosition === "after") {
+    if (overPosition === 'after') {
       dest = index + 1;
     }
 
@@ -160,7 +160,7 @@ const DynamicInputList = ({
 
     if (fromIndex !== adjustedDest) {
       setOptionItems((prev) =>
-        move(prev, fromIndex, Math.max(0, Math.min(prev.length, adjustedDest)))
+        move(prev, fromIndex, Math.max(0, Math.min(prev.length, adjustedDest))),
       );
     }
 
@@ -189,9 +189,9 @@ const DynamicInputList = ({
           <li
             key={item.id}
             className={cn(
-              "relative flex optionItems-center gap-2 transition mb-4",
+              'relative flex optionItems-center gap-2 transition mb-4',
               draggingIndex === index &&
-                "scale-[0.99] opacity-80 shadow-lg rounded-xl"
+                'scale-[0.99] opacity-80 shadow-lg rounded-xl',
             )}
             onDragOver={(e) => onDragOverRow(index, e)}
             onDragLeave={onDragLeaveRow}
@@ -205,7 +205,7 @@ const DynamicInputList = ({
               onDragEnd={onDragEnd}
               aria-label={`Drag handle for row ${index + 1}`}
               title="Drag to reorder"
-              style={{ cursor: "grab" }}
+              style={{ cursor: 'grab' }}
             >
               {/* 6-dots icon */}
               <svg

@@ -4,8 +4,8 @@ import React, {
   useContext,
   useEffect,
   useState,
-} from "react";
-import "./index.css";
+} from 'react';
+import './index.css';
 import {
   cn,
   Button,
@@ -19,27 +19,23 @@ import {
   SelectGroup,
   SelectLabel,
   TextField,
-} from "@fileverse/ui";
-import {
-  locale,
-  setConditionRules,
-  getSheetIndex,
-} from "@sheet-engine/core";
-import produce from "immer";
-import { numberToColumn } from "../SheetOverlay/helper";
+} from '@fileverse/ui';
+import { locale, setConditionRules, getSheetIndex } from '@sheet-engine/core';
+import produce from 'immer';
+import { numberToColumn } from '../SheetOverlay/helper';
 
-import WorkbookContext from "../../context";
-import { useDialog } from "../../hooks/useDialog";
-import { getDisplayedRangeTxt } from "../DataVerification/getDisplayedRangeTxt";
-import { injectDatepickerStyles } from "../../utils/datepickerStyles";
+import WorkbookContext from '../../context';
+import { useDialog } from '../../hooks/useDialog';
+import { getDisplayedRangeTxt } from '../DataVerification/getDisplayedRangeTxt';
+import { injectDatepickerStyles } from '../../utils/datepickerStyles';
 
-import "./formating.css";
+import './formating.css';
 
 // Initialize datepicker styles
 injectDatepickerStyles();
 
 const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
-  const [type, setType] = useState<string>("greaterThan");
+  const [type, setType] = useState<string>('greaterThan');
   const [create, setCreate] = useState<boolean>(false);
   const buttonClickCreateRef = useRef<boolean>(false);
   const textColorInputRef = useRef<HTMLInputElement | null>(null);
@@ -50,7 +46,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
   const editKeyRef = useRef<string | null>(null);
   const firstRenderRef = useRef<boolean>(true);
   const [editConditionRange, setEditConditionRange] = useState<string | null>(
-    ""
+    '',
   );
   const [editConditionFormatValue, setEditConditionFormatValue] =
     useState<any>(null);
@@ -65,7 +61,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
   const [colorRules, setColorRules] = useState<{
     textColor: string;
     cellColor: string;
-  }>({ textColor: "#177E23", cellColor: "#DDFBDF" });
+  }>({ textColor: '#177E23', cellColor: '#DDFBDF' });
   const [bold, setBold] = useState<boolean>(false);
   const [italic, setItalic] = useState<boolean>(false);
   const [underline, setUnderline] = useState<boolean>(false);
@@ -126,8 +122,8 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       ctx.luckysheetfile[index].conditionRules = {
         // Ensure all required properties are present
         editKey: editConditionFormatKey,
-        rulesType: type || "",
-        rulesValue: ctx.conditionRules.rulesValue || "",
+        rulesType: type || '',
+        rulesValue: ctx.conditionRules.rulesValue || '',
         textColor: { check: true, color: colorRules.textColor },
         cellColor: { check: true, color: colorRules.cellColor },
         font: {
@@ -137,12 +133,12 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
           strikethrough,
         },
         betweenValue: ctx.conditionRules.betweenValue || {
-          value1: "",
-          value2: "",
+          value1: '',
+          value2: '',
         },
-        dateValue: ctx.conditionRules.dateValue || "",
-        repeatValue: ctx.conditionRules.repeatValue || "0",
-        projectValue: ctx.conditionRules.projectValue || "10",
+        dateValue: ctx.conditionRules.dateValue || '',
+        repeatValue: ctx.conditionRules.repeatValue || '0',
+        projectValue: ctx.conditionRules.projectValue || '10',
       };
     });
   };
@@ -162,7 +158,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       });
       updateCacheRules();
     },
-    [colorRules.cellColor, colorRules.textColor, hideDialog, setContext]
+    [colorRules.cellColor, colorRules.textColor, hideDialog, setContext],
   );
 
   useEffect(() => {
@@ -171,7 +167,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
 
   const close = useCallback(
     (closeType: string) => {
-      if (closeType === "confirm") {
+      if (closeType === 'confirm') {
         buttonClickCreateRef.current = false;
         setCreate(false);
         setContext((ctx) => {
@@ -188,13 +184,13 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             protection,
             generalDialog,
             conditionformat,
-            ctx.conditionRules
+            ctx.conditionRules,
           );
         });
-      } else if (closeType === "close") {
+      } else if (closeType === 'close') {
         buttonClickCreateRef.current = true;
         setCreate(false);
-      } else if (closeType === "edit") {
+      } else if (closeType === 'edit') {
         buttonClickCreateRef.current = false;
         setCreate(false);
         setContext((ctx) => {
@@ -215,33 +211,33 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             ctx.conditionRules,
             true,
             // @ts-ignore
-            editConditionFormatKey
+            editConditionFormatKey,
           );
         });
       }
       setContext((ctx) => {
         ctx.conditionRules = {
-          rulesType: "greaterThan",
-          rulesValue: "",
-          textColor: { check: true, color: "#000000" },
-          cellColor: { check: true, color: "#000000" },
+          rulesType: 'greaterThan',
+          rulesValue: '',
+          textColor: { check: true, color: '#000000' },
+          cellColor: { check: true, color: '#000000' },
           font: {
             bold: false,
             italic: false,
             underline: false,
             strikethrough: false,
           },
-          betweenValue: { value1: "", value2: "" },
-          dateValue: "",
-          repeatValue: "0",
-          projectValue: "10",
+          betweenValue: { value1: '', value2: '' },
+          dateValue: '',
+          repeatValue: '0',
+          projectValue: '10',
         };
       });
       setBold(false);
       setItalic(false);
       setUnderline(false);
       setStrikethrough(false);
-      setColorRules({ textColor: "#177E23", cellColor: "#DDFBDF" });
+      setColorRules({ textColor: '#177E23', cellColor: '#DDFBDF' });
       updateCacheRules();
       setEditConditionFormatKey(null);
       setContext((ctx) => {
@@ -267,7 +263,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       editConditionFormatKey,
       editConditionFormatValue,
       editConditionRange,
-    ]
+    ],
   );
 
   // rulesValue初始化
@@ -278,76 +274,76 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       if (!ctx.rangeDialog) return;
       const rangeDialogType = ctx.rangeDialog.type;
       const rangeT = ctx.rangeDialog!.rangeTxt;
-      if (rangeDialogType === "conditionRulesbetween1") {
+      if (rangeDialogType === 'conditionRulesbetween1') {
         ctx.conditionRules.betweenValue.value1 = rangeT;
-      } else if (rangeDialogType === "conditionRulesbetween2") {
+      } else if (rangeDialogType === 'conditionRulesbetween2') {
         ctx.conditionRules.betweenValue.value2 = rangeT;
-      } else if (rangeDialogType.indexOf("conditionRules") >= 0) {
+      } else if (rangeDialogType.indexOf('conditionRules') >= 0) {
         ctx.conditionRules.rulesValue = rangeT;
-      } else if (rangeDialogType === "") {
+      } else if (rangeDialogType === '') {
         ctx.conditionRules = {
           rulesType: type,
-          rulesValue: context.conditionRules.rulesValue || "",
-          textColor: { check: true, color: "#000000" },
-          cellColor: { check: true, color: "#000000" },
+          rulesValue: context.conditionRules.rulesValue || '',
+          textColor: { check: true, color: '#000000' },
+          cellColor: { check: true, color: '#000000' },
           font: {
             bold: false,
             italic: false,
             underline: false,
             strikethrough: false,
           },
-          betweenValue: { value1: "", value2: "" },
-          dateValue: "",
-          repeatValue: "0",
-          projectValue: "10",
+          betweenValue: { value1: '', value2: '' },
+          dateValue: '',
+          repeatValue: '0',
+          projectValue: '10',
         };
       }
-      ctx.rangeDialog.type = "";
-      ctx.rangeDialog.rangeTxt = "";
+      ctx.rangeDialog.type = '';
+      ctx.rangeDialog.rangeTxt = '';
     });
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
   const cellHighlightConditionList = [
-    { text: "greaterThan", value: ">", label: "Greater Than" },
-    { text: "greaterThanOrEqual", value: ">=", label: "Greater Than or Equal" },
-    { text: "lessThan", value: "<", label: "Less Than" },
-    { text: "lessThanOrEqual", value: "<=", label: "Less Than or Equal" },
-    { text: "between", value: "[]", label: "Between" },
-    { text: "equal", value: "=", label: "Equal" },
-    { text: "textContains", value: "()", label: "Text Contains" },
-    { text: "empty", value: "", label: "Empty" },
+    { text: 'greaterThan', value: '>', label: 'Greater Than' },
+    { text: 'greaterThanOrEqual', value: '>=', label: 'Greater Than or Equal' },
+    { text: 'lessThan', value: '<', label: 'Less Than' },
+    { text: 'lessThanOrEqual', value: '<=', label: 'Less Than or Equal' },
+    { text: 'between', value: '[]', label: 'Between' },
+    { text: 'equal', value: '=', label: 'Equal' },
+    { text: 'textContains', value: '()', label: 'Text Contains' },
+    { text: 'empty', value: '', label: 'Empty' },
     {
-      text: "occurrenceDate",
+      text: 'occurrenceDate',
       value: conditionformat.yesterday,
-      label: "Occurrence Date",
+      label: 'Occurrence Date',
     },
-    { text: "duplicateValue", value: "##", label: "Duplicate Value" },
+    { text: 'duplicateValue', value: '##', label: 'Duplicate Value' },
   ];
 
   const itemSelectionConditionList = [
-    { text: "top10", value: conditionformat.top10 },
+    { text: 'top10', value: conditionformat.top10 },
     {
-      text: "top10_percent",
+      text: 'top10_percent',
       value: conditionformat.top10_percent,
-      label: "Top 10 Percent",
+      label: 'Top 10 Percent',
     },
-    { text: "last10", value: conditionformat.last10, label: "Last 10" },
+    { text: 'last10', value: conditionformat.last10, label: 'Last 10' },
     {
-      text: "last10_percent",
+      text: 'last10_percent',
       value: conditionformat.last10_percent,
-      label: "Last 10 Percent",
+      label: 'Last 10 Percent',
     },
     {
-      text: "aboveAverage",
+      text: 'aboveAverage',
       value: conditionformat.above,
-      label: "Above Average",
+      label: 'Above Average',
     },
     {
-      text: "belowAverage",
+      text: 'belowAverage',
       value: conditionformat.below,
-      label: "Below Average",
+      label: 'Below Average',
     },
   ];
 
@@ -363,7 +359,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     <div className="condition-rules">
       {!create ? (
         <div>
-          <div style={{ marginBottom: "16px" }}>
+          <div style={{ marginBottom: '16px' }}>
             {matchedConditionFormatKey.map((key) => {
               return (
                 <div
@@ -372,7 +368,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                     setContext((ctx) => {
                       const index = getSheetIndex(
                         ctx,
-                        ctx.currentSheetId
+                        ctx.currentSheetId,
                       ) as number;
 
                       if (
@@ -394,17 +390,17 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                         const endRow = range.row[1] + 1;
                         return `${startCol}${startRow}:${endCol}${endRow}`;
                       })
-                      .join(", ");
+                      .join(', ');
                     setEditConditionRange(rangeEdit);
                     setEditConditionFormatValue(
-                      allConditionFormats[key].conditionValue
+                      allConditionFormats[key].conditionValue,
                     );
                   }}
                   className={`group flex items-center border-b border-gray-200 condition-list-parent fortune-condition-rules__item fortune-condition-rules__item--${String(
-                    key
+                    key,
                   )
-                    .replace(/[^a-zA-Z0-9-]/g, "-")
-                    .replace(/-+/g, "-")}`}
+                    .replace(/[^a-zA-Z0-9-]/g, '-')
+                    .replace(/-+/g, '-')}`}
                   data-condition-key={key}
                   key={key}
                   data-testid={`condition-rules-item-${key}`}
@@ -413,13 +409,13 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                     className="condition-list-pill"
                     style={{
                       backgroundColor:
-                        allConditionFormats[key].format.cellColor || "",
+                        allConditionFormats[key].format.cellColor || '',
                     }}
                   >
                     <span
                       className="condition-list-text"
                       style={{
-                        color: allConditionFormats[key].format.textColor || "",
+                        color: allConditionFormats[key].format.textColor || '',
                       }}
                     >
                       123
@@ -428,8 +424,8 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   <div
                     className="flex flex-col"
                     style={{
-                      width: "200px",
-                      padding: "8px 0px",
+                      width: '200px',
+                      padding: '8px 0px',
                     }}
                     onClick={() => {
                       setCreate(true);
@@ -445,9 +441,9 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                           allConditionFormats[key].conditionName
                         ]
                       }
-                      {allConditionFormats[key].conditionName !== "empty" &&
+                      {allConditionFormats[key].conditionName !== 'empty' &&
                         ` ${
-                          allConditionFormats[key].conditionValue?.[0] ?? ""
+                          allConditionFormats[key].conditionValue?.[0] ?? ''
                         }`}
                     </h3>
                     <p
@@ -462,7 +458,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                           const endRow = range.row[1] + 1;
                           return `${startCol}${startRow}:${endCol}${endRow}`;
                         })
-                        .join(", ")}
+                        .join(', ')}
                     </p>
                   </div>
                   <div
@@ -477,15 +473,15 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       variant="secondary"
                       className="fortune-condition-rules__icon--trash"
                       style={{
-                        border: "0px",
-                        boxShadow: "none",
-                        color: "hsl(var(--color-icon-secondary))",
+                        border: '0px',
+                        boxShadow: 'none',
+                        color: 'hsl(var(--color-icon-secondary))',
                       }}
                       onClick={() => {
                         setContext((ctx) => {
                           const index = getSheetIndex(
                             ctx,
-                            ctx.currentSheetId
+                            ctx.currentSheetId,
                           ) as number;
                           const ruleArr =
                             ctx.luckysheetfile[index]
@@ -510,7 +506,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             variant="secondary"
             className="fortune-condition-rules__cta fortune-condition-rules__cta--add"
             onClick={() => {
-              setType("greaterThan");
+              setType('greaterThan');
               setCreate(true);
               setEditConditionFormatKey(null);
               setContext((ctx) => {
@@ -569,9 +565,9 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             <Select
               value={type}
               onValueChange={(value) => {
-                if (value === "empty" || type === "empty") {
+                if (value === 'empty' || type === 'empty') {
                   setContext((ctx) => {
-                    ctx.conditionRules.rulesValue = "";
+                    ctx.conditionRules.rulesValue = '';
                   });
                   setEditConditionFormatValue(null);
                 }
@@ -620,18 +616,18 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             </Select>
           </div>
 
-          {!["aboveAverage", "belowAverage"].includes(type) && (
+          {!['aboveAverage', 'belowAverage'].includes(type) && (
             <div className="flex flex-col">
               {/* <div className="condition-rules-value text-heading-xsm">
               {(conditionformat as any)[`conditionformat_${titleType}_title`]}
             </div> */}
 
-              {(type === "greaterThan" ||
-                type === "greaterThanOrEqual" ||
-                type === "lessThan" ||
-                type === "lessThanOrEqual" ||
-                type === "equal" ||
-                type === "textContains") && (
+              {(type === 'greaterThan' ||
+                type === 'greaterThanOrEqual' ||
+                type === 'lessThan' ||
+                type === 'lessThanOrEqual' ||
+                type === 'equal' ||
+                type === 'textContains') && (
                 <div className="w-full">
                   <TextField
                     label="Value for condition"
@@ -656,7 +652,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                 </div>
               )}
 
-              {type === "between" && (
+              {type === 'between' && (
                 <div className="w-full flex gap-2 items-center">
                   <div className="w-full">
                     <TextField
@@ -690,7 +686,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   </div>
                 </div>
               )}
-              {type === "occurrenceDate" && (
+              {type === 'occurrenceDate' && (
                 <div className="datepicker-toggle">
                   <input
                     type="date"
@@ -706,7 +702,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   <span className="datepicker-toggle-button" />
                 </div>
               )}
-              {type === "duplicateValue" && (
+              {type === 'duplicateValue' && (
                 <Select
                   value={context.conditionRules.repeatValue}
                   onValueChange={(value) => {
@@ -729,12 +725,12 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                 </Select>
               )}
 
-              {(type === "top10" ||
-                type === "top10_percent" ||
-                type === "last10" ||
-                type === "last10_percent") && (
+              {(type === 'top10' ||
+                type === 'top10_percent' ||
+                type === 'last10' ||
+                type === 'last10_percent') && (
                 <div className="condition-rules-project-box">
-                  {type === "top10" || type === "top10_percent"
+                  {type === 'top10' || type === 'top10_percent'
                     ? conditionformat.top
                     : conditionformat.last}
 
@@ -751,7 +747,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                           const current =
                             Number(ctx.conditionRules.projectValue) || 0;
                           ctx.conditionRules.projectValue = String(
-                            Math.max(current - 1, 1)
+                            Math.max(current - 1, 1),
                           ); // Prevent going below 1 if needed
                         });
                       }}
@@ -764,7 +760,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       className="condition-rules-project-input pr-0"
                       type="number"
                       min={1}
-                      max={type === "top10" || type === "last10" ? 10 : 100}
+                      max={type === 'top10' || type === 'last10' ? 10 : 100}
                       value={context.conditionRules.projectValue}
                       onChange={(e) => {
                         const { value } = e.target;
@@ -773,7 +769,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                         });
                       }}
                       rightIcon={
-                        type === "top10" || type === "last10" ? (
+                        type === 'top10' || type === 'last10' ? (
                           <span className="color-icon-secondary">
                             {conditionformat.oneself}
                           </span>
@@ -788,7 +784,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       className="!bg-transparent"
                       disabled={
                         Number(context.conditionRules.projectValue) >=
-                        (type === "top10" || type === "last10" ? 10 : 100)
+                        (type === 'top10' || type === 'last10' ? 10 : 100)
                       }
                       onClick={() => {
                         setContext((ctx) => {
@@ -816,15 +812,15 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                 style={{
                   backgroundColor: colorRules.cellColor,
                   color: colorRules.textColor,
-                  textDecoration: underline ? "underline" : "",
-                  textDecorationLine: strikethrough ? "line-through" : "",
+                  textDecoration: underline ? 'underline' : '',
+                  textDecorationLine: strikethrough ? 'line-through' : '',
                 }}
               >
                 <h2
                   className="toolbar-title"
                   style={{
-                    fontWeight: bold ? "bold" : "",
-                    fontStyle: italic ? "italic" : "",
+                    fontWeight: bold ? 'bold' : '',
+                    fontStyle: italic ? 'italic' : '',
                   }}
                 >
                   Formatting styles preview
@@ -835,80 +831,80 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   variant="ghost"
                   onClick={() => setBold(!bold)}
                   className={cn(
-                    "fortune-toolbar-combo-button !min-w-fit !px-0",
-                    {}
+                    'fortune-toolbar-combo-button !min-w-fit !px-0',
+                    {},
                   )}
                   style={{
                     width: 30,
                     height: 30,
                     backgroundColor: bold
-                      ? "hsl(var(--color-bg-default-active))"
-                      : "",
+                      ? 'hsl(var(--color-bg-default-active))'
+                      : '',
                   }}
                 >
                   <LucideIcon
                     name="Bold"
-                    style={{ width: "16px", height: "16px" }}
+                    style={{ width: '16px', height: '16px' }}
                   />
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => setItalic(!italic)}
                   className={cn(
-                    "fortune-toolbar-combo-button !min-w-fit !px-0",
-                    {}
+                    'fortune-toolbar-combo-button !min-w-fit !px-0',
+                    {},
                   )}
                   style={{
                     width: 30,
                     height: 30,
                     backgroundColor: italic
-                      ? "hsl(var(--color-bg-default-active))"
-                      : "",
+                      ? 'hsl(var(--color-bg-default-active))'
+                      : '',
                   }}
                 >
                   <LucideIcon
                     name="Italic"
-                    style={{ width: "16px", height: "16px" }}
+                    style={{ width: '16px', height: '16px' }}
                   />
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => setUnderline(!underline)}
                   className={cn(
-                    "fortune-toolbar-combo-button !min-w-fit !px-0",
-                    {}
+                    'fortune-toolbar-combo-button !min-w-fit !px-0',
+                    {},
                   )}
                   style={{
                     width: 30,
                     height: 30,
                     backgroundColor: underline
-                      ? "hsl(var(--color-bg-default-active))"
-                      : "",
+                      ? 'hsl(var(--color-bg-default-active))'
+                      : '',
                   }}
                 >
                   <LucideIcon
                     name="Underline"
-                    style={{ width: "16px", height: "16px" }}
+                    style={{ width: '16px', height: '16px' }}
                   />
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={() => setStrikethrough(!strikethrough)}
                   className={cn(
-                    "fortune-toolbar-combo-button !min-w-fit !px-0",
-                    {}
+                    'fortune-toolbar-combo-button !min-w-fit !px-0',
+                    {},
                   )}
                   style={{
                     width: 30,
                     height: 30,
                     backgroundColor: strikethrough
-                      ? "hsl(var(--color-bg-default-active))"
-                      : "",
+                      ? 'hsl(var(--color-bg-default-active))'
+                      : '',
                   }}
                 >
                   <LucideIcon
                     name="Strikethrough"
-                    style={{ width: "16px", height: "16px" }}
+                    style={{ width: '16px', height: '16px' }}
                   />
                 </Button>
 
@@ -919,8 +915,8 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                     }}
                     variant="ghost"
                     className={cn(
-                      "fortune-toolbar-combo-button !min-w-fit !px-0",
-                      {}
+                      'fortune-toolbar-combo-button !min-w-fit !px-0',
+                      {},
                     )}
                     style={{
                       width: 30,
@@ -929,13 +925,13 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   >
                     <div
                       style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
                       }}
                     >
                       <svg
-                        style={{ width: "19px", height: "19px" }}
+                        style={{ width: '19px', height: '19px' }}
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
                         height="24"
@@ -953,7 +949,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       <input
                         ref={textColorInputRef}
                         style={{
-                          marginBottom: "4px",
+                          marginBottom: '4px',
                         }}
                         type="color"
                         className="condition-rules-select-color"
@@ -963,7 +959,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                           setColorRules(
                             produce((draft) => {
                               draft.textColor = value;
-                            })
+                            }),
                           );
                         }}
                       />
@@ -978,18 +974,18 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       cellColorInputRef.current?.click();
                     }}
                     className={cn(
-                      "fortune-toolbar-combo-button !min-w-fit !px-0",
-                      {}
+                      'fortune-toolbar-combo-button !min-w-fit !px-0',
+                      {},
                     )}
                     style={{
                       width: 30,
                       height: 30,
                     }}
                   >
-                    <div style={{ display: "flex", flexDirection: "column" }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
                       <LucideIcon
                         name="PaintBucket"
-                        style={{ width: "16px", height: "16px" }}
+                        style={{ width: '16px', height: '16px' }}
                       />
                       <input
                         ref={cellColorInputRef}
@@ -1001,7 +997,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                           setColorRules(
                             produce((draft) => {
                               draft.cellColor = value;
-                            })
+                            }),
                           );
                         }}
                       />
@@ -1012,14 +1008,14 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end" style={{ marginTop: "8px" }}>
+          <div className="flex gap-2 justify-end" style={{ marginTop: '8px' }}>
             <Button
               variant="secondary"
               style={{
-                minWidth: "80px",
+                minWidth: '80px',
               }}
               onClick={() => {
-                close("close");
+                close('close');
               }}
               tabIndex={0}
             >
@@ -1028,14 +1024,14 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             {editConditionFormatKey !== null ? (
               <Button
                 disabled={
-                  context.conditionRules.rulesValue === "" && type !== "empty"
+                  context.conditionRules.rulesValue === '' && type !== 'empty'
                 }
                 variant="default"
                 style={{
-                  minWidth: "80px",
+                  minWidth: '80px',
                 }}
                 onClick={() => {
-                  close("edit");
+                  close('edit');
                 }}
                 tabIndex={0}
               >
@@ -1044,14 +1040,14 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             ) : (
               <Button
                 disabled={
-                  context.conditionRules.rulesValue === "" && type !== "empty"
+                  context.conditionRules.rulesValue === '' && type !== 'empty'
                 }
                 variant="default"
                 style={{
-                  minWidth: "80px",
+                  minWidth: '80px',
                 }}
                 onClick={() => {
-                  close("confirm");
+                  close('confirm');
                 }}
                 tabIndex={0}
               >

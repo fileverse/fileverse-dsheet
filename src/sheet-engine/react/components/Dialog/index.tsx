@@ -1,11 +1,11 @@
-import { locale } from "@sheet-engine/core";
-import { Button, cn, IconButton } from "@fileverse/ui";
-import React, { useContext } from "react";
-import WorkbookContext from "../../context";
-import "./index.css";
+import { locale } from '@sheet-engine/core';
+import { Button, cn, IconButton } from '@fileverse/ui';
+import React, { useContext } from 'react';
+import WorkbookContext from '../../context';
+import './index.css';
 
 type Props = {
-  type?: "ok" | "yesno";
+  type?: 'ok' | 'yesno';
   onOk?: () => void;
   onCancel?: () => void;
   containerStyle?: React.CSSProperties;
@@ -36,17 +36,17 @@ const Dialog: React.FC<Props> = ({
       style={{
         ...containerStyle,
         ...([
-          "Data validation",
-          "Split text to columns",
-          "Resize column",
+          'Data validation',
+          'Split text to columns',
+          'Resize column',
         ].includes(title as string)
-          ? { maxWidth: "unset" }
+          ? { maxWidth: 'unset' }
           : {}),
       }}
     >
       <div
         className={cn(
-          "fortune-dialog__header flex items-center justify-between border-b color-border-default py-3 px-6"
+          'fortune-dialog__header flex items-center justify-between border-b color-border-default py-3 px-6',
         )}
         data-testid="dialog-header"
       >
@@ -86,12 +86,12 @@ const Dialog: React.FC<Props> = ({
           className="fortune-dialog__actions px-6 pb-6 flex flex-row gap-2 justify-end"
           data-testid="dialog-actions"
         >
-          {type === "ok" ? (
+          {type === 'ok' ? (
             <Button
               variant="default"
               className="fortune-dialog__cta fortune-dialog__cta--confirm"
               style={{
-                minWidth: "80px",
+                minWidth: '80px',
               }}
               onClick={onOk}
               tabIndex={0}
@@ -105,7 +105,7 @@ const Dialog: React.FC<Props> = ({
                 variant="secondary"
                 className="fortune-dialog__cta fortune-dialog__cta--cancel"
                 style={{
-                  minWidth: "80px",
+                  minWidth: '80px',
                 }}
                 onClick={onCancel}
                 tabIndex={0}
@@ -117,7 +117,7 @@ const Dialog: React.FC<Props> = ({
                 variant="default"
                 className="fortune-dialog__cta fortune-dialog__cta--confirm"
                 style={{
-                  minWidth: "80px",
+                  minWidth: '80px',
                 }}
                 onClick={onOk}
                 tabIndex={0}

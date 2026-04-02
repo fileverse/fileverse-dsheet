@@ -1,16 +1,11 @@
 import * as Y from 'yjs';
 import { Sheet } from '@sheet-engine/react';
 
-function normalizeCelldataArray(
-  celldata: any[],
-): Record<string, any> {
+function normalizeCelldataArray(celldata: any[]): Record<string, any> {
   const result: Record<string, any> = {};
 
   celldata.forEach((cell) => {
-    if (
-      typeof cell?.r === 'number' &&
-      typeof cell?.c === 'number'
-    ) {
+    if (typeof cell?.r === 'number' && typeof cell?.c === 'number') {
       const key = `${cell.r}_${cell.c}`;
       result[key] = cell;
     }
@@ -49,7 +44,9 @@ export function migrateSheetArrayIfNeeded(
 
       Object.entries(item).forEach(([key, value]) => {
         if (value === undefined || value === null) {
-          console.warn(`[DSheet] Skipping property '${key}' as its value is undefined or null.`);
+          console.warn(
+            `[DSheet] Skipping property '${key}' as its value is undefined or null.`,
+          );
           return;
         }
 
@@ -58,11 +55,9 @@ export function migrateSheetArrayIfNeeded(
           const cellMap = new Y.Map();
           const normalized = normalizeCelldataArray(value);
 
-          Object.entries(normalized).forEach(
-            ([cellKey, cellValue]) => {
-              cellMap.set(cellKey, cellValue);
-            },
-          );
+          Object.entries(normalized).forEach(([cellKey, cellValue]) => {
+            cellMap.set(cellKey, cellValue);
+          });
 
           sheetMap.set('celldata', cellMap);
           return;
@@ -72,11 +67,9 @@ export function migrateSheetArrayIfNeeded(
           const calcChainMap = new Y.Map();
           const normalized = normalizeCelldataArray(value);
 
-          Object.entries(normalized).forEach(
-            ([cellKey, cellValue]) => {
-              calcChainMap.set(cellKey, cellValue);
-            },
-          );
+          Object.entries(normalized).forEach(([cellKey, cellValue]) => {
+            calcChainMap.set(cellKey, cellValue);
+          });
 
           sheetMap.set('calcChain', calcChainMap);
           return;
@@ -90,7 +83,7 @@ export function migrateSheetArrayIfNeeded(
 
           sheetMap.set(
             'luckysheet_conditionformat_save',
-            luckysheet_conditionformat_save
+            luckysheet_conditionformat_save,
           );
           return;
         }
@@ -117,9 +110,7 @@ export function migrateSheetArrayIfNeeded(
         if (key === 'hyperlink') {
           const hyperlink = new Y.Map();
           const hL = value ? value : {};
-          Object.entries(hL as object).forEach(([k, v]) =>
-            hyperlink.set(k, v),
-          );
+          Object.entries(hL as object).forEach(([k, v]) => hyperlink.set(k, v));
           sheetMap.set('hyperlink', hyperlink);
           return;
         }
@@ -137,7 +128,9 @@ export function migrateSheetArrayIfNeeded(
         if (key === 'filter_select') {
           const filterSelect = new Y.Map();
           const fS = value ? value : {};
-          Object.entries(fS as object).forEach(([k, v]) => filterSelect.set(k, v));
+          Object.entries(fS as object).forEach(([k, v]) =>
+            filterSelect.set(k, v),
+          );
           sheetMap.set('filter_select', filterSelect);
           return;
         }
@@ -152,19 +145,13 @@ export function migrateSheetArrayIfNeeded(
 
         if (key === 'config') {
           sheetMap.set('config', value);
-          return
+          return;
         }
 
         // nested object → Y.Map
-        if (
-          value &&
-          typeof value === 'object' &&
-          !Array.isArray(value)
-        ) {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
           const yMap = new Y.Map();
-          Object.entries(value).forEach(([k, v]) =>
-            yMap.set(k, v),
-          );
+          Object.entries(value).forEach(([k, v]) => yMap.set(k, v));
           sheetMap.set(key, yMap);
           return;
         }
@@ -187,7 +174,7 @@ export function migrateSheetArrayIfNeeded(
 type SheetFactory = () => Y.Map<any>;
 
 export function migrateSheetFactoryForImport(
-  sheet: Sheet | Y.Map<any>
+  sheet: Sheet | Y.Map<any>,
 ): SheetFactory {
   // already Yjs → reuse directly
   if (sheet instanceof Y.Map) {
@@ -223,4 +210,3 @@ export function migrateSheetFactoryForImport(
     return sheetMap;
   };
 }
-

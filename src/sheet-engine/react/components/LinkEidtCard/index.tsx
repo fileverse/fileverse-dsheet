@@ -6,7 +6,7 @@ import React, {
   useLayoutEffect,
   useRef,
   useEffect,
-} from "react";
+} from 'react';
 import {
   locale,
   saveHyperlink,
@@ -16,7 +16,7 @@ import {
   goToLink,
   isLinkValid,
   jfrefreshgrid,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 import {
   Button,
   TextField,
@@ -26,11 +26,11 @@ import {
   SelectTrigger,
   SelectValue,
   LucideIcon,
-} from "@fileverse/ui";
-import "./index.css";
-import _ from "lodash";
-import WorkbookContext from "../../context";
-import SVGIcon from "../SVGIcon";
+} from '@fileverse/ui';
+import './index.css';
+import _ from 'lodash';
+import WorkbookContext from '../../context';
+import SVGIcon from '../SVGIcon';
 
 export const LinkEditCard: React.FC<LinkCardProps> = ({
   r,
@@ -56,17 +56,17 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
 
   const isButtonDisabled = useMemo(() => {
     if (!linkText.trim()) return true;
-    if (linkType === "webpage") {
+    if (linkType === 'webpage') {
       return !linkAddress.trim() || !isLinkAddressValid.isValid;
     }
-    if (linkType === "sheet") {
+    if (linkType === 'sheet') {
       return !linkAddress.trim();
     }
     return false;
   }, [linkText, linkAddress, linkType, isLinkAddressValid.isValid]);
 
   const hideLinkCard = useCallback(() => {
-    _.set(refs.globalCache, "linkCard.mouseEnter", false);
+    _.set(refs.globalCache, 'linkCard.mouseEnter', false);
     setContext((draftCtx) => {
       draftCtx.linkCard = undefined;
     });
@@ -74,7 +74,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
 
   const handleInsertLink = useCallback(() => {
     if (isButtonDisabled) return;
-    _.set(refs.globalCache, "linkCard.mouseEnter", false);
+    _.set(refs.globalCache, 'linkCard.mouseEnter', false);
     setContext((draftCtx) => {
       saveHyperlink(draftCtx, r, c, linkText, linkType, linkAddress, {
         applyToSelection: applyToSelection || undefined,
@@ -100,8 +100,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
 
   const containerEvent = useMemo(
     () => ({
-      onMouseEnter: () => _.set(refs.globalCache, "linkCard.mouseEnter", true),
-      onMouseLeave: () => _.set(refs.globalCache, "linkCard.mouseEnter", false),
+      onMouseEnter: () => _.set(refs.globalCache, 'linkCard.mouseEnter', true),
+      onMouseLeave: () => _.set(refs.globalCache, 'linkCard.mouseEnter', false),
       onMouseDown: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
         e.stopPropagation(),
       onMouseMove: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
@@ -110,7 +110,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         e.stopPropagation(),
       onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => {
         e.stopPropagation();
-        if (e.key === "Enter") {
+        if (e.key === 'Enter') {
           e.preventDefault();
           handleInsertLink();
         }
@@ -118,14 +118,14 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
       onDoubleClick: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) =>
         e.stopPropagation(),
     }),
-    [handleInsertLink]
+    [handleInsertLink],
   );
 
   const renderToolbarButton = useCallback(
     (iconId: string, onClick: () => void) => {
       const iconIdClass = iconId
-        .replace(/[^a-zA-Z0-9-]/g, "-")
-        .replace(/-+/g, "-");
+        .replace(/[^a-zA-Z0-9-]/g, '-')
+        .replace(/-+/g, '-');
       return (
         <div
           className={`fortune-link-card__icon fortune-link-card__action fortune-link-card__action--${iconIdClass} fortune-toolbar-button`}
@@ -138,7 +138,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         </div>
       );
     },
-    []
+    [],
   );
 
   useLayoutEffect(() => {
@@ -150,7 +150,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   // Position card above or below drag handle depending on viewport
   useEffect(() => {
     const dragHandle = document.querySelector(
-      ".luckysheet-cs-draghandle-top.luckysheet-cs-draghandle"
+      '.luckysheet-cs-draghandle-top.luckysheet-cs-draghandle',
     ) as HTMLElement;
     const card = cardRef.current;
     if (!dragHandle || !card) {
@@ -208,46 +208,46 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                 linkType,
                 linkAddress,
                 refs.scrollbarX.current!,
-                refs.scrollbarY.current!
-              )
+                refs.scrollbarY.current!,
+              ),
             );
           }}
           tabIndex={0}
           data-testid="link-card-info-open"
         >
-          {linkType === "webpage"
+          {linkType === 'webpage'
             ? insertLink.openLink
             : replaceHtml(insertLink.goTo, { linkAddress })}
         </div>
         {(context.allowEdit === true ||
-          (context.isFlvReadOnly && linkType === "webpage")) && (
+          (context.isFlvReadOnly && linkType === 'webpage')) && (
           <div className="divider" />
         )}
         {(context.allowEdit === true || context.isFlvReadOnly) &&
-          linkType === "webpage" &&
-          renderToolbarButton("copy", () => {
+          linkType === 'webpage' &&
+          renderToolbarButton('copy', () => {
             navigator.clipboard.writeText(originAddress);
             hideLinkCard();
           })}
         {context.allowEdit === true &&
           !context.isFlvReadOnly &&
-          renderToolbarButton("pencil", () =>
+          renderToolbarButton('pencil', () =>
             setContext((draftCtx) => {
               if (draftCtx.linkCard != null && draftCtx.allowEdit) {
                 draftCtx.linkCard.isEditing = true;
               }
-            })
+            }),
           )}
         {context.allowEdit === true && !context.isFlvReadOnly && (
           <div className="divider" />
         )}
         {context.allowEdit === true &&
           !context.isFlvReadOnly &&
-          renderToolbarButton("unlink", () =>
+          renderToolbarButton('unlink', () =>
             setContext((draftCtx) => {
-              _.set(refs.globalCache, "linkCard.mouseEnter", false);
+              _.set(refs.globalCache, 'linkCard.mouseEnter', false);
               removeHyperlink(draftCtx, r, c);
-            })
+            }),
           )}
       </div>
     );
@@ -266,13 +266,13 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
       <Select
         value={linkType}
         onValueChange={(value) => {
-          if (value === "sheet") {
+          if (value === 'sheet') {
             if (!linkText) {
               setLinkText(context.luckysheetfile[0].name);
             }
             setLinkAddress(context.luckysheetfile[0].name);
           } else {
-            setLinkAddress("");
+            setLinkAddress('');
           }
           setLinkType(value);
         }}
@@ -282,8 +282,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         </SelectTrigger>
         <SelectContent className="fortune-link-type-dropdown">
           {linkTypeList
-            .filter((type) => type.value !== "cellrange")
-            .map((type) => (
+            .filter((type: { text: string; value: string }) => type.value !== 'cellrange')
+            .map((type: { text: string; value: string }) => (
               <SelectItem key={type.value} value={type.value}>
                 {type.text}
               </SelectItem>
@@ -304,7 +304,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
           value={linkText}
           onChange={(e) => setLinkText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === 'Enter') {
               e.preventDefault();
               e.stopPropagation();
               handleInsertLink();
@@ -314,7 +314,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         />
       </div>
 
-      {linkType === "webpage" && (
+      {linkType === 'webpage' && (
         <div className="fortune-input-with-icon">
           <div className="input-icon">
             <SVGIcon name="link" width={16} height={16} />
@@ -324,7 +324,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
             placeholder="Paste URL"
             value={linkAddress}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
                 handleInsertLink();
@@ -332,13 +332,13 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
             }}
             onChange={(e) => setLinkAddress(e.target.value)}
             className={`fortune-link-input ${
-              !linkAddress || isLinkAddressValid.isValid ? "" : "error-input"
+              !linkAddress || isLinkAddressValid.isValid ? '' : 'error-input'
             }`}
           />
         </div>
       )}
 
-      {linkType === "sheet" && (
+      {linkType === 'sheet' && (
         <div className="fortune-input-with-icon">
           <div className="input-icon">
             <SVGIcon name="link" width={16} height={16} />

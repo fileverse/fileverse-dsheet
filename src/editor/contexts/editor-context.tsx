@@ -134,16 +134,28 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     type: string,
     sheetId: string,
     sourceIndex: number,
-    targetIndex: number
+    targetIndex: number,
   ) => {
     const cloneDataBlockCalcFunction = { ...dataBlockCalcFunction };
     const sheetData = cloneDataBlockCalcFunction?.[sheetId];
 
     let result;
     if (type === 'row') {
-      result = updateRowIndices(sheetData, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex);
+      result = updateRowIndices(
+        sheetData,
+        selectedSourceIndex,
+        selectedTargetIndex,
+        sourceIndex,
+        targetIndex,
+      );
     } else {
-      result = updateColumnIndices(sheetData, selectedSourceIndex, selectedTargetIndex, sourceIndex, targetIndex);
+      result = updateColumnIndices(
+        sheetData,
+        selectedSourceIndex,
+        selectedTargetIndex,
+        sourceIndex,
+        targetIndex,
+      );
     }
 
     if (result !== sheetData) {
@@ -191,19 +203,18 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
           onChange({ data: currentDataRef.current }, encodedUpdate);
         }
       }, 1000),
-    [onChange, dsheetId]
+    [onChange, dsheetId],
   );
 
   useEffect(() => {
     const handleBeforeUnload = () => {
       handleOnChangePortalUpdate();
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
-
 
   // Initialize sheet data
   const {
@@ -290,7 +301,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       handleLiveQuery,
       initialiseLiveQueryData,
       isReadOnly,
-      handleOnChangePortalUpdate
+      handleOnChangePortalUpdate,
     };
   }, [
     setIsDataLoaded,
@@ -317,7 +328,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isAuthorized,
     handleLiveQuery,
     initialiseLiveQueryData,
-    isReadOnly
+    isReadOnly,
   ]);
 
   return (

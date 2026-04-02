@@ -1,15 +1,15 @@
-import { Patch as ImmerPatch } from "immer";
-import { PatchOptions } from "./utils";
+import { Patch as ImmerPatch } from 'immer';
+import { PatchOptions } from './utils';
 
 export type Op = {
   op:
-    | "replace"
-    | "remove"
-    | "add"
-    | "insertRowCol"
-    | "deleteRowCol"
-    | "addSheet"
-    | "deleteSheet";
+    | 'replace'
+    | 'remove'
+    | 'add'
+    | 'insertRowCol'
+    | 'deleteRowCol'
+    | 'addSheet'
+    | 'deleteSheet';
   id?: string;
   path: (string | number)[];
   value?: any;
@@ -207,7 +207,7 @@ export type Sheet = {
   dynamicArray_compute?: any;
   dynamicArray?: any[];
   frozen?: {
-    type: "row" | "column" | "both" | "rangeRow" | "rangeColumn" | "rangeBoth";
+    type: 'row' | 'column' | 'both' | 'rangeRow' | 'rangeColumn' | 'rangeBoth';
     range?: { row_focus: number; column_focus: number };
   };
   liveQueryList?: Record<string, LiveQueryData>;

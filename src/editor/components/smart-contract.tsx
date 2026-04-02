@@ -18,7 +18,11 @@ export const SmartContractButton = ({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger data-testid="smart-contract-popover-trigger">
-        <div role="button" className="dsheet-btn dsheet-btn--smart-contract-trigger p-2 rounded-lg bg-[#fef2ef]" data-testid="smart-contract-trigger">
+        <div
+          role="button"
+          className="dsheet-btn dsheet-btn--smart-contract-trigger p-2 rounded-lg bg-[#fef2ef]"
+          data-testid="smart-contract-trigger"
+        >
           <LucideIcon
             name="FileExport"
             size="md"
@@ -35,7 +39,10 @@ export const SmartContractButton = ({
         sideOffset={4}
         data-testid="smart-contract-popover-content"
       >
-        <div className="p-2 w-full dsheet-smart-contract-actions" data-testid="smart-contract-actions">
+        <div
+          className="p-2 w-full dsheet-smart-contract-actions"
+          data-testid="smart-contract-actions"
+        >
           {!isAuthorized && (
             <div
               onClick={() => {
@@ -49,10 +56,16 @@ export const SmartContractButton = ({
               style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
               data-testid="smart-contract-auth-prompt"
             >
-              <p className="dsheet-text dsheet-text--body font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default" data-testid="smart-contract-required-message">
+              <p
+                className="dsheet-text dsheet-text--body font-size-2xsm font-medium text-[12px] leading-[16px] color-text-default"
+                data-testid="smart-contract-required-message"
+              >
                 dSheets account required
               </p>
-              <p className="dsheet-text dsheet-text--helper text-helper-text-sm mt-1 color-text-secondary" data-testid="smart-contract-signup-message">
+              <p
+                className="dsheet-text dsheet-text--helper text-helper-text-sm mt-1 color-text-secondary"
+                data-testid="smart-contract-signup-message"
+              >
                 <a className="inline color-text-link">Signup/Login </a> to be
                 able to access smart contracts.
               </p>

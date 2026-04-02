@@ -1,7 +1,10 @@
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import { diffObjectArrays } from './diff-sheet';
-import { applyYdocSheetChanges, getSheetYdocSyncContext } from './sheet-ydoc-sync-utils';
+import {
+  applyYdocSheetChanges,
+  getSheetYdocSyncContext,
+} from './sheet-ydoc-sync-utils';
 import { SheetChangePath } from './update-ydoc';
 
 /**
@@ -12,14 +15,13 @@ export const conditionFormatYdocUpdate = ({
   sheetEditorRef,
   ydocRef,
   dsheetId,
-  handleContentPortal
+  handleContentPortal,
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
   dsheetId: string;
-  handleContentPortal?: any
-}
-) => {
+  handleContentPortal?: any;
+}) => {
   const syncContext = getSheetYdocSyncContext({
     sheetEditorRef,
     ydocRef,
@@ -27,7 +29,8 @@ export const conditionFormatYdocUpdate = ({
   });
   if (!syncContext) return;
 
-  const newData = sheetEditorRef.current?.getSheet()?.luckysheet_conditionformat_save || [];
+  const newData =
+    sheetEditorRef.current?.getSheet()?.luckysheet_conditionformat_save || [];
   const oldData = syncContext.oldSheet.luckysheet_conditionformat_save || [];
 
   //@ts-ignore

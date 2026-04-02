@@ -23,31 +23,31 @@ import {
   clearSelectedCellFormat,
   clearColumnsCellsFormat,
   clearRowsCellsFormat,
-} from "@sheet-engine/core";
-import _ from "lodash";
+} from '@sheet-engine/core';
+import _ from 'lodash';
 import React, {
   useContext,
   useRef,
   useCallback,
   useLayoutEffect,
   useState,
-} from "react";
-import Tippy from "@tippyjs/react";
-import { LucideIcon } from "@fileverse/ui";
-import { SplitColumn } from "../SplitColumn";
-import { ResetColumnWidth } from "../ResetColumnWidth";
+} from 'react';
+import Tippy from '@tippyjs/react';
+import { LucideIcon } from '@fileverse/ui';
+import { SplitColumn } from '../SplitColumn';
+import { ResetColumnWidth } from '../ResetColumnWidth';
 // import DataVerification from "../DataVerification";
-import WorkbookContext, { SetContextOptions } from "../../context";
-import { useAlert } from "../../hooks/useAlert";
-import { useDialog } from "../../hooks/useDialog";
-import Divider from "./Divider";
-import "./index.css";
-import Menu from "./Menu";
+import WorkbookContext, { SetContextOptions } from '../../context';
+import { useAlert } from '../../hooks/useAlert';
+import { useDialog } from '../../hooks/useDialog';
+import Divider from './Divider';
+import './index.css';
+import Menu from './Menu';
 // import CustomSort from "../CustomSort";
-import "tippy.js/dist/tippy.css";
+import 'tippy.js/dist/tippy.css';
 // import ConditionalFormat from "../ConditionFormat";
-import SVGIcon from "../SVGIcon";
-import { LucideIcon as LocalLucidIcon } from "../../components/SheetOverlay/LucideIcon";
+import SVGIcon from '../SVGIcon';
+import { LucideIcon as LocalLucidIcon } from '../../components/SheetOverlay/LucideIcon';
 
 const ContextMenu: React.FC = () => {
   const { showDialog } = useDialog();
@@ -57,20 +57,20 @@ const ContextMenu: React.FC = () => {
   const { showAlert } = useAlert();
   const { rightclick, drag, generalDialog, info, splitText } = locale(context);
 
-  const [activeMenu, setActiveMenu] = useState("");
+  const [activeMenu, setActiveMenu] = useState('');
 
   const addRowColRightAvobe = (
-    type: "row" | "column",
-    direction: "lefttop" | "rightbottom"
+    type: 'row' | 'column',
+    direction: 'lefttop' | 'rightbottom',
   ) => {
     const positionCol = context.luckysheet_select_save?.[0]?.column?.[0];
     const positionRow = context.luckysheet_select_save?.[0]?.row?.[0];
-    const position = type === "row" ? positionRow : positionCol;
+    const position = type === 'row' ? positionRow : positionCol;
     if (position == null) return;
     const count = 1;
     if (count < 1) return;
     // const direction = "rightbottom";
-    const insertRowColOp: SetContextOptions["insertRowColOp"] = {
+    const insertRowColOp: SetContextOptions['insertRowColOp'] = {
       type,
       index: position,
       count,
@@ -83,47 +83,47 @@ const ContextMenu: React.FC = () => {
           insertRowCol(draftCtx, insertRowColOp);
           draftCtx.contextMenu = {};
         } catch (err: any) {
-          if (err.message === "maxExceeded")
-            showAlert(rightclick.columnOverLimit, "ok");
-          else if (err.message === "readOnly")
-            showAlert(rightclick.cannotInsertOnColumnReadOnly, "ok");
+          if (err.message === 'maxExceeded')
+            showAlert(rightclick.columnOverLimit, 'ok');
+          else if (err.message === 'readOnly')
+            showAlert(rightclick.cannotInsertOnColumnReadOnly, 'ok');
           draftCtx.contextMenu = {};
         }
       },
       {
         insertRowColOp,
-      }
+      },
     );
   };
 
   const getMenuElement = useCallback(
     (name: string, i: number) => {
       const selection = context.luckysheet_select_save?.[0];
-      if (name === "|") {
+      if (name === '|') {
         return <Divider key={`divider-${i}`} />;
       }
-      if (name === "split-text") {
+      if (name === 'split-text') {
         return (
           <Menu
             key="split-text"
             onClick={() => {
               if (context.allowEdit === false) return;
               if (_.isUndefined(context.luckysheet_select_save)) {
-                showDialog(splitText.tipNoSelect, "ok");
+                showDialog(splitText.tipNoSelect, 'ok');
               } else {
                 const currentColumn =
                   context.luckysheet_select_save[
                     context.luckysheet_select_save.length - 1
                   ].column;
                 if (context.luckysheet_select_save.length > 1) {
-                  showDialog(splitText.tipNoMulti, "ok");
+                  showDialog(splitText.tipNoMulti, 'ok');
                 } else if (currentColumn[0] !== currentColumn[1]) {
-                  showDialog(splitText.tipNoMultiColumn, "ok");
+                  showDialog(splitText.tipNoMultiColumn, 'ok');
                 } else {
                   showDialog(
                     <SplitColumn />,
                     undefined,
-                    "Split text to columns"
+                    'Split text to columns',
                   );
                 }
               }
@@ -139,7 +139,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "freeze-row") {
+      if (name === 'freeze-row') {
         const freezeState = getFreezeState(context);
         const isFrozen = freezeState.isRowFrozen;
         const isEntireRowSelected = selection?.row_select === true;
@@ -152,9 +152,9 @@ const ContextMenu: React.FC = () => {
             onClick={() => {
               setContext((draftCtx) => {
                 if (isFrozen) {
-                  toggleFreeze(draftCtx, "unfreeze-row");
+                  toggleFreeze(draftCtx, 'unfreeze-row');
                 } else {
-                  toggleFreeze(draftCtx, "row");
+                  toggleFreeze(draftCtx, 'row');
                 }
                 draftCtx.contextMenu = {};
               });
@@ -162,13 +162,13 @@ const ContextMenu: React.FC = () => {
           >
             <div className="context-item">
               <LucideIcon name="Snowflake" />
-              <p>{isFrozen ? "Unfreeze row" : "Freeze upto current row"}</p>
+              <p>{isFrozen ? 'Unfreeze row' : 'Freeze upto current row'}</p>
             </div>
           </Menu>
         );
       }
 
-      if (name === "freeze-column") {
+      if (name === 'freeze-column') {
         const freezeState = getFreezeState(context);
         const isFrozen = freezeState.isColFrozen;
         const isEntireColumnSelected = selection?.column_select === true;
@@ -181,9 +181,9 @@ const ContextMenu: React.FC = () => {
             onClick={() => {
               setContext((draftCtx) => {
                 if (isFrozen) {
-                  toggleFreeze(draftCtx, "unfreeze-column");
+                  toggleFreeze(draftCtx, 'unfreeze-column');
                 } else {
-                  toggleFreeze(draftCtx, "column");
+                  toggleFreeze(draftCtx, 'column');
                   // Force a refresh of the grid after freezing
                   jfrefreshgrid(draftCtx, null, undefined, false);
                 }
@@ -194,13 +194,13 @@ const ContextMenu: React.FC = () => {
             <div className="context-item">
               <LucideIcon name="Snowflake" />
               <p>
-                {isFrozen ? "Unfreeze column" : "Freeze upto current column"}
+                {isFrozen ? 'Unfreeze column' : 'Freeze upto current column'}
               </p>
             </div>
           </Menu>
         );
       }
-      if (name === "comment") {
+      if (name === 'comment') {
         return (
           <Menu
             key={name}
@@ -210,7 +210,7 @@ const ContextMenu: React.FC = () => {
                   draftCtx,
                   refs.globalCache,
                   selection?.row_focus!,
-                  selection?.column_focus!
+                  selection?.column_focus!,
                 );
                 draftCtx.contextMenu = {};
               });
@@ -223,7 +223,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "dataVerification") {
+      if (name === 'dataVerification') {
         return (
           <Menu
             key={name}
@@ -243,7 +243,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "searchReplace") {
+      if (name === 'searchReplace') {
         return (
           <Menu
             key={name}
@@ -263,14 +263,14 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "copy") {
+      if (name === 'copy') {
         return (
           <Menu
             key={name}
             onClick={() => {
               setContext((draftCtx) => {
                 if (draftCtx.luckysheet_select_save?.length! > 1) {
-                  showAlert(rightclick.noMulti, "ok");
+                  showAlert(rightclick.noMulti, 'ok');
                   draftCtx.contextMenu = {};
                   return;
                 }
@@ -286,14 +286,14 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "cut") {
+      if (name === 'cut') {
         return (
           <Menu
             key={name}
             onClick={() => {
               setContext((draftCtx) => {
                 if (draftCtx.luckysheet_select_save?.length! > 1) {
-                  showAlert(rightclick.noMulti, "ok");
+                  showAlert(rightclick.noMulti, 'ok');
                   draftCtx.contextMenu = {};
                   return;
                 }
@@ -303,12 +303,12 @@ const ContextMenu: React.FC = () => {
                   removeActiveImage(draftCtx);
                 } else {
                   const msg = deleteSelectedCellText(draftCtx);
-                  if (msg === "partMC") {
-                    showDialog(generalDialog.partiallyError, "ok");
-                  } else if (msg === "allowEdit") {
-                    showDialog(generalDialog.readOnlyError, "ok");
-                  } else if (msg === "dataNullError") {
-                    showDialog(generalDialog.dataNullError, "ok");
+                  if (msg === 'partMC') {
+                    showDialog(generalDialog.partiallyError, 'ok');
+                  } else if (msg === 'allowEdit') {
+                    showDialog(generalDialog.readOnlyError, 'ok');
+                  } else if (msg === 'dataNullError') {
+                    showDialog(generalDialog.dataNullError, 'ok');
                   }
                 }
                 jfrefreshgrid(draftCtx, null, undefined);
@@ -324,7 +324,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "paste") {
+      if (name === 'paste') {
         return (
           <Menu
             key={name}
@@ -343,14 +343,14 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "insert-column") {
+      if (name === 'insert-column') {
         return selection?.row_select
           ? null
-          : ["left"].map((dir) => (
+          : ['left'].map((dir) => (
               <Menu
                 key={`add-col-${dir}`}
                 onClick={() => {
-                  addRowColRightAvobe("column", "lefttop");
+                  addRowColRightAvobe('column', 'lefttop');
                 }}
               >
                 <div className="context-item">
@@ -360,14 +360,14 @@ const ContextMenu: React.FC = () => {
               </Menu>
             ));
       }
-      if (name === "insert-column-right") {
+      if (name === 'insert-column-right') {
         return selection?.row_select
           ? null
-          : ["left"].map((dir) => (
+          : ['left'].map((dir) => (
               <Menu
                 key={`add-col-right-${dir}`}
                 onClick={() => {
-                  addRowColRightAvobe("column", "rightbottom");
+                  addRowColRightAvobe('column', 'rightbottom');
                 }}
               >
                 <div className="context-item">
@@ -377,14 +377,14 @@ const ContextMenu: React.FC = () => {
               </Menu>
             ));
       }
-      if (name === "insert-row-above") {
+      if (name === 'insert-row-above') {
         return selection?.column_select
           ? null
-          : ["left"].map((dir) => (
+          : ['left'].map((dir) => (
               <Menu
                 key={`add-row-above-${dir}`}
                 onClick={() => {
-                  addRowColRightAvobe("row", "lefttop");
+                  addRowColRightAvobe('row', 'lefttop');
                 }}
               >
                 <div className="context-item">
@@ -394,14 +394,14 @@ const ContextMenu: React.FC = () => {
               </Menu>
             ));
       }
-      if (name === "insert-row") {
+      if (name === 'insert-row') {
         return selection?.column_select
           ? null
-          : ["left"].map((dir) => (
+          : ['left'].map((dir) => (
               <Menu
                 key={`add-row-below-${dir}`}
                 onClick={() => {
-                  addRowColRightAvobe("row", "rightbottom");
+                  addRowColRightAvobe('row', 'rightbottom');
                 }}
               >
                 <div className="context-item">
@@ -411,7 +411,7 @@ const ContextMenu: React.FC = () => {
               </Menu>
             ));
       }
-      if (name === "delete-column") {
+      if (name === 'delete-column') {
         return (
           selection?.column_select && (
             <Menu
@@ -419,8 +419,8 @@ const ContextMenu: React.FC = () => {
               onClick={() => {
                 if (!selection) return;
                 const [st_index, ed_index] = selection.column;
-                const deleteRowColOp: SetContextOptions["deleteRowColOp"] = {
-                  type: "column",
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'column',
                   start: st_index,
                   end: ed_index,
                   id: context.currentSheetId,
@@ -428,7 +428,7 @@ const ContextMenu: React.FC = () => {
                 setContext(
                   (draftCtx) => {
                     if (draftCtx.luckysheet_select_save?.length! > 1) {
-                      showAlert(rightclick.noMulti, "ok");
+                      showAlert(rightclick.noMulti, 'ok');
                       draftCtx.contextMenu = {};
                       draftCtx.dataVerificationDropDownList = false;
                       return;
@@ -436,25 +436,25 @@ const ContextMenu: React.FC = () => {
                     const slen = ed_index - st_index + 1;
                     const index = getSheetIndex(
                       draftCtx,
-                      context.currentSheetId
+                      context.currentSheetId,
                     ) as number;
                     if (
                       draftCtx.luckysheetfile[index].data?.[0]?.length! <= slen
                     ) {
-                      showAlert(rightclick.cannotDeleteAllColumn, "ok");
+                      showAlert(rightclick.cannotDeleteAllColumn, 'ok');
                       draftCtx.contextMenu = {};
                       return;
                     }
                     try {
                       deleteRowCol(draftCtx, deleteRowColOp);
                     } catch (e: any) {
-                      if (e.message === "readOnly") {
-                        showAlert(rightclick.cannotDeleteColumnReadOnly, "ok");
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteColumnReadOnly, 'ok');
                       }
                     }
                     draftCtx.contextMenu = {};
                   },
-                  { deleteRowColOp }
+                  { deleteRowColOp },
                 );
               }}
             >
@@ -469,7 +469,7 @@ const ContextMenu: React.FC = () => {
           )
         );
       }
-      if (name === "cell-delete-column") {
+      if (name === 'cell-delete-column') {
         return (
           !selection?.row_select && (
             <Menu
@@ -477,8 +477,8 @@ const ContextMenu: React.FC = () => {
               onClick={() => {
                 if (!selection) return;
                 const [st_index, ed_index] = selection.column;
-                const deleteRowColOp: SetContextOptions["deleteRowColOp"] = {
-                  type: "column",
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'column',
                   start: st_index,
                   end: ed_index,
                   id: context.currentSheetId,
@@ -486,7 +486,7 @@ const ContextMenu: React.FC = () => {
                 setContext(
                   (draftCtx) => {
                     if (draftCtx.luckysheet_select_save?.length! > 1) {
-                      showAlert(rightclick.noMulti, "ok");
+                      showAlert(rightclick.noMulti, 'ok');
                       draftCtx.contextMenu = {};
                       draftCtx.dataVerificationDropDownList = false;
                       return;
@@ -494,25 +494,25 @@ const ContextMenu: React.FC = () => {
                     const slen = ed_index - st_index + 1;
                     const index = getSheetIndex(
                       draftCtx,
-                      context.currentSheetId
+                      context.currentSheetId,
                     ) as number;
                     if (
                       draftCtx.luckysheetfile[index].data?.[0]?.length! <= slen
                     ) {
-                      showAlert(rightclick.cannotDeleteAllColumn, "ok");
+                      showAlert(rightclick.cannotDeleteAllColumn, 'ok');
                       draftCtx.contextMenu = {};
                       return;
                     }
                     try {
                       deleteRowCol(draftCtx, deleteRowColOp);
                     } catch (e: any) {
-                      if (e.message === "readOnly") {
-                        showAlert(rightclick.cannotDeleteColumnReadOnly, "ok");
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteColumnReadOnly, 'ok');
                       }
                     }
                     draftCtx.contextMenu = {};
                   },
-                  { deleteRowColOp }
+                  { deleteRowColOp },
                 );
               }}
             >
@@ -527,7 +527,7 @@ const ContextMenu: React.FC = () => {
           )
         );
       }
-      if (name === "delete-row") {
+      if (name === 'delete-row') {
         return (
           selection?.row_select && (
             <Menu
@@ -535,8 +535,8 @@ const ContextMenu: React.FC = () => {
               onClick={() => {
                 if (!selection) return;
                 const [st_index, ed_index] = selection.row;
-                const deleteRowColOp: SetContextOptions["deleteRowColOp"] = {
-                  type: "row",
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'row',
                   start: st_index,
                   end: ed_index,
                   id: context.currentSheetId,
@@ -544,30 +544,30 @@ const ContextMenu: React.FC = () => {
                 setContext(
                   (draftCtx) => {
                     if (draftCtx.luckysheet_select_save?.length! > 1) {
-                      showAlert(rightclick.noMulti, "ok");
+                      showAlert(rightclick.noMulti, 'ok');
                       draftCtx.contextMenu = {};
                       return;
                     }
                     const slen = ed_index - st_index + 1;
                     const index = getSheetIndex(
                       draftCtx,
-                      context.currentSheetId
+                      context.currentSheetId,
                     ) as number;
                     if (draftCtx.luckysheetfile[index].data?.length! <= slen) {
-                      showAlert(rightclick.cannotDeleteAllRow, "ok");
+                      showAlert(rightclick.cannotDeleteAllRow, 'ok');
                       draftCtx.contextMenu = {};
                       return;
                     }
                     try {
                       deleteRowCol(draftCtx, deleteRowColOp);
                     } catch (e: any) {
-                      if (e.message === "readOnly") {
-                        showAlert(rightclick.cannotDeleteRowReadOnly, "ok");
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteRowReadOnly, 'ok');
                       }
                     }
                     draftCtx.contextMenu = {};
                   },
-                  { deleteRowColOp }
+                  { deleteRowColOp },
                 );
               }}
             >
@@ -582,7 +582,7 @@ const ContextMenu: React.FC = () => {
           )
         );
       }
-      if (name === "cell-delete-row") {
+      if (name === 'cell-delete-row') {
         return (
           !selection?.column_select && (
             <Menu
@@ -590,8 +590,8 @@ const ContextMenu: React.FC = () => {
               onClick={() => {
                 if (!selection) return;
                 const [st_index, ed_index] = selection.row;
-                const deleteRowColOp: SetContextOptions["deleteRowColOp"] = {
-                  type: "row",
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'row',
                   start: st_index,
                   end: ed_index,
                   id: context.currentSheetId,
@@ -599,30 +599,30 @@ const ContextMenu: React.FC = () => {
                 setContext(
                   (draftCtx) => {
                     if (draftCtx.luckysheet_select_save?.length! > 1) {
-                      showAlert(rightclick.noMulti, "ok");
+                      showAlert(rightclick.noMulti, 'ok');
                       draftCtx.contextMenu = {};
                       return;
                     }
                     const slen = ed_index - st_index + 1;
                     const index = getSheetIndex(
                       draftCtx,
-                      context.currentSheetId
+                      context.currentSheetId,
                     ) as number;
                     if (draftCtx.luckysheetfile[index].data?.length! <= slen) {
-                      showAlert(rightclick.cannotDeleteAllRow, "ok");
+                      showAlert(rightclick.cannotDeleteAllRow, 'ok');
                       draftCtx.contextMenu = {};
                       return;
                     }
                     try {
                       deleteRowCol(draftCtx, deleteRowColOp);
                     } catch (e: any) {
-                      if (e.message === "readOnly") {
-                        showAlert(rightclick.cannotDeleteRowReadOnly, "ok");
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteRowReadOnly, 'ok');
                       }
                     }
                     draftCtx.contextMenu = {};
                   },
-                  { deleteRowColOp }
+                  { deleteRowColOp },
                 );
               }}
             >
@@ -637,21 +637,21 @@ const ContextMenu: React.FC = () => {
           )
         );
       }
-      if (name === "hide-row") {
+      if (name === 'hide-row') {
         return (
           selection?.row_select &&
-          ["hideSelected"].map((item) => (
+          ['hideSelected'].map((item) => (
             <Menu
               key={item}
               onClick={() => {
                 setContext((draftCtx) => {
-                  let msg = "";
-                  if (item === "hideSelected") {
-                    msg = hideSelected(draftCtx, "row");
-                  } else if (item === "showHide") {
-                    showSelected(draftCtx, "row");
+                  let msg = '';
+                  if (item === 'hideSelected') {
+                    msg = hideSelected(draftCtx, 'row');
+                  } else if (item === 'showHide') {
+                    showSelected(draftCtx, 'row');
                   }
-                  if (msg === "noMulti") {
+                  if (msg === 'noMulti') {
                     showDialog(drag.noMulti);
                   }
                   draftCtx.contextMenu = {};
@@ -666,21 +666,21 @@ const ContextMenu: React.FC = () => {
           ))
         );
       }
-      if (name === "hide-column") {
+      if (name === 'hide-column') {
         return (
           selection?.column_select === true &&
-          ["hideSelected"].map((item) => (
+          ['hideSelected'].map((item) => (
             <Menu
               key={item}
               onClick={() => {
                 setContext((draftCtx) => {
-                  let msg = "";
-                  if (item === "hideSelected") {
-                    msg = hideSelected(draftCtx, "column");
-                  } else if (item === "showHide") {
-                    showSelected(draftCtx, "column");
+                  let msg = '';
+                  if (item === 'hideSelected') {
+                    msg = hideSelected(draftCtx, 'column');
+                  } else if (item === 'showHide') {
+                    showSelected(draftCtx, 'column');
                   }
-                  if (msg === "noMulti") {
+                  if (msg === 'noMulti') {
                     showDialog(drag.noMulti);
                   }
                   draftCtx.contextMenu = {};
@@ -695,30 +695,30 @@ const ContextMenu: React.FC = () => {
           ))
         );
       }
-      if (name === "set-row-height") {
+      if (name === 'set-row-height') {
         const rowHeight = selection?.height || context.defaultrowlen;
         const shownRowHeight = context.luckysheet_select_save?.some(
           (section) =>
             section.height_move !==
-            (rowHeight + 1) * (section.row[1] - section.row[0] + 1) - 1
+            (rowHeight + 1) * (section.row[1] - section.row[0] + 1) - 1,
         )
-          ? ""
+          ? ''
           : rowHeight;
         return context.luckysheet_select_save?.some(
-          (section) => section.row_select
+          (section) => section.row_select,
         ) ? (
           <Menu
             key="set-row-height"
             onClick={(e, container) => {
-              const targetRowHeight = container.querySelector("input")?.value;
+              const targetRowHeight = container.querySelector('input')?.value;
               setContext((draftCtx) => {
                 if (
                   _.isUndefined(targetRowHeight) ||
-                  targetRowHeight === "" ||
+                  targetRowHeight === '' ||
                   parseInt(targetRowHeight, 10) <= 0 ||
                   parseInt(targetRowHeight, 10) > 545
                 ) {
-                  showAlert(info.tipRowHeightLimit, "ok");
+                  showAlert(info.tipRowHeightLimit, 'ok');
                   draftCtx.contextMenu = {};
                   return;
                 }
@@ -754,7 +754,7 @@ const ContextMenu: React.FC = () => {
                   className="luckysheet-mousedown-cancel"
                   placeholder={rightclick.number}
                   defaultValue={shownRowHeight}
-                  style={{ width: "40px" }}
+                  style={{ width: '40px' }}
                 />
                 px
               </div>
@@ -762,7 +762,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         ) : null;
       }
-      if (name === "set-column-width") {
+      if (name === 'set-column-width') {
         // const colWidth = selection?.width || context.defaultcollen;
         // const shownColWidth = context.luckysheet_select_save?.some(
         //   (section) =>
@@ -772,12 +772,12 @@ const ContextMenu: React.FC = () => {
         //   ? ""
         //   : colWidth;
         return context.luckysheet_select_save?.some(
-          (section) => section.column_select
+          (section) => section.column_select,
         ) ? (
           <Menu
             key="set-column-width"
             onClick={() => {
-              showDialog(<ResetColumnWidth />, undefined, "Resize column");
+              showDialog(<ResetColumnWidth />, undefined, 'Resize column');
               setContext((draftCtx) => {
                 draftCtx.contextMenu = {};
               });
@@ -790,7 +790,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         ) : null;
       }
-      if (name === "clear") {
+      if (name === 'clear') {
         return (
           <Menu
             key={name}
@@ -803,12 +803,12 @@ const ContextMenu: React.FC = () => {
                   removeActiveImage(draftCtx);
                 } else {
                   const msg = deleteSelectedCellText(draftCtx);
-                  if (msg === "partMC") {
-                    showDialog(generalDialog.partiallyError, "ok");
-                  } else if (msg === "allowEdit") {
-                    showDialog(generalDialog.readOnlyError, "ok");
-                  } else if (msg === "dataNullError") {
-                    showDialog(generalDialog.dataNullError, "ok");
+                  if (msg === 'partMC') {
+                    showDialog(generalDialog.partiallyError, 'ok');
+                  } else if (msg === 'allowEdit') {
+                    showDialog(generalDialog.readOnlyError, 'ok');
+                  } else if (msg === 'dataNullError') {
+                    showDialog(generalDialog.dataNullError, 'ok');
                   }
                 }
                 draftCtx.contextMenu = {};
@@ -823,7 +823,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "ascSort") {
+      if (name === 'ascSort') {
         return (
           <Menu
             key={name}
@@ -848,7 +848,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "desSort") {
+      if (name === 'desSort') {
         return (
           <Menu
             key={name}
@@ -873,7 +873,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "sort") {
+      if (name === 'sort') {
         const { sort } = locale(context);
         return (
           <Tippy
@@ -886,15 +886,15 @@ const ContextMenu: React.FC = () => {
             zIndex={3000}
             appendTo={document.body}
             onShow={() => {
-              setActiveMenu("sort");
+              setActiveMenu('sort');
             }}
             onHide={() => {
-              if (activeMenu === "sort") setActiveMenu("");
+              if (activeMenu === 'sort') setActiveMenu('');
             }}
             content={
               <div
                 className="fortune-toolbar-select"
-                style={{ minWidth: "11.25rem" }}
+                style={{ minWidth: '11.25rem' }}
               >
                 <div className="flex flex-col color-text-default text-body-sm">
                   <Menu
@@ -907,7 +907,7 @@ const ContextMenu: React.FC = () => {
                   >
                     <div
                       className="context-item p-2 w-full"
-                      style={{ height: "40px" }}
+                      style={{ height: '40px' }}
                     >
                       <LucideIcon name="ArrowUp" />
                       <p>{sort.asc}</p>
@@ -923,7 +923,7 @@ const ContextMenu: React.FC = () => {
                   >
                     <div
                       className="context-item p-2 w-full"
-                      style={{ height: "40px" }}
+                      style={{ height: '40px' }}
                     >
                       <LucideIcon name="ArrowDown" />
                       <p>{sort.desc}</p>
@@ -956,7 +956,7 @@ const ContextMenu: React.FC = () => {
             hideOnClick={false}
           >
             <div>
-              <Menu isActive={activeMenu === "sort"}>
+              <Menu isActive={activeMenu === 'sort'}>
                 <div className="flex items-center justify-between w-full">
                   <div className="context-item">
                     <LucideIcon name="ArrowDownUp" />
@@ -969,7 +969,7 @@ const ContextMenu: React.FC = () => {
           </Tippy>
         );
       }
-      if (name === "filter") {
+      if (name === 'filter') {
         const { filter } = locale(context);
         return (
           <Tippy
@@ -984,7 +984,7 @@ const ContextMenu: React.FC = () => {
             content={
               <div
                 className="fortune-toolbar-select"
-                style={{ minWidth: "11.25rem" }}
+                style={{ minWidth: '11.25rem' }}
               >
                 <div className="flex flex-col color-text-default text-body-sm">
                   <Menu
@@ -997,7 +997,7 @@ const ContextMenu: React.FC = () => {
                   >
                     <div
                       className="context-item p-2 w-full"
-                      style={{ height: "32px" }}
+                      style={{ height: '32px' }}
                     >
                       <LucideIcon name="Filter" className="w-4 h-4" />
                       <p>{filter.filter}</p>
@@ -1013,7 +1013,7 @@ const ContextMenu: React.FC = () => {
                   >
                     <div
                       className="context-item p-2 w-full"
-                      style={{ height: "32px" }}
+                      style={{ height: '32px' }}
                     >
                       <LucideIcon name="Eraser" />
                       <p>{filter.clearFilter}</p>
@@ -1025,14 +1025,14 @@ const ContextMenu: React.FC = () => {
             trigger="mouseenter focus"
             hideOnClick={false}
             onShow={() => {
-              setActiveMenu("filter");
+              setActiveMenu('filter');
             }}
             onHide={() => {
-              if (activeMenu === "filter") setActiveMenu("");
+              if (activeMenu === 'filter') setActiveMenu('');
             }}
           >
             <div>
-              <Menu isActive={activeMenu === "filter"}>
+              <Menu isActive={activeMenu === 'filter'}>
                 <div className="flex items-center justify-between w-full">
                   <div className="context-item">
                     <LucideIcon name="Filter" />
@@ -1050,7 +1050,7 @@ const ContextMenu: React.FC = () => {
           </Tippy>
         );
       }
-      if (name === "image") {
+      if (name === 'image') {
         return (
           <Menu
             key={name}
@@ -1065,7 +1065,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "link") {
+      if (name === 'link') {
         return (
           <Menu
             key={name}
@@ -1083,7 +1083,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "conditionFormat") {
+      if (name === 'conditionFormat') {
         return (
           <Menu
             key={name}
@@ -1103,7 +1103,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === "clear-format") {
+      if (name === 'clear-format') {
         return (
           <Menu
             key={name}
@@ -1112,7 +1112,7 @@ const ContextMenu: React.FC = () => {
               setContext((draftCtx) => {
                 draftCtx.contextMenu = {};
                 // @ts-ignore
-                if (draftCtx.contextMenu.headerMenu === "row") {
+                if (draftCtx.contextMenu.headerMenu === 'row') {
                   clearRowsCellsFormat(draftCtx);
                 } else if (draftCtx.contextMenu.headerMenu === true) {
                   clearColumnsCellsFormat(draftCtx);
@@ -1145,7 +1145,7 @@ const ContextMenu: React.FC = () => {
       generalDialog.readOnlyError,
       generalDialog.dataNullError,
       activeMenu,
-    ]
+    ],
   );
 
   useLayoutEffect(() => {
@@ -1198,7 +1198,7 @@ const ContextMenu: React.FC = () => {
     >
       {context.contextMenu.headerMenu === true ||
       /* @ts-ignore */
-      context.contextMenu.headerMenu === "row"
+      context.contextMenu.headerMenu === 'row'
         ? settings.headerContextMenu.map((menu, i) => {
             return getMenuElement(menu, i);
           })

@@ -35,11 +35,11 @@ export function isLetterNumberPattern(str: string): boolean {
 
 export function removeLastSpan(htmlString: string) {
   // Create a temporary container
-  const container = document.createElement("div");
+  const container = document.createElement('div');
   container.innerHTML = htmlString;
 
   // Get all span elements
-  const spans = container.querySelectorAll("span");
+  const spans = container.querySelectorAll('span');
 
   if (spans.length > 0) {
     const lastSpan = spans[spans.length - 1];
@@ -68,7 +68,7 @@ function columnToNumber(colPart: string) {
 }
 
 export function numberToColumn(colNumber: number) {
-  let colPart = "";
+  let colPart = '';
   while (colNumber > 0) {
     colNumber -= 1;
     colPart = String.fromCharCode(65 + (colNumber % 26)) + colPart;
@@ -79,7 +79,7 @@ export function numberToColumn(colNumber: number) {
 
 export function incrementColumn(cell: string): string {
   const parsed = parseCell(cell);
-  if (!parsed) return "";
+  if (!parsed) return '';
 
   let colNumber = columnToNumber(parsed.colPart);
   colNumber += 1;
@@ -90,7 +90,7 @@ export function incrementColumn(cell: string): string {
 
 export function decrementColumn(cell: string): string {
   const parsed = parseCell(cell);
-  if (!parsed) return "";
+  if (!parsed) return '';
 
   let colNumber = columnToNumber(parsed.colPart);
   colNumber = Math.max(1, colNumber - 1); // Prevent going below 'A'
@@ -101,7 +101,7 @@ export function decrementColumn(cell: string): string {
 
 export function incrementRow(cell: string): string {
   const parsed = parseCell(cell);
-  if (!parsed) return "";
+  if (!parsed) return '';
 
   const newRowPart = parsed.rowPart + 1;
   return parsed.colPart + newRowPart;
@@ -109,7 +109,7 @@ export function incrementRow(cell: string): string {
 
 export function decrementRow(cell: string): string {
   const parsed = parseCell(cell);
-  if (!parsed) return "";
+  if (!parsed) return '';
 
   const newRowPart = Math.max(1, parsed.rowPart - 1); // Prevent going below row 1
   return parsed.colPart + newRowPart;
@@ -133,7 +133,7 @@ export function countCommasBeforeCursor(editableDiv: HTMLDivElement): number {
     const char = textBeforeCursor[i];
     if (char === '"') {
       inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+    } else if (char === ',' && !inQuotes) {
       count += 1;
     }
   }

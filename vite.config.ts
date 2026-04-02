@@ -11,7 +11,7 @@ export default defineConfig({
       '@sheet-engine/react': path.resolve(__dirname, 'src/sheet-engine/react'),
       '@sheet-engine/formula-parser': path.resolve(
         __dirname,
-        'src/sheet-engine/formula-parser'
+        'src/sheet-engine/formula-parser',
       ),
     },
   },

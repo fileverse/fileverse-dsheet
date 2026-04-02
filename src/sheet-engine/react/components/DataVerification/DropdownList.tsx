@@ -6,20 +6,20 @@ import {
   mergeBorder,
   setDropdownValue,
   api,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 import React, {
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-} from "react";
-import { Button, IconButton } from "@fileverse/ui";
-import WorkbookContext from "../../context";
-import { useOutsideClick } from "../../hooks/useOutsideClick";
-import SVGIcon from "../SVGIcon";
+} from 'react';
+import { Button, IconButton } from '@fileverse/ui';
+import WorkbookContext from '../../context';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
+import SVGIcon from '../SVGIcon';
 
-import "./index.css";
+import './index.css';
 
 const DropDownList: React.FC = () => {
   const { context, setContext } = useContext(WorkbookContext);
@@ -73,16 +73,16 @@ const DropDownList: React.FC = () => {
     const cellValue = getCellValue(rowIndex, colIndex, d);
 
     if (cellValue) {
-      setSelected(cellValue.toString().split(","));
+      setSelected(cellValue.toString().split(','));
     }
 
     const { color } = item;
     // const color = context.dataVerification!.dataRegulation!.color.split(",")
-    const colorValues = color?.split(",").map((v: any) => v.trim());
+    const colorValues = color?.split(',').map((v: any) => v.trim());
     // Group every 3 values into RGB arrays
     const rbgColorArr = [];
     for (let i = 0; i < colorValues.length; i += 3) {
-      rbgColorArr.push(colorValues.slice(i, i + 3).join(", "));
+      rbgColorArr.push(colorValues.slice(i, i + 3).join(', '));
     }
     setRbgColor(rbgColorArr);
 
@@ -91,7 +91,7 @@ const DropDownList: React.FC = () => {
       left: col_pre,
       top: row,
     });
-    setIsMul(item.type2 === "true");
+    setIsMul(item.type2 === 'true');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context.luckysheet_select_save]);
 
@@ -108,12 +108,12 @@ const DropDownList: React.FC = () => {
     if (!dataVerification) return;
     const item = dataVerification[`${rowIndex}_${colIndex}`];
     if (!item) return;
-    if (item.type2 !== "true") return;
+    if (item.type2 !== 'true') return;
     const d = getFlowdata(context);
     if (!d) return;
     const cellValue = getCellValue(rowIndex, colIndex, d);
     if (cellValue) {
-      setSelected(cellValue.toString().split(","));
+      setSelected(cellValue.toString().split(','));
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,7 +135,7 @@ const DropDownList: React.FC = () => {
         return (
           <div
             className="dropdown-List-item mb-1"
-            style={{ backgroundColor: `rgb(${rbgColor[i]})` || "red" }}
+            style={{ backgroundColor: `rgb(${rbgColor[i]})` || 'red' }}
             key={i}
             onClick={() => {
               setContext((ctx) => {
@@ -156,8 +156,8 @@ const DropDownList: React.FC = () => {
               name="check"
               width={12}
               style={{
-                verticalAlign: "middle",
-                display: isMul && selected.indexOf(v) >= 0 ? "inline" : "none",
+                verticalAlign: 'middle',
+                display: isMul && selected.indexOf(v) >= 0 ? 'inline' : 'none',
               }}
             />
             {v}
@@ -166,16 +166,16 @@ const DropDownList: React.FC = () => {
       })}
       <hr
         style={{
-          border: "none",
-          height: "1px",
-          background: "hsl(var(--color-bg-default-hover, #F2F4F5))",
-          marginBottom: "4px",
+          border: 'none',
+          height: '1px',
+          background: 'hsl(var(--color-bg-default-hover, #F2F4F5))',
+          marginBottom: '4px',
         }}
       />
 
       <div
         className="w-full flex align-center edit-dropdown"
-        style={{ height: "28px" }}
+        style={{ height: '28px' }}
         onClick={() => {
           const selectedCells = api.getSelection(context);
           // @ts-ignore
@@ -190,7 +190,7 @@ const DropDownList: React.FC = () => {
           size="sm"
           variant="ghost"
           className="color-picker-icon color-picker edit-dropdown"
-          style={{ paddingTop: "0px !important" }}
+          style={{ paddingTop: '0px !important' }}
         />
         <Button
           size="md"

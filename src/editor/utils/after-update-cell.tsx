@@ -19,11 +19,7 @@ import {
 import { updateYdocSheetData } from './update-ydoc';
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
-import {
-  getSheetIndex,
-  LiveQueryData,
-  update,
-} from '@sheet-engine/core';
+import { getSheetIndex, LiveQueryData, update } from '@sheet-engine/core';
 import { isHexValue } from './generic';
 import {
   isSmartContractResponse,
@@ -73,8 +69,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-  | React.Dispatch<React.SetStateAction<string>>
-  | undefined;
+    | React.Dispatch<React.SetStateAction<string>>
+    | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -288,7 +284,6 @@ const handleDatablockErroMessage = (
   });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isDatablockError = (value: any) => {
   const isObject =
     value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -398,7 +393,6 @@ const processRegularPromise = async (
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
     params.storeApiKey?.(apiKeyName);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     if (
       error === 'dataBlockApiKeyHandler missing' ||
@@ -448,10 +442,15 @@ const handlePromiseValue = async (
       ...newValue,
       m: LOADING_MESSAGE,
     };
-    (sheetEditorRef.current as any)?.setCellValuesByRange([[newCellValue]], {
-      row: [row, row],
-      column: [column, column],
-    }, {}, false);
+    (sheetEditorRef.current as any)?.setCellValuesByRange(
+      [[newCellValue]],
+      {
+        row: [row, row],
+        column: [column, column],
+      },
+      {},
+      false,
+    );
   }
 };
 
@@ -501,7 +500,6 @@ const adjustRowHeight = ({
   }
 };
 
-
 /**
  * Handles logic after a cell is updated, including processing formula results
  *
@@ -518,14 +516,19 @@ export const afterUpdateCell = async (
     params.ydocRef.current,
     // @ts-ignore
     params.dsheetId,
-    [{
-      sheetId: currentSheetId, path: ['celldata'], value: {
-        r: params.row,
-        c: params.column,
-        v: params.newValue,
-      }, key: params.row + '_' + params.column,
-      type: 'update',
-    }],
+    [
+      {
+        sheetId: currentSheetId,
+        path: ['celldata'],
+        value: {
+          r: params.row,
+          c: params.column,
+          v: params.newValue,
+        },
+        key: params.row + '_' + params.column,
+        type: 'update',
+      },
+    ],
     // @ts-ignore
     params.handleContentPortal,
   );

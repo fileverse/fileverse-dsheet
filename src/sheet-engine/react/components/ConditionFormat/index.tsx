@@ -1,16 +1,16 @@
-import React, { useCallback, useContext, useEffect, useRef } from "react";
-import "./index.css";
+import React, { useCallback, useContext, useEffect, useRef } from 'react';
+import './index.css';
 import {
   locale,
   // updateItem
-} from "@sheet-engine/core";
-import _ from "lodash";
-import WorkbookContext from "../../context";
-import Select, { Option } from "../Toolbar/Select";
-import SVGIcon from "../SVGIcon";
-import { useDialog } from "../../hooks/useDialog";
-import ConditionRules from "./ConditionRules";
-import { MenuDivider } from "../Toolbar/Divider";
+} from '@sheet-engine/core';
+import _ from 'lodash';
+import WorkbookContext from '../../context';
+import Select, { Option } from '../Toolbar/Select';
+import SVGIcon from '../SVGIcon';
+import { useDialog } from '../../hooks/useDialog';
+import ConditionRules from './ConditionRules';
+import { MenuDivider } from '../Toolbar/Divider';
 
 const ConditionalFormat: React.FC<{
   items: string[];
@@ -31,13 +31,13 @@ const ConditionalFormat: React.FC<{
 
       if (availableSpace < subMenuWidth) {
         // Not enough space on the right, position to the left
-        subMenu.style.right = "108%";
+        subMenu.style.right = '108%';
       } else {
         // Enough space on the right, position to the right
-        subMenu.style.right = "-100%";
+        subMenu.style.right = '-100%';
       }
     },
-    [refs.workbookContainer]
+    [refs.workbookContainer],
   );
 
   // re-position the subMenu if it oveflows the window
@@ -45,41 +45,41 @@ const ConditionalFormat: React.FC<{
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       const target = e.target as HTMLDivElement;
       const menuItem =
-        target.className === "fortune-toolbar-menu-line"
+        target.className === 'fortune-toolbar-menu-line'
           ? target.parentElement!
           : target;
       const subMenu = menuItem.querySelector(
-        ".condition-format-sub-menu"
+        '.condition-format-sub-menu',
       ) as HTMLDivElement;
       if (_.isNil(subMenu)) return;
 
-      subMenu.style.display = "block";
+      subMenu.style.display = 'block';
       activeSubMenuRef.current = subMenu;
       updateSubMenuPosition(subMenu, menuItem as HTMLDivElement);
     },
-    [updateSubMenuPosition]
+    [updateSubMenuPosition],
   );
 
   const hideSubMenu = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
       const target = e.target as HTMLDivElement;
 
-      if (target.className === "condition-format-sub-menu") {
-        target.style.display = "none";
+      if (target.className === 'condition-format-sub-menu') {
+        target.style.display = 'none';
         activeSubMenuRef.current = null;
         return;
       }
 
       const subMenu = (
-        target.className === "condition-format-item"
+        target.className === 'condition-format-item'
           ? target.parentElement
-          : target.querySelector(".condition-format-sub-menu")
+          : target.querySelector('.condition-format-sub-menu')
       ) as HTMLDivElement;
       if (_.isNil(subMenu)) return;
-      subMenu.style.display = "none";
+      subMenu.style.display = 'none';
       activeSubMenuRef.current = null;
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -93,19 +93,19 @@ const ConditionalFormat: React.FC<{
       }
     };
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener('resize', handleResize);
     };
   }, [updateSubMenuPosition]);
 
   // 获得条件格式
   const getConditionFormatItem = useCallback(
     (name: string) => {
-      if (name === "-") {
+      if (name === '-') {
         return <MenuDivider key={name} />;
       }
-      if (name === "highlightCellRules") {
+      if (name === 'highlightCellRules') {
         return (
           <Option
             key={name}
@@ -118,23 +118,23 @@ const ConditionalFormat: React.FC<{
               <div
                 className="condition-format-sub-menu"
                 style={{
-                  display: "none",
+                  display: 'none',
                 }}
               >
                 {[
-                  { text: "greaterThan", value: ">" },
-                  { text: "greaterThanOrEqual", value: ">=" },
-                  { text: "lessThan", value: "<" },
-                  { text: "lessThanOrEqual", value: "<=" },
-                  { text: "between", value: "[]" },
-                  { text: "equal", value: "=" },
-                  { text: "textContains", value: "()" },
-                  { text: "empty", value: "" },
+                  { text: 'greaterThan', value: '>' },
+                  { text: 'greaterThanOrEqual', value: '>=' },
+                  { text: 'lessThan', value: '<' },
+                  { text: 'lessThanOrEqual', value: '<=' },
+                  { text: 'between', value: '[]' },
+                  { text: 'equal', value: '=' },
+                  { text: 'textContains', value: '()' },
+                  { text: 'empty', value: '' },
                   {
-                    text: "occurrenceDate",
+                    text: 'occurrenceDate',
                     value: conditionformat.yesterday,
                   },
-                  { text: "duplicateValue", value: "##" },
+                  { text: 'duplicateValue', value: '##' },
                 ].map((v) => (
                   <div
                     className="condition-format-item text-body-sm color-text-default"
@@ -144,7 +144,7 @@ const ConditionalFormat: React.FC<{
                       showDialog(
                         <ConditionRules context={context} />,
                         undefined,
-                        (conditionformat as any)[`conditionformat_${v.text}`]
+                        (conditionformat as any)[`conditionformat_${v.text}`],
                       );
                     }}
                     tabIndex={0}
@@ -158,7 +158,7 @@ const ConditionalFormat: React.FC<{
           </Option>
         );
       }
-      if (name === "itemSelectionRules") {
+      if (name === 'itemSelectionRules') {
         return (
           <Option
             key={name}
@@ -170,21 +170,21 @@ const ConditionalFormat: React.FC<{
               <SVGIcon name="rightArrow" width={18} />
               <div
                 className="condition-format-sub-menu"
-                style={{ display: "none" }}
+                style={{ display: 'none' }}
               >
                 {[
-                  { text: "top10", value: conditionformat.top10 },
+                  { text: 'top10', value: conditionformat.top10 },
                   {
-                    text: "top10_percent",
+                    text: 'top10_percent',
                     value: conditionformat.top10_percent,
                   },
-                  { text: "last10", value: conditionformat.last10 },
+                  { text: 'last10', value: conditionformat.last10 },
                   {
-                    text: "last10_percent",
+                    text: 'last10_percent',
                     value: conditionformat.last10_percent,
                   },
-                  { text: "aboveAverage", value: conditionformat.above },
-                  { text: "belowAverage", value: conditionformat.below },
+                  { text: 'aboveAverage', value: conditionformat.above },
+                  { text: 'belowAverage', value: conditionformat.below },
                 ].map((v) => (
                   <div
                     className="condition-format-item text-body-sm color-text-default"
@@ -194,7 +194,7 @@ const ConditionalFormat: React.FC<{
                       showDialog(
                         <ConditionRules context={context} />,
                         undefined,
-                        (conditionformat as any)[`conditionformat_${v.text}`]
+                        (conditionformat as any)[`conditionformat_${v.text}`],
                       );
                     }}
                     tabIndex={0}
@@ -208,7 +208,7 @@ const ConditionalFormat: React.FC<{
           </Option>
         );
       }
-      if (name === "dataBar") {
+      if (name === 'dataBar') {
         return (
           <div className="fortune-toolbar-menu-line" key={`div${name}`}>
             {conditionformat[name]}
@@ -216,7 +216,7 @@ const ConditionalFormat: React.FC<{
           </div>
         );
       }
-      if (name === "colorGradation") {
+      if (name === 'colorGradation') {
         return (
           <div className="fortune-toolbar-menu-line" key={`div${name}`}>
             {conditionformat[name]}
@@ -224,21 +224,21 @@ const ConditionalFormat: React.FC<{
           </div>
         );
       }
-      if (name === "icons") {
+      if (name === 'icons') {
         return (
           <div className="fortune-toolbar-menu-line" key={`div${name}`}>
             {conditionformat[name]}
           </div>
         );
       }
-      if (name === "newFormatRule") {
+      if (name === 'newFormatRule') {
         return (
           <div className="fortune-toolbar-menu-line" key={`div${name}`}>
             {conditionformat[name]}
           </div>
         );
       }
-      if (name === "deleteRule") {
+      if (name === 'deleteRule') {
         return (
           <Option
             key={name}
@@ -250,13 +250,13 @@ const ConditionalFormat: React.FC<{
               <SVGIcon name="rightArrow" width={18} />
               <div
                 className="condition-format-sub-menu"
-                style={{ display: "none" }}
+                style={{ display: 'none' }}
               >
-                {["deleteSheetRule"].map((v) => (
+                {['deleteSheetRule'].map((v) => (
                   <div
                     className="condition-format-item text-body-sm color-text-default"
                     key={v}
-                    style={{ padding: "6px 10px" }}
+                    style={{ padding: '6px 10px' }}
                     onClick={() => {
                       // setContext((ctx) => {
                       //   // updateItem(ctx, "delSheet");
@@ -272,7 +272,7 @@ const ConditionalFormat: React.FC<{
           </Option>
         );
       }
-      if (name === "manageRules") {
+      if (name === 'manageRules') {
         return (
           <div className="fortune-toolbar-menu-line" key={`div${name}`}>
             {conditionformat[name]}
@@ -282,12 +282,19 @@ const ConditionalFormat: React.FC<{
 
       return <div />;
     },
-    [conditionformat, hideSubMenu, setContext, setOpen, showDialog, showSubMenu]
+    [
+      conditionformat,
+      hideSubMenu,
+      setContext,
+      setOpen,
+      showDialog,
+      showSubMenu,
+    ],
   );
 
   return (
     <div className="condition-format">
-      <Select style={{ overflow: "visible" }}>
+      <Select style={{ overflow: 'visible' }}>
         {items.map((v) => (
           <div key={`option${v}`}>{getConditionFormatItem(v)}</div>
         ))}

@@ -1,17 +1,17 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
-import { getFlowdata, locale, api } from "@sheet-engine/core";
+import { getFlowdata, locale, api } from '@sheet-engine/core';
 import {
   Button,
   RadioGroup,
   RadioGroupItem,
   Label,
   TextField,
-} from "@fileverse/ui";
-import _ from "lodash";
-import React, { useContext, useState } from "react";
-import WorkbookContext from "../../context";
-import { useAlert } from "../../hooks/useAlert";
-import { useDialog } from "../../hooks/useDialog";
+} from '@fileverse/ui';
+import _ from 'lodash';
+import React, { useContext, useState } from 'react';
+import WorkbookContext from '../../context';
+import { useAlert } from '../../hooks/useAlert';
+import { useDialog } from '../../hooks/useDialog';
 //   import "./index.css";
 
 export const ResetColumnWidth: React.FC<{}> = () => {
@@ -20,7 +20,7 @@ export const ResetColumnWidth: React.FC<{}> = () => {
   const { button } = locale(context);
   const { hideDialog } = useDialog();
 
-  const [radioValue, setRadioValue] = useState("number");
+  const [radioValue, setRadioValue] = useState('number');
   const [numberValue, setNumberValue] = useState(100);
 
   const getMaxCellWidth = (col: number) => {
@@ -30,11 +30,11 @@ export const ResetColumnWidth: React.FC<{}> = () => {
       for (let i = 0; i < data.length; i += 1) {
         // @ts-expect-error later
         const cellD: string | { v: string; m: string } = data[i][col];
-        if (typeof cellD === "string") {
+        if (typeof cellD === 'string') {
           if (cellD.length * 7 > maxWidth) {
             maxWidth = cellD.length * 7;
           }
-        } else if (typeof cellD === "object" && cellD !== null) {
+        } else if (typeof cellD === 'object' && cellD !== null) {
           const cellText = cellD.v || cellD.m;
           if (cellText && cellText.length * 7 > maxWidth) {
             maxWidth = cellText.length * 7;
@@ -95,7 +95,7 @@ export const ResetColumnWidth: React.FC<{}> = () => {
         </Button>
         <Button
           onClick={() => {
-            if (radioValue === "number") {
+            if (radioValue === 'number') {
               const targetColWidth = numberValue;
               setContext((draftCtx) => {
                 if (
@@ -104,7 +104,7 @@ export const ResetColumnWidth: React.FC<{}> = () => {
                   targetColWidth <= 0 ||
                   targetColWidth > 2038
                 ) {
-                  showAlert("The column width must be between 0 ~ 2038", "ok");
+                  showAlert('The column width must be between 0 ~ 2038', 'ok');
                   draftCtx.contextMenu = {};
                   return;
                 }
@@ -132,7 +132,7 @@ export const ResetColumnWidth: React.FC<{}> = () => {
                   targetColWidth <= 0 ||
                   targetColWidth > 2038
                 ) {
-                  showAlert("The column width must be between 0 ~ 2038", "ok");
+                  showAlert('The column width must be between 0 ~ 2038', 'ok');
                   draftCtx.contextMenu = {};
                   return;
                 }

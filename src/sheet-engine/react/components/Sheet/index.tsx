@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useContext } from "react";
+import React, { useRef, useEffect, useContext } from 'react';
 import {
   Canvas,
   updateContextWithCanvas,
@@ -6,11 +6,11 @@ import {
   initFreeze,
   Sheet as SheetType,
   cellFadeAnimator,
-} from "@sheet-engine/core";
-import "./index.css";
-import WorkbookContext from "../../context";
-import SheetOverlay from "../SheetOverlay";
-import { useSmoothScroll } from "./use-smooth-scroll";
+} from '@sheet-engine/core';
+import './index.css';
+import WorkbookContext from '../../context';
+import SheetOverlay from '../SheetOverlay';
+import { useSmoothScroll } from './use-smooth-scroll';
 
 type Props = {
   sheet: SheetType;
@@ -37,13 +37,13 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
         updateContextWithCanvas(
           draftCtx,
           refs.canvas.current!,
-          placeholderRef.current!
+          placeholderRef.current!,
         );
       });
     }
-    window.addEventListener("resize", resize);
+    window.addEventListener('resize', resize);
     return () => {
-      window.removeEventListener("resize", resize);
+      window.removeEventListener('resize', resize);
     };
   }, [data, refs.canvas, setContext, settings.devicePixelRatio]);
 
@@ -71,8 +71,8 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
       updateContextWithCanvas(
         draftCtx,
         refs.canvas.current!,
-        placeholderRef.current!
-      )
+        placeholderRef.current!,
+      ),
     );
   }, [
     refs.canvas,
@@ -163,13 +163,13 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
           tableCanvas.drawColumnHeader(
             context.scrollLeft + verticalPx - verticalScrollWidth,
             undefined,
-            verticalPx - verticalScrollWidth + context.rowHeaderWidth
+            verticalPx - verticalScrollWidth + context.rowHeaderWidth,
           );
           tableCanvas.drawColumnHeader(verticalScrollWidth, verticalPx);
           tableCanvas.drawRowHeader(
             context.scrollTop + horizontalPx - horizontalScrollTop,
             undefined,
-            horizontalPx - horizontalScrollTop + context.columnHeaderHeight
+            horizontalPx - horizontalScrollTop + context.columnHeaderHeight,
           );
           tableCanvas.drawRowHeader(horizontalScrollTop, horizontalPx);
           tableCanvas.drawFreezeLine({
@@ -204,7 +204,7 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
           tableCanvas.drawRowHeader(
             context.scrollTop + horizontalPx - horizontalScrollTop,
             undefined,
-            horizontalPx - horizontalScrollTop + context.columnHeaderHeight
+            horizontalPx - horizontalScrollTop + context.columnHeaderHeight,
           );
           tableCanvas.drawRowHeader(horizontalScrollTop, horizontalPx);
           tableCanvas.drawFreezeLine({
@@ -235,7 +235,7 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
           tableCanvas.drawColumnHeader(
             context.scrollLeft + verticalPx - verticalScrollWidth,
             undefined,
-            verticalPx - verticalScrollWidth + context.rowHeaderWidth
+            verticalPx - verticalScrollWidth + context.rowHeaderWidth,
           );
           tableCanvas.drawColumnHeader(verticalScrollWidth, verticalPx);
           tableCanvas.drawFreezeLine({
@@ -259,7 +259,7 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
 
     // keep repainting while fades are active
     cellFadeAnimator.setOnTick(repaint);
-    // eslint-disable-next-line consistent-return
+
     return () => cellFadeAnimator.setOnTick(null);
     // Only context fields used by Canvas/repaint; selection and other UI state omitted to avoid repaint on selection change.
     // refs.globalCache.freezen is read inside repaint but mutated by initFreeze; repaint re-runs when layout/scroll/sheet change.

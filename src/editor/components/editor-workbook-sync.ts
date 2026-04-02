@@ -22,18 +22,16 @@ const reportSyncWarning = (
   }
 };
 
-const logSyncWarning = (
-  context: string,
-  details: Record<string, unknown>,
-) => {
-  const isMigrated = typeof window !== 'undefined'
-    ? Boolean((window as any).__DSHEET_MIGRATION__?.isMigrated)
-    : false;
+const logSyncWarning = (context: string, details: Record<string, unknown>) => {
+  const isMigrated =
+    typeof window !== 'undefined'
+      ? Boolean((window as any).__DSHEET_MIGRATION__?.isMigrated)
+      : false;
   const warningDetails = {
     ...details,
     isMigrated,
   };
-  // eslint-disable-next-line no-console
+
   console.warn(`[WorkbookSync] ${context}`, warningDetails);
   reportSyncWarning(context, warningDetails);
 };
@@ -87,9 +85,15 @@ const getCurrentYdocSheet = ({
   ydocRef,
   dsheetId,
 }: Omit<SyncContext, 'handleOnChangePortalUpdate'>) => {
-  const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'getCurrentYdocSheet');
+  const currentSheet = getCurrentSheetSafe(
+    sheetEditorRef,
+    'getCurrentYdocSheet',
+  );
   const oldSheets = ydocRef?.current?.getArray(dsheetId);
-  return findSheetById(oldSheets?.toArray() as any[] | undefined, currentSheet?.id) as any;
+  return findSheetById(
+    oldSheets?.toArray() as any[] | undefined,
+    currentSheet?.id,
+  ) as any;
 };
 
 export const syncCurrentSheetField = (
@@ -105,7 +109,10 @@ export const syncCurrentSheetField = (
     | 'hide',
 ) => {
   const { sheetEditorRef, handleOnChangePortalUpdate } = context;
-  const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'syncCurrentSheetField') as any;
+  const currentSheet = getCurrentSheetSafe(
+    sheetEditorRef,
+    'syncCurrentSheetField',
+  ) as any;
   const currentYdocSheet = getCurrentYdocSheet(context);
   if (!currentSheet || !currentYdocSheet) return;
 
@@ -205,10 +212,7 @@ export const createAfterOrderChangesHandler = ({
     const oldSheetsList = oldSheets?.toArray() as any[] | undefined;
     let changed = false;
     allSheets?.forEach((sheet) => {
-      const currentYdocSheet = findSheetById(
-        oldSheetsList,
-        sheet?.id,
-      ) as any;
+      const currentYdocSheet = findSheetById(oldSheetsList, sheet?.id) as any;
       if (!currentYdocSheet) {
         logSyncWarning('afterOrderChanges: matching sheet not found', {
           dsheetId,
@@ -250,10 +254,7 @@ export const createAfterColorChangesHandler = ({
     let changed = false;
 
     allSheets?.forEach((sheet) => {
-      const currentYdocSheet = findSheetById(
-        oldSheetsList,
-        sheet?.id,
-      ) as any;
+      const currentYdocSheet = findSheetById(oldSheetsList, sheet?.id) as any;
       if (!currentYdocSheet) {
         logSyncWarning('afterColorChanges: matching sheet not found', {
           dsheetId,
@@ -296,10 +297,7 @@ export const createAfterHideChangesHandler = ({
     let changed = false;
 
     allSheets?.forEach((sheet) => {
-      const currentYdocSheet = findSheetById(
-        oldSheetsList,
-        sheet?.id,
-      ) as any;
+      const currentYdocSheet = findSheetById(oldSheetsList, sheet?.id) as any;
       if (!currentYdocSheet) {
         logSyncWarning('afterHideChanges: matching sheet not found', {
           dsheetId,
@@ -378,12 +376,15 @@ export const createAfterColRowChangesHandler = ({
   };
 };
 
-export const updateAllCell = ({
-  sheetEditorRef,
-  ydocRef,
-  dsheetId,
-  handleOnChangePortalUpdate,
-}: SyncContext, subSheetId: string) => {
+export const updateAllCell = (
+  {
+    sheetEditorRef,
+    ydocRef,
+    dsheetId,
+    handleOnChangePortalUpdate,
+  }: SyncContext,
+  subSheetId: string,
+) => {
   const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
   const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'updateAllCell');
   const currentSheetId =

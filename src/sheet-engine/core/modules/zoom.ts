@@ -12,13 +12,13 @@ export function handleKeydownForZoom(ev: KeyboardEvent, currentZoom: number) {
   }
   let handled = false;
   let zoom = currentZoom || 1;
-  if (ev.key === "-" || ev.which === 189) {
+  if (ev.key === '-' || ev.which === 189) {
     zoom -= ZOOM_STEP;
     handled = true;
-  } else if (ev.key === "+" || ev.which === 187) {
+  } else if (ev.key === '+' || ev.which === 187) {
     zoom += ZOOM_STEP;
     handled = true;
-  } else if (ev.key === "0" || ev.which === 48) {
+  } else if (ev.key === '0' || ev.which === 48) {
     zoom = 1;
     handled = true;
   }

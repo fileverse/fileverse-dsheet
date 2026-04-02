@@ -1,4 +1,4 @@
-import { RefObject, useContext, useRef } from "react";
+import { RefObject, useContext, useRef } from 'react';
 import {
   fixPositionOnFrozenCells,
   getSheetIndex,
@@ -7,12 +7,12 @@ import {
   rowLocationByIndex,
   updateContextWithSheetData,
   api,
-} from "@sheet-engine/core";
-import WorkbookContext from "../../../context";
+} from '@sheet-engine/core';
+import WorkbookContext from '../../../context';
 
 export const useRowDragAndDrop = (
   containerRef: RefObject<HTMLDivElement | null>,
-  selectedLocationRef: RefObject<any[]>
+  selectedLocationRef: RefObject<any[]>,
 ) => {
   const DOUBLE_MS = 300;
   const START_DRAG_THRESHOLD_PX = 6;
@@ -31,8 +31,8 @@ export const useRowDragAndDrop = (
     ghostEl: null as HTMLDivElement | null,
     onDocMove: null as null | ((ev: MouseEvent) => void),
     onDocUp: null as null | ((ev: MouseEvent) => void),
-    prevUserSelect: "" as string,
-    prevWebkitUserSelect: "" as string,
+    prevUserSelect: '' as string,
+    prevWebkitUserSelect: '' as string,
     lastNativeEvent: null as MouseEvent | null,
     ghostHeightPx: 24,
   });
@@ -59,7 +59,7 @@ export const useRowDragAndDrop = (
       0,
       localYInHeader,
       0,
-      mouseYInHeader
+      mouseYInHeader,
     );
     const [, , rowIndex] = rowLocation(adjustedY, context.visibledatarow);
     return rowIndex;
@@ -92,12 +92,12 @@ export const useRowDragAndDrop = (
       0,
       localYInWorkbook,
       0,
-      mouseYInWorkbook
+      mouseYInWorkbook,
     );
 
     const [rowTopPx, rowBottomPx, hoveredRowIndex] = rowLocation(
       yWorkbook,
-      context.visibledatarow
+      context.visibledatarow,
     );
 
     const rowMidPx = (rowTopPx + rowBottomPx) / 2;
@@ -113,45 +113,45 @@ export const useRowDragAndDrop = (
     return { insertionIndex, lineTopPx, mouseYInWorkbook };
   };
   const createInsertionLine = (host: HTMLElement) => {
-    const el = document.createElement("div");
-    el.style.position = "absolute";
-    el.style.left = "0px";
-    el.style.right = "0px";
-    el.style.height = "2px";
-    el.style.background = "#EFC703";
-    el.style.zIndex = "9999";
-    el.style.pointerEvents = "none";
+    const el = document.createElement('div');
+    el.style.position = 'absolute';
+    el.style.left = '0px';
+    el.style.right = '0px';
+    el.style.height = '2px';
+    el.style.background = '#EFC703';
+    el.style.zIndex = '9999';
+    el.style.pointerEvents = 'none';
     host.appendChild(el);
     return el;
   };
   const createGhost = (host: HTMLElement) => {
-    const el = document.createElement("div");
-    el.style.position = "fixed";
-    el.style.left = "58px";
+    const el = document.createElement('div');
+    el.style.position = 'fixed';
+    el.style.left = '58px';
     el.style.width = `${window.innerWidth}px`;
-    el.style.boxSizing = "border-box";
-    el.style.padding = "6px 8px";
-    el.style.background = "rgba(239,199,3,0.10)";
-    el.style.border = "1px solid #EFC703";
-    el.style.borderRadius = "6px";
-    el.style.zIndex = "10000";
-    el.style.pointerEvents = "none";
-    el.style.display = "flex";
-    el.style.alignItems = "center";
-    el.style.fontSize = "12px";
-    el.style.fontWeight = "500";
+    el.style.boxSizing = 'border-box';
+    el.style.padding = '6px 8px';
+    el.style.background = 'rgba(239,199,3,0.10)';
+    el.style.border = '1px solid #EFC703';
+    el.style.borderRadius = '6px';
+    el.style.zIndex = '10000';
+    el.style.pointerEvents = 'none';
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.fontSize = '12px';
+    el.style.fontWeight = '500';
 
     let ghostHeightPx = 24;
     let ghostLabel = `${dragRef.current.source + 1} row`;
 
     const selectedBlock = selectedLocationRef.current?.find(
-      (s) => s.r1 <= dragRef.current.source && dragRef.current.source <= s.r2
+      (s) => s.r1 <= dragRef.current.source && dragRef.current.source <= s.r2,
     );
 
     if (selectedBlock) {
       ghostHeightPx = Math.max(
         24,
-        selectedBlock.row - selectedBlock.row_pre - 1
+        selectedBlock.row - selectedBlock.row_pre - 1,
       );
       selectedRowHeight.current = ghostHeightPx;
       const count = selectedBlock.r2 - selectedBlock.r1 + 1;
@@ -159,7 +159,7 @@ export const useRowDragAndDrop = (
     } else {
       const [pre, end] = rowLocationByIndex(
         dragRef.current.source,
-        context.visibledatarow
+        context.visibledatarow,
       );
       const sourceRowHeight = end - pre - 1;
       ghostHeightPx = Math.max(24, sourceRowHeight);
@@ -182,8 +182,8 @@ export const useRowDragAndDrop = (
     dragRef.current.prevWebkitUserSelect = (
       document.body.style as any
     ).webkitUserSelect;
-    document.body.style.userSelect = "none";
-    (document.body.style as any).webkitUserSelect = "none";
+    document.body.style.userSelect = 'none';
+    (document.body.style as any).webkitUserSelect = 'none';
 
     // visuals
     dragRef.current.lineEl = createInsertionLine(host);
@@ -233,14 +233,14 @@ export const useRowDragAndDrop = (
 
     // restore selection
     try {
-      document.body.style.userSelect = dragRef.current.prevUserSelect || "";
+      document.body.style.userSelect = dragRef.current.prevUserSelect || '';
       (document.body.style as any).webkitUserSelect =
-        dragRef.current.prevWebkitUserSelect || "";
+        dragRef.current.prevWebkitUserSelect || '';
     } catch {}
 
     if (dragRef.current.active) {
       const { insertionIndex: finalInsertionIndex } = computeInsertionFromPageY(
-        ev.pageY
+        ev.pageY,
       );
 
       const sourceIndex = context.luckysheet_select_save?.[0]?.row?.[0] || 0;
@@ -282,7 +282,7 @@ export const useRowDragAndDrop = (
             }
           });
           const selectedTargetRow = [...tempSelectedTargetRow]?.sort(
-            (a, b) => a - b
+            (a, b) => a - b,
           );
 
           selectedSourceRowRef.current = selectedSourceRow;
@@ -353,10 +353,9 @@ export const useRowDragAndDrop = (
 
                   // Collect all replacement positions first
                   otherAffectedRows.forEach(({ source, target }) => {
-                    const regex = new RegExp(`\\b([A-Z]+)${source}\\b`, "g");
+                    const regex = new RegExp(`\\b([A-Z]+)${source}\\b`, 'g');
                     let match;
 
-                    // eslint-disable-next-line no-cond-assign
                     while ((match = regex.exec(formula)) !== null) {
                       replacements.push({
                         start: match.index,
@@ -387,7 +386,7 @@ export const useRowDragAndDrop = (
             const newDataVerification: any = {};
             Object.keys(_sheet.dataVerification).forEach((item) => {
               const itemData = _sheet.dataVerification?.[item];
-              const colRow = item.split("_");
+              const colRow = item.split('_');
               if (colRow.length !== 2) return;
               const presentRow = parseInt(colRow[0], 10);
               let updatedRow = presentRow;
@@ -416,7 +415,7 @@ export const useRowDragAndDrop = (
             Object.keys(_sheet.hyperlink).forEach((key) => {
               const itemData = _sheet.hyperlink?.[key];
               if (!itemData) return;
-              const parts = key.split("_");
+              const parts = key.split('_');
               if (parts.length !== 2) return;
               const presentRow = parseInt(parts[0], 10);
               const col = parts[1];
@@ -451,8 +450,8 @@ export const useRowDragAndDrop = (
           window?.updateDataBlockCalcFunctionAfterRowDrag?.(
             sourceIndex,
             targetIndex,
-            "row",
-            context.currentSheetId
+            'row',
+            context.currentSheetId,
           );
           // Notify Yjs for every cell in the disturbed range (moved row + all rows in between)
           const cellChanges: {
@@ -460,7 +459,7 @@ export const useRowDragAndDrop = (
             path: string[];
             key?: string;
             value: any;
-            type?: "update" | "delete";
+            type?: 'update' | 'delete';
           }[] = [];
           const affectedRowStart = Math.min(sourceIndex, targetIndex);
           const affectedRowEnd =
@@ -472,10 +471,10 @@ export const useRowDragAndDrop = (
               const cell = row?.[c];
               cellChanges.push({
                 sheetId: draft.currentSheetId,
-                path: ["celldata"],
+                path: ['celldata'],
                 value: { r, c, v: cell ?? null },
                 key: `${r}_${c}`,
-                type: "update",
+                type: 'update',
               });
             }
           }
@@ -496,7 +495,7 @@ export const useRowDragAndDrop = (
             ],
             {
               id: context.currentSheetId,
-            }
+            },
           );
         });
       }
@@ -508,9 +507,9 @@ export const useRowDragAndDrop = (
     dragRef.current.source = -1;
 
     if (dragRef.current.onDocMove)
-      document.removeEventListener("mousemove", dragRef.current.onDocMove);
+      document.removeEventListener('mousemove', dragRef.current.onDocMove);
     if (dragRef.current.onDocUp)
-      document.removeEventListener("mouseup", dragRef.current.onDocUp);
+      document.removeEventListener('mouseup', dragRef.current.onDocUp);
     dragRef.current.onDocMove = null;
     dragRef.current.onDocUp = null;
   };
@@ -523,8 +522,8 @@ export const useRowDragAndDrop = (
 
     dragRef.current.onDocMove = handleRowDrag;
     dragRef.current.onDocUp = handleRowDragEnd;
-    document.addEventListener("mousemove", handleRowDrag);
-    document.addEventListener("mouseup", handleRowDragEnd);
+    document.addEventListener('mousemove', handleRowDrag);
+    document.addEventListener('mouseup', handleRowDragEnd);
   };
 
   return {

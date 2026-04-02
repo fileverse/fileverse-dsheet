@@ -1,8 +1,8 @@
-import _ from "lodash";
-import { Context } from "../context";
-import { CellMatrix, CellWithRowAndCol, Sheet } from "../types";
-import { getSheetIndex } from "../utils";
-import { SHEET_NOT_FOUND } from "./errors";
+import _ from 'lodash';
+import { Context } from '../context';
+import { CellMatrix, CellWithRowAndCol, Sheet } from '../types';
+import { getSheetIndex } from '../utils';
+import { SHEET_NOT_FOUND } from './errors';
 
 export type CommonOptions = { index?: number; id?: string };
 
@@ -25,10 +25,10 @@ export const dataToCelldata = (data: CellMatrix | undefined) => {
 export const celldataToData = (
   celldata: CellWithRowAndCol[],
   rowCount?: number,
-  colCount?: number
+  colCount?: number,
 ) => {
-  const lastRow = _.maxBy<CellWithRowAndCol>(celldata, "r");
-  const lastCol = _.maxBy(celldata, "c");
+  const lastRow = _.maxBy<CellWithRowAndCol>(celldata, 'r');
+  const lastCol = _.maxBy(celldata, 'c');
   let lastRowNum = (lastRow?.r ?? 0) + 1;
   let lastColNum = (lastCol?.c ?? 0) + 1;
   if (rowCount != null && colCount != null && rowCount > 0 && colCount > 0) {
@@ -36,8 +36,8 @@ export const celldataToData = (
     lastColNum = Math.max(lastColNum, colCount);
   }
   if (lastRowNum && lastColNum) {
-    const expandedData: Sheet["data"] = _.times(lastRowNum, () =>
-      _.times(lastColNum, () => null)
+    const expandedData: Sheet['data'] = _.times(lastRowNum, () =>
+      _.times(lastColNum, () => null),
     );
     celldata?.forEach((d) => {
       expandedData[d.r][d.c] = d.v;
@@ -66,7 +66,7 @@ export function getSheet(ctx: Context, options: CommonOptions = {}) {
 
 export function getSheetWithLatestCelldata(
   ctx: Context,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   const sheet = getSheet(ctx, options);
   return { ...sheet, celldata: dataToCelldata(sheet.data) };

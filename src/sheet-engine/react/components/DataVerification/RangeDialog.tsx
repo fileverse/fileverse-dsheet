@@ -1,12 +1,12 @@
-import { locale } from "@sheet-engine/core";
-import { Button, cn, IconButton, TextField } from "@fileverse/ui";
-import React, { useCallback, useContext, useEffect, useState } from "react";
+import { locale } from '@sheet-engine/core';
+import { Button, cn, IconButton, TextField } from '@fileverse/ui';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 // import DataVerification from ".";
-import WorkbookContext from "../../context";
-import { useDialog } from "../../hooks/useDialog";
+import WorkbookContext from '../../context';
+import { useDialog } from '../../hooks/useDialog';
 // import ConditionRules from "../ConditionFormat/ConditionRules";
-import "./index.css";
-import { getDisplayedRangeTxt } from "./getDisplayedRangeTxt";
+import './index.css';
+import { getDisplayedRangeTxt } from './getDisplayedRangeTxt';
 
 const RangeDialog: React.FC = () => {
   const { context, setContext } = useContext(WorkbookContext);
@@ -17,7 +17,7 @@ const RangeDialog: React.FC = () => {
     // toolbar
   } = locale(context);
   const [rangeTxt2, setRangeTxt2] = useState<string>(
-    getDisplayedRangeTxt(context)
+    getDisplayedRangeTxt(context),
   );
 
   const close = useCallback(() => {
@@ -25,12 +25,12 @@ const RangeDialog: React.FC = () => {
       ctx.rangeDialog!.show = false;
       ctx.rangeDialog!.singleSelect = false;
     });
-    document.getElementById("data-verification-button")?.click();
+    document.getElementById('data-verification-button')?.click();
     // console.log("close", context,context.rangeDialog.type);
     if (!context.rangeDialog) return;
     const rangeDialogType = context.rangeDialog.type;
-    if (rangeDialogType.indexOf("between") >= 0) {
-      document.getElementById("conditional-format-button")?.click();
+    if (rangeDialogType.indexOf('between') >= 0) {
+      document.getElementById('conditional-format-button')?.click();
       // showDialog(
       //   <ConditionRules type="between" />,
       //   undefined,
@@ -38,8 +38,8 @@ const RangeDialog: React.FC = () => {
       // );
       return;
     }
-    if (rangeDialogType.indexOf("conditionRules") >= 0) {
-      document.getElementById("conditional-format-button")?.click();
+    if (rangeDialogType.indexOf('conditionRules') >= 0) {
+      document.getElementById('conditional-format-button')?.click();
       // const rulesType = rangeDialogType.substring(
       //   "conditionRules".length,
       //   rangeDialogType.length
@@ -71,7 +71,7 @@ const RangeDialog: React.FC = () => {
     >
       <div
         className={cn(
-          "fortune-range-dialog__header flex items-center justify-between border-b color-border-default py-3 px-6"
+          'fortune-range-dialog__header flex items-center justify-between border-b color-border-default py-3 px-6',
         )}
         data-testid="range-dialog-header"
       >
@@ -108,7 +108,7 @@ const RangeDialog: React.FC = () => {
         <Button
           variant="secondary"
           className="fortune-range-dialog__cta fortune-range-dialog__cta--close"
-          style={{ minWidth: "80px" }}
+          style={{ minWidth: '80px' }}
           onClick={close}
           tabIndex={0}
           data-testid="range-dialog-cta-close"
@@ -118,7 +118,7 @@ const RangeDialog: React.FC = () => {
         <Button
           variant="default"
           className="fortune-range-dialog__cta fortune-range-dialog__cta--confirm"
-          style={{ minWidth: "80px" }}
+          style={{ minWidth: '80px' }}
           onClick={() => {
             setContext((ctx) => {
               ctx.rangeDialog!.rangeTxt = rangeTxt2;

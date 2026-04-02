@@ -1,8 +1,8 @@
-import _ from "lodash";
-import { hideCRCount, removeActiveImage } from "..";
-import { Context, getFlowdata } from "../context";
-import { updateCell, cancelNormalSelected } from "../modules/cell";
-import { handleFormulaInput } from "../modules/formula";
+import _ from 'lodash';
+import { hideCRCount, removeActiveImage } from '..';
+import { Context, getFlowdata } from '../context';
+import { updateCell, cancelNormalSelected } from '../modules/cell';
+import { handleFormulaInput } from '../modules/formula';
 import {
   copy,
   deleteSelectedCellText,
@@ -16,25 +16,25 @@ import {
   moveHighlightRange,
   selectAll,
   selectionCache,
-} from "../modules/selection";
+} from '../modules/selection';
 import {
   cancelPaintModel,
   handleBold,
   handleItalic,
   handleUnderline,
   handleLink,
-} from "../modules/toolbar";
-import { hasPartMC } from "../modules/validation";
-import { CellMatrix, GlobalCache } from "../types";
-import { getNowDateTime, getSheetIndex, isAllowEdit } from "../utils";
-import { handleCopy } from "./copy";
-import { jfrefreshgrid } from "../modules/refresh";
+} from '../modules/toolbar';
+import { hasPartMC } from '../modules/validation';
+import { CellMatrix, GlobalCache } from '../types';
+import { getNowDateTime, getSheetIndex, isAllowEdit } from '../utils';
+import { handleCopy } from './copy';
+import { jfrefreshgrid } from '../modules/refresh';
 
 export function handleGlobalEnter(
   ctx: Context,
   cellInput: HTMLDivElement,
   e: KeyboardEvent,
-  canvas?: CanvasRenderingContext2D
+  canvas?: CanvasRenderingContext2D,
 ) {
   // const flowdata = getFlowdata(ctx);
   if ((e.altKey || e.metaKey) && ctx.luckysheetCellUpdate.length > 0) {
@@ -64,7 +64,7 @@ export function handleGlobalEnter(
       ctx.luckysheetCellUpdate[1],
       cellInput,
       undefined,
-      canvas
+      canvas,
     );
     ctx.luckysheet_select_save = [
       {
@@ -76,9 +76,9 @@ export function handleGlobalEnter(
     ];
     moveHighlightCell(
       ctx,
-      "down",
-      hideCRCount(ctx, "ArrowDown"),
-      "rangeOfSelect"
+      'down',
+      hideCRCount(ctx, 'ArrowDown'),
+      'rangeOfSelect',
     );
     // }
 
@@ -123,13 +123,13 @@ function moveToEdge(
   startC: number,
   endC: number,
   maxRow: number,
-  maxCol: number
+  maxCol: number,
 ) {
   let selectedLimit = -1;
-  if (key === "ArrowUp") selectedLimit = startR - 1;
-  else if (key === "ArrowDown") selectedLimit = endR + 1;
-  else if (key === "ArrowLeft") selectedLimit = startC - 1;
-  else if (key === "ArrowRight") selectedLimit = endC + 1;
+  if (key === 'ArrowUp') selectedLimit = startR - 1;
+  else if (key === 'ArrowDown') selectedLimit = endR + 1;
+  else if (key === 'ArrowLeft') selectedLimit = startC - 1;
+  else if (key === 'ArrowRight') selectedLimit = endC + 1;
 
   const maxRowCol = colDelta === 0 ? maxRow : maxCol;
   let r = colDelta === 0 ? selectedLimit : curr;
@@ -153,7 +153,7 @@ function moveToEdge(
 function handleControlPlusArrowKey(
   ctx: Context,
   e: KeyboardEvent,
-  shiftPressed: boolean
+  shiftPressed: boolean,
 ) {
   const idx = getSheetIndex(ctx, ctx.currentSheetId);
   if (_.isNil(idx)) return;
@@ -188,7 +188,7 @@ function handleControlPlusArrowKey(
   if (!sheetData) return;
 
   switch (e.key) {
-    case "ArrowUp":
+    case 'ArrowUp':
       {
         const selectedLimit = moveToEdge(
           sheetData,
@@ -201,27 +201,27 @@ function handleControlPlusArrowKey(
           startC,
           endC,
           maxRow,
-          maxCol
+          maxCol,
         );
         if (shiftPressed) {
-          moveHighlightRange(ctx, "down", verticalOffset, "rangeOfSelect");
+          moveHighlightRange(ctx, 'down', verticalOffset, 'rangeOfSelect');
           moveHighlightRange(
             ctx,
-            "down",
+            'down',
             selectedLimit - currR,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         } else {
           moveHighlightCell(
             ctx,
-            "down",
+            'down',
             selectedLimit - currR,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         }
       }
       break;
-    case "ArrowDown":
+    case 'ArrowDown':
       {
         const selectedLimit = moveToEdge(
           sheetData,
@@ -234,27 +234,27 @@ function handleControlPlusArrowKey(
           startC,
           endC,
           maxRow,
-          maxCol
+          maxCol,
         );
         if (shiftPressed) {
-          moveHighlightRange(ctx, "down", verticalOffset, "rangeOfSelect");
+          moveHighlightRange(ctx, 'down', verticalOffset, 'rangeOfSelect');
           moveHighlightRange(
             ctx,
-            "down",
+            'down',
             selectedLimit - currR,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         } else {
           moveHighlightCell(
             ctx,
-            "down",
+            'down',
             selectedLimit - currR,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         }
       }
       break;
-    case "ArrowLeft":
+    case 'ArrowLeft':
       {
         const selectedLimit = moveToEdge(
           sheetData,
@@ -267,27 +267,27 @@ function handleControlPlusArrowKey(
           startC,
           endC,
           maxRow,
-          maxCol
+          maxCol,
         );
         if (shiftPressed) {
-          moveHighlightRange(ctx, "right", horizontalOffset, "rangeOfSelect");
+          moveHighlightRange(ctx, 'right', horizontalOffset, 'rangeOfSelect');
           moveHighlightRange(
             ctx,
-            "right",
+            'right',
             selectedLimit - currC,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         } else {
           moveHighlightCell(
             ctx,
-            "right",
+            'right',
             selectedLimit - currC,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         }
       }
       break;
-    case "ArrowRight":
+    case 'ArrowRight':
       {
         const selectedLimit = moveToEdge(
           sheetData,
@@ -300,22 +300,22 @@ function handleControlPlusArrowKey(
           startC,
           endC,
           maxRow,
-          maxCol
+          maxCol,
         );
         if (shiftPressed) {
-          moveHighlightRange(ctx, "right", horizontalOffset, "rangeOfSelect");
+          moveHighlightRange(ctx, 'right', horizontalOffset, 'rangeOfSelect');
           moveHighlightRange(
             ctx,
-            "right",
+            'right',
             selectedLimit - currC,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         } else {
           moveHighlightCell(
             ctx,
-            "right",
+            'right',
             selectedLimit - currC,
-            "rangeOfSelect"
+            'rangeOfSelect',
           );
         }
       }
@@ -332,21 +332,21 @@ export function handleWithCtrlOrMetaKey(
   cellInput: HTMLDivElement,
   fxInput: HTMLDivElement | null | undefined,
   handleUndo: () => void,
-  handleRedo: () => void
+  handleRedo: () => void,
 ) {
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;
 
   if (e.shiftKey) {
     ctx.luckysheet_shiftpositon = _.cloneDeep(
-      ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1]
+      ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
     );
     ctx.luckysheet_shiftkeydown = true;
 
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
       // Ctrl + Shift + 方向键  调整选区
       handleControlPlusArrowKey(ctx, e, true);
-    } else if (_.includes(['"', ":", "'"], e.key)) {
+    } else if (_.includes(['"', ':', "'"], e.key)) {
       const last =
         ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1];
       if (!last) return;
@@ -362,42 +362,42 @@ export function handleWithCtrlOrMetaKey(
       // $("#luckysheet-rich-text-editor").html(value);
       // luckysheetRangeLast($("#luckysheet-rich-text-editor")[0]);
       handleFormulaInput(ctx, fxInput, cellInput, e.keyCode);
-    } else if (e.code === "KeyZ") {
+    } else if (e.code === 'KeyZ') {
       // Ctrl + shift + z 重做
       handleRedo();
       e.stopPropagation();
       return;
     }
   } else if (
-    ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)
   ) {
     handleControlPlusArrowKey(ctx, e, false);
-  } else if (e.code === "KeyB") {
+  } else if (e.code === 'KeyB') {
     // Ctrl + B  加粗
     handleBold(ctx, cellInput);
     // $("#luckysheet-icon-bold").click();
-  } else if (e.code === "KeyI") {
+  } else if (e.code === 'KeyI') {
     // Ctrl + B  加粗
     handleItalic(ctx, cellInput);
     // $("#luckysheet-icon-bold").click();
-  } else if (e.code === "KeyU") {
+  } else if (e.code === 'KeyU') {
     // Ctrl + B  加粗
     handleUnderline(ctx, cellInput);
     // $("#luckysheet-icon-bold").click();
-  } else if (e.code === "Backslash") {
+  } else if (e.code === 'Backslash') {
     // Ctrl + B  加粗
     deleteSelectedCellFormat(ctx);
     // $("#luckysheet-icon-bold").click();
-  } else if (e.code === "KeyC") {
+  } else if (e.code === 'KeyC') {
     // Ctrl + C  复制
     handleCopy(ctx);
     // luckysheetactiveCell();
     e.stopPropagation();
     return;
-  } else if (e.code === "KeyF") {
+  } else if (e.code === 'KeyF') {
     // Ctrl + F  查找
     ctx.showSearch = true;
-  } else if (e.code === "KeyH") {
+  } else if (e.code === 'KeyH') {
     // Ctrl + H  替换
     ctx.showReplace = true;
     //   searchReplace.init();
@@ -406,7 +406,7 @@ export function handleWithCtrlOrMetaKey(
     // } else if (e.code === "KeyI") {
     //   // Ctrl + I  斜体
     //   $("#luckysheet-icon-italic").click();
-  } else if (e.code === "KeyV") {
+  } else if (e.code === 'KeyV') {
     // Ctrl + V  粘贴
     // if (isEditMode()) {
     //   // 此模式下禁用粘贴
@@ -430,7 +430,7 @@ export function handleWithCtrlOrMetaKey(
     // luckysheetactiveCell();
     e.stopPropagation();
     return;
-  } else if (e.code === "KeyX") {
+  } else if (e.code === 'KeyX') {
     // Ctrl + X  剪切
     // 复制时存在格式刷状态，取消格式刷
     if (ctx.luckysheetPaintModelOn) {
@@ -486,7 +486,7 @@ export function handleWithCtrlOrMetaKey(
 
     e.stopPropagation();
     return;
-  } else if (e.code === "KeyZ") {
+  } else if (e.code === 'KeyZ') {
     // Ctrl + Z  撤销
     handleUndo();
     e.stopPropagation();
@@ -567,7 +567,7 @@ export function handleWithCtrlOrMetaKey(
       $("#luckysheet-rich-text-editor"),
       e.keyCode
     );
-  } */ else if (e.code === "KeyA") {
+  } */ else if (e.code === 'KeyA') {
     // Ctrl + A  全选
     // $("#luckysheet-left-top").trigger("mousedown");
     // $(document).trigger("mouseup");
@@ -586,7 +586,7 @@ function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
   }
 
   ctx.luckysheet_shiftpositon = _.cloneDeep(
-    ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1]
+    ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
   );
   ctx.luckysheet_shiftkeydown = true;
   /*
@@ -600,17 +600,17 @@ function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
 
   // shift + 方向键 调整选区
   switch (e.key) {
-    case "ArrowUp":
-      moveHighlightRange(ctx, "down", -1, "rangeOfSelect");
+    case 'ArrowUp':
+      moveHighlightRange(ctx, 'down', -1, 'rangeOfSelect');
       break;
-    case "ArrowDown":
-      moveHighlightRange(ctx, "down", 1, "rangeOfSelect");
+    case 'ArrowDown':
+      moveHighlightRange(ctx, 'down', 1, 'rangeOfSelect');
       break;
-    case "ArrowLeft":
-      moveHighlightRange(ctx, "right", -1, "rangeOfSelect");
+    case 'ArrowLeft':
+      moveHighlightRange(ctx, 'right', -1, 'rangeOfSelect');
       break;
-    case "ArrowRight":
-      moveHighlightRange(ctx, "right", 1, "rangeOfSelect");
+    case 'ArrowRight':
+      moveHighlightRange(ctx, 'right', 1, 'rangeOfSelect');
       break;
     default:
       break;
@@ -631,23 +631,23 @@ export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(
       `<div>${
-        document.getElementById("luckysheet-rich-text-editor")?.innerHTML
+        document.getElementById('luckysheet-rich-text-editor')?.innerHTML
       }</div>`,
-      "text/html"
+      'text/html',
     );
-    const spans = doc.querySelectorAll("span");
+    const spans = doc.querySelectorAll('span');
     const lastSpan = spans[spans.length - 1];
     const notFunctionInit = !document
-      .getElementById("luckysheet-rich-text-editor")
-      ?.innerText.includes("(");
+      .getElementById('luckysheet-rich-text-editor')
+      ?.innerText.includes('(');
 
     // handling for inputbox active arrow navigation for cell reference input for functions like SUM(A1:A10)
     if (
-      lastSpan?.innerText.includes(")") ||
+      lastSpan?.innerText.includes(')') ||
       lastSpan?.innerText.includes('"') ||
       (notFunctionInit &&
         /^[a-zA-Z]+$/.test(lastSpan?.innerText) &&
-        !_.includes(["="], lastSpan?.innerText)) ||
+        !_.includes(['='], lastSpan?.innerText)) ||
       /^[a-zA-Z]+$/.test(lastSpan?.innerText)
     ) {
       return;
@@ -656,17 +656,17 @@ export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
 
   const moveCount = hideCRCount(ctx, e.key);
   switch (e.key) {
-    case "ArrowUp":
-      moveHighlightCell(ctx, "down", -moveCount, "rangeOfSelect");
+    case 'ArrowUp':
+      moveHighlightCell(ctx, 'down', -moveCount, 'rangeOfSelect');
       break;
-    case "ArrowDown":
-      moveHighlightCell(ctx, "down", moveCount, "rangeOfSelect");
+    case 'ArrowDown':
+      moveHighlightCell(ctx, 'down', moveCount, 'rangeOfSelect');
       break;
-    case "ArrowLeft":
-      moveHighlightCell(ctx, "right", -moveCount, "rangeOfSelect");
+    case 'ArrowLeft':
+      moveHighlightCell(ctx, 'right', -moveCount, 'rangeOfSelect');
       break;
-    case "ArrowRight":
-      moveHighlightCell(ctx, "right", moveCount, "rangeOfSelect");
+    case 'ArrowRight':
+      moveHighlightCell(ctx, 'right', moveCount, 'rangeOfSelect');
       break;
     default:
       break;
@@ -681,42 +681,42 @@ export async function handleGlobalKeyDown(
   cache: GlobalCache,
   handleUndo: () => void,
   handleRedo: () => void,
-  canvas?: CanvasRenderingContext2D
+  canvas?: CanvasRenderingContext2D,
 ) {
   /* FLV */
-  if (e.shiftKey && e.code === "Space") {
+  if (e.shiftKey && e.code === 'Space') {
     e.stopImmediatePropagation();
     e.stopPropagation();
     e.preventDefault();
     return;
   }
   let handledFlvShortcut = false;
-  if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === "KeyE") {
-    textFormat(ctx, "center");
+  if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === 'KeyE') {
+    textFormat(ctx, 'center');
     handledFlvShortcut = true;
-  } else if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === "KeyL") {
-    textFormat(ctx, "left");
+  } else if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === 'KeyL') {
+    textFormat(ctx, 'left');
     handledFlvShortcut = true;
-  } else if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === "KeyR") {
-    textFormat(ctx, "right");
+  } else if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === 'KeyR') {
+    textFormat(ctx, 'right');
     handledFlvShortcut = true;
   }
-  if ((e.metaKey || e.ctrlKey) && e.code === "KeyK") {
+  if ((e.metaKey || e.ctrlKey) && e.code === 'KeyK') {
     handleLink(ctx, cellInput);
   }
-  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === "Semicolon") {
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'Semicolon') {
     fillDate(ctx);
     handledFlvShortcut = true;
   }
-  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === "Semicolon") {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Semicolon') {
     fillTime(ctx);
     handledFlvShortcut = true;
   }
-  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === "KeyR") {
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyR') {
     fillRightData(ctx);
     handledFlvShortcut = true;
   }
-  if ((e.metaKey || e.ctrlKey) && e.code === "KeyD") {
+  if ((e.metaKey || e.ctrlKey) && e.code === 'KeyD') {
     fillDownData(ctx);
     handledFlvShortcut = true;
   }
@@ -735,19 +735,19 @@ export async function handleGlobalKeyDown(
     return;
   }
 
-  if (kstr === "Escape" && !!ctx.luckysheet_selection_range) {
+  if (kstr === 'Escape' && !!ctx.luckysheet_selection_range) {
     ctx.luckysheet_selection_range = [];
   }
 
   const allowEdit = isAllowEdit(ctx);
 
   // @ts-ignore // eslint-disable-next-line no-restricted-globals
-  const isFxInput = e?.target?.classList?.contains("fortune-fx-input");
+  const isFxInput = e?.target?.classList?.contains('fortune-fx-input');
 
   const ignoredKeys = new Set(
     isFxInput
-      ? ["Enter", "Tab", "ArrowLeft", "ArrowRight"]
-      : ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+      ? ['Enter', 'Tab', 'ArrowLeft', 'ArrowRight']
+      : ['Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'],
   );
   const restCod = !ignoredKeys.has(kstr);
 
@@ -824,10 +824,10 @@ export async function handleGlobalKeyDown(
   //   return;
   // }
 
-  if (kstr === "Enter") {
+  if (kstr === 'Enter') {
     if (!allowEdit) return;
     handleGlobalEnter(ctx, cellInput, e, canvas);
-  } else if (kstr === "Tab") {
+  } else if (kstr === 'Tab') {
     if (ctx.luckysheetCellUpdate.length > 0) {
       updateCell(
         ctx,
@@ -835,26 +835,26 @@ export async function handleGlobalKeyDown(
         ctx.luckysheetCellUpdate[1],
         cellInput,
         undefined,
-        canvas
+        canvas,
       );
     }
     if (e.shiftKey) {
       moveHighlightCell(
         ctx,
-        "right",
-        -hideCRCount(ctx, "ArrowLeft"),
-        "rangeOfSelect"
+        'right',
+        -hideCRCount(ctx, 'ArrowLeft'),
+        'rangeOfSelect',
       );
     } else {
       moveHighlightCell(
         ctx,
-        "right",
-        hideCRCount(ctx, "ArrowRight"),
-        "rangeOfSelect"
+        'right',
+        hideCRCount(ctx, 'ArrowRight'),
+        'rangeOfSelect',
       );
     }
     e.preventDefault();
-  } else if (kstr === "F2") {
+  } else if (kstr === 'F2') {
     if (!allowEdit) return;
     if (ctx.luckysheetCellUpdate.length > 0) {
       return;
@@ -869,12 +869,12 @@ export async function handleGlobalKeyDown(
 
     ctx.luckysheetCellUpdate = [row_index, col_index];
     e.preventDefault();
-  } else if (kstr === "F4" && ctx.luckysheetCellUpdate.length > 0) {
+  } else if (kstr === 'F4' && ctx.luckysheetCellUpdate.length > 0) {
     // TODO formula.setfreezonFuc(event);
     e.preventDefault();
-  } else if (kstr === "Escape" && ctx.luckysheetCellUpdate.length > 0) {
+  } else if (kstr === 'Escape' && ctx.luckysheetCellUpdate.length > 0) {
     cancelNormalSelected(ctx);
-    moveHighlightCell(ctx, "down", 0, "rangeOfSelect");
+    moveHighlightCell(ctx, 'down', 0, 'rangeOfSelect');
     e.preventDefault();
   } else {
     if (e.ctrlKey || e.metaKey) {
@@ -885,19 +885,19 @@ export async function handleGlobalKeyDown(
         cellInput,
         fxInput,
         handleUndo,
-        handleRedo
+        handleRedo,
       );
       return;
     }
     if (
       e.shiftKey &&
-      (kstr === "ArrowUp" ||
-        kstr === "ArrowDown" ||
-        kstr === "ArrowLeft" ||
-        kstr === "ArrowRight")
+      (kstr === 'ArrowUp' ||
+        kstr === 'ArrowDown' ||
+        kstr === 'ArrowLeft' ||
+        kstr === 'ArrowRight')
     ) {
       handleShiftWithArrowKey(ctx, e);
-    } else if (kstr === "Escape") {
+    } else if (kstr === 'Escape') {
       ctx.contextMenu = {};
       // if (menuButton.luckysheetPaintModelOn) {
       //   menuButton.cancelPaintModel();
@@ -907,7 +907,7 @@ export async function handleGlobalKeyDown(
       // }
 
       // selectHightlightShow();
-    } else if (kstr === "Delete" || kstr === "Backspace") {
+    } else if (kstr === 'Delete' || kstr === 'Backspace') {
       if (!allowEdit) return;
       if (ctx.activeImg != null) {
         removeActiveImage(ctx);
@@ -921,14 +921,14 @@ export async function handleGlobalKeyDown(
       //   imageCtrl.removeImgItem();
       //   e.preventDefault();
     } else if (
-      kstr === "ArrowUp" ||
-      kstr === "ArrowDown" ||
-      kstr === "ArrowLeft" ||
-      kstr === "ArrowRight"
+      kstr === 'ArrowUp' ||
+      kstr === 'ArrowDown' ||
+      kstr === 'ArrowLeft' ||
+      kstr === 'ArrowRight'
     ) {
       const isEditing = ctx.luckysheetCellUpdate.length > 0;
-      const inputText = cellInput?.innerText ?? "";
-      const isFormulaEdit = isEditing && inputText.trim().startsWith("=");
+      const inputText = cellInput?.innerText ?? '';
+      const isFormulaEdit = isEditing && inputText.trim().startsWith('=');
       const enteredByTyping = cache.enteredEditByTyping === true;
 
       // Only when we entered edit by typing (not double-click): arrow keys
@@ -940,7 +940,7 @@ export async function handleGlobalKeyDown(
           ctx.luckysheetCellUpdate[1],
           cellInput,
           undefined,
-          canvas
+          canvas,
         );
         cache.enteredEditByTyping = false;
         handleArrowKey(ctx, e);
@@ -970,8 +970,8 @@ export async function handleGlobalKeyDown(
       if (
         String.fromCharCode(kcode) != null &&
         !_.isEmpty(ctx.luckysheet_select_save) && // $("#luckysheet-cell-selected").is(":visible") &&
-        kstr !== "CapsLock" &&
-        kstr !== "Win" &&
+        kstr !== 'CapsLock' &&
+        kstr !== 'Win' &&
         kcode !== 18
       ) {
         // 激活输入框，并将按键输入到输入框

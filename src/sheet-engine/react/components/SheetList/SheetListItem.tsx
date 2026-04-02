@@ -2,12 +2,12 @@ import {
   Sheet,
   cancelNormalSelected,
   cancelActiveImgItem,
-} from "@sheet-engine/core";
-import { LucideIcon } from "@fileverse/ui";
-import React, { useContext, useEffect, useRef } from "react";
-import WorkbookContext from "../../context";
-import "./index.css";
-import SheetHiddenButton from "./SheetHiddenButton";
+} from '@sheet-engine/core';
+import { LucideIcon } from '@fileverse/ui';
+import React, { useContext, useEffect, useRef } from 'react';
+import WorkbookContext from '../../context';
+import './index.css';
+import SheetHiddenButton from './SheetHiddenButton';
 
 type Props = {
   sheet: Sheet;

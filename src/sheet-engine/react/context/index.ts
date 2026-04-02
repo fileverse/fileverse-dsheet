@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   defaultContext,
   Context,
@@ -6,7 +6,7 @@ import {
   Settings,
   GlobalCache,
   PatchOptions,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 
 export type RefValues = {
   globalCache: GlobalCache;
@@ -37,9 +37,9 @@ const WorkbookContext = React.createContext<{
   context: Context;
   setContext: (
     recipe: (ctx: Context) => void,
-    options?: SetContextOptions
+    options?: SetContextOptions,
   ) => void;
-  // eslint-disable-next-line
+
   settings: Required<Settings>;
   refs: RefValues;
   handleUndo: () => void;

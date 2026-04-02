@@ -1,7 +1,7 @@
-import { Canvas, defaultStyle } from "../canvas";
-import { Context } from "../context";
+import { Canvas, defaultStyle } from '../canvas';
+import { Context } from '../context';
 // import { locale } from "../locale";
-import { hasPartMC } from "./validation";
+import { hasPartMC } from './validation';
 
 export function handleScreenShot(ctx: Context) {
   // const { screenshot } = locale;
@@ -85,7 +85,7 @@ export function handleScreenShot(ctx: Context) {
     scrollWidth = ctx.visibledatacolumn[st_c - 1];
     ch_width = ctx.visibledatacolumn[ed_c] - ctx.visibledatacolumn[st_c - 1];
   }
-  const newCanvasElement = document.createElement("canvas");
+  const newCanvasElement = document.createElement('canvas');
   newCanvasElement.width = Math.ceil(ch_width * devicePixelRatio);
   newCanvasElement.height = Math.ceil(rh_height * devicePixelRatio);
   newCanvasElement.style.width = `${ch_width}px`;
@@ -101,7 +101,7 @@ export function handleScreenShot(ctx: Context) {
     offsetTop: 1,
     clear: true,
   });
-  const ctx_newCanvas = newCanvasElement.getContext("2d");
+  const ctx_newCanvas = newCanvasElement.getContext('2d');
   if (ctx_newCanvas == null) return undefined;
 
   // 补上 左边框和上边框
@@ -122,13 +122,13 @@ export function handleScreenShot(ctx: Context) {
   ctx_newCanvas.closePath();
 
   const image = new Image();
-  const url = newCanvasElement.toDataURL("image/png");
+  const url = newCanvasElement.toDataURL('image/png');
   image.src = url;
 
   if (ch_width > rh_height) {
-    image.style.width = "100%";
+    image.style.width = '100%';
   } else {
-    image.style.height = "100%";
+    image.style.height = '100%';
   }
 
   newCanvasElement.remove();

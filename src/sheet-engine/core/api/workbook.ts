@@ -1,13 +1,13 @@
-import _ from "lodash";
-import { Context, Sheet } from "..";
+import _ from 'lodash';
+import { Context, Sheet } from '..';
 import {
   addSheet as addSheetInternal,
   deleteSheet as deleteSheetInternal,
   updateSheet as updateSheetInternal,
-} from "../modules";
-import { Settings } from "../settings";
-import { CommonOptions, getSheet } from "./common";
-import { INVALID_PARAMS } from "./errors";
+} from '../modules';
+import { Settings } from '../settings';
+import { CommonOptions, getSheet } from './common';
+import { INVALID_PARAMS } from './errors';
 
 export function addSheet(
   ctx: Context,
@@ -15,7 +15,7 @@ export function addSheet(
   newSheetID?: string,
   isPivotTable: boolean = false,
   sheetname: string | undefined = undefined,
-  sheetData: Sheet | undefined = undefined
+  sheetData: Sheet | undefined = undefined,
 ) {
   addSheetInternal(
     ctx,
@@ -23,7 +23,7 @@ export function addSheet(
     newSheetID,
     isPivotTable,
     sheetname,
-    sheetData
+    sheetData,
   );
 }
 
@@ -44,7 +44,7 @@ export function activateSheet(ctx: Context, options: CommonOptions = {}) {
 export function setSheetName(
   ctx: Context,
   name: string,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   const sheet = getSheet(ctx, options);
   sheet.name = name;
@@ -57,7 +57,7 @@ export function setSheetOrder(ctx: Context, orderList: Record<string, number>) {
     }
   });
   // re-order starting from 0
-  _.sortBy(ctx.luckysheetfile, ["order"]).forEach((sheet, i) => {
+  _.sortBy(ctx.luckysheetfile, ['order']).forEach((sheet, i) => {
     sheet.order = i;
   });
 }
@@ -71,7 +71,7 @@ export function scroll(
     scrollTop?: number;
     targetRow?: number;
     targetColumn?: number;
-  }
+  },
 ) {
   if (options.scrollLeft != null) {
     if (!_.isNumber(options.scrollLeft)) {

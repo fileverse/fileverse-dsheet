@@ -27,7 +27,7 @@ export const DEFAULT_SHEET_DATA = [
     order: 0,
     row: 500,
     column: 36,
-  }
+  },
 ];
 
 export const TOOL_BAR_ITEMS = [
@@ -76,10 +76,10 @@ export const CELL_CONTEXT_MENU_ITEMS = [
   'paste',
   'clear',
   '|',
-  "insert-row",
-  "insert-row-above",
-  "insert-column",
-  "insert-column-right",
+  'insert-row',
+  'insert-row-above',
+  'insert-column',
+  'insert-column-right',
   'cell-delete-row',
   'cell-delete-column',
   // "delete-cell",
@@ -112,10 +112,10 @@ export const HEADER_CONTEXT_MENU_ITEMS = [
   'paste',
   'clear',
   '|',
-  "insert-row",
-  "insert-row-above",
-  "insert-column",
-  "insert-column-right",
+  'insert-row',
+  'insert-row-above',
+  'insert-column',
+  'insert-column-right',
   'delete-row',
   'delete-column',
   // "delete-cell",

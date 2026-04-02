@@ -1,38 +1,38 @@
-import _ from "lodash";
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { LucideIcon, Tooltip } from "@fileverse/ui";
-import { UNFilter } from "./constant";
-import WorkbookContext from "../../../context";
-import "./index.css";
+import _ from 'lodash';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import { LucideIcon, Tooltip } from '@fileverse/ui';
+import { UNFilter } from './constant';
+import WorkbookContext from '../../../context';
+import './index.css';
 
 const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
-  props
+  props,
 ) => {
   const {
     context,
     settings: { isAuthorized },
   } = useContext(WorkbookContext);
   const authedFunction = [
-    "COINGECKO",
-    "ETHERSCAN",
-    "DEFILLAMA",
-    "GNOSIS",
-    "BASE",
-    "EOA",
-    "PNL",
-    "SAFE",
-    "BLOCKSCOUT",
-    "LENS",
-    "FARCASTER",
-    "Ethereum",
-    "SMARTCONTRACT",
-    "DUNESIM",
+    'COINGECKO',
+    'ETHERSCAN',
+    'DEFILLAMA',
+    'GNOSIS',
+    'BASE',
+    'EOA',
+    'PNL',
+    'SAFE',
+    'BLOCKSCOUT',
+    'LENS',
+    'FARCASTER',
+    'Ethereum',
+    'SMARTCONTRACT',
+    'DUNESIM',
   ];
   const filteredDefaultCandidates = context.defaultCandidates.filter(
-    (item) => !authedFunction.includes(item.n)
+    (item) => !authedFunction.includes(item.n),
   );
   const unfilteredDefaultCandidates = UNFilter.filter(
-    (item) => item.n !== "PNL"
+    (item) => item.n !== 'PNL',
   );
   const finalDefaultCandidates = !isAuthorized
     ? filteredDefaultCandidates
@@ -55,8 +55,8 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
     const hintHeight = 360;
     const inputBoxTop =
       parseInt(
-        document.getElementById("luckysheet-input-box")?.style.top || "0",
-        10
+        document.getElementById('luckysheet-input-box')?.style.top || '0',
+        10,
       ) - 85;
     const inputBottom = inputBoxTop + firstSelection.height_move;
     const availableBelow = window.innerHeight - inputBottom;
@@ -66,9 +66,9 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
     let topV = hintAbove
       ? selectionHeight - (divOffset + 80)
       : selectionHeight + 4;
-    const el = document.getElementsByClassName("fx-hint")?.[0];
+    const el = document.getElementsByClassName('fx-hint')?.[0];
     // @ts-ignore
-    if (el && el?.style?.display !== "none") {
+    if (el && el?.style?.display !== 'none') {
       topV = 25;
     }
     setTop(topV);
@@ -88,7 +88,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
     <div
       className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${
         // @ts-ignore
-        props?.from === "fx" ? "fx-search" : "cell-search"
+        props?.from === 'fx' ? 'fx-search' : 'cell-search'
       }`}
       id="luckysheet-formula-search-c-p"
       style={{
@@ -104,7 +104,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
         {context.defaultCandidates.length > 0 && (
           <>
             <div
-              style={{ marginBottom: "4px" }}
+              style={{ marginBottom: '4px' }}
               className="w-full flex flex-col p-2 gap-1"
             >
               <h4 className="text-helper-sm-bold color-text-secondary">
@@ -118,19 +118,19 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
             </div>
             {!isAuthorized && (
               <div
-                style={{ marginBottom: "8px", backgroundColor: "#F8F9FA" }}
+                style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
                 className="w-full flex flex-col p-2 gap-1"
               >
                 <h4 className="font-semibold">dSheets account required</h4>
                 <p className="text-helper-text-sm color-text-secondary">
-                  Use more onchain functions by creating a dSheets account.{" "}
+                  Use more onchain functions by creating a dSheets account.{' '}
                   <span
                     className="sign-fortune"
-                    style={{ color: "#5C0AFF", cursor: "pointer" }}
+                    style={{ color: '#5C0AFF', cursor: 'pointer' }}
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
-                      document.getElementById("triggerAuth")?.click();
+                      document.getElementById('triggerAuth')?.click();
                     }}
                   >
                     Signup/Login
@@ -143,7 +143,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                         key={index}
                         src={v.LOGO}
                         alt="Service Logo"
-                        style={{ width: "16px", height: "16px" }}
+                        style={{ width: '16px', height: '16px' }}
                       />
                     );
                   })}
@@ -161,59 +161,59 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                   key={v.n}
                   data-func={v.n}
                   style={{
-                    cursor: "pointer",
+                    cursor: 'pointer',
                   }}
                   className={`luckysheet-formula-search-item ${
-                    index === 0 ? "luckysheet-formula-search-item-active" : ""
+                    index === 0 ? 'luckysheet-formula-search-item-active' : ''
                   }`}
                 >
                   <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
                   >
                     <div className="luckysheet-formula-search-func color-text-default text-body-sm">
                       {v.n}
                     </div>
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "end",
-                        minWidth: "68px",
-                        alignItems: "center",
-                        gap: "6px",
+                        display: 'flex',
+                        justifyContent: 'end',
+                        minWidth: '68px',
+                        alignItems: 'center',
+                        gap: '6px',
                       }}
                     >
                       {v.LOGO && (
                         <img
                           src={v.LOGO}
                           alt="Service Logo"
-                          style={{ width: "16px" }}
+                          style={{ width: '16px' }}
                         />
                       )}
                       {v.SECONDARY_LOGO && (
                         <img
                           src={v.SECONDARY_LOGO}
                           alt="Service Logo"
-                          style={{ width: "16px" }}
+                          style={{ width: '16px' }}
                         />
                       )}
                       {v.API_KEY && (
                         <Tooltip
                           text={
                             localStorage.getItem(v.API_KEY)
-                              ? "API Key added"
-                              : "API key required"
+                              ? 'API Key added'
+                              : 'API key required'
                           }
                         >
                           <div
                             style={{
-                              borderRadius: "4px",
+                              borderRadius: '4px',
                               backgroundColor: `${
                                 localStorage.getItem(v.API_KEY)
-                                  ? "#177E23"
-                                  : "#e8ebec"
+                                  ? '#177E23'
+                                  : '#e8ebec'
                               }`,
-                              width: "16px",
-                              height: "16px",
+                              width: '16px',
+                              height: '16px',
                             }}
                             className="flex justify-center"
                           >
@@ -221,10 +221,10 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                               name="Key"
                               style={{
                                 color: localStorage.getItem(v.API_KEY)
-                                  ? "white"
-                                  : "#77818A",
-                                width: "12px",
-                                height: "12px",
+                                  ? 'white'
+                                  : '#77818A',
+                                width: '12px',
+                                height: '12px',
                               }}
                             />
                           </div>
@@ -248,13 +248,13 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                     key={v.n}
                     data-func={v.n}
                     className={`luckysheet-formula-search-item ${
-                      index === 0 ? "luckysheet-formula-search-item-active" : ""
+                      index === 0 ? 'luckysheet-formula-search-item-active' : ''
                     }`}
                   >
                     <div
                       style={{
-                        display: "flex",
-                        justifyContent: "space-between",
+                        display: 'flex',
+                        justifyContent: 'space-between',
                       }}
                     >
                       <div className="luckysheet-formula-search-func color-text-default text-body-sm">
@@ -262,45 +262,45 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                       </div>
                       <div
                         style={{
-                          display: "flex",
-                          justifyContent: "end",
-                          width: "68px",
-                          alignItems: "center",
-                          gap: "6px",
+                          display: 'flex',
+                          justifyContent: 'end',
+                          width: '68px',
+                          alignItems: 'center',
+                          gap: '6px',
                         }}
                       >
                         {v.LOGO && (
                           <img
                             src={v.LOGO}
                             alt="Service Logo"
-                            style={{ width: "16px" }}
+                            style={{ width: '16px' }}
                           />
                         )}
                         {v.SECONDARY_LOGO && (
                           <img
                             src={v.SECONDARY_LOGO}
                             alt="Service Logo"
-                            style={{ width: "16px" }}
+                            style={{ width: '16px' }}
                           />
                         )}
                         {v.API_KEY && (
                           <Tooltip
                             text={
                               localStorage.getItem(v.API_KEY)
-                                ? "API Key added"
-                                : "API Key required"
+                                ? 'API Key added'
+                                : 'API Key required'
                             }
                           >
                             <div
                               style={{
-                                borderRadius: "4px",
+                                borderRadius: '4px',
                                 backgroundColor: `${
                                   localStorage.getItem(v.API_KEY)
-                                    ? "#177E23"
-                                    : "#e8ebec"
+                                    ? '#177E23'
+                                    : '#e8ebec'
                                 }`,
-                                width: "16px",
-                                height: "16px",
+                                width: '16px',
+                                height: '16px',
                               }}
                               className="flex justify-center"
                             >
@@ -308,10 +308,10 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                                 name="Key"
                                 style={{
                                   color: localStorage.getItem(v.API_KEY)
-                                    ? "white"
-                                    : "#77818A",
-                                  width: "12px",
-                                  height: "12px",
+                                    ? 'white'
+                                    : '#77818A',
+                                  width: '12px',
+                                  height: '12px',
                                 }}
                               />
                             </div>
@@ -329,24 +329,24 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
               <span>
                 {!isAuthorized && (
                   <div
-                    style={{ marginBottom: "8px", backgroundColor: "#F8F9FA" }}
+                    style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
                     className="w-full flex flex-col p-2 gap-1"
                   >
                     <h4
                       className="text-helper-sm-bold"
-                      style={{ fontWeight: "bold" }}
+                      style={{ fontWeight: 'bold' }}
                     >
                       dSheets account required
                     </h4>
                     <p className="text-helper-text-sm color-text-secondary">
-                      Use more onchain functions by creating a dSheets account.{" "}
+                      Use more onchain functions by creating a dSheets account.{' '}
                       <span
                         className="sign-fortune"
-                        style={{ color: "#5C0AFF", cursor: "pointer" }}
+                        style={{ color: '#5C0AFF', cursor: 'pointer' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
-                          document.getElementById("triggerAuth")?.click();
+                          document.getElementById('triggerAuth')?.click();
                         }}
                       >
                         Signup/Login
@@ -359,7 +359,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
                             key={index}
                             src={v.LOGO}
                             alt="Service Logo"
-                            style={{ width: "16px", height: "16px" }}
+                            style={{ width: '16px', height: '16px' }}
                           />
                         );
                       })}
@@ -374,7 +374,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
       <div className="p-2 pt-0">
         <hr className="color-border-default mb-2" />
         <div
-          style={{ paddingLeft: "10px", paddingRight: "10px" }}
+          style={{ paddingLeft: '10px', paddingRight: '10px' }}
           className="flex gap-1 items-center color-border-default text-helper-sm"
         >
           <div className="border p-1 color-text-default rounded">Tab</div>

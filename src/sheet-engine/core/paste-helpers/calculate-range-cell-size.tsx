@@ -1,12 +1,11 @@
-/* eslint-disable no-plusplus */
-import { DEFAULT_FONT_SIZE } from "../paste-table-helpers";
-import { getSheetIndex } from "../utils";
-import { Context, getFlowdata } from "../context";
-import { Cell, Sheet } from "../types";
-import { setRowHeight } from "../api";
+import { DEFAULT_FONT_SIZE } from '../paste-table-helpers';
+import { getSheetIndex } from '../utils';
+import { Context, getFlowdata } from '../context';
+import { Cell, Sheet } from '../types';
+import { setRowHeight } from '../api';
 
 const DEFAULT_FONT_FAMILY =
-  "Helvetica Neue, system-ui, Roboto, Lato, Segoe UI, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Arial, sans-serif";
+  'Helvetica Neue, system-ui, Roboto, Lato, Segoe UI, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Arial, sans-serif';
 
 const getColumnWidth = (colIndex: number, ctx: Context, sheetFile: Sheet) => {
   const defaultColumnWidth = ctx.defaultcollen ?? 73;
@@ -21,20 +20,20 @@ const isCellWrapped = (cell: Cell | null | undefined) => Number(cell?.tb) === 1;
 
 const getCellDisplayText = (cell: Cell | null | undefined) => {
   let text = cell?.m ?? cell?.v;
-  if (text == null && cell?.ct?.t === "inlineStr") {
-    text = (cell.ct.s || []).map((s: any) => s.v).join("");
+  if (text == null && cell?.ct?.t === 'inlineStr') {
+    text = (cell.ct.s || []).map((s: any) => s.v).join('');
   }
-  return text == null ? "" : String(text);
+  return text == null ? '' : String(text);
 };
 
 const applyFontOnMeasurer = (
   cell: Cell | null | undefined,
-  cellSizeMeasurer: HTMLDivElement | null
+  cellSizeMeasurer: HTMLDivElement | null,
 ) => {
   const fontSizePx = (cell?.fs as number | undefined) ?? DEFAULT_FONT_SIZE;
   const fontFamily = (cell?.ff as string | undefined) ?? DEFAULT_FONT_FAMILY;
-  const fontWeight = cell?.bl === 1 ? "700" : "400";
-  const fontStyle = cell?.it === 1 ? "italic" : "normal";
+  const fontWeight = cell?.bl === 1 ? '700' : '400';
+  const fontStyle = cell?.it === 1 ? 'italic' : 'normal';
 
   cellSizeMeasurer!.style.fontSize = `${fontSizePx}px`;
   cellSizeMeasurer!.style.fontFamily = fontFamily;
@@ -51,7 +50,7 @@ export function calculateRangeCellSize(
   endRow: number,
   startCol: number,
   endCol: number,
-  maxColumnWidth = 1200
+  maxColumnWidth = 1200,
 ) {
   const sheetIndex = getSheetIndex(ctx, sheetId)!;
   const sheetFile = ctx.luckysheetfile[sheetIndex];
@@ -61,20 +60,20 @@ export function calculateRangeCellSize(
   const maxColumnWidths: Record<number, number> = {};
 
   let cellSizeMeasurer = document.getElementById(
-    "fs-cell-measurer"
+    'fs-cell-measurer',
   ) as HTMLDivElement | null;
   if (!cellSizeMeasurer) {
-    cellSizeMeasurer = document.createElement("div");
-    cellSizeMeasurer.id = "fs-cell-measurer";
+    cellSizeMeasurer = document.createElement('div');
+    cellSizeMeasurer.id = 'fs-cell-measurer';
     Object.assign(cellSizeMeasurer.style, {
-      position: "fixed",
-      left: "-99999px",
-      top: "-99999px",
-      visibility: "hidden",
-      lineHeight: "1.3",
-      whiteSpace: "normal",
-      wordBreak: "normal",
-      overflowWrap: "break-word",
+      position: 'fixed',
+      left: '-99999px',
+      top: '-99999px',
+      visibility: 'hidden',
+      lineHeight: '1.3',
+      whiteSpace: 'normal',
+      wordBreak: 'normal',
+      overflowWrap: 'break-word',
     });
     document.body.appendChild(cellSizeMeasurer);
   }
@@ -91,8 +90,8 @@ export function calculateRangeCellSize(
 
       const text = getCellDisplayText(cell);
       applyFontOnMeasurer(cell, cellSizeMeasurer);
-      cellSizeMeasurer!.style.whiteSpace = "pre";
-      cellSizeMeasurer!.style.width = "auto";
+      cellSizeMeasurer!.style.whiteSpace = 'pre';
+      cellSizeMeasurer!.style.width = 'auto';
       cellSizeMeasurer!.textContent = text;
       const intrinsicWidth = Math.ceil(cellSizeMeasurer!.scrollWidth + 12);
       if (intrinsicWidth > requiredWidth) requiredWidth = intrinsicWidth;
@@ -115,12 +114,12 @@ export function calculateRangeCellSize(
       if (isCellWrapped(cell)) {
         const finalColumnWidth = Math.max(
           getColumnWidth(col, ctx, sheetFile),
-          maxColumnWidths[col] || 0
+          maxColumnWidths[col] || 0,
         );
-        cellSizeMeasurer!.style.whiteSpace = "normal";
+        cellSizeMeasurer!.style.whiteSpace = 'normal';
         cellSizeMeasurer!.style.width = `${Math.max(
           5,
-          finalColumnWidth - 8
+          finalColumnWidth - 8,
         )}px`;
         cellSizeMeasurer!.textContent = text;
         const wrappedHeight = Math.ceil(cellSizeMeasurer!.scrollHeight + 6);
@@ -144,20 +143,20 @@ export function getColumnAutoFitWidth(ctx: Context, colIndex: number): number {
   const rowCount = flowdata.length;
 
   let cellSizeMeasurer = document.getElementById(
-    "fs-cell-measurer"
+    'fs-cell-measurer',
   ) as HTMLDivElement | null;
   if (!cellSizeMeasurer) {
-    cellSizeMeasurer = document.createElement("div");
-    cellSizeMeasurer.id = "fs-cell-measurer";
+    cellSizeMeasurer = document.createElement('div');
+    cellSizeMeasurer.id = 'fs-cell-measurer';
     Object.assign(cellSizeMeasurer.style, {
-      position: "fixed",
-      left: "-99999px",
-      top: "-99999px",
-      visibility: "hidden",
-      lineHeight: "1.3",
-      whiteSpace: "pre",
-      wordBreak: "normal",
-      overflowWrap: "break-word",
+      position: 'fixed',
+      left: '-99999px',
+      top: '-99999px',
+      visibility: 'hidden',
+      lineHeight: '1.3',
+      whiteSpace: 'pre',
+      wordBreak: 'normal',
+      overflowWrap: 'break-word',
     });
     document.body.appendChild(cellSizeMeasurer);
   }
@@ -177,8 +176,8 @@ export function getColumnAutoFitWidth(ctx: Context, colIndex: number): number {
     // so override with the correct pt unit to match canvas rendering
     const fontSizePt = (cell.fs as number | undefined) ?? ctx.defaultFontSize;
     cellSizeMeasurer.style.fontSize = `${fontSizePt}pt`;
-    cellSizeMeasurer.style.whiteSpace = "pre";
-    cellSizeMeasurer.style.width = "auto";
+    cellSizeMeasurer.style.whiteSpace = 'pre';
+    cellSizeMeasurer.style.width = 'auto';
     cellSizeMeasurer.textContent = text;
     const intrinsicWidth = Math.ceil(cellSizeMeasurer.scrollWidth + 12);
     if (intrinsicWidth > maxWidth) maxWidth = intrinsicWidth;
@@ -194,7 +193,7 @@ export const updateSheetCellSizes = (
     rowMax: Record<number, number>;
     colMax: Record<number, number>;
   },
-  maxColumnWidth = 1200
+  maxColumnWidth = 1200,
 ) => {
   const sheetFile = ctx.luckysheetfile[sheetIndex];
   if (!sheetFile) return;
@@ -225,7 +224,7 @@ export const updateSheetCellSizes = (
       if (requiredHeight > currentHeight) {
         rowHeightsConfig[rowIndex] = requiredHeight;
       }
-    }
+    },
   );
 
   Object.entries(measurements.colMax).forEach(
@@ -237,7 +236,7 @@ export const updateSheetCellSizes = (
       if (cappedWidth > currentWidth) {
         columnWidthsConfig[colIndex] = cappedWidth;
       }
-    }
+    },
   );
   setRowHeight(ctx, rowHeightsConfig);
 };

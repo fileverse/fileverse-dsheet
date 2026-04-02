@@ -1,14 +1,14 @@
-import _ from "lodash";
-import { Context } from "../context";
-import { Range } from "../types";
-import { getSheetIndex } from "../utils";
-import { isInlineStringCT } from "./inline-string";
+import _ from 'lodash';
+import { Context } from '../context';
+import { Range } from '../types';
+import { getSheetIndex } from '../utils';
+import { isInlineStringCT } from './inline-string';
 
 export function mergeCells(
   ctx: Context,
   sheetId: string,
   ranges: Range,
-  type: string
+  type: string,
 ) {
   // if (!checkIsAllowEdit()) {
   //   tooltip.info("", locale().pivotTable.errorNotAllowEdit);
@@ -31,13 +31,13 @@ export function mergeCells(
     path: string[];
     key?: string;
     value: any;
-    type?: "update" | "delete";
+    type?: 'update' | 'delete';
   }[] = [];
 
   // if (!checkProtectionNotEnable(ctx.currentSheetId)) {
   //   return;
   // }
-  if (type === "merge-cancel") {
+  if (type === 'merge-cancel') {
     for (let i = 0; i < ranges.length; i += 1) {
       const range = ranges[i];
       const r1 = range.row[0];
@@ -59,7 +59,7 @@ export function mergeCells(
             const mc_r = cell.mc.r;
             const mc_c = cell.mc.c;
 
-            if ("rs" in cell.mc) {
+            if ('rs' in cell.mc) {
               delete cell.mc;
               delete cfg.merge[`${mc_r}_${mc_c}`];
 
@@ -77,10 +77,10 @@ export function mergeCells(
               d[r][c] = cell_clone;
               cellChanges.push({
                 sheetId,
-                path: ["celldata"],
+                path: ['celldata'],
                 value: { r, c, v: d[r][c] },
                 key: `${r}_${c}`,
-                type: "update",
+                type: 'update',
               });
             }
           }
@@ -133,7 +133,7 @@ export function mergeCells(
               const mc_r = cell.mc.r;
               const mc_c = cell.mc.c;
 
-              if ("rs" in cell.mc) {
+              if ('rs' in cell.mc) {
                 delete cell.mc;
                 delete cfg.merge[`${mc_r}_${mc_c}`];
 
@@ -151,10 +151,10 @@ export function mergeCells(
                 d[r][c] = cell_clone;
                 cellChanges.push({
                   sheetId,
-                  path: ["celldata"],
+                  path: ['celldata'],
                   value: { r, c, v: d[r][c] },
                   key: `${r}_${c}`,
-                  type: "update",
+                  type: 'update',
                 });
               }
             }
@@ -175,7 +175,7 @@ export function mergeCells(
         continue;
       }
 
-      if (type === "merge-all") {
+      if (type === 'merge-all') {
         let fv = {};
         let isfirst = false;
 
@@ -200,10 +200,10 @@ export function mergeCells(
             d[r][c] = { mc: { r: r1, c: c1 } };
             cellChanges.push({
               sheetId,
-              path: ["celldata"],
+              path: ['celldata'],
               value: { r, c, v: d[r][c] },
               key: `${r}_${c}`,
-              type: "update",
+              type: 'update',
             });
           }
         }
@@ -214,10 +214,10 @@ export function mergeCells(
         a.mc = { r: r1, c: c1, rs: r2 - r1 + 1, cs: c2 - c1 + 1 };
         cellChanges.push({
           sheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r: r1, c: c1, v: d[r1][c1] },
           key: `${r1}_${c1}`,
-          type: "update",
+          type: 'update',
         });
 
         cfg.merge[`${r1}_${c1}`] = {
@@ -226,7 +226,7 @@ export function mergeCells(
           rs: r2 - r1 + 1,
           cs: c2 - c1 + 1,
         };
-      } else if (type === "merge-vertical") {
+      } else if (type === 'merge-vertical') {
         for (let c = c1; c <= c2; c += 1) {
           let fv = {};
           let isfirst = false;
@@ -251,10 +251,10 @@ export function mergeCells(
             d[r][c] = { mc: { r: r1, c } };
             cellChanges.push({
               sheetId,
-              path: ["celldata"],
+              path: ['celldata'],
               value: { r, c, v: d[r][c] },
               key: `${r}_${c}`,
-              type: "update",
+              type: 'update',
             });
           }
 
@@ -264,10 +264,10 @@ export function mergeCells(
           a.mc = { r: r1, c, rs: r2 - r1 + 1, cs: 1 };
           cellChanges.push({
             sheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r: r1, c, v: d[r1][c] },
             key: `${r1}_${c}`,
-            type: "update",
+            type: 'update',
           });
 
           cfg.merge[`${r1}_${c}`] = {
@@ -277,7 +277,7 @@ export function mergeCells(
             cs: 1,
           };
         }
-      } else if (type === "merge-horizontal") {
+      } else if (type === 'merge-horizontal') {
         for (let r = r1; r <= r2; r += 1) {
           let fv = {};
           let isfirst = false;
@@ -302,10 +302,10 @@ export function mergeCells(
             d[r][c] = { mc: { r, c: c1 } };
             cellChanges.push({
               sheetId,
-              path: ["celldata"],
+              path: ['celldata'],
               value: { r, c, v: d[r][c] },
               key: `${r}_${c}`,
-              type: "update",
+              type: 'update',
             });
           }
 
@@ -315,10 +315,10 @@ export function mergeCells(
           a.mc = { r, c: c1, rs: 1, cs: c2 - c1 + 1 };
           cellChanges.push({
             sheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c: c1, v: d[r][c1] },
             key: `${r}_${c1}`,
-            type: "update",
+            type: 'update',
           });
 
           cfg.merge[`${r}_${c1}`] = {

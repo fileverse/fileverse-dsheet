@@ -3,7 +3,7 @@ import {
   getSheetIndex,
   getRangetxt,
   indexToColumnChar,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 
 /**
  * Find all cells that have matching validation rules
@@ -12,7 +12,7 @@ import {
 export function findMatchingCells(
   ctx: Context,
   currentRow: number,
-  currentCol: number
+  currentCol: number,
 ): { row: number; col: number }[] {
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId) as number;
   const dataVerification =
@@ -25,7 +25,7 @@ export function findMatchingCells(
 
   // Compare all cells with validation
   Object.keys(dataVerification).forEach((key) => {
-    const [r, c] = key.split("_").map(Number);
+    const [r, c] = key.split('_').map(Number);
     const validation = dataVerification[key];
 
     // Compare relevant fields (exclude rangeTxt and checked)
@@ -54,16 +54,16 @@ export function findMatchingCells(
  */
 export function cellsToRangeString(
   ctx: Context,
-  cells: { row: number; col: number }[]
+  cells: { row: number; col: number }[],
 ): string {
-  if (cells.length === 0) return "";
+  if (cells.length === 0) return '';
   if (cells.length === 1) {
     return indexToColumnChar(cells[0].col) + (cells[0].row + 1);
   }
 
   // Sort cells by row, then column
   const sorted = [...cells].sort((a, b) =>
-    a.row === b.row ? a.col - b.col : a.row - b.row
+    a.row === b.row ? a.col - b.col : a.row - b.row,
   );
 
   // Try to merge into contiguous ranges
@@ -104,5 +104,5 @@ export function cellsToRangeString(
   });
   ranges.push(range);
 
-  return ranges.join(",");
+  return ranges.join(',');
 }

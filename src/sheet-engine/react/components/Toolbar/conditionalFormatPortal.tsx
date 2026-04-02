@@ -1,7 +1,7 @@
 // DataVerificationPortal.tsx
-import React from "react";
-import { createPortal } from "react-dom";
-import ConditionRules from "../ConditionFormat/ConditionRules";
+import React from 'react';
+import { createPortal } from 'react-dom';
+import ConditionRules from '../ConditionFormat/ConditionRules';
 
 const ConditionalFormatPortal = ({
   visible,
@@ -10,7 +10,7 @@ const ConditionalFormatPortal = ({
   visible: boolean;
   context: any;
 }) => {
-  const container = document.getElementById("placeholder-conditional-format");
+  const container = document.getElementById('placeholder-conditional-format');
 
   if (!visible || !container) return null;
 

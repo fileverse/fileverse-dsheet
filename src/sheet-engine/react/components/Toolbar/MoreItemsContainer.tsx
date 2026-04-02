@@ -1,20 +1,16 @@
-import React, { useRef } from "react";
-import { useOutsideClick } from "../../hooks/useOutsideClick";
+import React, { useRef } from 'react';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
 
 const MoreItemsContaier: React.FC<{
   onClose?: () => void;
   children?: React.ReactNode;
 }> = ({ onClose, children }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  useOutsideClick(
-    containerRef,
-    () => {
-      setTimeout(() => {
-        onClose?.();
-      }, 100);
-    },
-    [containerRef, onClose]
-  );
+  useOutsideClick(containerRef, () => {
+    setTimeout(() => {
+      onClose?.();
+    }, 100);
+  }, [containerRef, onClose]);
 
   return (
     <div ref={containerRef} className="fortune-toolbar-more-container">

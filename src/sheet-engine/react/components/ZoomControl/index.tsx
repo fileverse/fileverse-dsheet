@@ -4,55 +4,55 @@ import React, {
   useRef,
   useState,
   useEffect,
-} from "react";
+} from 'react';
 import {
   Context,
   MAX_ZOOM_RATIO,
   MIN_ZOOM_RATIO,
   getSheetIndex,
-} from "@sheet-engine/core";
-import { useMediaQuery } from "usehooks-ts";
-import { IconButton } from "@fileverse/ui";
-import WorkbookContext from "../../context";
+} from '@sheet-engine/core';
+import { useMediaQuery } from 'usehooks-ts';
+import { IconButton } from '@fileverse/ui';
+import WorkbookContext from '../../context';
 // import SVGIcon from "../SVGIcon";
-import { useOutsideClick } from "../../hooks/useOutsideClick";
-import "./index.css";
+import { useOutsideClick } from '../../hooks/useOutsideClick';
+import './index.css';
 
 const presets = [
   {
-    text: "10%",
+    text: '10%',
     value: 0.1,
   },
   {
-    text: "30%",
+    text: '30%',
     value: 0.3,
   },
   {
-    text: "50%",
+    text: '50%',
     value: 0.5,
   },
   {
-    text: "70%",
+    text: '70%',
     value: 0.7,
   },
   {
-    text: "100%",
+    text: '100%',
     value: 1,
   },
   {
-    text: "150%",
+    text: '150%',
     value: 1.5,
   },
   {
-    text: "200%",
+    text: '200%',
     value: 2,
   },
   {
-    text: "300%",
+    text: '300%',
     value: 3,
   },
   {
-    text: "400%",
+    text: '400%',
     value: 4,
   },
 ];
@@ -61,15 +61,11 @@ const ZoomControl: React.FC = () => {
   const { context, setContext } = useContext(WorkbookContext);
   const menuRef = useRef<HTMLDivElement>(null);
   const [radioMenuOpen, setRadioMenuOpen] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 780px)", { defaultValue: true });
+  const isMobile = useMediaQuery('(max-width: 780px)', { defaultValue: true });
 
-  useOutsideClick(
-    menuRef,
-    () => {
-      setRadioMenuOpen(false);
-    },
-    []
-  );
+  useOutsideClick(menuRef, () => {
+    setRadioMenuOpen(false);
+  }, []);
 
   const zoomTo = useCallback(
     (val: number) => {
@@ -86,25 +82,25 @@ const ZoomControl: React.FC = () => {
           ctx.luckysheetfile[index].zoomRatio = val;
           ctx.zoomRatio = val;
         },
-        { noHistory: true }
+        { noHistory: true },
       );
     },
-    [setContext]
+    [setContext],
   );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.code === "Equal") {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'Equal') {
         zoomTo(context.zoomRatio + 0.1);
         e.stopPropagation();
-      } else if ((e.metaKey || e.ctrlKey) && e.code === "Minus") {
+      } else if ((e.metaKey || e.ctrlKey) && e.code === 'Minus') {
         zoomTo(context.zoomRatio - 0.1);
         e.stopPropagation();
       }
     };
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [context.zoomRatio]);
 
@@ -128,7 +124,7 @@ const ZoomControl: React.FC = () => {
           className="fortune-zoom-ratio-current fortune-zoom-button"
           onClick={() => setRadioMenuOpen(true)}
           tabIndex={0}
-          style={{ fontWeight: "500" }}
+          style={{ fontWeight: '500' }}
         >
           {(context.zoomRatio * 100).toFixed(0)}%
         </div>

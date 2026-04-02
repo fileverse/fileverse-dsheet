@@ -1,16 +1,16 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { GlobalCache } from "../types";
-import { getSheetIndex } from "../utils";
-import { mergeBorder } from "./cell";
-import { generateRandomId } from "./image";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { GlobalCache } from '../types';
+import { getSheetIndex } from '../utils';
+import { mergeBorder } from './cell';
+import { generateRandomId } from './image';
 
 export function sanitizeDuneUrl(input: string): string | null {
   const trimmed = input.trim();
 
   // Match iframe embed src
   const iframeMatch = trimmed.match(
-    /src=["']?(https:\/\/dune\.com\/embeds\/\d+\/\d+)/
+    /src=["']?(https:\/\/dune\.com\/embeds\/\d+\/\d+)/,
   );
   if (iframeMatch) {
     return iframeMatch[1];
@@ -18,7 +18,7 @@ export function sanitizeDuneUrl(input: string): string | null {
 
   // Match query-to-embed conversion
   const queryMatch = trimmed.match(
-    /^https:\/\/dune\.com\/queries\/(\d+)\/(\d+)/
+    /^https:\/\/dune\.com\/queries\/(\d+)\/(\d+)/,
   );
   if (queryMatch) {
     const [, queryId, vizId] = queryMatch;
@@ -54,7 +54,7 @@ export function insertIframe(ctx: Context, src: string) {
     }
 
     const iframe = {
-      id: generateRandomId("iframe"),
+      id: generateRandomId('iframe'),
       src,
       left,
       top,
@@ -77,7 +77,7 @@ export function insertDuneChart(ctx: Context, input: string) {
   const embedUrl = sanitizeDuneUrl(input);
 
   if (!embedUrl) {
-    console.warn("Unsupported Dune chart URL:", input);
+    console.warn('Unsupported Dune chart URL:', input);
     return;
   }
 
@@ -85,7 +85,7 @@ export function insertDuneChart(ctx: Context, input: string) {
 }
 
 function getIframePosition() {
-  const box = document.getElementById("fortune-modal-dialog-activeIframe");
+  const box = document.getElementById('fortune-modal-dialog-activeIframe');
   if (!box) return undefined;
   const { width, height } = box.getBoundingClientRect();
   const left = box.offsetLeft;
@@ -102,7 +102,7 @@ export function onIframeResizeEnd(ctx: Context, globalCache: GlobalCache) {
     if (position) {
       const iframe = _.find(
         ctx.insertedIframes,
-        (v) => v.id === ctx.activeIframe
+        (v) => v.id === ctx.activeIframe,
       );
       if (iframe) {
         iframe.left = position.left / ctx.zoomRatio;
@@ -118,11 +118,11 @@ export function onIframeResizeEnd(ctx: Context, globalCache: GlobalCache) {
 export function onIframeMove(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   if (ctx.allowEdit === false) return false;
   const iframe = globalCache?.iframe;
-  const el = document.getElementById("fortune-modal-dialog-activeIframe");
+  const el = document.getElementById('fortune-modal-dialog-activeIframe');
   if (el && iframe && !iframe.resizingSide) {
     const { x: startX, y: startY } = iframe.cursorMoveStartPosition!;
     let { top, left } = iframe.iframeInitialPosition!;
@@ -143,7 +143,7 @@ export function onIframeMoveEnd(ctx: Context, globalCache: GlobalCache) {
     if (position) {
       const iframe = _.find(
         ctx.insertedIframes,
-        (v) => v.id === ctx.activeIframe
+        (v) => v.id === ctx.activeIframe,
       );
       if (iframe) {
         iframe.left = position.left / ctx.zoomRatio;
@@ -157,12 +157,12 @@ export function onIframeMoveEnd(ctx: Context, globalCache: GlobalCache) {
 export function onIframeMoveStart(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   const position = getIframePosition();
   if (position) {
     const { top, left } = position;
-    _.set(globalCache, "iframe", {
+    _.set(globalCache, 'iframe', {
       cursorMoveStartPosition: { x: e.pageX, y: e.pageY },
       iframeInitialPosition: { left, top },
     });
@@ -174,16 +174,16 @@ export function onIframeMoveStart(
 export function onIframeResize(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   if (ctx.allowEdit === false) return false;
   const iframe = globalCache?.iframe;
   if (!iframe?.resizingSide) return false;
 
   const container = document.getElementById(
-    "fortune-modal-dialog-activeIframe"
+    'fortune-modal-dialog-activeIframe',
   );
-  const content = container?.querySelector(".luckysheet-modal-dialog-content");
+  const content = container?.querySelector('.luckysheet-modal-dialog-content');
   if (!container || !content) return false;
 
   const { x: startX, y: startY } = iframe.cursorMoveStartPosition!;
@@ -193,7 +193,7 @@ export function onIframeResize(
   const minHeight = 60 * ctx.zoomRatio;
   const minWidth = 90 * ctx.zoomRatio;
 
-  if (["lm", "lt", "lb"].includes(iframe.resizingSide)) {
+  if (['lm', 'lt', 'lb'].includes(iframe.resizingSide)) {
     if (width - dx < minWidth) {
       left += width - minWidth;
       width = minWidth;
@@ -205,11 +205,11 @@ export function onIframeResize(
     container.style.left = `${left}px`;
   }
 
-  if (["rm", "rt", "rb"].includes(iframe.resizingSide)) {
+  if (['rm', 'rt', 'rb'].includes(iframe.resizingSide)) {
     width = width + dx < minWidth ? minWidth : width + dx;
   }
 
-  if (["mt", "lt", "rt"].includes(iframe.resizingSide)) {
+  if (['mt', 'lt', 'rt'].includes(iframe.resizingSide)) {
     if (height - dy < minHeight) {
       top += height - minHeight;
       height = minHeight;
@@ -221,7 +221,7 @@ export function onIframeResize(
     container.style.top = `${top}px`;
   }
 
-  if (["mb", "lb", "rb"].includes(iframe.resizingSide)) {
+  if (['mb', 'lb', 'rb'].includes(iframe.resizingSide)) {
     height = height + dy < minHeight ? minHeight : height + dy;
   }
 
@@ -237,11 +237,11 @@ export function onIframeResizeStart(
   ctx: Context,
   globalCache: GlobalCache,
   e: MouseEvent,
-  resizingSide: string
+  resizingSide: string,
 ) {
   const position = getIframePosition();
   if (position) {
-    _.set(globalCache, "iframe", {
+    _.set(globalCache, 'iframe', {
       cursorMoveStartPosition: { x: e.pageX, y: e.pageY },
       resizingSide,
       iframeInitialPosition: position,

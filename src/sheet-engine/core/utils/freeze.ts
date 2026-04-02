@@ -1,5 +1,5 @@
-import { getSheetIndex } from ".";
-import { Context } from "../context";
+import { getSheetIndex } from '.';
+import { Context } from '../context';
 
 export const getFreezeState = (ctx: Context) => {
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
@@ -13,10 +13,10 @@ export const getFreezeState = (ctx: Context) => {
   const frozenCol = frozen?.range?.column_focus;
 
   const isRowFrozen =
-    typeof frozenRow === "number" && frozenRow === selection.row_focus;
+    typeof frozenRow === 'number' && frozenRow === selection.row_focus;
 
   const isColFrozen =
-    typeof frozenCol === "number" && frozenCol === selection.column_focus;
+    typeof frozenCol === 'number' && frozenCol === selection.column_focus;
 
   return {
     isRowFrozen,
@@ -25,12 +25,12 @@ export const getFreezeState = (ctx: Context) => {
 };
 
 export type FreezeType =
-  | "row"
-  | "column"
-  | "both"
-  | "unfreeze-row"
-  | "unfreeze-column"
-  | "unfreeze-all";
+  | 'row'
+  | 'column'
+  | 'both'
+  | 'unfreeze-row'
+  | 'unfreeze-column'
+  | 'unfreeze-all';
 
 export const toggleFreeze = (ctx: Context, type: FreezeType) => {
   const selection = ctx.luckysheet_select_save?.[0];
@@ -48,23 +48,23 @@ export const toggleFreeze = (ctx: Context, type: FreezeType) => {
   };
 
   switch (type) {
-    case "row":
+    case 'row':
       row_focus = selection.row_focus ?? -1;
       break;
-    case "column":
+    case 'column':
       column_focus = selection.column_focus ?? -1;
       break;
-    case "both":
+    case 'both':
       row_focus = selection.row_focus ?? -1;
       column_focus = selection.column_focus ?? -1;
       break;
-    case "unfreeze-row":
+    case 'unfreeze-row':
       row_focus = -1;
       break;
-    case "unfreeze-column":
+    case 'unfreeze-column':
       column_focus = -1;
       break;
-    case "unfreeze-all":
+    case 'unfreeze-all':
       delete sheet.frozen;
       return;
     default:
@@ -78,14 +78,14 @@ export const toggleFreeze = (ctx: Context, type: FreezeType) => {
     delete sheet.frozen;
     return;
   }
-  let newType: "row" | "column" | "both";
+  let newType: 'row' | 'column' | 'both';
 
   if (hasRow && hasCol) {
-    newType = "both";
+    newType = 'both';
   } else if (hasRow) {
-    newType = "row";
+    newType = 'row';
   } else {
-    newType = "column";
+    newType = 'column';
   }
 
   sheet.frozen = {

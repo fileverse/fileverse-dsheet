@@ -14,15 +14,14 @@ export const dataBlockListYdocUpdate = ({
   ydocRef,
   dsheetId,
   handleContentPortal,
-  dataBlockCalcFunction
+  dataBlockCalcFunction,
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
   dsheetId: string;
-  handleContentPortal?: any,
-  dataBlockCalcFunction?: any
-}
-) => {
+  handleContentPortal?: any;
+  dataBlockCalcFunction?: any;
+}) => {
   const syncContext = getSheetYdocSyncContext({
     sheetEditorRef,
     ydocRef,

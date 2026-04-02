@@ -1,4 +1,4 @@
-import { getRangetxt, Context } from "@sheet-engine/core";
+import { getRangetxt, Context } from '@sheet-engine/core';
 
 export function getDisplayedRangeTxt(context: Context): string {
   if (context.luckysheet_select_save) {
@@ -8,8 +8,8 @@ export function getDisplayedRangeTxt(context: Context): string {
       context,
       context.currentSheetId,
       range,
-      context.currentSheetId
+      context.currentSheetId,
     );
   }
-  return context.rangeDialog?.rangeTxt ?? "";
+  return context.rangeDialog?.rangeTxt ?? '';
 }

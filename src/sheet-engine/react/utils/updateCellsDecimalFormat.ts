@@ -1,21 +1,21 @@
-import { getFlowdata } from "@sheet-engine/core";
-import { FIAT_ICON_MAP } from "../constants";
+import { getFlowdata } from '@sheet-engine/core';
+import { FIAT_ICON_MAP } from '../constants';
 
 // Helper to get the actual symbol for a fiat code
 function getFiatSymbol(code: string): string {
   switch (code) {
-    case "USD":
-      return "$";
-    case "EUR":
-      return "€";
-    case "GBP":
-      return "£";
-    case "JPY":
-      return "¥";
-    case "CNY":
-      return "¥";
-    case "INR":
-      return "₹";
+    case 'USD':
+      return '$';
+    case 'EUR':
+      return '€';
+    case 'GBP':
+      return '£';
+    case 'JPY':
+      return '¥';
+    case 'CNY':
+      return '¥';
+    case 'INR':
+      return '₹';
     default:
       return code;
   }
@@ -56,9 +56,9 @@ export function updateCellsDecimalFormat({
     selectedCells.forEach(({ row, col }) => {
       const cell = d[row]?.[col];
       if (!cell) return;
-      let denomStr = "ETH";
+      let denomStr = 'ETH';
       let isCrypto = false;
-      if (cell.ct && typeof cell.ct.fa === "string") {
+      if (cell.ct && typeof cell.ct.fa === 'string') {
         const [, matchedDenom] = cell.ct.fa.match(/"([A-Z]+)"/) || [];
         if (matchedDenom) {
           denomStr = matchedDenom;
@@ -67,21 +67,21 @@ export function updateCellsDecimalFormat({
       }
       if (isCrypto) {
         cell.ct = {
-          fa: `0.${"0".repeat(decimals)} "${denomStr}"`,
-          t: "n",
+          fa: `0.${'0'.repeat(decimals)} "${denomStr}"`,
+          t: 'n',
         };
-        if (typeof cell.v === "number") {
+        if (typeof cell.v === 'number') {
           cell.m = `${cell.v.toFixed(decimals)} ${denomStr}`;
         }
       } else {
-        const fiat = denomination || "USD";
+        const fiat = denomination || 'USD';
         // Use the correct symbol from FIAT_ICON_MAP, fallback to code
         const symbol = fiat in FIAT_ICON_MAP ? getFiatSymbol(fiat) : fiat;
         cell.ct = {
-          fa: `${symbol} #,##0.${"0".repeat(decimals)}`,
-          t: "n",
+          fa: `${symbol} #,##0.${'0'.repeat(decimals)}`,
+          t: 'n',
         };
-        if (typeof cell.v === "number") {
+        if (typeof cell.v === 'number') {
           cell.m = `${symbol} ${cell.v.toFixed(decimals)}`;
         }
       }

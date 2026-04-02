@@ -151,27 +151,27 @@ const EditorContent = ({
     const conditionRules = new Y.Map();
     ySheet.set('conditionRules', conditionRules);
     const luckysheet_conditionformat_save = new Y.Array();
-    ySheet.set('luckysheet_conditionformat_save', luckysheet_conditionformat_save);
+    ySheet.set(
+      'luckysheet_conditionformat_save',
+      luckysheet_conditionformat_save,
+    );
     return ySheet;
   };
 
   useEffect(() => {
     if (isNewSheet) {
       ydocRef.current?.transact(() => {
-        const sheetArray =
-          ydocRef.current?.getArray(dsheetId);
+        const sheetArray = ydocRef.current?.getArray(dsheetId);
         //@ts-ignore
-        const sData: any = []
+        const sData: any = [];
         if (sheetArray?.toArray().length === 0 && ydocRef.current) {
           DEFAULT_SHEET_DATA.forEach((sheet, index) => {
             const id = crypto.randomUUID();
             sheet = {
               ...sheet,
               id,
-            }
-            sheetArray?.insert(0, [
-              plainSheetToYMap(sheet, index),
-            ]);
+            };
+            sheetArray?.insert(0, [plainSheetToYMap(sheet, index)]);
             sData.push(sheet);
           });
           //@ts-ignore
@@ -203,7 +203,10 @@ const EditorContent = ({
         </nav>
       )}
 
-      <div className="dsheet-editor-main relative overflow-hidden h-[94dvh] md:!h-[calc(100vh-44px)] mt-[44px]" data-testid="dsheet-editor-main">
+      <div
+        className="dsheet-editor-main relative overflow-hidden h-[94dvh] md:!h-[calc(100vh-44px)] mt-[44px]"
+        data-testid="dsheet-editor-main"
+      >
         <TransitionWrapper show={true}>
           <SkeletonLoader isReadOnly={isReadOnly} />
         </TransitionWrapper>
@@ -211,7 +214,10 @@ const EditorContent = ({
         <TransitionWrapper show={!loading && shouldRenderSheet} duration={1000}>
           {/* Permission chip - only visible with real content */}
           {isReadOnly && (
-            <div className="dsheet-permission-chip-wrap absolute top-2 right-4 z-20" data-testid="dsheet-permission-chip-wrap">
+            <div
+              className="dsheet-permission-chip-wrap absolute top-2 right-4 z-20"
+              data-testid="dsheet-permission-chip-wrap"
+            >
               <PermissionChip allowComments={allowComments || false} />
             </div>
           )}

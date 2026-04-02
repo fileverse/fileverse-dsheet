@@ -7,9 +7,7 @@ import {
   getSheetYdocSyncContext,
 } from './sheet-ydoc-sync-utils';
 
-const getCalcChainKey = (item: any) =>
-  `${item.r}_${item.c}`;
-
+const getCalcChainKey = (item: any) => `${item.r}_${item.c}`;
 
 /**
  * Sync calcChain array for active sheet.
@@ -19,14 +17,13 @@ export const calcChainYdocUpdate = ({
   sheetEditorRef,
   ydocRef,
   dsheetId,
-  handleContentPortal
+  handleContentPortal,
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
   dsheetId: string;
-  handleContentPortal?: any
-}
-) => {
+  handleContentPortal?: any;
+}) => {
   const syncContext = getSheetYdocSyncContext({
     sheetEditorRef,
     ydocRef,
@@ -43,25 +40,31 @@ export const calcChainYdocUpdate = ({
   if (calcChainDiff?.added?.length) {
     calcChainDiff.added.forEach((item) => {
       changes.push({
-        sheetId: syncContext.currentSheetId, path: ['calcChain'], value: {
+        sheetId: syncContext.currentSheetId,
+        path: ['calcChain'],
+        value: {
           r: item.r,
           c: item.c,
           v: item,
-        }, key: item.r + '_' + item.c,
+        },
+        key: item.r + '_' + item.c,
         type: 'update',
-      })
+      });
     });
   }
 
   calcChainDiff?.removed?.forEach((item) => {
     changes.push({
-      sheetId: syncContext.currentSheetId, path: ['calcChain'], value: {
+      sheetId: syncContext.currentSheetId,
+      path: ['calcChain'],
+      value: {
         r: item.r,
         c: item.c,
         v: item,
-      }, key: item.r + '_' + item.c,
+      },
+      key: item.r + '_' + item.c,
       type: 'delete',
-    })
+    });
   });
 
   applyYdocSheetChanges({

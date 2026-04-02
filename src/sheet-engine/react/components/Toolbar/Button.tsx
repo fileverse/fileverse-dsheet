@@ -1,6 +1,6 @@
-import React from "react";
-import { LucideIcon, Tooltip } from "@fileverse/ui";
-import { getLucideIcon } from ".";
+import React from 'react';
+import { LucideIcon, Tooltip } from '@fileverse/ui';
+import { getLucideIcon } from '.';
 
 type Props = {
   tooltip: string;
@@ -23,7 +23,7 @@ const Button: React.FC<Props> = ({
   style,
   id,
 }) => {
-  const iconIdClass = iconId.replace(/[^a-zA-Z0-9-]/g, "-").replace(/-+/g, "-");
+  const iconIdClass = iconId.replace(/[^a-zA-Z0-9-]/g, '-').replace(/-+/g, '-');
   return (
     <Tooltip text={tooltip} position="bottom">
       <div
@@ -33,7 +33,7 @@ const Button: React.FC<Props> = ({
         onClick={onClick}
         tabIndex={0}
         role="button"
-        style={selected ? { backgroundColor: "#FFDF0A" } : style}
+        style={selected ? { backgroundColor: '#FFDF0A' } : style}
         data-testid={`toolbar-cta-${id ?? iconId}`}
       >
         <span

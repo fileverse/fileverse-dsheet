@@ -1,18 +1,18 @@
-import { cn } from "@fileverse/ui";
-import React, { useRef } from "react";
+import { cn } from '@fileverse/ui';
+import React, { useRef } from 'react';
 
 type Props = React.PropsWithChildren<{
   onClick?: (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    container: HTMLDivElement
+    container: HTMLDivElement,
   ) => void;
   onMouseLeave?: (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    container: HTMLDivElement
+    container: HTMLDivElement,
   ) => void;
   onMouseEnter?: (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    container: HTMLDivElement
+    container: HTMLDivElement,
   ) => void;
   isActive?: boolean;
 }>;
@@ -29,8 +29,8 @@ const Menu: React.FC<Props> = ({
     <div
       ref={containerRef}
       className={cn(
-        "luckysheet-cols-menuitem luckysheet-mousedown-cancel",
-        isActive && "color-bg-default-hover"
+        'luckysheet-cols-menuitem luckysheet-mousedown-cancel',
+        isActive && 'color-bg-default-hover',
       )}
       onClick={(e) => onClick?.(e, containerRef.current!)}
       onMouseLeave={(e) => onMouseLeave?.(e, containerRef.current!)}

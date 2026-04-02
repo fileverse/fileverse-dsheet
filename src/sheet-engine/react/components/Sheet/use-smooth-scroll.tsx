@@ -1,16 +1,16 @@
-import { RefObject, useContext, useEffect } from "react";
-import { removeEditingComment, mouseRender } from "@sheet-engine/core";
-import WorkbookContext from "../../context";
+import { RefObject, useContext, useEffect } from 'react';
+import { removeEditingComment, mouseRender } from '@sheet-engine/core';
+import WorkbookContext from '../../context';
 
 export const useSmoothScroll = (
-  scrollContainerRef: RefObject<HTMLDivElement | null>
+  scrollContainerRef: RefObject<HTMLDivElement | null>,
 ) => {
   const { context, refs, setContext } = useContext(WorkbookContext);
 
   function handleScroll(
     scrollContainer: HTMLElement,
     moveScrollBy: (deltaX: number, deltaY: number) => void,
-    getPixelScale: () => number = () => window.devicePixelRatio || 1
+    getPixelScale: () => number = () => window.devicePixelRatio || 1,
   ) {
     let queuedXPixels = 0;
     let queuedYPixels = 0;
@@ -29,11 +29,11 @@ export const useSmoothScroll = (
 
       const xPixels = Math.max(
         -MAX_PIXEL_DELTA_PER_FRAME,
-        Math.min(MAX_PIXEL_DELTA_PER_FRAME, queuedXPixels)
+        Math.min(MAX_PIXEL_DELTA_PER_FRAME, queuedXPixels),
       );
       const yPixels = Math.max(
         -MAX_PIXEL_DELTA_PER_FRAME,
-        Math.min(MAX_PIXEL_DELTA_PER_FRAME, queuedYPixels)
+        Math.min(MAX_PIXEL_DELTA_PER_FRAME, queuedYPixels),
       );
 
       moveScrollBy(xPixels, yPixels);
@@ -58,10 +58,10 @@ export const useSmoothScroll = (
       const hasFilterContextMenuOpen = context.filterContextMenu != null;
 
       const functionDetailAvailable = (event.target as Element).closest(
-        ".luckysheet-formula-help-content"
+        '.luckysheet-formula-help-content',
       );
       const formulaSearchAvailable = (event.target as Element).closest(
-        ".luckysheet-formula-search-c-p"
+        '.luckysheet-formula-search-c-p',
       );
 
       if (
@@ -77,13 +77,13 @@ export const useSmoothScroll = (
       scrollHandler(event.deltaX * scaleFactor, event.deltaY * scaleFactor);
     }
 
-    scrollContainer.addEventListener("wheel", handleWheelEvent, {
+    scrollContainer.addEventListener('wheel', handleWheelEvent, {
       passive: false,
     });
     return {
       scrollHandler,
       detach() {
-        scrollContainer.removeEventListener("wheel", handleWheelEvent);
+        scrollContainer.removeEventListener('wheel', handleWheelEvent);
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
       },
     };
@@ -93,7 +93,7 @@ export const useSmoothScroll = (
   function handleMouseDragScroll(
     containerEl: HTMLElement,
     scrollHandler: (x: number, y: number) => void,
-    getPixelScale: () => number
+    getPixelScale: () => number,
   ) {
     let isDragging = false;
     let startX = 0;
@@ -104,7 +104,7 @@ export const useSmoothScroll = (
     let velocityY = 0;
     let autoScrollAnimationId = 0;
     let lastMoveTime = 0;
-    let scrollDirection: "horizontal" | "vertical" | "none" = "none";
+    let scrollDirection: 'horizontal' | 'vertical' | 'none' = 'none';
 
     const VELOCITY_SMOOTHING = 0.3; // Smoothing factor for velocity changes
     const MIN_DRAG_THRESHOLD = 5; // Minimum pixels to start dragging
@@ -152,7 +152,7 @@ export const useSmoothScroll = (
         const containerElCtx = refs.cellArea.current;
         const fxInputEl = refs.fxInput.current;
         if (scrollXEl && scrollYEl && cellInputEl && containerElCtx) {
-          const syntheticEvent = new MouseEvent("mousemove", {
+          const syntheticEvent = new MouseEvent('mousemove', {
             bubbles: true,
             clientX: lastX,
             clientY: lastY,
@@ -166,7 +166,7 @@ export const useSmoothScroll = (
             scrollXEl,
             scrollYEl,
             containerElCtx,
-            fxInputEl ?? null
+            fxInputEl ?? null,
           );
         }
       });
@@ -183,18 +183,18 @@ export const useSmoothScroll = (
       // Don't interfere with interactive elements
       const target = e.target as HTMLElement;
       if (
-        target.tagName === "INPUT" ||
-        target.tagName === "BUTTON" ||
-        target.tagName === "SELECT" ||
-        target.tagName === "TEXTAREA" ||
-        target.closest("button") ||
-        target.closest("input")
+        target.tagName === 'INPUT' ||
+        target.tagName === 'BUTTON' ||
+        target.tagName === 'SELECT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.closest('button') ||
+        target.closest('input')
       ) {
         return;
       }
 
       isDragging = true;
-      scrollDirection = "none"; // Reset scroll direction
+      scrollDirection = 'none'; // Reset scroll direction
       startX = e.clientX;
       startY = e.clientY;
       lastX = e.clientX;
@@ -203,7 +203,7 @@ export const useSmoothScroll = (
       velocityX = 0;
       velocityY = 0;
 
-      containerEl.style.cursor = "grabbing";
+      containerEl.style.cursor = 'grabbing';
       e.preventDefault();
     }
 
@@ -236,20 +236,20 @@ export const useSmoothScroll = (
 
       // Determine scroll direction if not set yet
       if (
-        scrollDirection === "none" &&
+        scrollDirection === 'none' &&
         (absMovedX > MIN_DRAG_THRESHOLD || absMovedY > MIN_DRAG_THRESHOLD)
       ) {
         if (absMovedX > absMovedY * DIRECTION_LOCK_THRESHOLD) {
-          scrollDirection = "horizontal";
+          scrollDirection = 'horizontal';
         } else if (absMovedY > absMovedX * DIRECTION_LOCK_THRESHOLD) {
-          scrollDirection = "vertical";
+          scrollDirection = 'vertical';
         } else {
-          scrollDirection = "none"; // Allow both if movement is diagonal
+          scrollDirection = 'none'; // Allow both if movement is diagonal
         }
       }
 
       // Handle X-axis (horizontal) with direction locking AND edge detection
-      if (scrollDirection === "horizontal" || scrollDirection === "none") {
+      if (scrollDirection === 'horizontal' || scrollDirection === 'none') {
         if (absMovedX > MIN_DRAG_THRESHOLD) {
           // Only trigger auto-scroll if near left or right edge
           if (isNearLeftEdge || isNearRightEdge) {
@@ -277,7 +277,7 @@ export const useSmoothScroll = (
       }
 
       // Handle Y-axis (vertical) with direction locking AND edge detection
-      if (scrollDirection === "vertical" || scrollDirection === "none") {
+      if (scrollDirection === 'vertical' || scrollDirection === 'none') {
         if (absMovedY > MIN_DRAG_THRESHOLD) {
           // Only trigger auto-scroll if near top or bottom edge
           if (isNearTopEdge || isNearBottomEdge) {
@@ -319,26 +319,26 @@ export const useSmoothScroll = (
 
       isDragging = false;
       stopAutoScroll();
-      containerEl.style.cursor = "";
+      containerEl.style.cursor = '';
     }
 
     // Attach event listeners
-    containerEl.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    containerEl.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
 
     return () => {
       stopAutoScroll();
-      containerEl.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+      containerEl.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
   }
 
   function handleMobileScroll(
     containerEl: HTMLElement,
     scrollHandler: (x: number, y: number) => void,
-    getPixelScale: () => number
+    getPixelScale: () => number,
   ) {
     let isScrolling = false;
     let gestureStartClientX = 0;
@@ -349,7 +349,7 @@ export const useSmoothScroll = (
     let velocityX = 0;
     let velocityY = 0;
     let momentumAnimationId = 0;
-    let scrollDirection: "horizontal" | "vertical" | "none" = "none";
+    let scrollDirection: 'horizontal' | 'vertical' | 'none' = 'none';
 
     const PAN_DISTANCE_THRESHOLD_PX = 8;
     const FRICTION = 0.95; // Deceleration factor (higher = longer momentum)
@@ -381,9 +381,9 @@ export const useSmoothScroll = (
       let momentumX = -velocityX * scale;
       let momentumY = -velocityY * scale;
 
-      if (scrollDirection === "vertical") {
+      if (scrollDirection === 'vertical') {
         momentumX = 0;
-      } else if (scrollDirection === "horizontal") {
+      } else if (scrollDirection === 'horizontal') {
         momentumY = 0;
       }
 
@@ -397,15 +397,15 @@ export const useSmoothScroll = (
 
     function onPointerDown(pointerEvent: PointerEvent) {
       if (
-        pointerEvent.pointerType !== "touch" &&
-        pointerEvent.pointerType !== "pen"
+        pointerEvent.pointerType !== 'touch' &&
+        pointerEvent.pointerType !== 'pen'
       )
         return;
 
       stopMomentum(); // Stop any ongoing momentum
 
       isScrolling = false;
-      scrollDirection = "none"; // Reset scroll direction
+      scrollDirection = 'none'; // Reset scroll direction
       gestureStartClientX = pointerEvent.clientX;
       lastPointerClientX = pointerEvent.clientX;
       gestureStartClientY = pointerEvent.clientY;
@@ -419,8 +419,8 @@ export const useSmoothScroll = (
 
     function onPointerMove(pointerEvent: PointerEvent) {
       if (
-        pointerEvent.pointerType !== "touch" &&
-        pointerEvent.pointerType !== "pen"
+        pointerEvent.pointerType !== 'touch' &&
+        pointerEvent.pointerType !== 'pen'
       )
         return;
 
@@ -454,11 +454,11 @@ export const useSmoothScroll = (
         const absY = Math.abs(totalYFromGestureStart);
 
         if (absX > absY * DIRECTION_LOCK_THRESHOLD) {
-          scrollDirection = "horizontal";
+          scrollDirection = 'horizontal';
         } else if (absY > absX * DIRECTION_LOCK_THRESHOLD) {
-          scrollDirection = "vertical";
+          scrollDirection = 'vertical';
         } else {
-          scrollDirection = "none"; // Allow both if movement is diagonal
+          scrollDirection = 'none'; // Allow both if movement is diagonal
         }
 
         isScrolling = true;
@@ -472,9 +472,9 @@ export const useSmoothScroll = (
       let scrollX = -deltaXSinceLastMove * scale * VELOCITY_MULTIPLIER;
       let scrollY = -deltaYSinceLastMove * scale * VELOCITY_MULTIPLIER;
 
-      if (scrollDirection === "vertical") {
+      if (scrollDirection === 'vertical') {
         scrollX = 0; // Lock horizontal movement
-      } else if (scrollDirection === "horizontal") {
+      } else if (scrollDirection === 'horizontal') {
         scrollY = 0; // Lock vertical movement
       }
 
@@ -499,27 +499,27 @@ export const useSmoothScroll = (
       isScrolling = false;
     }
 
-    containerEl.addEventListener("pointerdown", onPointerDown, {
+    containerEl.addEventListener('pointerdown', onPointerDown, {
       passive: false,
     });
-    containerEl.addEventListener("pointermove", onPointerMove, {
+    containerEl.addEventListener('pointermove', onPointerMove, {
       passive: false,
     });
-    containerEl.addEventListener("pointerup", onPointerUp);
-    containerEl.addEventListener("pointercancel", onPointerUp);
+    containerEl.addEventListener('pointerup', onPointerUp);
+    containerEl.addEventListener('pointercancel', onPointerUp);
 
     return () => {
       stopMomentum();
-      containerEl.removeEventListener("pointerdown", onPointerDown as any);
-      containerEl.removeEventListener("pointermove", onPointerMove as any);
-      containerEl.removeEventListener("pointerup", onPointerUp as any);
-      containerEl.removeEventListener("pointercancel", onPointerUp as any);
+      containerEl.removeEventListener('pointerdown', onPointerDown as any);
+      containerEl.removeEventListener('pointermove', onPointerMove as any);
+      containerEl.removeEventListener('pointerup', onPointerUp as any);
+      containerEl.removeEventListener('pointercancel', onPointerUp as any);
     };
   }
 
   const makeScrollableAreaMoveByPixels = (
     horizontalScrollbarEl: HTMLDivElement,
-    verticalScrollbarEl: HTMLDivElement
+    verticalScrollbarEl: HTMLDivElement,
   ) => {
     return (xPixels: number, yPixels: number) => {
       const maxScrollLeft =
@@ -529,11 +529,11 @@ export const useSmoothScroll = (
 
       const targetScrollLeft = Math.max(
         0,
-        Math.min(maxScrollLeft, horizontalScrollbarEl.scrollLeft + xPixels)
+        Math.min(maxScrollLeft, horizontalScrollbarEl.scrollLeft + xPixels),
       );
       const targetScrollTop = Math.max(
         0,
-        Math.min(maxScrollTop, verticalScrollbarEl.scrollTop + yPixels)
+        Math.min(maxScrollTop, verticalScrollbarEl.scrollTop + yPixels),
       );
 
       const didScrollX = targetScrollLeft !== horizontalScrollbarEl.scrollLeft;
@@ -551,27 +551,27 @@ export const useSmoothScroll = (
   function mountScrollEventHandlers(
     scrollContainerEl: HTMLElement,
     horizontalScrollbarEl: HTMLDivElement,
-    verticalScrollbarEl: HTMLDivElement
+    verticalScrollbarEl: HTMLDivElement,
   ) {
     const moveScrollableAreaByPixels = makeScrollableAreaMoveByPixels(
       horizontalScrollbarEl,
-      verticalScrollbarEl
+      verticalScrollbarEl,
     );
     const { scrollHandler, detach: unmountScrollHandler } = handleScroll(
       scrollContainerEl,
       moveScrollableAreaByPixels,
-      () => (window.devicePixelRatio || 1) * context.zoomRatio
+      () => (window.devicePixelRatio || 1) * context.zoomRatio,
     );
     const unmountMobileScrollHandler = handleMobileScroll(
       scrollContainerEl,
       scrollHandler,
-      () => (window.devicePixelRatio || 1) * context.zoomRatio
+      () => (window.devicePixelRatio || 1) * context.zoomRatio,
     );
     // NEW: Add mouse drag scrolling
     const unmountMouseDragHandler = handleMouseDragScroll(
       scrollContainerEl,
       scrollHandler,
-      () => (window.devicePixelRatio || 1) * context.zoomRatio
+      () => (window.devicePixelRatio || 1) * context.zoomRatio,
     );
 
     return () => {
@@ -591,7 +591,7 @@ export const useSmoothScroll = (
     const unmountScrollEventHandlers = mountScrollEventHandlers(
       scrollContainerEl,
       horizontalScrollbarEl,
-      verticalScrollbarEl
+      verticalScrollbarEl,
     );
 
     return unmountScrollEventHandlers;

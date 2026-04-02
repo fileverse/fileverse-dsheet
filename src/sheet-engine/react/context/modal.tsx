@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo } from 'react';
 
 const ModalContext = React.createContext<{
   component: React.ReactNode;
@@ -29,7 +29,7 @@ const ModalProvider: React.FC<{ children?: React.ReactNode }> = ({
       showModal,
       hideModal,
     }),
-    [hideModal, showModal]
+    [hideModal, showModal],
   );
 
   return (

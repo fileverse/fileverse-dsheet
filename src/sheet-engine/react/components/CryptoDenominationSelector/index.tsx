@@ -1,22 +1,22 @@
-import React, { useState, useContext, useCallback, useMemo } from "react";
-import { getFlowdata, normalizedCellAttr } from "@sheet-engine/core";
+import React, { useState, useContext, useCallback, useMemo } from 'react';
+import { getFlowdata, normalizedCellAttr } from '@sheet-engine/core';
 import {
   IconButton,
   LucideIcon,
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@fileverse/ui";
-import "./index.css";
-import SVGIcon from "../SVGIcon";
-import WorkbookContext from "../../context";
-import { convertCellsToCrypto } from "../../utils/convertCellsToCrypto";
-import { updateCellsDecimalFormat } from "../../utils/updateCellsDecimalFormat";
+} from '@fileverse/ui';
+import './index.css';
+import SVGIcon from '../SVGIcon';
+import WorkbookContext from '../../context';
+import { convertCellsToCrypto } from '../../utils/convertCellsToCrypto';
+import { updateCellsDecimalFormat } from '../../utils/updateCellsDecimalFormat';
 
 const CRYPTO_OPTIONS = [
-  { label: "Bitcoin (BTC)", value: "BTC", icon: "Btc" },
-  { label: "Ethereum (ETH)", value: "ETH", icon: "Ethereum" },
-  { label: "Solana (SOL)", value: "SOL", icon: "Solana" },
+  { label: 'Bitcoin (BTC)', value: 'BTC', icon: 'Btc' },
+  { label: 'Ethereum (ETH)', value: 'ETH', icon: 'Ethereum' },
+  { label: 'Solana (SOL)', value: 'SOL', icon: 'Solana' },
   // Add more as needed
 ];
 
@@ -46,12 +46,12 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
     const cell = flowdata[row]?.[col];
     if (!cell) return null;
 
-    const curr = normalizedCellAttr(cell, "ct");
+    const curr = normalizedCellAttr(cell, 'ct');
     if (!curr?.fa) return null;
 
     // Check if the current format contains any crypto currency
     const found = CRYPTO_OPTIONS.find((option) =>
-      curr.fa.includes(option.value)
+      curr.fa.includes(option.value),
     );
 
     return found ? found.value : null;
@@ -69,7 +69,7 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
         decimals,
       });
     },
-    [context, setContext, decimals]
+    [context, setContext, decimals],
   );
 
   const handleDecimalsChange = useCallback(
@@ -81,7 +81,7 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
         decimals: newDecimals,
       });
     },
-    [context, setContext]
+    [context, setContext],
   );
 
   const handleTriggerClick = useCallback(
@@ -96,7 +96,7 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
 
       setOpen(!open);
     },
-    [open, context.allowEdit]
+    [open, context.allowEdit],
   );
 
   return (
@@ -124,7 +124,7 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
                 value={decimals}
                 onChange={(e) =>
                   handleDecimalsChange(
-                    Math.max(1, Math.min(18, Number(e.target.value)))
+                    Math.max(1, Math.min(18, Number(e.target.value))),
                   )
                 }
               />
@@ -143,7 +143,7 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
               <div
                 key={opt.value}
                 className={`flex items-center justify-between cds-option${
-                  activeCryptoCurrency === opt.value ? " selected" : ""
+                  activeCryptoCurrency === opt.value ? ' selected' : ''
                 }`}
                 onClick={() => handleDenominationChange(opt.value)}
               >
@@ -156,7 +156,7 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
                   {opt.label}
                 </span>
                 <LucideIcon name={opt.icon} className="cds-icon" />
-                {opt.value === "SOL" && (
+                {opt.value === 'SOL' && (
                   <SVGIcon name="solana" width={16} height={16} />
                 )}
               </div>

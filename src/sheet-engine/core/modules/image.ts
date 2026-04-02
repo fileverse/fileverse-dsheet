@@ -1,8 +1,8 @@
-import _ from "lodash";
-import { GlobalCache } from "../types";
-import { mergeBorder } from ".";
-import { Context, getFlowdata } from "../context";
-import { getSheetIndex } from "../utils";
+import _ from 'lodash';
+import { GlobalCache } from '../types';
+import { mergeBorder } from '.';
+import { Context, getFlowdata } from '../context';
+import { getSheetIndex } from '../utils';
 
 type ImageProps = {
   defaultWidth: number;
@@ -32,14 +32,14 @@ export const imageProps: ImageProps = {
 
 export function generateRandomId(prefix: string) {
   if (prefix == null) {
-    prefix = "img";
+    prefix = 'img';
   }
 
   const userAgent = window.navigator.userAgent
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .split("");
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .split('');
 
-  let mid = "";
+  let mid = '';
 
   for (let i = 0; i < 12; i += 1) {
     mid += userAgent[Math.round(Math.random() * (userAgent.length - 1))];
@@ -52,7 +52,7 @@ export function generateRandomId(prefix: string) {
 
 export function showImgChooser() {
   const chooser = document.getElementById(
-    "fortune-img-upload"
+    'fortune-img-upload',
   ) as HTMLInputElement;
   if (chooser) chooser.click();
 }
@@ -68,7 +68,7 @@ export function saveImage(ctx: Context) {
 export function removeActiveImage(ctx: Context) {
   ctx.insertedImgs = _.filter(
     ctx.insertedImgs,
-    (image) => image.id !== ctx.activeImg
+    (image) => image.id !== ctx.activeImg,
   );
   ctx.activeImg = undefined;
   saveImage(ctx);
@@ -104,7 +104,7 @@ export function insertImage(ctx: Context, image: HTMLImageElement) {
     const { width } = image;
     const { height } = image;
     const img = {
-      id: generateRandomId("img"),
+      id: generateRandomId('img'),
       src: image.src,
       left,
       top,
@@ -116,13 +116,12 @@ export function insertImage(ctx: Context, image: HTMLImageElement) {
     ctx.insertedImgs = (ctx.insertedImgs || []).concat(img);
     saveImage(ctx);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.info(err);
   }
 }
 
 function getImagePosition() {
-  const box = document.getElementById("luckysheet-modal-dialog-activeImage");
+  const box = document.getElementById('luckysheet-modal-dialog-activeImage');
   if (!box) return undefined;
   const { width, height } = box.getBoundingClientRect();
   const left = box.offsetLeft;
@@ -138,13 +137,13 @@ export function cancelActiveImgItem(ctx: Context, globalCache: GlobalCache) {
 export function onImageMoveStart(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
   // { r, c, rc }: { r: number; c: number; rc: string },
 ) {
   const position = getImagePosition();
   if (position) {
     const { top, left } = position;
-    _.set(globalCache, "image", {
+    _.set(globalCache, 'image', {
       cursorMoveStartPosition: {
         x: e.pageX,
         y: e.pageY,
@@ -159,11 +158,11 @@ export function onImageMoveStart(
 export function onImageMove(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   if (ctx.allowEdit === false) return false;
   const image = globalCache?.image;
-  const img = document.getElementById("luckysheet-modal-dialog-activeImage");
+  const img = document.getElementById('luckysheet-modal-dialog-activeImage');
   if (img && image && !image.resizingSide) {
     const { x: startX, y: startY } = image.cursorMoveStartPosition!;
     let { top, left } = image.imgInitialPosition!;
@@ -196,11 +195,11 @@ export function onImageMoveEnd(ctx: Context, globalCache: GlobalCache) {
 export function onImageResizeStart(
   globalCache: GlobalCache,
   e: MouseEvent,
-  resizingSide: string
+  resizingSide: string,
 ) {
   const position = getImagePosition();
   if (position) {
-    _.set(globalCache, "image", {
+    _.set(globalCache, 'image', {
       cursorMoveStartPosition: { x: e.pageX, y: e.pageY },
       resizingSide,
       imgInitialPosition: position,
@@ -211,15 +210,15 @@ export function onImageResizeStart(
 export function onImageResize(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   if (ctx.allowEdit === false) return false;
   const image = globalCache?.image;
   if (image?.resizingSide) {
     const imgContainer = document.getElementById(
-      "luckysheet-modal-dialog-activeImage"
+      'luckysheet-modal-dialog-activeImage',
     );
-    const img = imgContainer?.querySelector(".luckysheet-modal-dialog-content");
+    const img = imgContainer?.querySelector('.luckysheet-modal-dialog-content');
     if (img == null) return false;
     const { x: startX, y: startY } = image.cursorMoveStartPosition!;
     let { top, left, width, height } = image.imgInitialPosition!;
@@ -227,7 +226,7 @@ export function onImageResize(
     const dy = e.pageY - startY;
     const minHeight = 60 * ctx.zoomRatio;
     const minWidth = 1.5 * 60 * ctx.zoomRatio;
-    if (["lm", "lt", "lb"].includes(image.resizingSide)) {
+    if (['lm', 'lt', 'lb'].includes(image.resizingSide)) {
       if (width - dx < minWidth) {
         left += width - minWidth;
         width = minWidth;
@@ -239,10 +238,10 @@ export function onImageResize(
       (img as HTMLDivElement).style.left = `${left}px`;
       (imgContainer as HTMLDivElement).style.left = `${left}px`;
     }
-    if (["rm", "rt", "rb"].includes(image.resizingSide)) {
+    if (['rm', 'rt', 'rb'].includes(image.resizingSide)) {
       width = width + dx < minWidth ? minWidth : width + dx;
     }
-    if (["mt", "lt", "rt"].includes(image.resizingSide)) {
+    if (['mt', 'lt', 'rt'].includes(image.resizingSide)) {
       if (height - dy < minHeight) {
         top += height - minHeight;
         height = minHeight;
@@ -254,7 +253,7 @@ export function onImageResize(
       (img as HTMLDivElement).style.top = `${top}px`;
       (imgContainer as HTMLDivElement).style.top = `${top}px`;
     }
-    if (["mb", "lb", "rb"].includes(image.resizingSide)) {
+    if (['mb', 'lb', 'rb'].includes(image.resizingSide)) {
       height = height + dy < minHeight ? minHeight : height + dy;
     }
     (img as HTMLDivElement).style.width = `${width}px`;

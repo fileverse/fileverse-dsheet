@@ -28,7 +28,8 @@ export const filterSelectYdocUpdate = ({
   });
   if (!syncContext) return;
 
-  const newData = (sheetEditorRef.current?.getSheet() as any)?.filter_select || {};
+  const newData =
+    (sheetEditorRef.current?.getSheet() as any)?.filter_select || {};
   const oldData = syncContext.oldSheet.filter_select || {};
 
   const changes = buildMapFieldChanges({
@@ -45,4 +46,3 @@ export const filterSelectYdocUpdate = ({
     handleContentPortal,
   });
 };
-

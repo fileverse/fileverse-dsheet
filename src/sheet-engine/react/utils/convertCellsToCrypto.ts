@@ -1,20 +1,20 @@
-import { getFlowdata, api } from "@sheet-engine/core";
-import { getCachedPrice } from "./cryptoApi";
+import { getFlowdata, api } from '@sheet-engine/core';
+import { getCachedPrice } from './cryptoApi';
 
 export const getFiatSymbol = (code: string): string => {
   switch (code) {
-    case "USD":
-      return "$";
-    case "EUR":
-      return "€";
-    case "GBP":
-      return "£";
-    case "JPY":
-      return "¥";
-    case "CNY":
-      return "¥";
-    case "INR":
-      return "₹";
+    case 'USD':
+      return '$';
+    case 'EUR':
+      return '€';
+    case 'GBP':
+      return '£';
+    case 'JPY':
+      return '¥';
+    case 'CNY':
+      return '¥';
+    case 'INR':
+      return '₹';
     default:
       return code;
   }
@@ -22,86 +22,86 @@ export const getFiatSymbol = (code: string): string => {
 
 export const getFiatGeckoId = (
   symbol: string,
-  baseCurrency: string
+  baseCurrency: string,
 ): string => {
   switch (symbol) {
-    case "$":
-      return "usd"; // Defaulting to USD for $ — adjust if needed
-    case "€":
-      return "eur";
-    case "￡":
-      return "gbp";
-    case "CN¥":
-      return "cny";
-    case "K$":
-      return "hkd";
-    case "jp¥":
-      return "jpy";
-    case "AU$":
-      return "aud";
-    case "৳":
-      return "bdt";
-    case "NAR":
-      return "bhd";
-    case "R$":
-      return "brl";
-    case "CA$":
-      return "cad";
-    case "CF":
-      return "chf";
-    case "CLP$":
-      return "clp";
-    case "kr":
-      return "dkk";
-    case "gl":
-      return "gel";
-    case "ft":
-      return "huf";
-    case "Rp":
-      return "idr";
-    case "Rs":
-      return "inr"; // Also used for LKR/PKR — adjust if needed
-    case "₩":
-      return "krw";
-    case "KW":
-      return "kwd";
-    case "K":
-      return "mmk";
-    case "PO$":
-      return "mxn";
-    case "R":
-      return "myr";
-    case "₦":
-      return "ngn";
-    case "₦kr":
-      return "nok"; // Also used for SEK, adjust if needed
-    case "₱":
-      return "php";
-    case "zł":
-      return "pln";
-    case "RU":
-      return "rub";
-    case "Rial":
-      return "sar";
-    case "P$":
-      return "sgd";
-    case "฿":
-      return "thb";
-    case "₺":
-      return "try";
-    case "грн.":
-      return "uah";
-    case "ZAR":
-      return "zar";
+    case '$':
+      return 'usd'; // Defaulting to USD for $ — adjust if needed
+    case '€':
+      return 'eur';
+    case '￡':
+      return 'gbp';
+    case 'CN¥':
+      return 'cny';
+    case 'K$':
+      return 'hkd';
+    case 'jp¥':
+      return 'jpy';
+    case 'AU$':
+      return 'aud';
+    case '৳':
+      return 'bdt';
+    case 'NAR':
+      return 'bhd';
+    case 'R$':
+      return 'brl';
+    case 'CA$':
+      return 'cad';
+    case 'CF':
+      return 'chf';
+    case 'CLP$':
+      return 'clp';
+    case 'kr':
+      return 'dkk';
+    case 'gl':
+      return 'gel';
+    case 'ft':
+      return 'huf';
+    case 'Rp':
+      return 'idr';
+    case 'Rs':
+      return 'inr'; // Also used for LKR/PKR — adjust if needed
+    case '₩':
+      return 'krw';
+    case 'KW':
+      return 'kwd';
+    case 'K':
+      return 'mmk';
+    case 'PO$':
+      return 'mxn';
+    case 'R':
+      return 'myr';
+    case '₦':
+      return 'ngn';
+    case '₦kr':
+      return 'nok'; // Also used for SEK, adjust if needed
+    case '₱':
+      return 'php';
+    case 'zł':
+      return 'pln';
+    case 'RU':
+      return 'rub';
+    case 'Rial':
+      return 'sar';
+    case 'P$':
+      return 'sgd';
+    case '฿':
+      return 'thb';
+    case '₺':
+      return 'try';
+    case 'грн.':
+      return 'uah';
+    case 'ZAR':
+      return 'zar';
     default:
-      return baseCurrency || "usd"; // Fallback: assume symbol is already a code
+      return baseCurrency || 'usd'; // Fallback: assume symbol is already a code
   }
 };
 
 const COINGECKO_IDS: Record<string, string> = {
-  BTC: "bitcoin",
-  ETH: "ethereum",
-  SOL: "solana",
+  BTC: 'bitcoin',
+  ETH: 'ethereum',
+  SOL: 'solana',
   // add more as needed
 };
 
@@ -144,14 +144,14 @@ export async function convertCellsToCrypto({
   });
 
   let denomStr: string =
-    typeof denomination === "string" && denomination.trim() !== ""
+    typeof denomination === 'string' && denomination.trim() !== ''
       ? denomination
-      : "ETH";
+      : 'ETH';
   denomStr = denomStr.toUpperCase();
   const coingeckoId: string =
-    typeof COINGECKO_IDS[denomStr] === "string"
+    typeof COINGECKO_IDS[denomStr] === 'string'
       ? COINGECKO_IDS[denomStr]
-      : "ethereum";
+      : 'ethereum';
 
   // Get the crypto price in USD
   // const price = await getCryptoPrice(
@@ -176,9 +176,9 @@ export async function convertCellsToCrypto({
       baseValue = cell.baseValue;
     } else {
       // First time conversion - extract USD value from current cell
-      if (typeof cell?.v === "number") {
+      if (typeof cell?.v === 'number') {
         baseValue = cell.v;
-      } else if (typeof cell?.v === "string") {
+      } else if (typeof cell?.v === 'string') {
         baseValue = parseFloat(cell.v);
       }
 
@@ -186,7 +186,7 @@ export async function convertCellsToCrypto({
       // This handles cases where cells were previously converted
       if (cell?.ct?.fa && cell.ct.fa.includes('"')) {
         // Extract the numeric value from the formatted string
-        const numericValue = parseFloat(cell.v?.toString() || "0");
+        const numericValue = parseFloat(cell.v?.toString() || '0');
         if (!Number.isNaN(numericValue)) {
           baseValue = numericValue;
         }
@@ -196,15 +196,15 @@ export async function convertCellsToCrypto({
     if (!baseValue || Number.isNaN(baseValue)) return;
 
     // @ts-expect-error later
-    const fiatSymbol = cell?.m?.split(" ")[0];
+    const fiatSymbol = cell?.m?.split(' ')[0];
     const fiatVsCryptoPrice = getCachedPrice(
       coingeckoId,
-      getFiatGeckoId(fiatSymbol, cell?.baseCurrency)
+      getFiatGeckoId(fiatSymbol, cell?.baseCurrency),
     );
 
     // Convert USD base value to selected cryptocurrency
     const cryptoValue = baseValue / fiatVsCryptoPrice;
-    if (typeof cryptoValue !== "number" || Number.isNaN(cryptoValue)) return;
+    if (typeof cryptoValue !== 'number' || Number.isNaN(cryptoValue)) return;
 
     cellUpdates.push({
       row,
@@ -212,7 +212,7 @@ export async function convertCellsToCrypto({
       baseValue,
       cryptoValue,
       // @ts-expect-error later
-      baseCurrency: getFiatGeckoId(fiatSymbol) || "usd",
+      baseCurrency: getFiatGeckoId(fiatSymbol) || 'usd',
       baseCurrencyPrice: fiatVsCryptoPrice,
     });
   });
@@ -227,7 +227,7 @@ export async function convertCellsToCrypto({
       path: string[];
       key?: string;
       value: any;
-      type?: "update" | "delete";
+      type?: 'update' | 'delete';
     }[] = [];
 
     cellUpdates.forEach(
@@ -251,8 +251,8 @@ export async function convertCellsToCrypto({
         cellCp.v = baseValue.toString();
         cellCp.m = `${cryptoValue.toFixed(decimals)} ${denomStr}`;
         cellCp.ct = {
-          fa: `0.${"0".repeat(decimals)} "${denomStr}"`,
-          t: "n",
+          fa: `0.${'0'.repeat(decimals)} "${denomStr}"`,
+          t: 'n',
         };
         cellCp.baseValue = baseValue;
         cellCp.baseCurrency = baseCurrency.toLowerCase();
@@ -262,12 +262,12 @@ export async function convertCellsToCrypto({
 
         ydocChanges.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r: row, c: col, v: d[row]?.[col] ?? null },
           key: `${row}_${col}`,
-          type: "update",
+          type: 'update',
         });
-      }
+      },
     );
 
     if (ydocChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {

@@ -1,17 +1,17 @@
-import _ from "lodash";
-import { Context } from "../context";
-import { Cell, CellMatrix, CellStyle } from "../types";
-import { getCellValue, getFontStyleByCell } from "./cell";
-import { selectTextContent, selectTextContentCross } from "./cursor";
+import _ from 'lodash';
+import { Context } from '../context';
+import { Cell, CellMatrix, CellStyle } from '../types';
+import { getCellValue, getFontStyleByCell } from './cell';
+import { selectTextContent, selectTextContentCross } from './cursor';
 
 export const attrToCssName = {
-  bl: "font-weight",
-  it: "font-style",
-  ff: "font-family",
-  fs: "font-size",
-  fc: "color",
-  cl: "text-decoration",
-  un: "border-bottom",
+  bl: 'font-weight',
+  it: 'font-style',
+  ff: 'font-family',
+  fs: 'font-size',
+  fc: 'color',
+  cl: 'text-decoration',
+  un: 'border-bottom',
 };
 
 export const inlineStyleAffectAttribute = {
@@ -25,28 +25,28 @@ export const inlineStyleAffectAttribute = {
 };
 
 export const inlineStyleAffectCssName = {
-  "font-weight": 1,
-  "font-style": 1,
-  "font-family": 1,
-  "text-decoration": 1,
-  "border-bottom": 1,
-  "font-size": 1,
+  'font-weight': 1,
+  'font-style': 1,
+  'font-family': 1,
+  'text-decoration': 1,
+  'border-bottom': 1,
+  'font-size': 1,
   color: 1,
 };
 
 export function isInlineStringCell(cell: any): boolean {
-  return cell?.ct?.t === "inlineStr" && (cell?.ct?.s?.length ?? 0) > 0;
+  return cell?.ct?.t === 'inlineStr' && (cell?.ct?.s?.length ?? 0) > 0;
 }
 
 export function isInlineStringCT(ct: any): boolean {
-  return ct?.t === "inlineStr" && (ct?.s?.length ?? 0) > 0;
+  return ct?.t === 'inlineStr' && (ct?.s?.length ?? 0) > 0;
 }
 
 export function getInlineStringNoStyle(r: number, c: number, data: CellMatrix) {
-  const ct = getCellValue(r, c, data, "ct");
+  const ct = getCellValue(r, c, data, 'ct');
   if (isInlineStringCT(ct)) {
     const strings = ct.s;
-    let value = "";
+    let value = '';
     for (let i = 0; i < strings.length; i += 1) {
       const strObj = strings[i];
       if (strObj.v) {
@@ -55,18 +55,18 @@ export function getInlineStringNoStyle(r: number, c: number, data: CellMatrix) {
     }
     return value;
   }
-  return "";
+  return '';
 }
 
 export function convertCssToStyleList(cssText: string, originCell: Cell) {
   if (_.isEmpty(cssText)) {
     return {};
   }
-  const cssTextArray = cssText.split(";");
+  const cssTextArray = cssText.split(';');
 
   const styleList: CellStyle = {
     // ff: locale_fontarray[0], // font family
-    fc: originCell.fc || "#000000", // font color
+    fc: originCell.fc || '#000000', // font color
     fs: originCell.fs || 10, // font size
     cl: originCell.cl || 0, // strike
     un: originCell.un || 0, // underline
@@ -76,16 +76,16 @@ export function convertCssToStyleList(cssText: string, originCell: Cell) {
   };
   cssTextArray.forEach((s) => {
     s = s.toLowerCase();
-    const key = _.trim(s.substring(0, s.indexOf(":")));
-    const value = _.trim(s.substring(s.indexOf(":") + 1));
-    if (key === "font-weight") {
-      if (value === "bold") {
+    const key = _.trim(s.substring(0, s.indexOf(':')));
+    const value = _.trim(s.substring(s.indexOf(':') + 1));
+    if (key === 'font-weight') {
+      if (value === 'bold') {
         styleList.bl = 1;
       }
     }
 
-    if (key === "font-style") {
-      if (value === "italic") {
+    if (key === 'font-style') {
+      if (value === 'italic') {
         styleList.it = 1;
       }
     }
@@ -99,27 +99,27 @@ export function convertCssToStyleList(cssText: string, originCell: Cell) {
     //   }
     // }
 
-    if (key === "font-size") {
+    if (key === 'font-size') {
       styleList.fs = parseInt(value, 10);
     }
 
-    if (key === "color") {
+    if (key === 'color') {
       styleList.fc = value;
     }
 
-    if (key === "text-decoration") {
+    if (key === 'text-decoration') {
       styleList.cl = 1;
     }
 
-    if (key === "border-bottom") {
+    if (key === 'border-bottom') {
       styleList.un = 1;
     }
 
-    if (key === "lucky-strike") {
+    if (key === 'lucky-strike') {
       styleList.cl = Number(value);
     }
 
-    if (key === "lucky-underline") {
+    if (key === 'lucky-underline') {
       styleList.un = Number(value);
     }
   });
@@ -130,9 +130,8 @@ export function convertCssToStyleList(cssText: string, originCell: Cell) {
 export type InlineSegmentLink = { linkType: string; linkAddress: string };
 
 export function convertSpanToShareString(
-  // eslint-disable-next-line no-undef
   $dom: NodeListOf<HTMLSpanElement>,
-  originCell: Cell
+  originCell: Cell,
 ) {
   const styles: (CellStyle & { v?: string; link?: InlineSegmentLink })[] = [];
   let preStyleList:
@@ -143,7 +142,7 @@ export function convertSpanToShareString(
     const span = $dom[i];
     const styleList = convertCssToStyleList(
       span.style.cssText,
-      originCell
+      originCell,
     ) as CellStyle & { v?: string; link?: InlineSegmentLink };
 
     if (span.dataset?.linkType && span.dataset?.linkAddress) {
@@ -153,11 +152,11 @@ export function convertSpanToShareString(
       };
     }
 
-    const curStyleListString = JSON.stringify(_.omit(styleList, "link"));
+    const curStyleListString = JSON.stringify(_.omit(styleList, 'link'));
     let v = span.innerText;
-    v = v.replace(/\n/g, "\r\n");
+    v = v.replace(/\n/g, '\r\n');
     if (i === $dom.length - 1) {
-      if (v.endsWith("\r\n") && !v.endsWith("\r\n\r\n")) {
+      if (v.endsWith('\r\n') && !v.endsWith('\r\n\r\n')) {
         v = v.slice(0, v.length - 2);
       }
     }
@@ -180,7 +179,7 @@ export function convertSpanToShareString(
 export function updateInlineStringFormatOutside(
   cell: Cell,
   key: string,
-  value: any
+  value: any,
 ) {
   if (_.isNil(cell.ct)) {
     return;
@@ -196,7 +195,7 @@ export function updateInlineStringFormatOutside(
 }
 
 function getClassWithcss(cssText: string, ukey: string) {
-  const cssTextArray = cssText.split(";");
+  const cssTextArray = cssText.split(';');
   if (ukey == null || ukey.length === 0) {
     return cssText;
   }
@@ -204,20 +203,20 @@ function getClassWithcss(cssText: string, ukey: string) {
     for (let i = 0; i < cssTextArray.length; i += 1) {
       let s = cssTextArray[i];
       s = s.toLowerCase();
-      const key = _.trim(s.substring(0, s.indexOf(":")));
-      const value = _.trim(s.substring(s.indexOf(":") + 1));
+      const key = _.trim(s.substring(0, s.indexOf(':')));
+      const value = _.trim(s.substring(s.indexOf(':') + 1));
       if (key === ukey) {
         return value;
       }
     }
   }
 
-  return "";
+  return '';
 }
 
 function upsetClassWithCss(cssText: string, ukey: string, uvalue: any) {
-  const cssTextArray = cssText.split(";");
-  let newCss = "";
+  const cssTextArray = cssText.split(';');
+  let newCss = '';
   if (ukey == null || ukey.length === 0) {
     return cssText;
   }
@@ -225,8 +224,8 @@ function upsetClassWithCss(cssText: string, ukey: string, uvalue: any) {
     for (let i = 0; i < cssTextArray.length; i += 1) {
       let s = cssTextArray[i];
       s = s.toLowerCase();
-      const key = _.trim(s.substring(0, s.indexOf(":")));
-      const value = _.trim(s.substring(s.indexOf(":") + 1));
+      const key = _.trim(s.substring(0, s.indexOf(':')));
+      const value = _.trim(s.substring(s.indexOf(':') + 1));
       if (key === ukey) {
         newCss += `${key}:${uvalue};`;
       } else if (key.length > 0) {
@@ -242,8 +241,8 @@ function upsetClassWithCss(cssText: string, ukey: string, uvalue: any) {
 }
 
 function removeClassWidthCss(cssText: string, ukey: string) {
-  const cssTextArray = cssText.split(";");
-  let newCss = "";
+  const cssTextArray = cssText.split(';');
+  let newCss = '';
   const oUkey = ukey;
   if (ukey == null || ukey.length === 0) {
     return cssText;
@@ -256,12 +255,12 @@ function removeClassWidthCss(cssText: string, ukey: string) {
     for (let i = 0; i < cssTextArray.length; i += 1) {
       let s = cssTextArray[i];
       s = s.toLowerCase();
-      const key = _.trim(s.substring(0, s.indexOf(":")));
-      const value = _.trim(s.substring(s.indexOf(":") + 1));
+      const key = _.trim(s.substring(0, s.indexOf(':')));
+      const value = _.trim(s.substring(s.indexOf(':') + 1));
       if (
         key === ukey ||
-        (oUkey === "cl" && key === "lucky-strike") ||
-        (oUkey === "un" && key === "lucky-underline")
+        (oUkey === 'cl' && key === 'lucky-strike') ||
+        (oUkey === 'un' && key === 'lucky-underline')
       ) {
         continue;
       } else if (key.length > 0) {
@@ -278,14 +277,14 @@ function removeClassWidthCss(cssText: string, ukey: string) {
 function getCssText(cssText: string, attr: keyof Cell, value: any) {
   const styleObj: any = {};
   styleObj[attr] = value;
-  if (attr === "un") {
-    let fontColor = getClassWithcss(cssText, "color");
-    if (fontColor === "") {
-      fontColor = "#000000";
+  if (attr === 'un') {
+    let fontColor = getClassWithcss(cssText, 'color');
+    if (fontColor === '') {
+      fontColor = '#000000';
     }
-    let fs = getClassWithcss(cssText, "font-size");
-    if (fs === "") {
-      fs = "11";
+    let fs = getClassWithcss(cssText, 'font-size');
+    if (fs === '') {
+      fs = '11';
     }
     styleObj._fontSize = Number(fs);
     styleObj._color = fontColor;
@@ -302,23 +301,23 @@ function getCssText(cssText: string, attr: keyof Cell, value: any) {
 }
 
 function extendCssText(origin: string, cover: string, isLimit = true) {
-  const originArray = origin.split(";");
-  const coverArray = cover.split(";");
-  let newCss = "";
+  const originArray = origin.split(';');
+  const coverArray = cover.split(';');
+  let newCss = '';
 
   const addKeyList: any = {};
   for (let i = 0; i < originArray.length; i += 1) {
     let so = originArray[i];
     let isAdd = true;
     so = so.toLowerCase();
-    const okey = _.trim(so.substring(0, so.indexOf(":")));
+    const okey = _.trim(so.substring(0, so.indexOf(':')));
 
     /* 不设置文字的大小，解决设置删除线等后字体变大的问题 */
-    if (okey === "font-size") {
+    if (okey === 'font-size') {
       continue;
     }
 
-    const ovalue = _.trim(so.substring(so.indexOf(":") + 1));
+    const ovalue = _.trim(so.substring(so.indexOf(':') + 1));
 
     if (isLimit) {
       if (!(okey in inlineStyleAffectCssName)) {
@@ -329,8 +328,8 @@ function extendCssText(origin: string, cover: string, isLimit = true) {
     for (let a = 0; a < coverArray.length; a += 1) {
       let sc = coverArray[a];
       sc = sc.toLowerCase();
-      const ckey = _.trim(sc.substring(0, sc.indexOf(":")));
-      const cvalue = _.trim(sc.substring(sc.indexOf(":") + 1));
+      const ckey = _.trim(sc.substring(0, sc.indexOf(':')));
+      const cvalue = _.trim(sc.substring(sc.indexOf(':') + 1));
 
       if (okey === ckey) {
         newCss += `${ckey}:${cvalue};`;
@@ -349,8 +348,8 @@ function extendCssText(origin: string, cover: string, isLimit = true) {
   for (let a = 0; a < coverArray.length; a += 1) {
     let sc = coverArray[a];
     sc = sc.toLowerCase();
-    const ckey = _.trim(sc.substring(0, sc.indexOf(":")));
-    const cvalue = _.trim(sc.substring(sc.indexOf(":") + 1));
+    const ckey = _.trim(sc.substring(0, sc.indexOf(':')));
+    const cvalue = _.trim(sc.substring(sc.indexOf(':') + 1));
 
     if (isLimit) {
       if (!(ckey in inlineStyleAffectCssName)) {
@@ -368,18 +367,18 @@ function extendCssText(origin: string, cover: string, isLimit = true) {
 
 function escapeHtmlAttr(s: string): string {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 export function updateInlineStringFormat(
   ctx: Context,
   attr: keyof Cell,
   value: any,
-  cellInput: HTMLDivElement
+  cellInput: HTMLDivElement,
 ) {
   // let s = ctx.inlineStringEditCache;
   const w = window.getSelection();
@@ -407,16 +406,16 @@ export function updateInlineStringFormat(
     children.forEach((node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const el = node as HTMLElement;
-        if (el.tagName === "SPAN") {
+        if (el.tagName === 'SPAN') {
           const cssText = getCssText(el.style.cssText, attr, value);
-          el.setAttribute("style", cssText);
+          el.setAttribute('style', cssText);
         }
       } else if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent ?? "";
+        const text = node.textContent ?? '';
         if (text.length === 0) return;
-        const wrapper = document.createElement("span");
-        const cssText = getCssText("", attr, value);
-        wrapper.setAttribute("style", cssText);
+        const wrapper = document.createElement('span');
+        const cssText = getCssText('', attr, value);
+        wrapper.setAttribute('style', cssText);
         wrapper.textContent = text;
         node.parentNode?.replaceChild(wrapper, node);
       }
@@ -445,17 +444,17 @@ export function updateInlineStringFormat(
       let spanIndex: number;
       let inherit = false;
 
-      const content = span?.innerHTML || "";
+      const content = span?.innerHTML || '';
 
       const fullContent = $textEditor.innerHTML;
-      if (fullContent.substring(0, 5) !== "<span") {
+      if (fullContent.substring(0, 5) !== '<span') {
         inherit = true;
       }
 
       if (span) {
-        let left = "";
-        let mid = "";
-        let right = "";
+        let left = '';
+        let mid = '';
+        let right = '';
         const s1 = 0;
         const s2 = startOffset;
         const s3 = endOffset;
@@ -464,12 +463,12 @@ export function updateInlineStringFormat(
         mid = content.substring(s2, s3);
         right = content.substring(s3, s4);
 
-        let cont = "";
-        if (left !== "") {
+        let cont = '';
+        if (left !== '') {
           let { cssText } = span.style;
           if (inherit) {
             const box = span.closest(
-              "#luckysheet-input-box"
+              '#luckysheet-input-box',
             ) as HTMLElement | null;
             if (box != null) {
               cssText = extendCssText(box.style.cssText, cssText);
@@ -478,12 +477,12 @@ export function updateInlineStringFormat(
           cont += `<span style="${escapeHtmlAttr(cssText)}">${left}</span>`;
         }
 
-        if (mid !== "") {
+        if (mid !== '') {
           let cssText = getCssText(span.style.cssText, attr, value);
 
           if (inherit) {
             const box = span.closest(
-              "#luckysheet-input-box"
+              '#luckysheet-input-box',
             ) as HTMLElement | null;
             if (box != null) {
               cssText = extendCssText(box.style.cssText, cssText);
@@ -493,11 +492,11 @@ export function updateInlineStringFormat(
           cont += `<span style="${escapeHtmlAttr(cssText)}">${mid}</span>`;
         }
 
-        if (right !== "") {
+        if (right !== '') {
           let { cssText } = span.style;
           if (inherit) {
             const box = span.closest(
-              "#luckysheet-input-box"
+              '#luckysheet-input-box',
             ) as HTMLElement | null;
             if (box != null) {
               cssText = extendCssText(box.style.cssText, cssText);
@@ -506,8 +505,8 @@ export function updateInlineStringFormat(
           cont += `<span style="${escapeHtmlAttr(cssText)}">${right}</span>`;
         }
 
-        if (startContainer.parentElement?.tagName === "SPAN") {
-          spanIndex = _.indexOf($textEditor.querySelectorAll("span"), span);
+        if (startContainer.parentElement?.tagName === 'SPAN') {
+          spanIndex = _.indexOf($textEditor.querySelectorAll('span'), span);
           span.outerHTML = cont;
         } else {
           spanIndex = 0;
@@ -522,27 +521,27 @@ export function updateInlineStringFormat(
         }
 
         selectTextContent(
-          $textEditor.querySelectorAll("span")[seletedNodeIndex]
+          $textEditor.querySelectorAll('span')[seletedNodeIndex],
         );
       }
     } else {
       if (
-        startContainer.parentElement?.tagName === "SPAN" &&
-        endContainer.parentElement?.tagName === "SPAN"
+        startContainer.parentElement?.tagName === 'SPAN' &&
+        endContainer.parentElement?.tagName === 'SPAN'
       ) {
         const startSpan = startContainer.parentNode as HTMLElement | null;
         const endSpan = endContainer.parentNode as HTMLElement | null;
-        const allSpans = $textEditor.querySelectorAll("span");
+        const allSpans = $textEditor.querySelectorAll('span');
 
         const startSpanIndex = _.indexOf(allSpans, startSpan);
         const endSpanIndex = _.indexOf(allSpans, endSpan);
 
-        const startContent = startSpan?.innerHTML || "";
-        const endContent = endSpan?.innerHTML || "";
-        let sleft = "";
-        let sright = "";
-        let eleft = "";
-        let eright = "";
+        const startContent = startSpan?.innerHTML || '';
+        const endContent = endSpan?.innerHTML || '';
+        let sleft = '';
+        let sright = '';
+        let eleft = '';
+        let eright = '';
         const s1 = 0;
         const s2 = startOffset;
         const s3 = endOffset;
@@ -553,23 +552,23 @@ export function updateInlineStringFormat(
 
         eleft = endContent.substring(0, s3);
         eright = endContent.substring(s3, s4);
-        let spans = $textEditor.querySelectorAll("span");
+        let spans = $textEditor.querySelectorAll('span');
         // const replaceSpans = spans.slice(startSpanIndex, endSpanIndex + 1);
-        let cont = "";
+        let cont = '';
         for (let i = 0; i < startSpanIndex; i += 1) {
           const span = spans[i];
           const content = span.innerHTML;
           cont += `<span style="${escapeHtmlAttr(
-            span.style.cssText
+            span.style.cssText,
           )}">${content}</span>`;
         }
-        if (sleft !== "") {
+        if (sleft !== '') {
           cont += `<span style="${escapeHtmlAttr(
-            startSpan!.style.cssText
+            startSpan!.style.cssText,
           )}">${sleft}</span>`;
         }
 
-        if (sright !== "") {
+        if (sright !== '') {
           const cssText = getCssText(startSpan!.style.cssText, attr, value);
           cont += `<span style="${escapeHtmlAttr(cssText)}">${sright}</span>`;
         }
@@ -579,19 +578,19 @@ export function updateInlineStringFormat(
             const span = spans[i];
             const content = span.innerHTML;
             cont += `<span style="${escapeHtmlAttr(
-              span.style.cssText
+              span.style.cssText,
             )}">${content}</span>`;
           }
         }
 
-        if (eleft !== "") {
+        if (eleft !== '') {
           const cssText = getCssText(endSpan!.style.cssText, attr, value);
           cont += `<span style="${escapeHtmlAttr(cssText)}">${eleft}</span>`;
         }
 
-        if (eright !== "") {
+        if (eright !== '') {
           cont += `<span style="${escapeHtmlAttr(
-            endSpan!.style.cssText
+            endSpan!.style.cssText,
           )}">${eright}</span>`;
         }
 
@@ -599,7 +598,7 @@ export function updateInlineStringFormat(
           const span = spans[i];
           const content = span.innerHTML;
           cont += `<span style="${escapeHtmlAttr(
-            span.style.cssText
+            span.style.cssText,
           )}">${content}</span>`;
         }
 
@@ -618,11 +617,11 @@ export function updateInlineStringFormat(
           endSeletedNodeIndex = endSpanIndex + 1;
         }
 
-        spans = $textEditor.querySelectorAll("span");
+        spans = $textEditor.querySelectorAll('span');
 
         selectTextContentCross(
           spans[startSeletedNodeIndex],
-          spans[endSeletedNodeIndex]
+          spans[endSeletedNodeIndex],
         );
       }
     }
@@ -632,15 +631,15 @@ export function updateInlineStringFormat(
 function getLinkDataAttrs(span: HTMLElement): string {
   if (span.dataset?.linkType && span.dataset?.linkAddress) {
     return ` data-link-type="${escapeHtmlAttr(
-      span.dataset.linkType
+      span.dataset.linkType,
     )}" data-link-address="${escapeHtmlAttr(span.dataset.linkAddress)}"`;
   }
-  return "";
+  return '';
 }
 
 function getLinkStyleCssText(baseCssText: string): string {
-  let css = getCssText(baseCssText, "fc", "rgb(0, 0, 255)");
-  css = getCssText(css, "un", 1);
+  let css = getCssText(baseCssText, 'fc', 'rgb(0, 0, 255)');
+  css = getCssText(css, 'un', 1);
   return css;
 }
 
@@ -648,7 +647,7 @@ function getLinkStyleCssText(baseCssText: string): string {
 export function applyLinkToSelection(
   cellInput: HTMLDivElement,
   linkType: string,
-  linkAddress: string
+  linkAddress: string,
 ) {
   const w = window.getSelection();
   if (!w || w.rangeCount === 0) return;
@@ -660,101 +659,101 @@ export function applyLinkToSelection(
 
   if (startContainer === endContainer) {
     const span = startContainer.parentNode as HTMLElement | null;
-    const content = span?.innerHTML || "";
+    const content = span?.innerHTML || '';
     const fullContent = $textEditor.innerHTML;
-    const inherit = fullContent.substring(0, 5) !== "<span";
+    const inherit = fullContent.substring(0, 5) !== '<span';
     const s2 = startOffset;
     const s3 = endOffset;
     const left = content.substring(0, s2);
     const mid = content.substring(s2, s3);
     const right = content.substring(s3, content.length);
 
-    let cont = "";
+    let cont = '';
     const dataAttrs = getLinkDataAttrs(span!);
-    if (left !== "") {
+    if (left !== '') {
       let { cssText } = span!.style;
       if (inherit) {
         const box = span!.closest(
-          "#luckysheet-input-box"
+          '#luckysheet-input-box',
         ) as HTMLElement | null;
         if (box != null) cssText = extendCssText(box.style.cssText, cssText);
       }
       cont += `<span style="${escapeHtmlAttr(
-        cssText
+        cssText,
       )}"${dataAttrs}>${left}</span>`;
     }
-    if (mid !== "") {
+    if (mid !== '') {
       let cssText = getLinkStyleCssText(span!.style.cssText);
       if (inherit) {
         const box = span!.closest(
-          "#luckysheet-input-box"
+          '#luckysheet-input-box',
         ) as HTMLElement | null;
         if (box != null) cssText = extendCssText(box.style.cssText, cssText);
       }
       cont += `<span style="${escapeHtmlAttr(
-        cssText
+        cssText,
       )}" data-link-type="${escapeHtmlAttr(
-        linkType
+        linkType,
       )}" data-link-address="${escapeHtmlAttr(linkAddress)}">${mid}</span>`;
     }
-    if (right !== "") {
+    if (right !== '') {
       let { cssText } = span!.style;
       if (inherit) {
         const box = span!.closest(
-          "#luckysheet-input-box"
+          '#luckysheet-input-box',
         ) as HTMLElement | null;
         if (box != null) cssText = extendCssText(box.style.cssText, cssText);
       }
       cont += `<span style="${escapeHtmlAttr(
-        cssText
+        cssText,
       )}"${dataAttrs}>${right}</span>`;
     }
-    if (startContainer.parentElement?.tagName === "SPAN") {
+    if (startContainer.parentElement?.tagName === 'SPAN') {
       (span as HTMLElement).outerHTML = cont;
     } else {
       span!.innerHTML = cont;
     }
-    const newSpans = $textEditor.querySelectorAll("span");
-    const linkSpanIndex = left === "" ? 0 : 1;
+    const newSpans = $textEditor.querySelectorAll('span');
+    const linkSpanIndex = left === '' ? 0 : 1;
     if (newSpans[linkSpanIndex]) {
       selectTextContent(newSpans[linkSpanIndex]);
     }
   } else if (
-    startContainer.parentElement?.tagName === "SPAN" &&
-    endContainer.parentElement?.tagName === "SPAN"
+    startContainer.parentElement?.tagName === 'SPAN' &&
+    endContainer.parentElement?.tagName === 'SPAN'
   ) {
     const startSpan = startContainer.parentNode as HTMLElement | null;
     const endSpan = endContainer.parentNode as HTMLElement | null;
-    const allSpans = $textEditor.querySelectorAll("span");
+    const allSpans = $textEditor.querySelectorAll('span');
     const startSpanIndex = _.indexOf(allSpans, startSpan);
     const endSpanIndex = _.indexOf(allSpans, endSpan);
-    const startContent = startSpan?.innerHTML || "";
-    const endContent = endSpan?.innerHTML || "";
+    const startContent = startSpan?.innerHTML || '';
+    const endContent = endSpan?.innerHTML || '';
     const s2 = startOffset;
     const s3 = endOffset;
     const sleft = startContent.substring(0, s2);
     const sright = startContent.substring(s2, startContent.length);
     const eleft = endContent.substring(0, s3);
     const eright = endContent.substring(s3, endContent.length);
-    let spans = $textEditor.querySelectorAll("span");
-    let cont = "";
+    let spans = $textEditor.querySelectorAll('span');
+    let cont = '';
     for (let i = 0; i < startSpanIndex; i += 1) {
       const sp = spans[i] as HTMLElement;
       cont += `<span style="${escapeHtmlAttr(
-        sp.style.cssText
+        sp.style.cssText,
       )}"${getLinkDataAttrs(sp)}>${sp.innerHTML}</span>`;
     }
-    if (sleft !== "") {
+    if (sleft !== '') {
       cont += `<span style="${escapeHtmlAttr(
-        startSpan!.style.cssText
+        startSpan!.style.cssText,
       )}"${getLinkDataAttrs(startSpan!)}>${sleft}</span>`;
     }
-    if (sright !== "") {
+    if (sright !== '') {
       const cssText = getLinkStyleCssText(startSpan!.style.cssText);
       cont += `<span style="${escapeHtmlAttr(
-        cssText
+        cssText,
       )}" data-link-type="${escapeHtmlAttr(
-        linkType
+        linkType,
       )}" data-link-address="${escapeHtmlAttr(linkAddress)}">${sright}</span>`;
     }
     if (startSpanIndex < endSpanIndex) {
@@ -762,37 +761,37 @@ export function applyLinkToSelection(
         const sp = spans[i];
         const cssText = getLinkStyleCssText(sp.style.cssText);
         cont += `<span style="${escapeHtmlAttr(
-          cssText
+          cssText,
         )}" data-link-type="${escapeHtmlAttr(
-          linkType
+          linkType,
         )}" data-link-address="${escapeHtmlAttr(linkAddress)}">${
           sp.innerHTML
         }</span>`;
       }
     }
-    if (eleft !== "") {
+    if (eleft !== '') {
       const cssText = getLinkStyleCssText(endSpan!.style.cssText);
       cont += `<span style="${escapeHtmlAttr(
-        cssText
+        cssText,
       )}" data-link-type="${escapeHtmlAttr(
-        linkType
+        linkType,
       )}" data-link-address="${escapeHtmlAttr(linkAddress)}">${eleft}</span>`;
     }
-    if (eright !== "") {
+    if (eright !== '') {
       cont += `<span style="${escapeHtmlAttr(
-        endSpan!.style.cssText
+        endSpan!.style.cssText,
       )}"${getLinkDataAttrs(endSpan!)}>${eright}</span>`;
     }
     for (let i = endSpanIndex + 1; i < spans.length; i += 1) {
       const sp = spans[i] as HTMLElement;
       cont += `<span style="${escapeHtmlAttr(
-        sp.style.cssText
+        sp.style.cssText,
       )}"${getLinkDataAttrs(sp)}>${sp.innerHTML}</span>`;
     }
     $textEditor.innerHTML = cont;
-    spans = $textEditor.querySelectorAll("span");
-    const startSel = sleft === "" ? startSpanIndex : startSpanIndex + 1;
-    const endSel = eright === "" ? endSpanIndex : endSpanIndex + 1;
+    spans = $textEditor.querySelectorAll('span');
+    const startSel = sleft === '' ? startSpanIndex : startSpanIndex + 1;
+    const endSel = eright === '' ? endSpanIndex : endSpanIndex + 1;
     selectTextContentCross(spans[startSel], spans[endSel]);
   }
 }

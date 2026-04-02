@@ -1,20 +1,20 @@
-import { locale, deleteSheet, api } from "@sheet-engine/core";
-import _ from "lodash";
+import { locale, deleteSheet, api } from '@sheet-engine/core';
+import _ from 'lodash';
 import React, {
   useContext,
   useRef,
   useState,
   useLayoutEffect,
   useCallback,
-} from "react";
-import { LucideIcon } from "@fileverse/ui";
-import WorkbookContext from "../../context";
-import { useAlert } from "../../hooks/useAlert";
-import { useOutsideClick } from "../../hooks/useOutsideClick";
-import { ChangeColor } from "../ChangeColor";
-import Divider from "./Divider";
-import "./index.css";
-import Menu from "./Menu";
+} from 'react';
+import { LucideIcon } from '@fileverse/ui';
+import WorkbookContext from '../../context';
+import { useAlert } from '../../hooks/useAlert';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
+import { ChangeColor } from '../ChangeColor';
+import Divider from './Divider';
+import './index.css';
+import Menu from './Menu';
 
 const SheetTabContextMenu: React.FC = () => {
   const { context, setContext, settings } = useContext(WorkbookContext);
@@ -47,7 +47,7 @@ const SheetTabContextMenu: React.FC = () => {
       if (!sheet) return;
       setContext((ctx) => {
         let currentOrder = -1;
-        _.sortBy(ctx.luckysheetfile, ["order"]).forEach((_sheet, i) => {
+        _.sortBy(ctx.luckysheetfile, ['order']).forEach((_sheet, i) => {
           _sheet.order = i;
           if (_sheet.id === sheet.id) {
             currentOrder = i;
@@ -56,7 +56,7 @@ const SheetTabContextMenu: React.FC = () => {
         api.setSheetOrder(ctx, { [sheet.id!]: currentOrder + delta });
       });
     },
-    [context.allowEdit, setContext, sheet]
+    [context.allowEdit, setContext, sheet],
   );
 
   const hideSheet = useCallback(() => {
@@ -64,12 +64,12 @@ const SheetTabContextMenu: React.FC = () => {
     if (!sheet) return;
     setContext((ctx) => {
       const shownSheets = ctx.luckysheetfile.filter(
-        (oneSheet) => _.isUndefined(oneSheet.hide) || oneSheet?.hide !== 1
+        (oneSheet) => _.isUndefined(oneSheet.hide) || oneSheet?.hide !== 1,
       );
       if (shownSheets.length > 1) {
         api.hideSheet(ctx, sheet.id as string);
       } else {
-        showAlert(sheetconfig.noMoreSheet, "ok");
+        showAlert(sheetconfig.noMoreSheet, 'ok');
       }
     });
   }, [context.allowEdit, setContext, sheet, showAlert, sheetconfig]);
@@ -81,7 +81,7 @@ const SheetTabContextMenu: React.FC = () => {
       (ctx) => {
         api.copySheet(ctx, sheet.id!);
       },
-      { addSheetOp: true }
+      { addSheetOp: true },
     );
   }, [context.allowEdit, setContext, sheet?.id]);
   const updateShowInputColor = useCallback((state: boolean) => {
@@ -104,24 +104,24 @@ const SheetTabContextMenu: React.FC = () => {
     <div
       className="fortune-context-menu luckysheet-cols-menu"
       onContextMenu={(e) => e.stopPropagation()}
-      style={{ left: position.x, top: position.y, overflow: "visible" }}
+      style={{ left: position.x, top: position.y, overflow: 'visible' }}
       ref={containerRef}
     >
       {settings.sheetTabContextMenu?.map((name, i) => {
-        if (name === "delete") {
+        if (name === 'delete') {
           return (
             <Menu
               key={name}
               onClick={() => {
                 const shownSheets = context.luckysheetfile.filter(
                   (singleSheet) =>
-                    _.isUndefined(singleSheet.hide) || singleSheet.hide !== 1
+                    _.isUndefined(singleSheet.hide) || singleSheet.hide !== 1,
                 );
                 if (
                   context.luckysheetfile.length > 1 &&
                   shownSheets.length > 1
                 ) {
-                  showAlert(sheetconfig.confirmDelete, "yesno", () => {
+                  showAlert(sheetconfig.confirmDelete, 'yesno', () => {
                     setContext(
                       (ctx) => {
                         deleteSheet(ctx, sheet.id!);
@@ -130,12 +130,12 @@ const SheetTabContextMenu: React.FC = () => {
                         deleteSheetOp: {
                           id: sheet.id!,
                         },
-                      }
+                      },
                     );
                     hideAlert();
                   });
                 } else {
-                  showAlert(sheetconfig.noMoreSheet, "ok");
+                  showAlert(sheetconfig.noMoreSheet, 'ok');
                 }
                 close();
               }}
@@ -144,7 +144,7 @@ const SheetTabContextMenu: React.FC = () => {
             </Menu>
           );
         }
-        if (name === "rename") {
+        if (name === 'rename') {
           return (
             <Menu
               key={name}
@@ -157,7 +157,7 @@ const SheetTabContextMenu: React.FC = () => {
             </Menu>
           );
         }
-        if (name === "move") {
+        if (name === 'move') {
           return (
             <React.Fragment key={name}>
               <Menu
@@ -179,7 +179,7 @@ const SheetTabContextMenu: React.FC = () => {
             </React.Fragment>
           );
         }
-        if (name === "hide") {
+        if (name === 'hide') {
           return (
             <Menu
               key={name}
@@ -192,7 +192,7 @@ const SheetTabContextMenu: React.FC = () => {
             </Menu>
           );
         }
-        if (name === "copy") {
+        if (name === 'copy') {
           return (
             <Menu
               key={name}
@@ -205,7 +205,7 @@ const SheetTabContextMenu: React.FC = () => {
             </Menu>
           );
         }
-        if (name === "color") {
+        if (name === 'color') {
           return (
             <Menu
               key={name}
@@ -228,7 +228,7 @@ const SheetTabContextMenu: React.FC = () => {
             </Menu>
           );
         }
-        if (name === "focus") {
+        if (name === 'focus') {
           return (
             <Menu
               key={name}
@@ -241,7 +241,7 @@ const SheetTabContextMenu: React.FC = () => {
             </Menu>
           );
         }
-        if (name === "|") {
+        if (name === '|') {
           return <Divider key={`divide-${i}`} />;
         }
         return null;

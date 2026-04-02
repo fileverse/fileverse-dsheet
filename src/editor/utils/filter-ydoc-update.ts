@@ -1,6 +1,9 @@
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
-import { applyYdocSheetChanges, getSheetYdocSyncContext } from './sheet-ydoc-sync-utils';
+import {
+  applyYdocSheetChanges,
+  getSheetYdocSyncContext,
+} from './sheet-ydoc-sync-utils';
 import { SheetChangePath } from './update-ydoc';
 
 /**
@@ -54,4 +57,3 @@ export const filterYdocUpdate = ({
     handleContentPortal,
   });
 };
-

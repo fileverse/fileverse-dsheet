@@ -13,7 +13,7 @@ import {
   isShowHidenCR,
   escapeHTMLTag,
   isAllowEdit,
-} from "@sheet-engine/core";
+} from '@sheet-engine/core';
 import React, {
   useContext,
   useState,
@@ -21,25 +21,25 @@ import React, {
   useEffect,
   useRef,
   useMemo,
-} from "react";
-import "./index.css";
-import _ from "lodash";
-import WorkbookContext from "../../context";
-import ContentEditable from "../SheetOverlay/ContentEditable";
-import NameBox from "./NameBox";
-import FormulaSearch from "../../components/SheetOverlay/FormulaSearch";
-import FormulaHint from "../../components/SheetOverlay/FormulaHint";
-import usePrevious from "../../hooks/usePrevious";
-import { LucideIcon } from "../../components/SheetOverlay/LucideIcon";
+} from 'react';
+import './index.css';
+import _ from 'lodash';
+import WorkbookContext from '../../context';
+import ContentEditable from '../SheetOverlay/ContentEditable';
+import NameBox from './NameBox';
+import FormulaSearch from '../../components/SheetOverlay/FormulaSearch';
+import FormulaHint from '../../components/SheetOverlay/FormulaHint';
+import usePrevious from '../../hooks/usePrevious';
+import { LucideIcon } from '../../components/SheetOverlay/LucideIcon';
 
 import {
   countCommasBeforeCursor,
   isLetterNumberPattern,
   moveCursorToEnd,
-} from "../../components/SheetOverlay/helper";
+} from '../../components/SheetOverlay/helper';
 
 const FxEditor: React.FC = () => {
-  const hideFormulaHintLocal = localStorage.getItem("formulaMore") === "true";
+  const hideFormulaHintLocal = localStorage.getItem('formulaMore') === 'true';
   const [showSearchHint, setShowSearchHint] = useState(false);
   const [showFormulaHint, setShowFormulaHint] = useState(!hideFormulaHintLocal);
   const [commaCount, setCommaCount] = useState(0);
@@ -50,10 +50,10 @@ const FxEditor: React.FC = () => {
   const firstSelection = context.luckysheet_select_save?.[0];
   const prevFirstSelection = usePrevious(firstSelection);
   const prevSheetId = usePrevious(context.currentSheetId);
-  const recentText = useRef("");
+  const recentText = useRef('');
 
   const handleShowFormulaHint = () => {
-    localStorage.setItem("formulaMore", String(showFormulaHint));
+    localStorage.setItem('formulaMore', String(showFormulaHint));
     setShowFormulaHint(!showFormulaHint);
   };
 
@@ -68,7 +68,7 @@ const FxEditor: React.FC = () => {
       return;
     }
     const d = getFlowdata(context);
-    let value = "";
+    let value = '';
     if (firstSelection) {
       const r = firstSelection.row_focus;
       const c = firstSelection.column_focus;
@@ -79,14 +79,14 @@ const FxEditor: React.FC = () => {
         if (isInlineStringCell(cell)) {
           value = getInlineStringNoStyle(r, c, d);
         } else if (cell.f) {
-          value = getCellValue(r, c, d, "f");
+          value = getCellValue(r, c, d, 'f');
         } else {
           value = valueShowEs(r, c, d);
         }
       }
       refs.fxInput.current!.innerHTML = escapeHTMLTag(escapeScriptTag(value));
     } else {
-      refs.fxInput.current!.innerHTML = "";
+      refs.fxInput.current!.innerHTML = '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -129,14 +129,14 @@ const FxEditor: React.FC = () => {
   ]);
 
   const getActiveFormula = useCallback(
-    () => document.querySelector(".luckysheet-formula-search-item-active"),
-    []
+    () => document.querySelector('.luckysheet-formula-search-item-active'),
+    [],
   );
   const insertSelectedFormula = useCallback(
     (formulaName: string) => {
       const ht = `<span dir="auto" class="luckysheet-formula-text-color">=</span><span dir="auto" class="luckysheet-formula-text-func">${formulaName}</span><span dir="auto" class="luckysheet-formula-text-lpar">(</span>`;
       refs.fxInput.current!.innerHTML = ht;
-      const cellEditor = document.getElementById("luckysheet-rich-text-editor");
+      const cellEditor = document.getElementById('luckysheet-rich-text-editor');
       if (cellEditor) {
         cellEditor.innerHTML = ht;
       }
@@ -148,13 +148,13 @@ const FxEditor: React.FC = () => {
         draftCtx.functionHint = formulaName;
       });
     },
-    [setContext]
+    [setContext],
   );
 
   const clearSearchItemActiveClass = useCallback(() => {
     const activeFormula = getActiveFormula();
     if (activeFormula) {
-      activeFormula.classList.remove("luckysheet-formula-search-item-active");
+      activeFormula.classList.remove('luckysheet-formula-search-item-active');
     }
   }, [getActiveFormula]);
 
@@ -162,9 +162,9 @@ const FxEditor: React.FC = () => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(
       `<div>${refs.fxInput?.current?.innerHTML}</div>`,
-      "text/html"
+      'text/html',
     );
-    const spans = doc.querySelectorAll("span");
+    const spans = doc.querySelectorAll('span');
     const lastSpan = spans[spans.length - 1];
     return lastSpan?.innerText;
   };
@@ -172,10 +172,10 @@ const FxEditor: React.FC = () => {
   const selectActiveFormulaOnClick = useCallback(
     (e: React.MouseEvent) => {
       // @ts-expect-error later
-      if (e.target.className.includes("sign-fortune")) return;
+      if (e.target.className.includes('sign-fortune')) return;
       recentText.current = refs.fxInput?.current!.innerText;
       const formulaName = getActiveFormula()?.querySelector(
-        ".luckysheet-formula-search-func"
+        '.luckysheet-formula-search-func',
       )?.textContent;
       const lastSpanText = getLastInputSpanText();
 
@@ -185,7 +185,7 @@ const FxEditor: React.FC = () => {
         e.stopPropagation();
       }
     },
-    [getActiveFormula, insertSelectedFormula]
+    [getActiveFormula, insertSelectedFormula],
   );
 
   const onKeyDown = useCallback(
@@ -198,18 +198,18 @@ const FxEditor: React.FC = () => {
       lastKeyDownEventRef.current = new KeyboardEvent(e.type, e.nativeEvent);
       const { key } = e;
       recentText.current = refs.fxInput.current!.innerText;
-      if (key === "ArrowLeft" || key === "ArrowRight") {
+      if (key === 'ArrowLeft' || key === 'ArrowRight') {
         e.stopPropagation();
       }
 
       if (
-        (e.key === "Enter" || e.key === "Tab") &&
+        (e.key === 'Enter' || e.key === 'Tab') &&
         context.luckysheetCellUpdate.length > 0
       ) {
         if (e.altKey || e.metaKey) {
           // originally `enterKeyControll`
-          document.execCommand("insertHTML", false, "\n "); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
-          document.execCommand("delete", false);
+          document.execCommand('insertHTML', false, '\n '); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
+          document.execCommand('delete', false);
           e.stopPropagation();
         } else {
           const event = e as unknown;
@@ -218,63 +218,63 @@ const FxEditor: React.FC = () => {
         return;
       }
 
-      if (e.key === "ArrowUp" && context.luckysheetCellUpdate.length > 0) {
-        if (document.getElementById("luckysheet-formula-search-c")) {
+      if (e.key === 'ArrowUp' && context.luckysheetCellUpdate.length > 0) {
+        if (document.getElementById('luckysheet-formula-search-c')) {
           const formulaSearchContainer = document.getElementById(
-            "luckysheet-formula-search-c"
+            'luckysheet-formula-search-c',
           );
           const activeItem = formulaSearchContainer?.querySelector(
-            ".luckysheet-formula-search-item-active"
+            '.luckysheet-formula-search-item-active',
           );
           let previousItem = activeItem
             ? activeItem.previousElementSibling
             : null;
           while (
             previousItem &&
-            !previousItem.classList.contains("luckysheet-formula-search-item")
+            !previousItem.classList.contains('luckysheet-formula-search-item')
           ) {
             previousItem = previousItem.previousElementSibling;
           }
           if (!previousItem) {
             const items = formulaSearchContainer?.querySelectorAll(
-              ".luckysheet-formula-search-item"
+              '.luckysheet-formula-search-item',
             );
             const lastItem = items?.[items.length - 1];
             previousItem = lastItem || null;
           }
           clearSearchItemActiveClass();
           if (previousItem) {
-            previousItem.classList.add("luckysheet-formula-search-item-active");
+            previousItem.classList.add('luckysheet-formula-search-item-active');
           }
         }
         e.preventDefault();
       } else if (
-        e.key === "ArrowDown" &&
+        e.key === 'ArrowDown' &&
         context.luckysheetCellUpdate.length > 0
       ) {
-        if (document.getElementById("luckysheet-formula-search-c")) {
+        if (document.getElementById('luckysheet-formula-search-c')) {
           const formulaSearchContainer = document.getElementById(
-            "luckysheet-formula-search-c"
+            'luckysheet-formula-search-c',
           );
           const activeItem = formulaSearchContainer?.querySelector(
-            ".luckysheet-formula-search-item-active"
+            '.luckysheet-formula-search-item-active',
           );
           let nextItem = activeItem ? activeItem.nextElementSibling : null;
           while (
             nextItem &&
-            !nextItem.classList.contains("luckysheet-formula-search-item")
+            !nextItem.classList.contains('luckysheet-formula-search-item')
           ) {
             nextItem = nextItem.nextElementSibling;
           }
           if (!nextItem) {
             nextItem =
               formulaSearchContainer?.querySelector(
-                ".luckysheet-formula-search-item"
+                '.luckysheet-formula-search-item',
               ) || null;
           }
           clearSearchItemActiveClass();
           if (nextItem) {
-            nextItem.classList.add("luckysheet-formula-search-item-active");
+            nextItem.classList.add('luckysheet-formula-search-item-active');
           }
         }
         e.preventDefault();
@@ -283,7 +283,7 @@ const FxEditor: React.FC = () => {
       setContext((draftCtx) => {
         if (context.luckysheetCellUpdate.length > 0) {
           switch (key) {
-            case "Enter": {
+            case 'Enter': {
               // if (
               //   $("#luckysheet-formula-search-c").is(":visible") &&
               //   formula.searchFunctionCell != null
@@ -299,7 +299,7 @@ const FxEditor: React.FC = () => {
                 draftCtx,
                 draftCtx.luckysheetCellUpdate[0],
                 draftCtx.luckysheetCellUpdate[1],
-                refs.fxInput.current!
+                refs.fxInput.current!,
               );
               draftCtx.luckysheet_select_save = [
                 {
@@ -309,16 +309,16 @@ const FxEditor: React.FC = () => {
                   column_focus: lastCellUpdate[1],
                 },
               ];
-              moveHighlightCell(draftCtx, "down", 1, "rangeOfSelect");
+              moveHighlightCell(draftCtx, 'down', 1, 'rangeOfSelect');
               // $("#luckysheet-rich-text-editor").focus();
               // }
               e.preventDefault();
               e.stopPropagation();
               break;
             }
-            case "Escape": {
+            case 'Escape': {
               cancelNormalSelected(draftCtx);
-              moveHighlightCell(draftCtx, "down", 0, "rangeOfSelect");
+              moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               // $("#luckysheet-functionbox-cell").blur();
               // $("#luckysheet-rich-text-editor").focus();
               e.preventDefault();
@@ -371,11 +371,11 @@ const FxEditor: React.FC = () => {
                 break;
               }
               */
-            case "ArrowLeft": {
+            case 'ArrowLeft': {
               rangeHightlightselected(draftCtx, refs.fxInput.current!);
               break;
             }
-            case "ArrowRight": {
+            case 'ArrowRight': {
               rangeHightlightselected(draftCtx, refs.fxInput.current!);
               break;
             }
@@ -390,29 +390,29 @@ const FxEditor: React.FC = () => {
       context.luckysheetCellUpdate.length,
       refs.fxInput,
       setContext,
-    ]
+    ],
   );
 
   const handleHideShowHint = () => {
-    const el = document.getElementsByClassName("cell-hint")?.[0];
-    const fxHint = document.getElementsByClassName("fx-hint")?.[0];
-    const searchElFx = document.getElementsByClassName("fx-search")?.[0];
-    const searchElCell = document.getElementsByClassName("cell-search")?.[0];
+    const el = document.getElementsByClassName('cell-hint')?.[0];
+    const fxHint = document.getElementsByClassName('fx-hint')?.[0];
+    const searchElFx = document.getElementsByClassName('fx-search')?.[0];
+    const searchElCell = document.getElementsByClassName('cell-search')?.[0];
     if (searchElFx) {
       // @ts-ignore
-      searchElFx.style.display = "block";
+      searchElFx.style.display = 'block';
     }
     if (searchElCell) {
       // @ts-ignore
-      searchElCell.style.display = "none";
+      searchElCell.style.display = 'none';
     }
     if (el) {
       // @ts-ignore
-      el.style.display = "none";
+      el.style.display = 'none';
     }
     if (fxHint) {
       // @ts-ignore
-      fxHint.style.display = "block";
+      fxHint.style.display = 'block';
     }
   };
 
@@ -420,7 +420,7 @@ const FxEditor: React.FC = () => {
     if (context.isFlvReadOnly) return;
     handleHideShowHint();
     if (
-      refs.fxInput?.current?.innerText.includes("=") &&
+      refs.fxInput?.current?.innerText.includes('=') &&
       /^=?[A-Za-z]*$/.test(getLastInputSpanText())
     ) {
       setShowSearchHint(true);
@@ -457,7 +457,7 @@ const FxEditor: React.FC = () => {
           refs.cellInput.current!,
           refs.fxInput.current!,
           kcode,
-          recentText.current
+          recentText.current,
         );
       });
     }
@@ -465,8 +465,8 @@ const FxEditor: React.FC = () => {
 
   // Helper function to extract function name from input text
   const getFunctionNameFromInput = useCallback(() => {
-    const inputText = refs.fxInput?.current?.innerText || "";
-    if (!inputText.startsWith("=")) return null;
+    const inputText = refs.fxInput?.current?.innerText || '';
+    if (!inputText.startsWith('=')) return null;
 
     // Try to find function name pattern: =FUNCTIONNAME(
     const functionMatch = inputText.match(/^=([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
@@ -477,7 +477,7 @@ const FxEditor: React.FC = () => {
     // Also check if there's a function with class luckysheet-formula-text-func in the HTML
     if (refs.fxInput?.current) {
       const funcSpan = refs.fxInput.current.querySelector(
-        ".luckysheet-formula-text-func"
+        '.luckysheet-formula-text-func',
       );
       if (funcSpan) {
         return funcSpan.textContent?.toUpperCase() || null;
@@ -532,12 +532,12 @@ const FxEditor: React.FC = () => {
 
     const onMouseUp = () => {
       setIsResizing(false);
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
     };
 
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
   };
 
   return (
@@ -546,9 +546,9 @@ const FxEditor: React.FC = () => {
         <NameBox />
         <div
           className="fortune-fx-icon"
-          style={{ cursor: "pointer" }}
+          style={{ cursor: 'pointer' }}
           onClick={() => {
-            document.getElementById("function-button")?.click();
+            document.getElementById('function-button')?.click();
           }}
         >
           {/* <SVGIcon name="fx" width={18} height={18} /> */}
@@ -556,10 +556,10 @@ const FxEditor: React.FC = () => {
             name="DSheetOnlyText"
             fill="black"
             style={{
-              width: "14px",
-              height: "14px",
-              margin: "auto",
-              marginTop: "1px",
+              width: '14px',
+              height: '14px',
+              margin: 'auto',
+              marginTop: '1px',
             }}
           />
         </div>
@@ -568,7 +568,7 @@ const FxEditor: React.FC = () => {
             onMouseUp={() => {
               handleHideShowHint();
               const currentCommaCount = countCommasBeforeCursor(
-                refs.fxInput?.current!
+                refs.fxInput?.current!,
               );
               setCommaCount(currentCommaCount);
             }}
@@ -590,16 +590,16 @@ const FxEditor: React.FC = () => {
               // @ts-ignore
               from="fx"
               onMouseMove={(e) => {
-                if (document.getElementById("luckysheet-formula-search-c")) {
+                if (document.getElementById('luckysheet-formula-search-c')) {
                   // apply hovered state on the function item
                   const hoveredItem = (e.target as HTMLElement).closest(
-                    ".luckysheet-formula-search-item"
+                    '.luckysheet-formula-search-item',
                   ) as HTMLElement | null;
                   if (!hoveredItem) return;
 
                   clearSearchItemActiveClass();
                   hoveredItem.classList.add(
-                    "luckysheet-formula-search-item-active"
+                    'luckysheet-formula-search-item-active',
                   );
                 }
                 e.preventDefault();
@@ -630,10 +630,10 @@ const FxEditor: React.FC = () => {
                   name="DSheetTextDisabled"
                   fill="black"
                   style={{
-                    width: "14px",
-                    height: "14px",
-                    margin: "auto",
-                    marginTop: "1px",
+                    width: '14px',
+                    height: '14px',
+                    margin: 'auto',
+                    marginTop: '1px',
                   }}
                 />
               </div>
@@ -660,8 +660,8 @@ const FxEditor: React.FC = () => {
         className="resize-handle"
         onMouseDown={startResize}
         style={{
-          cursor: isResizing ? "grabbing" : "ns-resize",
-          height: "1px",
+          cursor: isResizing ? 'grabbing' : 'ns-resize',
+          height: '1px',
         }}
       />
     </div>

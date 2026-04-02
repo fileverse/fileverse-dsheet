@@ -1,7 +1,6 @@
-/* eslint-disable no-plusplus */
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { Cell, CellMatrix, Range, Selection, SingleRange } from "../types";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { Cell, CellMatrix, Range, Selection, SingleRange } from '../types';
 import {
   getSheetIndex,
   indexToColumnChar,
@@ -9,11 +8,11 @@ import {
   processArray,
   getContentInParentheses,
   getNumberFormat,
-} from "../utils";
-import { checkCF, getComputeMap } from "./ConditionFormat";
-import { getFailureText, validateCellData } from "./dataVerification";
-import { genarate, update } from "./format";
-import { clearCellError, getRowHeight } from "../api";
+} from '../utils';
+import { checkCF, getComputeMap } from './ConditionFormat';
+import { getFailureText, validateCellData } from './dataVerification';
+import { genarate, update } from './format';
+import { clearCellError, getRowHeight } from '../api';
 import {
   delFunctionGroup,
   execfunction,
@@ -21,16 +20,16 @@ import {
   functionHTMLGenerate,
   getcellrange,
   iscelldata,
-} from "./formula";
+} from './formula';
 import {
   attrToCssName,
   convertSpanToShareString,
   isInlineStringCell,
   isInlineStringCT,
-} from "./inline-string";
-import { isRealNull, isRealNum, valueIsError } from "./validation";
-import { getCellTextInfo } from "./text";
-import { spillSortResult } from "./sort";
+} from './inline-string';
+import { isRealNull, isRealNum, valueIsError } from './validation';
+import { getCellTextInfo } from './text';
+import { spillSortResult } from './sort';
 
 // TODO put these in context ref
 // let rangestart = false;
@@ -40,32 +39,32 @@ import { spillSortResult } from "./sort";
 export function normalizedCellAttr(
   cell: Cell,
   attr: keyof Cell,
-  defaultFontSize = 10
+  defaultFontSize = 10,
 ): any {
   const tf = { bl: 1, it: 1, ff: 1, cl: 1, un: 1 };
   let value: any = cell?.[attr];
 
-  if (attr in tf || (attr === "fs" && isInlineStringCell(cell))) {
-    value ||= "0";
-  } else if (["fc", "bg", "bc"].includes(attr)) {
-    if (["fc", "bc"].includes(attr)) {
-      value ||= "#000000";
+  if (attr in tf || (attr === 'fs' && isInlineStringCell(cell))) {
+    value ||= '0';
+  } else if (['fc', 'bg', 'bc'].includes(attr)) {
+    if (['fc', 'bc'].includes(attr)) {
+      value ||= '#000000';
     }
-    if (value?.indexOf("rgba") > -1) {
+    if (value?.indexOf('rgba') > -1) {
       value = rgbToHex(value);
     }
-  } else if (attr.substring(0, 2) === "bs") {
-    value ||= "none";
-  } else if (attr === "ht" || attr === "vt") {
-    const defaultValue = attr === "ht" ? "1" : "0";
+  } else if (attr.substring(0, 2) === 'bs') {
+    value ||= 'none';
+  } else if (attr === 'ht' || attr === 'vt') {
+    const defaultValue = attr === 'ht' ? '1' : '0';
     value = !_.isNil(value) ? value.toString() : defaultValue;
-    if (["0", "1", "2"].indexOf(value.toString()) === -1) {
+    if (['0', '1', '2'].indexOf(value.toString()) === -1) {
       value = defaultValue;
     }
-  } else if (attr === "fs") {
+  } else if (attr === 'fs') {
     value ||= defaultFontSize.toString();
-  } else if (attr === "tb" || attr === "tr") {
-    value ||= "0";
+  } else if (attr === 'tb' || attr === 'tr') {
+    value ||= '0';
   }
 
   return value;
@@ -75,7 +74,7 @@ export function normalizedAttr(
   data: CellMatrix,
   r: number,
   c: number,
-  attr: keyof Cell
+  attr: keyof Cell,
 ): any {
   if (!data || !data[r]) {
     return null;
@@ -86,18 +85,18 @@ export function normalizedAttr(
 }
 
 function newlinesToBr(text: string) {
-  if (!text) return "";
-  return text.replace(/\r\n|\r|\n/g, "<br />");
+  if (!text) return '';
+  return text.replace(/\r\n|\r|\n/g, '<br />');
 }
 
 export function getCellValue(
   r: number,
   c: number,
   data: CellMatrix,
-  attr?: keyof Cell
+  attr?: keyof Cell,
 ) {
   if (!attr) {
-    attr = "v";
+    attr = 'v';
   }
 
   let d_value;
@@ -123,15 +122,15 @@ export function getCellValue(
     const d = d_value as Cell;
     retv = d[attr];
 
-    if (attr === "f" && !_.isNil(retv)) {
+    if (attr === 'f' && !_.isNil(retv)) {
       retv = functionHTMLGenerate(retv);
-    } else if (attr === "f") {
+    } else if (attr === 'f') {
       retv = (d as Cell).v;
-    } else if (d && d.ct && d.ct.t === "d") {
+    } else if (d && d.ct && d.ct.t === 'd') {
       retv = d.m;
     }
 
-    if (d?.ct && isInlineStringCT(d.ct) && (attr === "v" || attr === "m")) {
+    if (d?.ct && isInlineStringCT(d.ct) && (attr === 'v' || attr === 'm')) {
       retv = newlinesToBr(d.ct.s[0]?.v);
     }
   }
@@ -148,7 +147,7 @@ export function setCellValue(
   r: number,
   c: number,
   d: CellMatrix | null | undefined,
-  v: any
+  v: any,
 ) {
   if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
   if (_.isNil(d)) {
@@ -169,7 +168,7 @@ export function setCellValue(
     } else {
       if (!_.isNil(v.f)) {
         cell.f = v.f;
-      } else if ("f" in cell) {
+      } else if ('f' in cell) {
         delete cell.f;
       }
 
@@ -203,10 +202,10 @@ export function setCellValue(
     vupdate = v;
   }
   let commaPresent = false;
-  if (vupdate && typeof vupdate === "string" && vupdate.includes(",")) {
-    commaPresent = vupdate.includes(",");
+  if (vupdate && typeof vupdate === 'string' && vupdate.includes(',')) {
+    commaPresent = vupdate.includes(',');
     const removeCommasValidated = (str: string) =>
-      /^[\d,.]+$/.test(str) ? str?.replace(/,/g, "") : str;
+      /^[\d,.]+$/.test(str) ? str?.replace(/,/g, '') : str;
     vupdate = removeCommasValidated(vupdate);
   }
 
@@ -242,42 +241,42 @@ export function setCellValue(
 
   if (vupdateStr.substr(0, 1) === "'") {
     cell.m = vupdateStr.substr(1);
-    cell.ct = { fa: "@", t: "s" };
+    cell.ct = { fa: '@', t: 's' };
     cell.v = vupdateStr.substr(1);
     cell.qp = 1;
   } else if (cell.qp === 1) {
     cell.m = vupdateStr;
-    cell.ct = { fa: "@", t: "s" };
+    cell.ct = { fa: '@', t: 's' };
     cell.v = vupdateStr;
   } else if (
-    vupdateStr.toUpperCase() === "TRUE" &&
-    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== "@")
+    vupdateStr.toUpperCase() === 'TRUE' &&
+    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== '@')
   ) {
-    cell.m = "TRUE";
-    cell.ct = { fa: "General", t: "b" };
+    cell.m = 'TRUE';
+    cell.ct = { fa: 'General', t: 'b' };
     cell.v = true;
   } else if (
-    vupdateStr.toUpperCase() === "FALSE" &&
-    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== "@")
+    vupdateStr.toUpperCase() === 'FALSE' &&
+    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== '@')
   ) {
-    cell.m = "FALSE";
-    cell.ct = { fa: "General", t: "b" };
+    cell.m = 'FALSE';
+    cell.ct = { fa: 'General', t: 'b' };
     cell.v = false;
   } else if (
-    vupdateStr.substr(-1) === "%" &&
+    vupdateStr.substr(-1) === '%' &&
     isRealNum(vupdateStr.substring(0, vupdateStr.length - 1)) &&
-    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== "@")
+    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== '@')
   ) {
-    cell.ct = { fa: "0%", t: "n" };
+    cell.ct = { fa: '0%', t: 'n' };
     cell.v = vupdateStr.substring(0, vupdateStr.length - 1) / 100;
     cell.m = vupdate;
   } else if (valueIsError(vupdate)) {
     cell.m = vupdateStr;
     // cell.ct = { "fa": "General", "t": "e" };
     if (!_.isNil(cell.ct)) {
-      cell.ct.t = "e";
+      cell.ct.t = 'e';
     } else {
-      cell.ct = { fa: "General", t: "e" };
+      cell.ct = { fa: 'General', t: 'e' };
     }
     cell.v = vupdate;
   } else {
@@ -285,19 +284,19 @@ export function setCellValue(
       !_.isNil(cell.f) &&
       isRealNum(vupdate) &&
       !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-        vupdate
+        vupdate,
       )
     ) {
       cell.v = parseFloat(vupdate);
       if (_.isNil(cell.ct)) {
-        cell.ct = { fa: "General", t: "n" };
+        cell.ct = { fa: 'General', t: 'n' };
       }
 
       // if output is number fetch fa from referenced cells
       const isDigit = /^\d+$/.test(vupdate);
       if (isDigit) {
         const flowdata = getFlowdata(ctx);
-        const args = getContentInParentheses(cell?.f)?.split(",");
+        const args = getContentInParentheses(cell?.f)?.split(',');
         const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
         const formatted = processArray(cellRefs, d, flowdata);
         if (formatted) {
@@ -308,12 +307,12 @@ export function setCellValue(
       if (cell.v === Infinity || cell.v === -Infinity) {
         cell.m = cell.v.toString();
       } else {
-        if (cell.v.toString().indexOf("e") > -1) {
+        if (cell.v.toString().indexOf('e') > -1) {
           let len;
-          if (cell.v.toString().split(".").length === 1) {
+          if (cell.v.toString().split('.').length === 1) {
             len = 0;
           } else {
-            len = cell.v.toString().split(".")[1].split("e")[0].length;
+            len = cell.v.toString().split('.')[1].split('e')[0].length;
           }
           if (len > 5) {
             len = 5;
@@ -336,12 +335,12 @@ export function setCellValue(
         // Right-align numeric formula results (e.g. SUM in a currency-formatted cell)
         cell.ht = 2;
       }
-    } else if (!_.isNil(cell.ct) && cell.ct.fa === "@") {
+    } else if (!_.isNil(cell.ct) && cell.ct.fa === '@') {
       cell.m = vupdateStr;
       cell.v = vupdate;
-    } else if (cell.ct != null && cell.ct.t === "d" && _.isString(vupdate)) {
+    } else if (cell.ct != null && cell.ct.t === 'd' && _.isString(vupdate)) {
       const mask = genarate(vupdate) as any;
-      if (mask[1].t !== "d" || mask[1].fa === cell.ct.fa) {
+      if (mask[1].t !== 'd' || mask[1].fa === cell.ct.fa) {
         [cell.m, cell.ct, cell.v] = mask;
       } else {
         [, , cell.v] = mask;
@@ -350,7 +349,7 @@ export function setCellValue(
     } else if (
       !_.isNil(cell.ct) &&
       !_.isNil(cell.ct.fa) &&
-      cell.ct.fa !== "General"
+      cell.ct.fa !== 'General'
     ) {
       let { fa } = cell.ct;
       if (isRealNum(vupdate)) {
@@ -358,18 +357,18 @@ export function setCellValue(
         // Conditions that compared format commas/decimals against input were removed because they
         // incorrectly changed an explicit format (e.g. "#,##0.00") when a plain value like "42" was typed,
         // causing the decimal places to be lost.
-        if (commaPresent && !fa.includes(",")) {
+        if (commaPresent && !fa.includes(',')) {
           fa = getNumberFormat(String(vupdate), commaPresent);
         }
         vupdate = parseFloat(vupdate);
         if (cell?.ct) {
-          cell.ct = { ...cell.ct, fa, t: "n" };
+          cell.ct = { ...cell.ct, fa, t: 'n' };
         }
         // Right-align numeric/currency values so alignment is preserved after edit
         cell.ht = 2;
       }
 
-      let mask = update(fa, vupdate);
+      const mask = update(fa, vupdate);
 
       if (mask === vupdate) {
         // 若原来单元格格式 应用不了 要更新的值，则获取更新值的 格式
@@ -393,13 +392,13 @@ export function setCellValue(
       if (
         isRealNum(vupdate) &&
         !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-          vupdate
+          vupdate,
         )
       ) {
-        if (typeof vupdate === "string") {
+        if (typeof vupdate === 'string') {
           const flag = vupdate
-            .split("")
-            .every((ele) => ele === "0" || ele === ".");
+            .split('')
+            .every((ele) => ele === '0' || ele === '.');
           // Convert to number if: all zeros/dots, or has leading zeros that should be stripped
           if (flag || /^0+\d/.test(vupdate)) {
             vupdate = parseFloat(vupdate);
@@ -413,7 +412,7 @@ export function setCellValue(
         cell.m = v.m ? v.m : update(format, cell.v);
         // Right-align numeric values so alignment is preserved after edit
         cell.ht = 2;
-        cell.ct = { fa: format, t: "n" };
+        cell.ct = { fa: format, t: 'n' };
         if (cell.v === Infinity || cell.v === -Infinity) {
           cell.m = cell.v.toString();
         } else if (cell.v != null && !cell.m) {
@@ -433,9 +432,9 @@ export function setCellValue(
           [, cell.ct, cell.v] = mask;
           if (
             v?.ct &&
-            v.ct.t === "n" &&
+            v.ct.t === 'n' &&
             cell?.ct &&
-            cell.ct.t !== "n" &&
+            cell.ct.t !== 'n' &&
             cell?.ht === 2
           ) {
             cell.ht = 1;
@@ -483,13 +482,13 @@ export function getRealCellValue(
   r: number,
   c: number,
   data: CellMatrix,
-  attr?: keyof Cell
+  attr?: keyof Cell,
 ) {
-  let value = getCellValue(r, c, data, "m");
+  let value = getCellValue(r, c, data, 'm');
   if (_.isNil(value)) {
     value = getCellValue(r, c, data, attr);
     if (_.isNil(value)) {
-      const ct = getCellValue(r, c, data, "ct");
+      const ct = getCellValue(r, c, data, 'ct');
       if (isInlineStringCT(ct)) {
         value = ct.s;
       }
@@ -503,10 +502,10 @@ export function mergeBorder(
   ctx: Context,
   d: CellMatrix,
   row_index: number,
-  col_index: number
+  col_index: number,
 ) {
   if (!d || !d[row_index]) {
-    console.warn("Merge info is null", row_index, col_index);
+    console.warn('Merge info is null', row_index, col_index);
     return null;
   }
   const value = d[row_index][col_index];
@@ -515,14 +514,14 @@ export function mergeBorder(
   if (value?.mc) {
     const margeMaindata = value.mc;
     if (!margeMaindata) {
-      console.warn("Merge info is null", row_index, col_index);
+      console.warn('Merge info is null', row_index, col_index);
       return null;
     }
     col_index = margeMaindata.c;
     row_index = margeMaindata.r;
 
     if (_.isNil(d?.[row_index]?.[col_index])) {
-      console.warn("Main merge Cell info is null", row_index, col_index);
+      console.warn('Main merge Cell info is null', row_index, col_index);
       return null;
     }
     const col_rs = d[row_index]?.[col_index]?.mc?.cs;
@@ -536,7 +535,7 @@ export function mergeBorder(
       _.isNil(col_rs) ||
       _.isNil(row_rs)
     ) {
-      console.warn("Main merge info is null", mergeMain);
+      console.warn('Main merge info is null', mergeMain);
       return null;
     }
 
@@ -585,8 +584,8 @@ export function mergeBorder(
 
     if (_.isNil(row_pre) || _.isNil(col_pre) || _.isNil(row) || _.isNil(col)) {
       console.warn(
-        "Main merge info row_pre or col_pre or row or col is null",
-        mergeMain
+        'Main merge info row_pre or col_pre or row or col is null',
+        mergeMain,
       );
       return null;
     }
@@ -608,7 +607,7 @@ function mergeMove(
   top: number,
   height: number,
   left: number,
-  width: number
+  width: number,
 ) {
   const row_st = mc.r;
   const row_ed = mc.r + mc.rs - 1;
@@ -694,7 +693,7 @@ export function mergeMoveMain(
   top: number,
   height: number,
   left: number,
-  width: number
+  width: number,
 ) {
   const mergesetting = ctx.config.merge;
 
@@ -730,7 +729,7 @@ export function mergeMoveMain(
         top,
         height,
         left,
-        width
+        width,
       );
 
       if (changeparam != null) {
@@ -749,7 +748,6 @@ export function mergeMoveMain(
   return [columnseleted, rowseleted, top, height, left, width];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function cancelFunctionrangeSelected(ctx: Context) {
   if (ctx.formulaCache.selectingRangeIndex === -1) {
     ctx.formulaRangeSelect = undefined;
@@ -782,14 +780,14 @@ export function updateCell(
   c: number,
   $input?: HTMLDivElement | null,
   value?: any,
-  canvas?: CanvasRenderingContext2D
+  canvas?: CanvasRenderingContext2D,
 ) {
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
 
     let inputText = $input?.innerText;
-    if (inputText?.startsWith("=")) {
-      inputText = inputText?.replace(/[\r\n]/g, "");
+    if (inputText?.startsWith('=')) {
+      inputText = inputText?.replace(/[\r\n]/g, '');
     }
     const inputHtml = $input?.innerHTML;
 
@@ -812,11 +810,11 @@ export function updateCell(
     const sheetFile = ctx.luckysheetfile[index] as any;
 
     const getUrlFromText = (text?: string): string | null => {
-      const t = (text ?? "").trim();
+      const t = (text ?? '').trim();
       // only treat a single token as a URL (no spaces/newlines)
       if (!t || /[\s\r\n]/.test(t)) return null;
       if (!/^(https?:\/\/|www\.)\S+$/i.test(t)) return null;
-      return t.startsWith("http") ? t : `https://${t}`;
+      return t.startsWith('http') ? t : `https://${t}`;
     };
     // --- end ---s
 
@@ -843,29 +841,29 @@ export function updateCell(
 
     const isPrevInline = isInlineStringCell(curv);
     let isCurInline =
-      inputText?.slice(0, 1) !== "=" && inputHtml?.substring(0, 5) === "<span";
+      inputText?.slice(0, 1) !== '=' && inputHtml?.substring(0, 5) === '<span';
 
     let isCopyVal = false;
     if (!isCurInline && inputText && inputText.length > 0) {
       const splitArr = inputText
-        .replace(/\r\n/g, "_x000D_")
-        .replace(/&#13;&#10;/g, "_x000D_")
-        .replace(/\r/g, "_x000D_")
-        .replace(/\n/g, "_x000D_")
-        .split("_x000D_");
-      if (splitArr.length > 1 && inputHtml !== "<br>") {
+        .replace(/\r\n/g, '_x000D_')
+        .replace(/&#13;&#10;/g, '_x000D_')
+        .replace(/\r/g, '_x000D_')
+        .replace(/\n/g, '_x000D_')
+        .split('_x000D_');
+      if (splitArr.length > 1 && inputHtml !== '<br>') {
         isCopyVal = true;
         isCurInline = true;
-        inputText = splitArr.join("\r\n");
+        inputText = splitArr.join('\r\n');
       }
     }
 
     if (curv?.ct && !value && !isCurInline && isPrevInline) {
       delete curv.ct.s;
-      curv.ct.t = "g";
-      curv.ct.fa = "General";
-      curv.tb = "1";
-      value = "";
+      curv.ct.t = 'g';
+      curv.ct.fa = 'General';
+      curv.tb = '1';
+      value = '';
     } else if (isCurInline) {
       if (!_.isPlainObject(curv)) {
         curv = {};
@@ -875,15 +873,15 @@ export function updateCell(
 
       if (!curv.ct) {
         curv.ct = {};
-        curv.ct.fa = "General";
-        curv.tb = "1";
+        curv.ct.fa = 'General';
+        curv.tb = '1';
       }
 
-      curv.ct.t = "inlineStr";
+      curv.ct.t = 'inlineStr';
 
       curv.ct.s = convertSpanToShareString(
-        $input!.querySelectorAll("span"),
-        curv
+        $input!.querySelectorAll('span'),
+        curv,
       );
 
       delete curv.fs;
@@ -937,13 +935,13 @@ export function updateCell(
         }
       }
 
-      if (_.isString(value) && value.slice(0, 1) === "=" && value.length > 1) {
+      if (_.isString(value) && value.slice(0, 1) === '=' && value.length > 1) {
       } else if (
         _.isPlainObject(curv) &&
         curv &&
         curv.ct &&
         curv.ct.fa &&
-        curv.ct.fa !== "@" &&
+        curv.ct.fa !== '@' &&
         !isRealNull(value)
       ) {
         delete curv.m; // 更新时间m处理 ， 会实际删除单元格数据的参数（flowdata时已删除）
@@ -966,7 +964,7 @@ export function updateCell(
       if (!isCurInline) {
         if (
           _.isString(value) &&
-          value.slice(0, 1) === "=" &&
+          value.slice(0, 1) === '=' &&
           value.length > 1
         ) {
           const v = execfunction(ctx, value, r, c, undefined, undefined, true);
@@ -975,7 +973,7 @@ export function updateCell(
           [, curv.v, curv.f] = v;
 
           // 打进单元格的sparklines的配置串， 报错需要单独处理。
-          if (v.length === 4 && v[3].type === "sparklines") {
+          if (v.length === 4 && v[3].type === 'sparklines') {
             delete curv.m;
             delete curv.v;
 
@@ -986,7 +984,7 @@ export function updateCell(
             } else {
               curv.spl = v[3].data;
             }
-          } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+          } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
             dynamicArrayItem = v[3].data;
           }
         }
@@ -996,7 +994,7 @@ export function updateCell(
 
           if (
             _.isString(valueFunction) &&
-            valueFunction.slice(0, 1) === "=" &&
+            valueFunction.slice(0, 1) === '=' &&
             valueFunction.length > 1
           ) {
             const v = execfunction(
@@ -1006,7 +1004,7 @@ export function updateCell(
               c,
               undefined,
               undefined,
-              true
+              true,
             );
             isRunExecFunction = false;
             // get v/m/ct
@@ -1015,7 +1013,7 @@ export function updateCell(
             [, curv.v, curv.f] = v;
 
             // 打进单元格的sparklines的配置串， 报错需要单独处理。
-            if (v.length === 4 && v[3].type === "sparklines") {
+            if (v.length === 4 && v[3].type === 'sparklines') {
               delete curv.m;
               delete curv.v;
 
@@ -1026,7 +1024,7 @@ export function updateCell(
               } else {
                 curv.spl = v[3].data;
               }
-            } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+            } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
               dynamicArrayItem = v[3].data;
             }
           }
@@ -1048,22 +1046,19 @@ export function updateCell(
           delete curv.spl;
 
           // FLV crypto denomination --START--
-          const decemialCount = oldValue?.m?.toString().includes(".")
-            ? oldValue?.m?.toString().split(" ")[0].split(".")[1]?.length
+          const decemialCount = oldValue?.m?.toString().includes('.')
+            ? oldValue?.m?.toString().split(' ')[0].split('.')[1]?.length
             : 0;
-          const coin = oldValue?.m?.toString().split(" ")[1];
+          const coin = oldValue?.m?.toString().split(' ')[1];
           if (
-            typeof curv === "object" &&
+            typeof curv === 'object' &&
             curv?.baseValue &&
             oldValue?.baseCurrencyPrice
           ) {
-            curv.m = `${
-              // eslint-disable-next-line no-unsafe-optional-chaining
-              (
-                parseFloat(value as string) /
-                (oldValue.baseCurrencyPrice as number)
-              ).toFixed(decemialCount || 2)
-            } ${coin}`;
+            curv.m = `${(
+              parseFloat(value as string) /
+              (oldValue.baseCurrencyPrice as number)
+            ).toFixed(decemialCount || 2)} ${coin}`;
             curv.baseValue = value;
           }
           // FLV crypto denomination --END--
@@ -1073,15 +1068,15 @@ export function updateCell(
             // if quotePrefix is 1, cell is force string, cell clear quotePrefix when it is updated
             curv.qp = 0;
             if (curv.ct) {
-              curv.ct.fa = "General";
-              curv.ct.t = "n";
+              curv.ct.fa = 'General';
+              curv.ct.t = 'n';
             }
           }
         }
       }
       value = curv;
     } else {
-      if (_.isString(value) && value.slice(0, 1) === "=" && value.length > 1) {
+      if (_.isString(value) && value.slice(0, 1) === '=' && value.length > 1) {
         const v = execfunction(ctx, value, r, c, undefined, undefined, true);
         isRunExecFunction = false;
         value = {
@@ -1090,21 +1085,21 @@ export function updateCell(
         };
 
         if (/^[\d.,]+$/.test(value.v)) {
-          const args = getContentInParentheses(value?.f)?.split(",");
+          const args = getContentInParentheses(value?.f)?.split(',');
           const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
           const formatted = processArray(cellRefs, d, flowdata);
           if (formatted) {
             value.m = update(formatted, value.v);
             value.ct = {
               fa: formatted,
-              t: "n",
+              t: 'n',
             };
           }
           value.ht = 2;
         }
 
         // 打进单元格的sparklines的配置串， 报错需要单独处理。
-        if (v.length === 4 && v[3].type === "sparklines") {
+        if (v.length === 4 && v[3].type === 'sparklines') {
           const curCalv = v[3].data;
 
           if (_.isArray(curCalv) && !_.isPlainObject(curCalv[0])) {
@@ -1112,7 +1107,7 @@ export function updateCell(
           } else {
             value.spl = v[3].data;
           }
-        } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+        } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
           dynamicArrayItem = v[3].data;
         }
       }
@@ -1122,7 +1117,7 @@ export function updateCell(
 
         if (
           _.isString(valueFunction) &&
-          valueFunction.slice(0, 1) === "=" &&
+          valueFunction.slice(0, 1) === '=' &&
           valueFunction.length > 1
         ) {
           const v = execfunction(
@@ -1132,7 +1127,7 @@ export function updateCell(
             c,
             undefined,
             undefined,
-            true
+            true,
           );
           isRunExecFunction = false;
           // value = {
@@ -1144,7 +1139,7 @@ export function updateCell(
           [, value.v, value.f] = v;
 
           // 打进单元格的sparklines的配置串， 报错需要单独处理。
-          if (v.length === 4 && v[3].type === "sparklines") {
+          if (v.length === 4 && v[3].type === 'sparklines') {
             const curCalv = v[3].data;
 
             if (_.isArray(curCalv) && !_.isPlainObject(curCalv[0])) {
@@ -1152,7 +1147,7 @@ export function updateCell(
             } else {
               value.spl = v[3].data;
             }
-          } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+          } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             dynamicArrayItem = v[3].data;
           }
@@ -1174,32 +1169,32 @@ export function updateCell(
 
     // value maybe an object
     // FLV crypto denomination --START--
-    const decemialCount = oldValue?.m?.toString().includes(".")
-      ? oldValue?.m?.toString().split(" ")[0].split(".")[1]?.length
+    const decemialCount = oldValue?.m?.toString().includes('.')
+      ? oldValue?.m?.toString().split(' ')[0].split('.')[1]?.length
       : 0;
-    const coin = oldValue?.m?.toString().split(" ")[1];
-    if (typeof value === "object" && value.baseValue && !value?.m) {
+    const coin = oldValue?.m?.toString().split(' ')[1];
+    if (typeof value === 'object' && value.baseValue && !value?.m) {
       value.m = `${
         // @ts-expect-error later
-        // eslint-disable-next-line no-unsafe-optional-chaining
+
         (parseFloat(value?.v as string) / oldValue?.baseCurrencyPrice).toFixed(
-          decemialCount || 2
+          decemialCount || 2,
         )
       } ${coin}`;
     }
 
     // FLV crypto denomination --END--
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       value = {
         ct: {
-          fa: "General",
-          t: "g",
+          fa: 'General',
+          t: 'g',
         },
         v: value,
-        tb: "1",
+        tb: '1',
       };
-    } else if (typeof value === "object" && !value.tb) {
-      value.tb = "1";
+    } else if (typeof value === 'object' && !value.tb) {
+      value.tb = '1';
     }
 
     const isValueArray = Array.isArray((value as any)?.v?.[0]);
@@ -1211,7 +1206,7 @@ export function updateCell(
           if (ctx.hooks.afterUpdateCell) {
             const newValue = _.cloneDeep(d[r][c]);
             setTimeout(() =>
-              ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue)
+              ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue),
             );
           }
           ctx.formulaCache.execFunctionGlobalData = null;
@@ -1219,22 +1214,22 @@ export function updateCell(
         }
       }
     } catch (e) {
-      console.log("[updateCell] spill failed; falling back", e);
+      console.log('[updateCell] spill failed; falling back', e);
     }
 
     // --- hyperlink-on-edit-paste support ---
     // If user pasted a URL while editing (double click), persist hyperlink using sheet.hyperlink + cell.hl
     const url = getUrlFromText($input?.innerText);
-    if (url && typeof value === "object" && value) {
+    if (url && typeof value === 'object' && value) {
       (value as any).hl = 1;
 
       if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
       sheetFile.hyperlink[`${r}_${c}`] = {
-        linkType: "webpage",
+        linkType: 'webpage',
         linkAddress: url,
       };
 
-      if (typeof (value as any).v !== "string") {
+      if (typeof (value as any).v !== 'string') {
         (value as any).v = $input?.innerText ?? url;
       }
 
@@ -1243,7 +1238,7 @@ export function updateCell(
       }
 
       // Persist hyperlink look (blue + underline)
-      if ((value as any).fc == null) (value as any).fc = "rgb(0, 0, 255)";
+      if ((value as any).fc == null) (value as any).fc = 'rgb(0, 0, 255)';
       if ((value as any).un == null) (value as any).un = 1;
     }
 
@@ -1263,7 +1258,7 @@ export function updateCell(
     }
     */
 
-    if ((curv?.tb === "2" && curv.v) || isInlineStringCell(d[r][c])) {
+    if ((curv?.tb === '2' && curv.v) || isInlineStringCell(d[r][c])) {
       // 自动换行
       const { defaultrowlen } = ctx;
 
@@ -1369,7 +1364,7 @@ export function getcellFormula(
   r: number,
   c: number,
   i: string,
-  data?: any
+  data?: any,
 ) {
   let cell;
   if (_.isNil(data)) {
@@ -1425,9 +1420,9 @@ export function getRangetxt(
   ctx: Context,
   sheetId: string,
   range: SingleRange,
-  currentId?: string
+  currentId?: string,
 ) {
-  let sheettxt = "";
+  let sheettxt = '';
 
   if (currentId == null) {
     currentId = ctx.currentSheetId;
@@ -1436,16 +1431,16 @@ export function getRangetxt(
   if (sheetId !== currentId) {
     // sheet名字包含'的，引用时应该替换为''
     const index = getSheetIndex(ctx, sheetId);
-    if (index == null) return "";
+    if (index == null) return '';
     sheettxt = ctx.luckysheetfile[index].name.replace(/'/g, "''");
     // 如果包含除a-z、A-Z、0-9、下划线等以外的字符那么就用单引号包起来
     if (
       // eslint-disable-next-line no-misleading-character-class
       /^[:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD][:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\-.0-9\u00B7\u0300-\u036F\u203F-\u2040]*$/.test(
-        sheettxt
+        sheettxt,
       )
     ) {
-      sheettxt += "!";
+      sheettxt += '!';
     } else {
       sheettxt = `'${sheettxt}'!`;
     }
@@ -1458,7 +1453,7 @@ export function getRangetxt(
 
   if (row0 == null && row1 == null) {
     return `${sheettxt + indexToColumnChar(column0)}:${indexToColumnChar(
-      column1
+      column1,
     )}`;
   }
   if (column0 == null && column1 == null) {
@@ -1477,8 +1472,8 @@ export function getRangetxt(
 // 把string A1:A2转为选区数组
 export function getRangeByTxt(ctx: Context, txt: string) {
   let range = [];
-  if (txt.indexOf(",") !== -1) {
-    const arr = txt.split(",");
+  if (txt.indexOf(',') !== -1) {
+    const arr = txt.split(',');
     for (let i = 0; i < arr.length; i += 1) {
       if (iscelldata(arr[i])) {
         range.push(getcellrange(ctx, arr[i]));
@@ -1498,7 +1493,7 @@ export function getRangeByTxt(ctx: Context, txt: string) {
 export function isAllSelectedCellsInStatus(
   ctx: Context,
   attr: keyof Cell,
-  status: any
+  status: any,
 ) {
   // editing mode
   if (!_.isEmpty(ctx.luckysheetCellUpdate)) {
@@ -1516,16 +1511,16 @@ export function isAllSelectedCellsInStatus(
     if (startContainer === endContainer) {
       return !_.isEmpty(
         // @ts-ignore
-        startContainer.parentElement?.style[cssField]
+        startContainer.parentElement?.style[cssField],
       );
     }
     if (
-      startContainer.parentElement?.tagName === "SPAN" &&
-      endContainer.parentElement?.tagName === "SPAN"
+      startContainer.parentElement?.tagName === 'SPAN' &&
+      endContainer.parentElement?.tagName === 'SPAN'
     ) {
       const startSpan = startContainer.parentNode as HTMLElement | null;
       const endSpan = endContainer.parentNode as HTMLElement | null;
-      const allSpans = startSpan?.parentNode?.querySelectorAll("span");
+      const allSpans = startSpan?.parentNode?.querySelectorAll('span');
       if (allSpans) {
         const startSpanIndex = _.indexOf(allSpans, startSpan);
         const endSpanIndex = _.indexOf(allSpans, endSpan);
@@ -1555,7 +1550,7 @@ export function getFontStyleByCell(
   cell: Cell | null | undefined,
   checksAF?: any[],
   checksCF?: any,
-  isCheck = true
+  isCheck = true,
 ) {
   const style: any = {};
   if (!cell) {
@@ -1568,12 +1563,12 @@ export function getFontStyleByCell(
       value = normalizedCellAttr(cell, key);
     }
     const valueNum = Number(value);
-    if (key === "bl" && valueNum !== 0) {
-      style.fontWeight = "bold";
+    if (key === 'bl' && valueNum !== 0) {
+      style.fontWeight = 'bold';
     }
 
-    if (key === "it" && valueNum !== 0) {
-      style.fontStyle = "italic";
+    if (key === 'it' && valueNum !== 0) {
+      style.fontStyle = 'italic';
     }
 
     // if (key === "ff") {
@@ -1586,12 +1581,12 @@ export function getFontStyleByCell(
     //   style += "font-family: " + f + ";";
     // }
 
-    if (key === "fs" && !_.isNil(value)) {
+    if (key === 'fs' && !_.isNil(value)) {
       style.fontSize = `${valueNum}pt`;
     }
 
     if (
-      (key === "fc" && value !== "#000000") ||
+      (key === 'fc' && value !== '#000000') ||
       (checksAF?.length ?? 0) > 0 ||
       checksCF?.textColor
     ) {
@@ -1604,11 +1599,11 @@ export function getFontStyleByCell(
       }
     }
 
-    if (key === "cl" && valueNum !== 0) {
-      style.textDecoration = "line-through";
+    if (key === 'cl' && valueNum !== 0) {
+      style.textDecoration = 'line-through';
     }
 
-    if (key === "un" && (valueNum === 1 || valueNum === 3)) {
+    if (key === 'un' && (valueNum === 1 || valueNum === 3)) {
       // @ts-ignore
       const color = cell._color ?? cell.fc;
       // @ts-ignore
@@ -1623,7 +1618,7 @@ export function getStyleByCell(
   ctx: Context,
   d: CellMatrix,
   r: number,
-  c: number
+  c: number,
 ) {
   let style: any = {};
 
@@ -1639,8 +1634,8 @@ export function getStyleByCell(
   if (!cell) return {};
 
   const isInline = isInlineStringCell(cell);
-  if ("bg" in cell) {
-    const value = normalizedCellAttr(cell, "bg");
+  if ('bg' in cell) {
+    const value = normalizedCellAttr(cell, 'bg');
     if (checksCF?.cellColor) {
       if (checksCF?.cellColor) {
         style.background = `${checksCF.cellColor}`;
@@ -1653,33 +1648,33 @@ export function getStyleByCell(
       style.background = `${value}`;
     }
   }
-  if ("ht" in cell) {
-    const value = normalizedCellAttr(cell, "ht");
+  if ('ht' in cell) {
+    const value = normalizedCellAttr(cell, 'ht');
     if (Number(value) === 0) {
-      style.textAlign = "center";
+      style.textAlign = 'center';
     } else if (Number(value) === 2) {
-      style.textAlign = "right";
-      style.overflowWrap = "anywhere";
+      style.textAlign = 'right';
+      style.overflowWrap = 'anywhere';
     }
   }
 
-  if ("tb" in cell) {
+  if ('tb' in cell) {
     if (Number(cell.tb) === 2) {
-      style.overflowWrap = "anywhere";
+      style.overflowWrap = 'anywhere';
     }
   }
 
-  if ("ff" in cell) {
-    const value = normalizedCellAttr(cell, "ff");
+  if ('ff' in cell) {
+    const value = normalizedCellAttr(cell, 'ff');
     style.fontFamily = value;
   }
 
-  if ("vt" in cell) {
-    const value = normalizedCellAttr(cell, "vt");
+  if ('vt' in cell) {
+    const value = normalizedCellAttr(cell, 'vt');
     if (Number(value) === 0) {
-      style.alignItems = "center";
+      style.alignItems = 'center';
     } else if (Number(value) === 2) {
-      style.alignItems = "flex-end";
+      style.alignItems = 'flex-end';
     }
   }
   if (!isInline) {
@@ -1690,84 +1685,84 @@ export function getStyleByCell(
 }
 
 export function getInlineStringHTML(r: number, c: number, data: CellMatrix) {
-  const ct = getCellValue(r, c, data, "ct");
+  const ct = getCellValue(r, c, data, 'ct');
   if (isInlineStringCT(ct)) {
     const strings = ct.s;
-    let value = "";
+    let value = '';
     for (let i = 0; i < strings.length; i += 1) {
       const strObj = strings[i];
       if (strObj.v) {
         const style = getFontStyleByCell(strObj);
         const { link } = strObj as any;
         if (link?.linkType && link?.linkAddress) {
-          style.color = style.color || "rgb(0, 0, 255)";
-          style.borderBottom = style.borderBottom || "1px solid rgb(0, 0, 255)";
+          style.color = style.color || 'rgb(0, 0, 255)';
+          style.borderBottom = style.borderBottom || '1px solid rgb(0, 0, 255)';
         }
         const styleStr = _.map(style, (v, key) => {
           return `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`;
-        }).join("");
+        }).join('');
         const dataAttrs =
           link?.linkType && link?.linkAddress
             ? ` data-link-type='${String(link.linkType).replace(
                 /'/g,
-                "&#39;"
+                '&#39;',
               )}' data-link-address='${String(link.linkAddress).replace(
                 /'/g,
-                "&#39;"
+                '&#39;',
               )}'`
-            : "";
+            : '';
         value += `<span class="luckysheet-input-span" index='${i}' style='${styleStr}'${dataAttrs}>${strObj.v}</span>`;
       }
     }
     return value;
   }
-  return "";
+  return '';
 }
 
 export function getQKBorder(width: string, type: string, color: string) {
-  let bordertype = "";
+  let bordertype = '';
 
-  if (width.toString().indexOf("pt") > -1) {
+  if (width.toString().indexOf('pt') > -1) {
     const nWidth = parseFloat(width);
 
     if (nWidth < 1) {
     } else if (nWidth < 1.5) {
-      bordertype = "Medium";
+      bordertype = 'Medium';
     } else {
-      bordertype = "Thick";
+      bordertype = 'Thick';
     }
   } else {
     const nWidth = parseFloat(width);
 
     if (nWidth < 2) {
     } else if (nWidth < 3) {
-      bordertype = "Medium";
+      bordertype = 'Medium';
     } else {
-      bordertype = "Thick";
+      bordertype = 'Thick';
     }
   }
 
   let style = 0;
   type = type.toLowerCase();
 
-  if (type === "double") {
+  if (type === 'double') {
     style = 2;
-  } else if (type === "dotted") {
-    if (bordertype === "Medium" || bordertype === "Thick") {
+  } else if (type === 'dotted') {
+    if (bordertype === 'Medium' || bordertype === 'Thick') {
       style = 3;
     } else {
       style = 10;
     }
-  } else if (type === "dashed") {
-    if (bordertype === "Medium" || bordertype === "Thick") {
+  } else if (type === 'dashed') {
+    if (bordertype === 'Medium' || bordertype === 'Thick') {
       style = 4;
     } else {
       style = 9;
     }
-  } else if (type === "solid") {
-    if (bordertype === "Medium") {
+  } else if (type === 'solid') {
+    if (bordertype === 'Medium') {
       style = 8;
-    } else if (bordertype === "Thick") {
+    } else if (bordertype === 'Thick') {
       style = 13;
     } else {
       style = 1;
@@ -1886,7 +1881,7 @@ export function rowlenByRange(
 export function getdatabyselection(
   ctx: Context,
   range: Selection | undefined,
-  sheetId: string
+  sheetId: string,
 ) {
   if (range == null && ctx.luckysheet_select_save) {
     [range] = ctx.luckysheet_select_save;
@@ -1935,7 +1930,7 @@ export function getdatabyselection(
 export function luckysheetUpdateCell(
   ctx: Context,
   row_index: number,
-  col_index: number
+  col_index: number,
 ) {
   ctx.luckysheetCellUpdate = [row_index, col_index];
 }
@@ -2003,16 +1998,16 @@ export function clearSelectedCellFormat(ctx: Context) {
       ) {
         if (rowCells[columnIndex] === undefined) continue;
         rowCells[columnIndex] = keepOnlyValueParts(
-          rowCells[columnIndex]
+          rowCells[columnIndex],
         ) as Cell;
         const v = (rowCells[columnIndex] as any) ?? null;
         const key = `${rowIndex}_${columnIndex}`;
         changeMap.set(key, {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key,
           value: { r: rowIndex, c: columnIndex, v },
-          type: v == null ? "delete" : "update",
+          type: v == null ? 'delete' : 'update',
         });
       }
     }
@@ -2045,16 +2040,16 @@ export function clearRowsCellsFormat(ctx: Context) {
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
         if (rowCells[columnIndex] === undefined) continue;
         rowCells[columnIndex] = keepOnlyValueParts(
-          rowCells[columnIndex]
+          rowCells[columnIndex],
         ) as Cell;
         const v = (rowCells[columnIndex] as any) ?? null;
         const key = `${rowIndex}_${columnIndex}`;
         changeMap.set(key, {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key,
           value: { r: rowIndex, c: columnIndex, v },
-          type: v == null ? "delete" : "update",
+          type: v == null ? 'delete' : 'update',
         });
       }
     }
@@ -2091,16 +2086,16 @@ export function clearColumnsCellsFormat(ctx: Context) {
       ) {
         if (rowCells[columnIndex] === undefined) continue;
         rowCells[columnIndex] = keepOnlyValueParts(
-          rowCells[columnIndex]
+          rowCells[columnIndex],
         ) as Cell;
         const v = (rowCells[columnIndex] as any) ?? null;
         const key = `${rowIndex}_${columnIndex}`;
         changeMap.set(key, {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key,
           value: { r: rowIndex, c: columnIndex, v },
-          type: v == null ? "delete" : "update",
+          type: v == null ? 'delete' : 'update',
         });
       }
     }

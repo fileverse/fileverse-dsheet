@@ -84,7 +84,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -119,7 +119,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         sheetEditorRef,
         ydocRef,
         dsheetId,
-        dataBlockCalcFunction
+        dataBlockCalcFunction,
       });
     }
   }, [dataBlockCalcFunction]);
@@ -170,9 +170,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       : ['filter']
     : TOOL_BAR_ITEMS;
 
-  const {
-    handleOnChangePortalUpdate
-  } = useEditor();
+  const { handleOnChangePortalUpdate } = useEditor();
 
   const syncContext = {
     sheetEditorRef,
@@ -233,25 +231,25 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-              handleContentPortal: handleOnChangePortalUpdate,
-              setShowSmartContractModal,
-              getDocumentTitle,
-              updateDocumentTitle,
-              setExportDropdownOpen,
-              handleCSVUpload,
-              // @ts-ignore
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
+                handleContentPortal: handleOnChangePortalUpdate,
+                setShowSmartContractModal,
+                getDocumentTitle,
+                updateDocumentTitle,
+                setExportDropdownOpen,
+                handleCSVUpload,
+                // @ts-ignore
+                handleXLSXUpload,
+                handleExportToXLSX,
+                handleExportToCSV,
+                handleExportToJSON,
+                sheetEditorRef,
+                ydocRef,
+                dsheetId,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
+              })
             : []
         }
         hooks={{
@@ -292,32 +290,32 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               sheetEditorRef,
               ydocRef,
               dsheetId,
-              handleContentPortal: handleOnChangePortalUpdate
-            })
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           },
           liveQueryChange: () => {
             liveQueryListYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
-              handleContentPortal: handleOnChangePortalUpdate
-            })
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           },
           calcChainChange: () => {
             calcChainYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
-              handleContentPortal: handleOnChangePortalUpdate
-            })
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           },
           conditionFormatChange: () => {
             conditionFormatYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
-              handleContentPortal: handleOnChangePortalUpdate
-            })
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           filterSelectChange: () => {
@@ -342,16 +340,16 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               sheetEditorRef,
               ydocRef,
               dsheetId,
-              handleContentPortal: handleOnChangePortalUpdate
-            })
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,
               changes,
-              handleOnChangePortalUpdate
-            )
+              handleOnChangePortalUpdate,
+            );
           },
           afterImagesChange: () => {
             syncCurrentSheetField(syncContext, 'images');
@@ -380,8 +378,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
                   handleOnChangePortalUpdate,
                 },
                 subSheetId,
-              )
-            }, 500)
+              );
+            }, 500);
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           afterColorChanges: handleAfterColorChanges,
@@ -390,7 +388,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           afterColRowChanges: handleAfterColRowChanges,
           afterShowGridLinesChange: () => {
             syncCurrentSheetField(syncContext, 'showGridLines');
-          }
+          },
         }}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}

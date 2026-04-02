@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef } from "react";
-import _ from "lodash";
+import React, { useCallback, useEffect, useRef } from 'react';
+import _ from 'lodash';
 
 type ContentEditableProps = Omit<
   React.HTMLAttributes<HTMLDivElement>,
-  "onChange"
+  'onChange'
 > & {
   initialContent?: string;
   innerRef?: (e: HTMLDivElement | null) => void;
@@ -14,7 +14,7 @@ type ContentEditableProps = Omit<
 };
 
 const ContentEditable: React.FC<ContentEditableProps> = ({ ...props }) => {
-  const lastHtml = useRef("");
+  const lastHtml = useRef('');
   const root = useRef<HTMLDivElement | null>(null);
   const { autoFocus, initialContent, onChange } = props;
 
@@ -39,11 +39,11 @@ const ContentEditable: React.FC<ContentEditableProps> = ({ ...props }) => {
         html = root.current.innerHTML;
       }
       if (onChange && html !== lastHtml.current) {
-        onChange(html || "", isBlur);
+        onChange(html || '', isBlur);
       }
-      lastHtml.current = html || "";
+      lastHtml.current = html || '';
     },
-    [root, onChange]
+    [root, onChange],
   );
 
   const { innerRef, onBlur } = props;
@@ -56,13 +56,13 @@ const ContentEditable: React.FC<ContentEditableProps> = ({ ...props }) => {
       onClick={(e) => e.stopPropagation()}
       {..._.omit(
         props,
-        "innerRef",
-        "onChange",
-        "html",
-        "onBlur",
-        "autoFocus",
-        "allowEdit",
-        "initialContent"
+        'innerRef',
+        'onChange',
+        'html',
+        'onBlur',
+        'autoFocus',
+        'allowEdit',
+        'initialContent',
       )}
       ref={(e) => {
         root.current = e;

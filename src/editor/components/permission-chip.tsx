@@ -19,7 +19,12 @@ export const PermissionChip: React.FC<PermissionChipProps> = ({
           name="MessageSquareText"
           className="w-4 h-4 text-gray-800"
         />
-        <span className="dsheet-text dsheet-text--chip text-xs text-black" data-testid="permission-chip-label">View and comment</span>
+        <span
+          className="dsheet-text dsheet-text--chip text-xs text-black"
+          data-testid="permission-chip-label"
+        >
+          View and comment
+        </span>
       </div>
     );
   }
@@ -31,7 +36,12 @@ export const PermissionChip: React.FC<PermissionChipProps> = ({
       role="status"
     >
       <LucideIcon name="Eye" className="w-4 h-4 text-gray-800" />
-      <span className="dsheet-text dsheet-text--chip text-xs text-black" data-testid="permission-chip-label">View only</span>
+      <span
+        className="dsheet-text dsheet-text--chip text-xs text-black"
+        data-testid="permission-chip-label"
+      >
+        View only
+      </span>
     </div>
   );
 };

@@ -1,5 +1,5 @@
-import _ from "lodash";
-import { Context } from "../context";
+import _ from 'lodash';
+import { Context } from '../context';
 
 export function mousePosition(x: number, y: number, ctx: Context) {
   const newX = x - ctx.rowHeaderWidth;

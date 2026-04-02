@@ -1,12 +1,12 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect } from 'react';
 import {
   getFlowdata,
   onCommentBoxMoveStart,
   setEditingComment,
   showComments,
-} from "@sheet-engine/core";
-import _ from "lodash";
-import WorkbookContext from "../../context";
+} from '@sheet-engine/core';
+import _ from 'lodash';
+import WorkbookContext from '../../context';
 
 const NotationBoxes: React.FC = () => {
   const { context, setContext, refs, settings } = useContext(WorkbookContext);
@@ -46,7 +46,7 @@ const NotationBoxes: React.FC = () => {
         refs.globalCache,
         nativeEvent,
         { r, c, rc },
-        commentId
+        commentId,
       );
       e.stopPropagation();
     };
@@ -54,9 +54,9 @@ const NotationBoxes: React.FC = () => {
     <div id="luckysheet-postil-showBoxs">
       {_.concat(
         context.commentBoxes?.filter(
-          (v) => v?.rc !== context.editingCommentBox?.rc
+          (v) => v?.rc !== context.editingCommentBox?.rc,
         ),
-        [context.editingCommentBox, context.hoveredCommentBox]
+        [context.editingCommentBox, context.hoveredCommentBox],
       ).map((commentBox, index) => {
         if (!commentBox) return null;
         const { r, c, rc, left, top, size } = commentBox;
@@ -70,21 +70,21 @@ const NotationBoxes: React.FC = () => {
               width={size.width}
               height={size.height}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 left: size.left,
                 top: size.top,
                 zIndex: 400,
-                pointerEvents: "none",
+                pointerEvents: 'none',
               }}
             />
             <div
               id={commentId}
               style={{
-                position: "absolute",
+                position: 'absolute',
                 left,
                 top,
                 zIndex: isEditing ? 500 : 400,
-                boxShadow: "0 1px 1px #0000002e,0 4px 8px #0000001a",
+                boxShadow: '0 1px 1px #0000002e,0 4px 8px #0000001a',
               }}
               onMouseDown={(e) => {
                 e.stopPropagation();
@@ -124,15 +124,15 @@ const NotationBoxes: React.FC = () => {
               )} */}
               <div
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  overflow: "hidden",
+                  width: '100%',
+                  height: '100%',
+                  overflow: 'hidden',
                 }}
               >
                 {settings.getCommentCellUI?.(
                   r,
                   c,
-                  handleMouseDownEvent(r, c, rc, commentId)
+                  handleMouseDownEvent(r, c, rc, commentId),
                 )}
                 {/* <ContentEditable
                   id={`comment-editor-${rc}`}

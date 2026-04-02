@@ -1,6 +1,5 @@
-/* eslint-disable no-plusplus */
-import React, { useContext } from "react";
-import WorkbookContext from "../../context";
+import React, { useContext } from 'react';
+import WorkbookContext from '../../context';
 
 const ErrorBoxes: React.FC = () => {
   const { context } = useContext(WorkbookContext);
@@ -13,16 +12,16 @@ const ErrorBoxes: React.FC = () => {
     <div
       style={{
         borderLeft: `4px solid #FB3449`,
-        width: "auto",
-        maxWidth: "280px",
-        height: "auto",
+        width: 'auto',
+        maxWidth: '280px',
+        height: 'auto',
         left,
         top,
-        position: "absolute",
-        padding: "8px",
-        background: "#FFFFFF",
+        position: 'absolute',
+        padding: '8px',
+        background: '#FFFFFF',
         zIndex: 100,
-        borderRadius: "4px",
+        borderRadius: '4px',
       }}
       className="fortune-error-state shadow-lg flex flex-col gap-2 break-all"
       data-testid="error-state"

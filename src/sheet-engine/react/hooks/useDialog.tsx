@@ -1,18 +1,18 @@
-import React, { useContext, useCallback } from "react";
-import Dialog from "../components/Dialog";
-import { ModalContext } from "../context/modal";
+import React, { useContext, useCallback } from 'react';
+import Dialog from '../components/Dialog';
+import { ModalContext } from '../context/modal';
 
 export function useDialog() {
   const { showModal, hideModal } = useContext(ModalContext);
   const showDialog = useCallback(
     (
       content: string | React.ReactNode,
-      type?: "ok" | "yesno",
+      type?: 'ok' | 'yesno',
       title?: string | React.ReactNode,
       okLabel?: string,
       cancelLabel?: string,
       onOk: () => void = hideModal,
-      onCancel: () => void = hideModal
+      onCancel: () => void = hideModal,
     ) => {
       showModal(
         <Dialog
@@ -24,10 +24,10 @@ export function useDialog() {
           cancelLabel={cancelLabel}
         >
           {content}
-        </Dialog>
+        </Dialog>,
       );
     },
-    [hideModal, showModal]
+    [hideModal, showModal],
   );
   return {
     showDialog,

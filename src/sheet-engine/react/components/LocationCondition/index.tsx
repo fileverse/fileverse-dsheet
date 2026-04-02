@@ -4,19 +4,19 @@ import {
   getOptionValue,
   getSelectRange,
   locale,
-} from "@sheet-engine/core";
-import produce from "immer";
-import _ from "lodash";
-import React, { useContext, useState, useCallback } from "react";
-import WorkbookContext from "../../context";
-import { useDialog } from "../../hooks/useDialog";
-import "./index.css";
+} from '@sheet-engine/core';
+import produce from 'immer';
+import _ from 'lodash';
+import React, { useContext, useState, useCallback } from 'react';
+import WorkbookContext from '../../context';
+import { useDialog } from '../../hooks/useDialog';
+import './index.css';
 
 export const LocationCondition: React.FC<{}> = () => {
   const { context, setContext } = useContext(WorkbookContext);
   const { showDialog, hideDialog } = useDialog();
   const { findAndReplace, button } = locale(context);
-  const [conditionType, setConditionType] = useState("locationConstant");
+  const [conditionType, setConditionType] = useState('locationConstant');
   const [constants, setConstants] = useState<Record<string, boolean>>({
     locationDate: true,
     locationDigital: true,
@@ -33,30 +33,30 @@ export const LocationCondition: React.FC<{}> = () => {
   });
   // 确定按钮
   const onConfirm = useCallback(() => {
-    if (conditionType === "locationConstant") {
+    if (conditionType === 'locationConstant') {
       const value = getOptionValue(constants);
       const selectRange = getSelectRange(context);
       setContext((ctx) => {
         const rangeArr = applyLocation(selectRange, conditionType, value, ctx);
         if (rangeArr.length === 0)
-          showDialog(findAndReplace.locationTipNotFindCell, "ok");
+          showDialog(findAndReplace.locationTipNotFindCell, 'ok');
       });
-    } else if (conditionType === "locationFormula") {
+    } else if (conditionType === 'locationFormula') {
       const value = getOptionValue(formulas);
       const selectRange = getSelectRange(context);
       setContext((ctx) => {
         const rangeArr = applyLocation(selectRange, conditionType, value, ctx);
         if (rangeArr.length === 0)
-          showDialog(findAndReplace.locationTipNotFindCell, "ok");
+          showDialog(findAndReplace.locationTipNotFindCell, 'ok');
       });
-    } else if (conditionType === "locationRowSpan") {
+    } else if (conditionType === 'locationRowSpan') {
       if (
         context.luckysheet_select_save?.length === 0 ||
         (context.luckysheet_select_save?.length === 1 &&
           context.luckysheet_select_save[0].row[0] ===
             context.luckysheet_select_save[0].row[1])
       ) {
-        showDialog(findAndReplace.locationTiplessTwoRow, "ok");
+        showDialog(findAndReplace.locationTiplessTwoRow, 'ok');
         return;
       }
       const selectRange = _.assignIn([], context.luckysheet_select_save);
@@ -65,19 +65,19 @@ export const LocationCondition: React.FC<{}> = () => {
           selectRange,
           conditionType,
           undefined,
-          ctx
+          ctx,
         );
         if (rangeArr.length === 0)
-          showDialog(findAndReplace.locationTipNotFindCell, "ok");
+          showDialog(findAndReplace.locationTipNotFindCell, 'ok');
       });
-    } else if (conditionType === "locationColumnSpan") {
+    } else if (conditionType === 'locationColumnSpan') {
       if (
         context.luckysheet_select_save?.length === 0 ||
         (context.luckysheet_select_save?.length === 1 &&
           context.luckysheet_select_save[0].column[0] ===
             context.luckysheet_select_save[0].column[1])
       ) {
-        showDialog(findAndReplace.locationTiplessTwoColumn, "ok");
+        showDialog(findAndReplace.locationTiplessTwoColumn, 'ok');
         return;
       }
       const selectRange = _.assignIn([], context.luckysheet_select_save);
@@ -86,10 +86,10 @@ export const LocationCondition: React.FC<{}> = () => {
           selectRange,
           conditionType,
           undefined,
-          ctx
+          ctx,
         );
         if (rangeArr.length === 0)
-          showDialog(findAndReplace.locationTipNotFindCell, "ok");
+          showDialog(findAndReplace.locationTipNotFindCell, 'ok');
       });
     } else {
       // 空值处理
@@ -120,10 +120,10 @@ export const LocationCondition: React.FC<{}> = () => {
           selectRange,
           conditionType,
           undefined,
-          ctx
+          ctx,
         );
         if (rangeArr.length === 0)
-          showDialog(findAndReplace.locationTipNotFindCell, "ok");
+          showDialog(findAndReplace.locationTipNotFindCell, 'ok');
       });
     }
   }, [
@@ -141,7 +141,7 @@ export const LocationCondition: React.FC<{}> = () => {
   // 选中事件处理
   const isSelect = useCallback(
     (currentType: string) => conditionType === currentType,
-    [conditionType]
+    [conditionType],
   );
 
   return (
@@ -154,9 +154,9 @@ export const LocationCondition: React.FC<{}> = () => {
             type="radio"
             name="locationType"
             id="locationConstant"
-            checked={isSelect("locationConstant")}
+            checked={isSelect('locationConstant')}
             onChange={() => {
-              setConditionType("locationConstant");
+              setConditionType('locationConstant');
             }}
           />
           <label htmlFor="locationConstant">
@@ -164,29 +164,29 @@ export const LocationCondition: React.FC<{}> = () => {
           </label>
           <div className="subbox">
             {[
-              "locationDate",
-              "locationDigital",
-              "locationString",
-              "locationBool",
-              "locationError",
+              'locationDate',
+              'locationDigital',
+              'locationString',
+              'locationBool',
+              'locationError',
             ].map((v) => (
               <div className="subItem" key={v}>
                 <input
                   type="checkbox"
-                  disabled={!isSelect("locationConstant")}
+                  disabled={!isSelect('locationConstant')}
                   checked={constants[v]}
                   onChange={() => {
                     setConstants(
                       produce((draft) => {
                         _.set(draft, v, !draft[v]);
-                      })
+                      }),
                     );
                   }}
                 />
                 <label
                   htmlFor={v}
                   style={{
-                    color: isSelect("locationConstant") ? "#000" : "#666",
+                    color: isSelect('locationConstant') ? '#000' : '#666',
                   }}
                 >
                   {(findAndReplace as any)[v]}
@@ -201,9 +201,9 @@ export const LocationCondition: React.FC<{}> = () => {
             type="radio"
             name="locationType"
             id="locationFormula"
-            checked={isSelect("locationFormula")}
+            checked={isSelect('locationFormula')}
             onChange={() => {
-              setConditionType("locationFormula");
+              setConditionType('locationFormula');
             }}
           />
           <label htmlFor="locationFormula">
@@ -211,29 +211,29 @@ export const LocationCondition: React.FC<{}> = () => {
           </label>
           <div className="subbox">
             {[
-              "locationDate",
-              "locationDigital",
-              "locationString",
-              "locationBool",
-              "locationError",
+              'locationDate',
+              'locationDigital',
+              'locationString',
+              'locationBool',
+              'locationError',
             ].map((v) => (
               <div className="subItem" key={v}>
                 <input
                   type="checkbox"
-                  disabled={!isSelect("locationFormula")}
+                  disabled={!isSelect('locationFormula')}
                   checked={formulas[v]}
                   onChange={() => {
                     setFormulas(
                       produce((draft) => {
                         _.set(draft, v, !draft[v]);
-                      })
+                      }),
                     );
                   }}
                 />
                 <label
                   htmlFor={v}
                   style={{
-                    color: isSelect("locationFormula") ? "#000" : "#666",
+                    color: isSelect('locationFormula') ? '#000' : '#666',
                   }}
                 >
                   {(findAndReplace as any)[v]}
@@ -243,7 +243,7 @@ export const LocationCondition: React.FC<{}> = () => {
           </div>
         </div>
         {/* TODO 条件格式 */}
-        {["locationNull", "locationRowSpan", "locationColumnSpan"].map((v) => (
+        {['locationNull', 'locationRowSpan', 'locationColumnSpan'].map((v) => (
           <div className="listItem" key={v}>
             <input
               type="radio"

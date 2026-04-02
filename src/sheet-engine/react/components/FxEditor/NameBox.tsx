@@ -1,7 +1,7 @@
-import React, { useContext, useMemo } from "react";
-import _ from "lodash";
-import { getRangetxt } from "@sheet-engine/core";
-import WorkbookContext from "../../context";
+import React, { useContext, useMemo } from 'react';
+import _ from 'lodash';
+import { getRangetxt } from '@sheet-engine/core';
+import WorkbookContext from '../../context';
 
 const LocationBox: React.FC = () => {
   const { context } = useContext(WorkbookContext);
@@ -15,7 +15,7 @@ const LocationBox: React.FC = () => {
         lastSelection.column_focus != null
       )
     )
-      return "";
+      return '';
     const rf = lastSelection.row_focus;
     const cf = lastSelection.column_focus;
     if (context.config.merge != null && `${rf}_${cf}` in context.config.merge) {

@@ -1,4 +1,4 @@
-import { RefObject, useContext, useRef } from "react";
+import { RefObject, useContext, useRef } from 'react';
 import {
   fixPositionOnFrozenCells,
   getSheetIndex,
@@ -7,11 +7,11 @@ import {
   colLocationByIndex,
   updateContextWithSheetData,
   api,
-} from "@sheet-engine/core";
-import WorkbookContext from "../../../context";
+} from '@sheet-engine/core';
+import WorkbookContext from '../../../context';
 
 export function numberToColumnName(num: number): string {
-  let columnName = "";
+  let columnName = '';
   while (num >= 0) {
     const remainder = num % 26;
     columnName = String.fromCharCode(65 + remainder) + columnName;
@@ -22,7 +22,7 @@ export function numberToColumnName(num: number): string {
 
 export const useColumnDragAndDrop = (
   containerRef: RefObject<HTMLDivElement | null>,
-  selectedLocationRef: RefObject<any[]>
+  selectedLocationRef: RefObject<any[]>,
 ) => {
   const DOUBLE_CLICK_MS = 300;
   const START_DRAG_THRESHOLD_PX = 6;
@@ -41,8 +41,8 @@ export const useColumnDragAndDrop = (
     ghostEl: null as HTMLDivElement | null,
     onDocMove: null as null | ((ev: MouseEvent) => void),
     onDocUp: null as null | ((ev: MouseEvent) => void),
-    prevUserSelect: "" as string,
-    prevWebkitUserSelect: "" as string,
+    prevUserSelect: '' as string,
+    prevWebkitUserSelect: '' as string,
     lastNativeEvent: null as MouseEvent | null,
     ghostWidthPx: 60,
   });
@@ -70,7 +70,7 @@ export const useColumnDragAndDrop = (
       localXInHeader,
       0,
       mouseXInHeader,
-      0
+      0,
     );
     const [, , colIndex] = colLocation(adjustedX, context.visibledatacolumn);
     return colIndex;
@@ -103,12 +103,12 @@ export const useColumnDragAndDrop = (
       localXInWorkbook,
       0,
       mouseXInWorkbook,
-      0
+      0,
     );
 
     const [colLeftPx, colRightPx, hoveredColIndex] = colLocation(
       xWorkbook,
-      context.visibledatacolumn
+      context.visibledatacolumn,
     );
 
     const colMidPx = (colLeftPx + colRightPx) / 2;
@@ -126,47 +126,47 @@ export const useColumnDragAndDrop = (
   };
 
   const createInsertionLine = (host: HTMLElement) => {
-    const el = document.createElement("div");
-    el.style.position = "absolute";
-    el.style.top = "0px";
-    el.style.bottom = "0px";
-    el.style.width = "2px";
-    el.style.background = "#EFC703";
-    el.style.zIndex = "9999";
-    el.style.pointerEvents = "none";
+    const el = document.createElement('div');
+    el.style.position = 'absolute';
+    el.style.top = '0px';
+    el.style.bottom = '0px';
+    el.style.width = '2px';
+    el.style.background = '#EFC703';
+    el.style.zIndex = '9999';
+    el.style.pointerEvents = 'none';
     host.appendChild(el);
     return el;
   };
 
   const createGhost = (host: HTMLElement) => {
-    const el = document.createElement("div");
-    el.style.position = "fixed";
-    el.style.top = "134px";
+    const el = document.createElement('div');
+    el.style.position = 'fixed';
+    el.style.top = '134px';
     el.style.height = `${window.innerHeight}px`;
-    el.style.boxSizing = "border-box";
-    el.style.padding = "6px 8px";
-    el.style.background = "rgba(239,199,3,0.10)";
-    el.style.border = "1px solid #EFC703";
-    el.style.borderRadius = "6px";
-    el.style.zIndex = "10000";
-    el.style.pointerEvents = "none";
-    el.style.display = "flex";
-    el.style.alignItems = "start";
-    el.style.justifyContent = "center";
-    el.style.fontSize = "12px";
-    el.style.fontWeight = "500";
+    el.style.boxSizing = 'border-box';
+    el.style.padding = '6px 8px';
+    el.style.background = 'rgba(239,199,3,0.10)';
+    el.style.border = '1px solid #EFC703';
+    el.style.borderRadius = '6px';
+    el.style.zIndex = '10000';
+    el.style.pointerEvents = 'none';
+    el.style.display = 'flex';
+    el.style.alignItems = 'start';
+    el.style.justifyContent = 'center';
+    el.style.fontSize = '12px';
+    el.style.fontWeight = '500';
 
     let ghostWidthPx = 60;
     let ghostLabel = `Col ${String.fromCharCode(65 + dragRef.current.source)}`;
 
     const selectedBlock = selectedLocationRef.current?.find(
-      (s) => s.c1 <= dragRef.current.source && dragRef.current.source <= s.c2
+      (s) => s.c1 <= dragRef.current.source && dragRef.current.source <= s.c2,
     );
 
     if (selectedBlock) {
       ghostWidthPx = Math.max(
         60,
-        selectedBlock.col - selectedBlock.col_pre - 1
+        selectedBlock.col - selectedBlock.col_pre - 1,
       );
       selectedColWidth.current = ghostWidthPx;
       const count = selectedBlock.c2 - selectedBlock.c1 + 1;
@@ -177,7 +177,7 @@ export const useColumnDragAndDrop = (
     } else {
       const [pre, end] = colLocationByIndex(
         dragRef.current.source,
-        context.visibledatacolumn
+        context.visibledatacolumn,
       );
       const sourceColWidth = end - pre - 1;
       ghostWidthPx = Math.max(60, sourceColWidth);
@@ -201,8 +201,8 @@ export const useColumnDragAndDrop = (
     dragRef.current.prevWebkitUserSelect = (
       document.body.style as any
     ).webkitUserSelect;
-    document.body.style.userSelect = "none";
-    (document.body.style as any).webkitUserSelect = "none";
+    document.body.style.userSelect = 'none';
+    (document.body.style as any).webkitUserSelect = 'none';
 
     // visuals
     dragRef.current.lineEl = createInsertionLine(host);
@@ -245,14 +245,14 @@ export const useColumnDragAndDrop = (
 
     // restore selection
     try {
-      document.body.style.userSelect = dragRef.current.prevUserSelect || "";
+      document.body.style.userSelect = dragRef.current.prevUserSelect || '';
       (document.body.style as any).webkitUserSelect =
-        dragRef.current.prevWebkitUserSelect || "";
+        dragRef.current.prevWebkitUserSelect || '';
     } catch {}
 
     if (dragRef.current.active) {
       const { insertionIndex: finalInsertionIndex } = computeInsertionFromPageX(
-        ev.pageX
+        ev.pageX,
       );
 
       const sourceIndex = context.luckysheet_select_save?.[0]?.column?.[0] || 0;
@@ -297,7 +297,7 @@ export const useColumnDragAndDrop = (
             }
           });
           const selectedTargetCol = [...tempSelectedTargetCol]?.sort(
-            (a, b) => a - b
+            (a, b) => a - b,
           );
 
           selectedSourceColRef.current = selectedSourceCol;
@@ -371,10 +371,9 @@ export const useColumnDragAndDrop = (
 
                   // Collect all replacement positions first
                   otherAffectedCols.forEach((col) => {
-                    const regex = new RegExp(`\\b${col.source}(\\d+)\\b`, "g");
+                    const regex = new RegExp(`\\b${col.source}(\\d+)\\b`, 'g');
                     let match;
 
-                    // eslint-disable-next-line no-cond-assign
                     while ((match = regex.exec(formula)) !== null) {
                       if (/^\d+$/.test(match[1])) {
                         replacements.push({
@@ -408,7 +407,7 @@ export const useColumnDragAndDrop = (
             const newDataVerification: any = {};
             Object.keys(_sheet.dataVerification).forEach((item) => {
               const itemData = _sheet.dataVerification?.[item];
-              const colRow = item.split("_");
+              const colRow = item.split('_');
               if (colRow.length !== 2) return;
               const presentcol = parseInt(colRow[1], 10);
               let updatedCol = presentcol;
@@ -437,7 +436,7 @@ export const useColumnDragAndDrop = (
             Object.keys(_sheet.hyperlink).forEach((key) => {
               const itemData = _sheet.hyperlink?.[key];
               if (!itemData) return;
-              const parts = key.split("_");
+              const parts = key.split('_');
               if (parts.length !== 2) return;
               const row = parts[0];
               const presentCol = parseInt(parts[1], 10);
@@ -475,10 +474,10 @@ export const useColumnDragAndDrop = (
           window?.updateDataBlockCalcFunctionAfterRowDrag?.(
             selectedSourceCol,
             selectedTargetCol,
-            "column",
+            'column',
             context.currentSheetId,
             sourceIndex,
-            targetIndex
+            targetIndex,
           );
           // Notify Yjs for every cell in the disturbed range (moved column + all columns in between)
           const cellChanges: {
@@ -486,7 +485,7 @@ export const useColumnDragAndDrop = (
             path: string[];
             key?: string;
             value: any;
-            type?: "update" | "delete";
+            type?: 'update' | 'delete';
           }[] = [];
           const affectedColStart = Math.min(sourceIndex, targetIndex);
           const affectedColEnd =
@@ -498,10 +497,10 @@ export const useColumnDragAndDrop = (
               const cell = row?.[c];
               cellChanges.push({
                 sheetId: draft.currentSheetId,
-                path: ["celldata"],
+                path: ['celldata'],
                 value: { r, c, v: cell ?? null },
                 key: `${r}_${c}`,
-                type: "update",
+                type: 'update',
               });
             }
           }
@@ -522,7 +521,7 @@ export const useColumnDragAndDrop = (
             ],
             {
               id: context.currentSheetId,
-            }
+            },
           );
         });
       }
@@ -534,9 +533,9 @@ export const useColumnDragAndDrop = (
     dragRef.current.source = -1;
 
     if (dragRef.current.onDocMove)
-      document.removeEventListener("mousemove", dragRef.current.onDocMove);
+      document.removeEventListener('mousemove', dragRef.current.onDocMove);
     if (dragRef.current.onDocUp)
-      document.removeEventListener("mouseup", dragRef.current.onDocUp);
+      document.removeEventListener('mouseup', dragRef.current.onDocUp);
     dragRef.current.onDocMove = null;
     dragRef.current.onDocUp = null;
   };
@@ -549,8 +548,8 @@ export const useColumnDragAndDrop = (
 
     dragRef.current.onDocMove = handleColumnDrag;
     dragRef.current.onDocUp = handleColumnDragEnd;
-    document.addEventListener("mousemove", handleColumnDrag);
-    document.addEventListener("mouseup", handleColumnDragEnd);
+    document.addEventListener('mousemove', handleColumnDrag);
+    document.addEventListener('mouseup', handleColumnDragEnd);
   };
 
   return {

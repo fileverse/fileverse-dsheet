@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import "./duneChartsInputModal.css";
-import { Button, LucideIcon } from "@fileverse/ui";
-import { sanitizeDuneUrl } from "@sheet-engine/core";
-import SVGIcon from "../SVGIcon";
+import React, { useState, useEffect, useRef } from 'react';
+import './duneChartsInputModal.css';
+import { Button, LucideIcon } from '@fileverse/ui';
+import { sanitizeDuneUrl } from '@sheet-engine/core';
+import SVGIcon from '../SVGIcon';
 
 interface DuneChartsInputModalProps {
   isOpen: boolean;
@@ -16,10 +16,10 @@ const DuneChartsInputModal = ({
   isOpen,
   onClose,
   onSubmit,
-  submitText = "Submit",
-  placeholder = "Enter a value...",
+  submitText = 'Submit',
+  placeholder = 'Enter a value...',
 }: DuneChartsInputModalProps) => {
-  const [url, setUrl] = useState<string>("");
+  const [url, setUrl] = useState<string>('');
   const [showError, setShowError] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -39,7 +39,7 @@ const DuneChartsInputModal = ({
     const trimmed = url.trim();
     if (trimmed && sanitizeDuneUrl(trimmed)) {
       onSubmit(trimmed);
-      setUrl("");
+      setUrl('');
       setShowError(false);
       onClose();
     } else {
@@ -50,9 +50,9 @@ const DuneChartsInputModal = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation();
 
-    if (e.key === "Enter") {
+    if (e.key === 'Enter') {
       handleSubmit();
-    } else if (e.key === "Escape") {
+    } else if (e.key === 'Escape') {
       onClose();
     }
   };
@@ -61,7 +61,7 @@ const DuneChartsInputModal = ({
     <div className="custom-overlay" onClick={onClose}>
       <div
         className="input-modal w-3/4 md:w-full"
-        style={{ transformOrigin: "top center" }}
+        style={{ transformOrigin: 'top center' }}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -83,7 +83,7 @@ const DuneChartsInputModal = ({
         {showError && (
           <div className="modal-error-message">
             <SVGIcon
-              style={{ width: "14px", height: "14px" }}
+              style={{ width: '14px', height: '14px' }}
               name="circle-alert"
             />
             <span>Please add a valid valid Dune chart URL</span>

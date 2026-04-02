@@ -1,9 +1,9 @@
-import _ from "lodash";
-import { v4 as uuidv4 } from "uuid";
-import { dataToCelldata, getSheet } from "./common";
-import { Context } from "../context";
-import { CellMatrix, CellWithRowAndCol, Sheet } from "../types";
-import { getSheetIndex } from "../utils";
+import _ from 'lodash';
+import { v4 as uuidv4 } from 'uuid';
+import { dataToCelldata, getSheet } from './common';
+import { Context } from '../context';
+import { CellMatrix, CellWithRowAndCol, Sheet } from '../types';
+import { getSheetIndex } from '../utils';
 import {
   api,
   changeSheet,
@@ -12,7 +12,7 @@ import {
   insertUpdateFunctionGroup,
   locale,
   spillSortResult,
-} from "..";
+} from '..';
 
 function isCellReferenced(formulaString: string, cell: string): boolean {
   type Cell = { col: number; row: number };
@@ -45,7 +45,6 @@ function isCellReferenced(formulaString: string, cell: string): boolean {
   const rangeRegex = /([A-Z]+\d+):([A-Z]+\d+)/g;
   let match: RegExpExecArray | null;
 
-  // eslint-disable-next-line no-cond-assign
   while ((match = rangeRegex.exec(formula)) !== null) {
     const start = parseCell(match[1])!;
     const end = parseCell(match[2])!;
@@ -61,10 +60,9 @@ function isCellReferenced(formulaString: string, cell: string): boolean {
   }
 
   // 2️⃣ Check individual cells (A1, B2, etc.)
-  const cleanedFormula = formula.replace(rangeRegex, "");
+  const cleanedFormula = formula.replace(rangeRegex, '');
   const cellRegex = /([A-Z]+\d+)/g;
 
-  // eslint-disable-next-line no-cond-assign
   while ((match = cellRegex.exec(cleanedFormula)) !== null) {
     if (match[1] === cell.toUpperCase()) {
       return true;
@@ -83,11 +81,11 @@ export { getSheet };
 export function initSheetData(
   draftCtx: Context,
   index: number,
-  newData: Sheet
+  newData: Sheet,
 ): CellMatrix | null {
   const { celldata, row, column } = newData;
-  const lastRow = _.maxBy<CellWithRowAndCol>(celldata, "r");
-  const lastCol = _.maxBy(celldata, "c");
+  const lastRow = _.maxBy<CellWithRowAndCol>(celldata, 'r');
+  const lastCol = _.maxBy(celldata, 'c');
   let lastRowNum = (lastRow?.r ?? 0) + 1;
   let lastColNum = (lastCol?.c ?? 0) + 1;
   if (row != null && column != null && row > 0 && column > 0) {
@@ -98,8 +96,8 @@ export function initSheetData(
     lastColNum = Math.max(lastColNum, draftCtx.defaultcolumnNum);
   }
   if (lastRowNum && lastColNum) {
-    const expandedData: Sheet["data"] = _.times(lastRowNum, () =>
-      _.times(lastColNum, () => null)
+    const expandedData: Sheet['data'] = _.times(lastRowNum, () =>
+      _.times(lastColNum, () => null),
     );
     celldata?.forEach((d) => {
       expandedData[d.r][d.c] = d.v;
@@ -122,7 +120,7 @@ export function hideSheet(ctx: Context, sheetId: string) {
   ctx.luckysheetfile[index].hide = 1;
   ctx.luckysheetfile[index].status = 0;
   const shownSheets = ctx.luckysheetfile.filter(
-    (sheet) => _.isUndefined(sheet.hide) || sheet?.hide !== 1
+    (sheet) => _.isUndefined(sheet.hide) || sheet?.hide !== 1,
   );
   ctx.currentSheetId = shownSheets[0].id as string;
 }
@@ -154,7 +152,7 @@ function generateCopySheetName(ctx: Context, sheetId: string) {
 
     if (st_i === 0) {
       index = index || 2;
-      const ed_i = fileName.indexOf(")", st_i + nameCopy.length);
+      const ed_i = fileName.indexOf(')', st_i + nameCopy.length);
       const num = fileName.substring(st_i + nameCopy.length, ed_i);
 
       if (_.isNumber(num)) {
@@ -168,7 +166,7 @@ function generateCopySheetName(ctx: Context, sheetId: string) {
   let sheetCopyName;
 
   do {
-    const postfix = `${copyWord + (index || "")})`;
+    const postfix = `${copyWord + (index || '')})`;
     const lengthLimit = 31 - postfix.length;
     sheetCopyName = sheetName;
     if (sheetCopyName.length > lengthLimit) {
@@ -196,7 +194,7 @@ export function copySheet(ctx: Context, sheetId: string) {
     uuidv4(),
     ctx.luckysheetfile[index].isPivotTable,
     sheetName,
-    sheetData
+    sheetData,
   );
   // Fix formula references: cloned calcChain (and dynamic arrays) still had the original sheet id.
   // Formula execution and groupValuesRefresh use entry.id to target the sheet; wrong id writes to the wrong sheet.
@@ -208,23 +206,23 @@ export function copySheet(ctx: Context, sheetId: string) {
       (entry: { r: number; c: number; id?: string }) => ({
         ...entry,
         id: newSheetId,
-      })
+      }),
     );
   }
   if (newSheet.dynamicArray?.length) {
     newSheet.dynamicArray = newSheet.dynamicArray.map(
       (entry: { id?: string; [k: string]: any }) =>
-        entry && typeof entry === "object" && "id" in entry
+        entry && typeof entry === 'object' && 'id' in entry
           ? { ...entry, id: newSheetId }
-          : entry
+          : entry,
     );
   }
   if (newSheet.dynamicArray_compute?.length) {
     newSheet.dynamicArray_compute = newSheet.dynamicArray_compute.map(
       (entry: { id?: string; [k: string]: any }) =>
-        entry && typeof entry === "object" && "id" in entry
+        entry && typeof entry === 'object' && 'id' in entry
           ? { ...entry, id: newSheetId }
-          : entry
+          : entry,
     );
   }
   const sheetOrderList: Record<string, number> = {};
@@ -250,10 +248,10 @@ export function copySheet(ctx: Context, sheetId: string) {
         if (!_.isNumber(r) || !_.isNumber(c)) return;
         changes.push({
           sheetId: newSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key: `${r}_${c}`,
           value: { r, c, v: d.v ?? null },
-          type: d.v == null ? "delete" : "update",
+          type: d.v == null ? 'delete' : 'update',
         });
       });
     }
@@ -277,7 +275,7 @@ export function calculateSheetFromula(ctx: Context, id: string) {
         ctx.luckysheetfile[index].data![r][c]?.f!,
         r,
         c,
-        id
+        id,
       );
       const isValueArray = Array.isArray(result[1]);
       if (isValueArray) {
@@ -294,7 +292,7 @@ export function calculateSheetFromula(ctx: Context, id: string) {
 export function calculateReferencedCellSheetFromula(
   ctx: Context,
   id: string,
-  refCell?: string[]
+  refCell?: string[],
 ) {
   const index = getSheetIndex(ctx, id) as number;
   if (!ctx.luckysheetfile[index].data) return;
@@ -309,7 +307,7 @@ export function calculateReferencedCellSheetFromula(
         isRef = refCell.some((cell) => {
           return isCellReferenced(
             ctx.luckysheetfile[index].data![r][c]?.f!,
-            cell
+            cell,
           );
         });
       }
@@ -325,7 +323,7 @@ export function calculateReferencedCellSheetFromula(
         ctx.luckysheetfile[index].data![r][c]?.f!,
         r,
         c,
-        id
+        id,
       );
       const isValueArray = Array.isArray(result[1]);
       if (isValueArray) {

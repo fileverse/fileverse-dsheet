@@ -5,24 +5,24 @@ import {
   getRegStr,
   locale,
   updateMoreCell,
-} from "@sheet-engine/core";
-import { Button, TextField } from "@fileverse/ui";
-import _ from "lodash";
+} from '@sheet-engine/core';
+import { Button, TextField } from '@fileverse/ui';
+import _ from 'lodash';
 import React, {
   useContext,
   useEffect,
   useState,
   useCallback,
   useRef,
-} from "react";
-import WorkbookContext from "../../context";
-import { useDialog } from "../../hooks/useDialog";
-import "./index.css";
+} from 'react';
+import WorkbookContext from '../../context';
+import { useDialog } from '../../hooks/useDialog';
+import './index.css';
 
 export const SplitColumn: React.FC<{}> = () => {
   const { context, setContext } = useContext(WorkbookContext);
   const { splitText, button } = locale(context);
-  const [splitOperate, setSplitOperate] = useState("");
+  const [splitOperate, setSplitOperate] = useState('');
   const [otherFlag, setOtherFlag] = useState(false);
   const [tableData, setTableData] = useState<string[][]>([]);
   const splitSymbols = useRef<HTMLDivElement>(null);
@@ -51,7 +51,7 @@ export const SplitColumn: React.FC<{}> = () => {
     if (dataCover) {
       showDialog(
         splitText.splitConfirmToExe,
-        "yesno",
+        'yesno',
         undefined,
         undefined,
         undefined,
@@ -60,7 +60,7 @@ export const SplitColumn: React.FC<{}> = () => {
           setContext((ctx) => {
             updateMoreCell(r, c, dataArr, ctx);
           });
-        }
+        },
       );
     } else {
       setContext((ctx) => {
@@ -114,7 +114,7 @@ export const SplitColumn: React.FC<{}> = () => {
 
       <div className="splitDelimiters text-heading-xsm !mt-4">Separator</div>
       <div className="splitSymbols flex gap-3 flex-wrap" ref={splitSymbols}>
-        {splitText.splitSymbols.map((o) => (
+        {splitText.splitSymbols.map((o: { name: string; value: string }) => (
           <div key={o.value} className="splitSymbol flex gap-2 items-center">
             <input
               id={o.value}
@@ -146,7 +146,7 @@ export const SplitColumn: React.FC<{}> = () => {
           }}
           tabIndex={0}
         />
-        {/* eslint-disable-next-line */}
+        {}
         <label htmlFor="other">Custom</label>
         <TextField
           placeholder="Custom separator"

@@ -1,12 +1,12 @@
-import _ from "lodash";
-import { Context } from "../context";
-import { getSheetByIndex } from "../utils";
+import _ from 'lodash';
+import { Context } from '../context';
+import { getSheetByIndex } from '../utils';
 
 export function checkCellIsLocked(
   ctx: Context,
   r: number,
   c: number,
-  sheetId: string
+  sheetId: string,
 ) {
   const sheetFile = getSheetByIndex(ctx, sheetId);
   if (_.isNil(sheetFile)) {
@@ -29,7 +29,7 @@ export function checkProtectionSelectLockedOrUnLockedCells(
   ctx: Context,
   r: number,
   c: number,
-  sheetId: string
+  sheetId: string,
 ) {
   //   const _locale = locale();
   //   const local_protection = _locale.protection;
@@ -129,7 +129,7 @@ export function checkProtectionFormatCells(ctx: Context) {
     return true;
   }
 
-  let ht = "";
+  let ht = '';
   if (!_.isNil(aut.hintText) && aut.hintText.length > 0) {
     ht = aut.hintText;
   } else {

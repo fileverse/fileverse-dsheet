@@ -26,22 +26,19 @@ type DiffResult<T> = {
   updated: UpdatedItem<T>[];
 };
 
-
 export function diffObjectArrays<T extends Record<string, any>>(
   oldArr: readonly T[],
   newArr: readonly T[],
-  getKey?: (item: T) => string
+  getKey?: (item: T) => string,
 ): DiffResult<T> {
   const oldMap = new Map<string, T>();
   const newMap = new Map<string, T>();
 
   oldArr?.forEach((item, index) => {
-    if (item)
-      oldMap.set(getKey ? getKey(item) : index, item)
+    if (item) oldMap.set(getKey ? getKey(item) : index, item);
   });
   newArr?.forEach((item, index) => {
-    if (item)
-      newMap.set(getKey ? getKey(item) : index, item)
+    if (item) newMap.set(getKey ? getKey(item) : index, item);
   });
 
   const added: T[] = [];
@@ -57,9 +54,9 @@ export function diffObjectArrays<T extends Record<string, any>>(
       continue;
     }
 
-    const changes: UpdatedItem<T>["changes"] = {};
+    const changes: UpdatedItem<T>['changes'] = {};
 
-    (Object.keys(newItem) as Array<keyof T>).forEach(prop => {
+    (Object.keys(newItem) as Array<keyof T>).forEach((prop) => {
       if (newItem[prop] !== oldItem[prop]) {
         changes[prop] = {
           from: oldItem[prop],
@@ -106,10 +103,9 @@ type ObjectDiffResult<T> = {
   updated: UpdatedEntry<T>[];
 };
 
-
 export function diffObjectMap<T extends Record<string, any>>(
   oldObj: Record<string, T>,
-  newObj: Record<string, T>
+  newObj: Record<string, T>,
 ): ObjectDiffResult<T> {
   const added: Record<string, T> = {};
   const removed: Record<string, T> = {};
@@ -128,9 +124,9 @@ export function diffObjectMap<T extends Record<string, any>>(
       continue;
     }
 
-    const changes: UpdatedEntry<T>["changes"] = {};
+    const changes: UpdatedEntry<T>['changes'] = {};
 
-    (Object.keys(newVal) as Array<keyof T>).forEach(prop => {
+    (Object.keys(newVal) as Array<keyof T>).forEach((prop) => {
       if (newVal[prop] !== oldVal[prop]) {
         added[key] = newVal;
         // changes[prop] = {
@@ -159,5 +155,3 @@ export function diffObjectMap<T extends Record<string, any>>(
 
   return { added, removed, updated };
 }
-
-

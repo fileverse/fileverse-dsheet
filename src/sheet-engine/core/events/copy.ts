@@ -1,8 +1,8 @@
-import _ from "lodash";
-import { cancelPaintModel, checkCF, getComputeMap, getSheetIndex } from "..";
-import { Context } from "../context";
-import { copy, selectIsOverlap } from "../modules/selection";
-import { hasPartMC } from "../modules/validation";
+import _ from 'lodash';
+import { cancelPaintModel, checkCF, getComputeMap, getSheetIndex } from '..';
+import { Context } from '../context';
+import { copy, selectIsOverlap } from '../modules/selection';
+import { hasPartMC } from '../modules/validation';
 
 export function handleCopy(ctx: Context) {
   // if (imageCtrl.currentImgId != null) {

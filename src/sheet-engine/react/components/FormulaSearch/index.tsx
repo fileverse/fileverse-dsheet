@@ -1,12 +1,12 @@
-import React, { useContext, useState, useMemo, useCallback } from "react";
+import React, { useContext, useState, useMemo, useCallback } from 'react';
 import {
   cancelNormalSelected,
   locale,
   setCaretPosition,
-} from "@sheet-engine/core";
-import _ from "lodash";
-import WorkbookContext from "../../context";
-import "./index.css";
+} from '@sheet-engine/core';
+import _ from 'lodash';
+import WorkbookContext from '../../context';
+import './index.css';
 
 export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
   onCancel: _onCancel,
@@ -18,7 +18,7 @@ export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
   } = useContext(WorkbookContext);
   const [selectedType, setSelectedType] = useState(20);
   const [selectedFuncIndex, setSelectedFuncIndex] = useState(0);
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState('');
   const { formulaMore, functionlist, button } = locale(context);
 
   const typeList = useMemo(
@@ -42,7 +42,7 @@ export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
       { t: 14, n: formulaMore.Array },
       { t: -1, n: formulaMore.other },
     ],
-    [formulaMore]
+    [formulaMore],
   );
 
   const filteredFunctionList = useMemo(() => {
@@ -97,7 +97,7 @@ export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
             ctx,
             spans[spans.length - 1] as HTMLSpanElement,
             0,
-            1
+            1,
           );
         }
         ctx.functionHint =
@@ -127,7 +127,7 @@ export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
     setContext((ctx) => {
       cancelNormalSelected(ctx);
       if (cellInput.current) {
-        cellInput.current.innerHTML = "";
+        cellInput.current.innerHTML = '';
       }
     });
     _onCancel();
@@ -166,7 +166,7 @@ export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
         <div className="formulaList">
           {filteredFunctionList.map((v, index) => (
             <div
-              className={`listBox${index === selectedFuncIndex ? " on" : ""}`}
+              className={`listBox${index === selectedFuncIndex ? ' on' : ''}`}
               key={v.n}
               onClick={() => setSelectedFuncIndex(index)}
               tabIndex={0}

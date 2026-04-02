@@ -1,9 +1,9 @@
-import { Context, getSheetIndex } from "@sheet-engine/core";
-import React, { useContext, useEffect, useState } from "react";
-import WorkbookContext from "../../context";
-import ColorPicker from "../Toolbar/ColorPicker";
-import "./index.css";
-import SVGIcon from "../SVGIcon";
+import { Context, getSheetIndex } from '@sheet-engine/core';
+import React, { useContext, useEffect, useState } from 'react';
+import WorkbookContext from '../../context';
+import ColorPicker from '../Toolbar/ColorPicker';
+import './index.css';
+import SVGIcon from '../SVGIcon';
 
 type Props = {
   triggerParentUpdate: (state: boolean) => void;
@@ -14,7 +14,7 @@ export const ChangeColor: React.FC<Props> = ({ triggerParentUpdate }) => {
   const [selectColor, setSelectColor] = useState<undefined | string>(
     context.luckysheetfile[
       getSheetIndex(context, context.currentSheetId) as number
-    ].color
+    ].color,
   );
   // 把用户选择的颜色记录在ctx中
   useEffect(() => {

@@ -1,11 +1,11 @@
-import _ from "lodash";
-import { getdatabyselection, getFlowdata, getRangetxt, Selection } from "..";
-import { Context } from "../context";
-import { normalizeSelection, rangeValueToHtml } from "../modules";
-import { Cell, Range, SingleRange } from "../types";
-import { setCellFormat, setCellValue } from "./cell";
-import { CommonOptions, getSheet } from "./common";
-import { INVALID_PARAMS } from "./errors";
+import _ from 'lodash';
+import { getdatabyselection, getFlowdata, getRangetxt, Selection } from '..';
+import { Context } from '../context';
+import { normalizeSelection, rangeValueToHtml } from '../modules';
+import { Cell, Range, SingleRange } from '../types';
+import { setCellFormat, setCellValue } from './cell';
+import { CommonOptions, getSheet } from './common';
+import { INVALID_PARAMS } from './errors';
 
 export function getSelection(ctx: Context) {
   return ctx.luckysheet_select_save?.map((selection) => ({
@@ -33,7 +33,7 @@ export function getFlattenRange(ctx: Context, range?: Range) {
 
 export function getCellsByFlattenRange(
   ctx: Context,
-  range?: { r: number; c: number }[]
+  range?: { r: number; c: number }[],
 ) {
   range = range || getFlattenRange(ctx);
 
@@ -61,11 +61,11 @@ export function getSelectionCoordinates(ctx: Context) {
 export function getCellsByRange(
   ctx: Context,
   range: Selection,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   const sheet = getSheet(ctx, options);
 
-  if (!range || typeof range === "object") {
+  if (!range || typeof range === 'object') {
     return getdatabyselection(ctx, range, sheet.id!);
   }
   throw INVALID_PARAMS;
@@ -74,7 +74,7 @@ export function getCellsByRange(
 export function getHtmlByRange(
   ctx: Context,
   range: Range,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   const sheet = getSheet(ctx, options);
   return rangeValueToHtml(ctx, sheet.id!, range);
@@ -83,7 +83,7 @@ export function getHtmlByRange(
 export function setSelection(
   ctx: Context,
   range: Range,
-  options: CommonOptions
+  options: CommonOptions,
 ) {
   const sheet = getSheet(ctx, options);
   sheet.luckysheet_select_save = normalizeSelection(ctx, range);
@@ -97,16 +97,16 @@ export function setCellValuesByRange(
   data: any[][],
   range: SingleRange,
   cellInput: HTMLDivElement | null,
-  // eslint-disable-next-line default-param-last
+
   options: CommonOptions = {},
-  callAfterUpdate?: boolean
+  callAfterUpdate?: boolean,
 ) {
   if (data == null) {
     throw INVALID_PARAMS;
   }
 
   if (range instanceof Array) {
-    throw new Error("setCellValuesByRange does not support multiple ranges");
+    throw new Error('setCellValuesByRange does not support multiple ranges');
   }
 
   if (!_.isPlainObject(range)) {
@@ -117,7 +117,7 @@ export function setCellValuesByRange(
   const columnCount = range.column[1] - range.column[0] + 1;
 
   if (data.length !== rowCount || data[0].length !== columnCount) {
-    throw new Error("data size does not match range");
+    throw new Error('data size does not match range');
   }
 
   const sheet = getSheet(ctx, options);
@@ -127,7 +127,7 @@ export function setCellValuesByRange(
     path: string[];
     key?: string;
     value: any;
-    type?: "update" | "delete";
+    type?: 'update' | 'delete';
   }[] = [];
 
   for (let i = 0; i < rowCount; i += 1) {
@@ -141,15 +141,15 @@ export function setCellValuesByRange(
         data[i][j],
         cellInput,
         options,
-        callAfterUpdate
+        callAfterUpdate,
       );
       if (ctx?.hooks?.updateCellYdoc && sheet.data) {
         cellChanges.push({
           sheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r: row, c: column, v: sheet.data?.[row]?.[column] ?? null },
           key: `${row}_${column}`,
-          type: "update",
+          type: 'update',
         });
       }
     }
@@ -165,7 +165,7 @@ export function setCellFormatByRange(
   attr: keyof Cell,
   value: any,
   range: Range | SingleRange,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   if (_.isPlainObject(range)) {
     range = [range as SingleRange];

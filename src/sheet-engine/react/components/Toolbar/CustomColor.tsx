@@ -1,7 +1,7 @@
-import React from "react";
-import ColorPicker from "../Toolbar/ColorPicker";
-import "./index.css";
-import SVGIcon from "../SVGIcon";
+import React from 'react';
+import ColorPicker from '../Toolbar/ColorPicker';
+import './index.css';
+import SVGIcon from '../SVGIcon';
 
 type Props = {
   onCustomPick: (color: string | undefined) => void;

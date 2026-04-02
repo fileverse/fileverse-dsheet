@@ -74,7 +74,8 @@ export const handleExportToCSV = (
     link.href = url;
     const title = getExportFilenameBase({
       getDocumentTitle,
-      documentTitleFallback: typeof document !== 'undefined' ? document.title : '',
+      documentTitleFallback:
+        typeof document !== 'undefined' ? document.title : '',
       sheetNameFallback: activeSheet.name,
       defaultBase: 'Sheet',
     });

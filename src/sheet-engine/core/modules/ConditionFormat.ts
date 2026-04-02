@@ -1,12 +1,12 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { CellMatrix, Sheet } from "../types";
-import { getSheetIndex } from "../utils";
-import { getCellValue, getRangeByTxt } from "./cell";
-import { genarate } from "./format";
-import { execfunction, functionCopy } from "./formula";
-import { checkProtectionFormatCells } from "./protection";
-import { isRealNull } from "./validation";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { CellMatrix, Sheet } from '../types';
+import { getSheetIndex } from '../utils';
+import { getCellValue, getRangeByTxt } from './cell';
+import { genarate } from './format';
+import { execfunction, functionCopy } from './formula';
+import { checkProtectionFormatCells } from './protection';
+import { isRealNull } from './validation';
 
 // Helper function to check if a value contains alphabetic characters
 function hasAlphabeticChars(value: any): boolean {
@@ -17,14 +17,14 @@ function hasAlphabeticChars(value: any): boolean {
 function compareGreaterThan(
   cellValue: any,
   conditionValue: any,
-  symbol: any
+  symbol: any,
 ): boolean {
   const cellStr = String(cellValue);
   const conditionStr = String(conditionValue);
 
   // If either value contains alphabetic characters, use string comparison
   if (hasAlphabeticChars(cellValue) || hasAlphabeticChars(conditionValue)) {
-    if (symbol === ">=") {
+    if (symbol === '>=') {
       return cellStr.localeCompare(conditionStr) >= 0;
     }
     return cellStr.localeCompare(conditionStr) > 0;
@@ -37,18 +37,18 @@ function compareGreaterThan(
   if (
     !Number.isNaN(cellNum) &&
     !Number.isNaN(conditionNum) &&
-    symbol === ">="
+    symbol === '>='
   ) {
     return cellNum >= conditionNum;
   }
 
   // Check if both conversions resulted in valid numbers
-  if (!Number.isNaN(cellNum) && !Number.isNaN(conditionNum) && symbol === ">") {
+  if (!Number.isNaN(cellNum) && !Number.isNaN(conditionNum) && symbol === '>') {
     return cellNum > conditionNum;
   }
 
   // Fallback to string comparison if number conversion fails
-  if (symbol === ">=") {
+  if (symbol === '>=') {
     return cellStr.localeCompare(conditionStr) >= 0;
   }
   return cellStr.localeCompare(conditionStr) > 0;
@@ -58,14 +58,14 @@ function compareGreaterThan(
 function compareLessThan(
   cellValue: any,
   conditionValue: any,
-  symbol: any
+  symbol: any,
 ): boolean {
   const cellStr = String(cellValue);
   const conditionStr = String(conditionValue);
 
   // If either value contains alphabetic characters, use string comparison
   if (hasAlphabeticChars(cellValue) || hasAlphabeticChars(conditionValue)) {
-    if (symbol === "<=") {
+    if (symbol === '<=') {
       return cellStr.localeCompare(conditionStr) <= 0;
     }
     return cellStr.localeCompare(conditionStr) < 0;
@@ -78,7 +78,7 @@ function compareLessThan(
   if (
     !Number.isNaN(cellNum) &&
     !Number.isNaN(conditionNum) &&
-    symbol === "<="
+    symbol === '<='
   ) {
     return cellNum <= conditionNum;
   }
@@ -89,7 +89,7 @@ function compareLessThan(
   }
 
   // Fallback to string comparison if number conversion fails
-  if (symbol === "<=") {
+  if (symbol === '<=') {
     return cellStr.localeCompare(conditionStr) <= 0;
   }
   return cellStr.localeCompare(conditionStr) < 0;
@@ -186,7 +186,7 @@ export function setConditionRules(
   conditionformat: any,
   rules: any,
   edit?: boolean,
-  editKey?: string
+  editKey?: string,
 ) {
   if (!checkProtectionFormatCells(ctx)) {
     return;
@@ -202,12 +202,12 @@ export function setConditionRules(
   const conditionValue = [];
 
   if (
-    conditionName === "greaterThan" ||
-    conditionName === "greaterThanOrEqual" ||
-    conditionName === "lessThan" ||
-    conditionName === "lessThanOrEqual" ||
-    conditionName === "equal" ||
-    conditionName === "textContains"
+    conditionName === 'greaterThan' ||
+    conditionName === 'greaterThanOrEqual' ||
+    conditionName === 'lessThan' ||
+    conditionName === 'lessThanOrEqual' ||
+    conditionName === 'equal' ||
+    conditionName === 'textContains'
   ) {
     let v = rules.rulesValue;
     const rangeArr = getRangeByTxt(ctx, v);
@@ -230,9 +230,9 @@ export function setConditionRules(
         ctx.warnDialog = conditionformat.onlySingleCell;
       }
     } else if (rangeArr.length === 0) {
-      if (_.isNaN(v) || v === "") {
-        if (v === "") {
-          ctx.warnDialog = "Value is required";
+      if (_.isNaN(v) || v === '') {
+        if (v === '') {
+          ctx.warnDialog = 'Value is required';
           return;
         }
         ctx.warnDialog = conditionformat.conditionValueCanOnly;
@@ -240,7 +240,7 @@ export function setConditionRules(
       }
       conditionValue.push(v);
     }
-  } else if (conditionName === "between") {
+  } else if (conditionName === 'between') {
     let v1 = rules.betweenValue.value1;
     let v2 = rules.betweenValue.value2;
 
@@ -269,7 +269,7 @@ export function setConditionRules(
         return;
       }
     } else if (rangeArr1.length === 0) {
-      if (_.isNaN(v1) || v1 === "") {
+      if (_.isNaN(v1) || v1 === '') {
         ctx.warnDialog = conditionformat.conditionValueCanOnly;
         return;
       }
@@ -298,26 +298,26 @@ export function setConditionRules(
         return;
       }
     } else if (rangeArr2.length === 0) {
-      if (_.isNaN(v2) || v2 === "") {
+      if (_.isNaN(v2) || v2 === '') {
         ctx.warnDialog = conditionformat.conditionValueCanOnly;
       } else {
         conditionValue.push(v2);
       }
     }
-  } else if (conditionName === "occurrenceDate") {
+  } else if (conditionName === 'occurrenceDate') {
     const v = rules.dateValue;
     if (!v) {
       ctx.warnDialog = conditionformat.pleaseSelectADate;
       return;
     }
     conditionValue.push(v);
-  } else if (conditionName === "duplicateValue") {
+  } else if (conditionName === 'duplicateValue') {
     conditionValue.push(rules.repeatValue);
   } else if (
-    conditionName === "top10" ||
-    conditionName === "top10_percent" ||
-    conditionName === "last10" ||
-    conditionName === "last10_percent"
+    conditionName === 'top10' ||
+    conditionName === 'top10_percent' ||
+    conditionName === 'last10' ||
+    conditionName === 'last10_percent'
   ) {
     const v = rules.projectValue;
     if (
@@ -355,7 +355,7 @@ export function setConditionRules(
 
   // 构造现在的规则
   const rule = {
-    type: "default",
+    type: 'default',
     cellrange: ctx.luckysheet_select_save ?? [],
     format: {
       textColor,
@@ -383,14 +383,14 @@ export function setConditionRules(
   ctx.luckysheetfile[index].conditionRules = {
     ...rules,
     // Ensure all required properties are present
-    rulesType: rules.rulesType || "",
-    rulesValue: rules.rulesValue || "",
-    textColor: rules.textColor || { check: true, color: "#000000" },
-    cellColor: rules.cellColor || { check: true, color: "#000000" },
-    betweenValue: rules.betweenValue || { value1: "", value2: "" },
-    dateValue: rules.dateValue || "",
-    repeatValue: rules.repeatValue || "0",
-    projectValue: rules.projectValue || "10",
+    rulesType: rules.rulesType || '',
+    rulesValue: rules.rulesValue || '',
+    textColor: rules.textColor || { check: true, color: '#000000' },
+    cellColor: rules.cellColor || { check: true, color: '#000000' },
+    betweenValue: rules.betweenValue || { value1: '', value2: '' },
+    dateValue: rules.dateValue || '',
+    repeatValue: rules.repeatValue || '0',
+    projectValue: rules.projectValue || '10',
   };
 }
 
@@ -399,17 +399,17 @@ export function getColorGradation(
   color2: string,
   value1: number,
   value2: number,
-  value: number
+  value: number,
 ) {
-  const rgb1 = color1.split(",");
-  const r1 = parseInt(rgb1[0].split("(")[1], 10);
+  const rgb1 = color1.split(',');
+  const r1 = parseInt(rgb1[0].split('(')[1], 10);
   const g1 = parseInt(rgb1[1], 10);
-  const b1 = parseInt(rgb1[2].split(")")[0], 10);
+  const b1 = parseInt(rgb1[2].split(')')[0], 10);
 
-  const rgb2 = color2.split(",");
-  const r2 = parseInt(rgb2[0].split("(")[1], 10);
+  const rgb2 = color2.split(',');
+  const r2 = parseInt(rgb2[0].split('(')[1], 10);
   const g2 = parseInt(rgb2[1], 10);
-  const b2 = parseInt(rgb2[2].split(")")[0], 10);
+  const b2 = parseInt(rgb2[2].split(')')[0], 10);
 
   const v12 = value1 - value2;
   const v10 = value1 - value;
@@ -432,7 +432,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
     for (let i = 0; i < ruleArr.length; i += 1) {
       const { type, cellrange, format } = ruleArr[i];
       // 数据条
-      if (type === "dataBar") {
+      if (type === 'dataBar') {
         let max = null;
         let min = null;
         for (let s = 0; s < cellrange.length; s += 1) {
@@ -449,7 +449,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               if (
                 !_.isNil(cell) &&
                 !_.isNil(cell.ct) &&
-                cell.ct.t === "n" &&
+                cell.ct.t === 'n' &&
                 _.isNil(cell.v)
               ) {
                 if (_.isNil(max) || parseInt(`${cell.v}`, 10) > max) {
@@ -490,7 +490,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   if (
                     !_.isNil(cell) &&
                     !_.isNil(cell.ct) &&
-                    cell.ct.t === "n" &&
+                    cell.ct.t === 'n' &&
                     !_.isNil(cell.v)
                   ) {
                     if (parseInt(`${cell.v}`, 10) < 0) {
@@ -499,12 +499,12 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                         Math.round(
                           (Math.abs(parseInt(`${cell.v}`, 10)) /
                             Math.abs(min)) *
-                            100
+                            100,
                         ) / 100;
 
                       if (`${r}_${c}` in computeMap) {
                         computeMap[`${r}_${c}`].dataBar = {
-                          valueType: "minus",
+                          valueType: 'minus',
                           minusLen,
                           valueLen,
                           format,
@@ -512,7 +512,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                       } else {
                         computeMap[`${r}_${c}`] = {
                           dataBar: {
-                            valueType: "minus",
+                            valueType: 'minus',
                             minusLen,
                             valueLen,
                             format,
@@ -529,7 +529,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
                       if (`${r}_${c}` in computeMap) {
                         computeMap[`${r}_${c}`].dataBar = {
-                          valueType: "plus",
+                          valueType: 'plus',
                           plusLen,
                           minusLen,
                           valueLen,
@@ -538,7 +538,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                       } else {
                         computeMap[`${r}_${c}`] = {
                           dataBar: {
-                            valueType: "plus",
+                            valueType: 'plus',
                             plusLen,
                             minusLen,
                             valueLen,
@@ -574,7 +574,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   if (
                     !_.isNil(cell) &&
                     !_.isNil(cell.ct) &&
-                    cell.ct.t === "n" &&
+                    cell.ct.t === 'n' &&
                     !_.isNil(cell.v)
                   ) {
                     let valueLen;
@@ -588,7 +588,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
                     if (`${r}_${c}` in computeMap) {
                       computeMap[`${r}_${c}`].dataBar = {
-                        valueType: "plus",
+                        valueType: 'plus',
                         plusLen,
                         valueLen,
                         format,
@@ -596,7 +596,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     } else {
                       computeMap[`${r}_${c}`] = {
                         dataBar: {
-                          valueType: "plus",
+                          valueType: 'plus',
                           plusLen,
                           valueLen,
                           format,
@@ -609,7 +609,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
             }
           }
         }
-      } else if (type === "colorGradation") {
+      } else if (type === 'colorGradation') {
         // 色阶
         let max = null;
         let min = null;
@@ -631,7 +631,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               if (
                 !_.isNil(cell) &&
                 !_.isNil(cell.ct) &&
-                cell.ct.t === "n" &&
+                cell.ct.t === 'n' &&
                 !_.isNil(cell.v)
               ) {
                 count += 1;
@@ -673,7 +673,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   if (
                     !_.isNil(cell) &&
                     !_.isNil(cell.ct) &&
-                    cell.ct.t === "n" &&
+                    cell.ct.t === 'n' &&
                     !_.isNil(cell.v)
                   ) {
                     if (parseInt(`${cell.v}`, 10) === min) {
@@ -694,7 +694,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                           format.textColor,
                           min,
                           avg,
-                          parseInt(`${cell.v}`, 10)
+                          parseInt(`${cell.v}`, 10),
                         );
                       } else {
                         computeMap[`${r}_${c}`] = {
@@ -703,7 +703,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                             format[1],
                             min,
                             avg,
-                            parseInt(`${cell.v}`, 10)
+                            parseInt(`${cell.v}`, 10),
                           ),
                         };
                       }
@@ -723,7 +723,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                           format[0],
                           avg,
                           max,
-                          parseInt(`${cell.v}`, 10)
+                          parseInt(`${cell.v}`, 10),
                         );
                       } else {
                         computeMap[`${r}_${c}`] = {
@@ -732,7 +732,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                             format[0],
                             avg,
                             max,
-                            parseInt(`${cell.v}`, 10)
+                            parseInt(`${cell.v}`, 10),
                           ),
                         };
                       }
@@ -769,7 +769,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   if (
                     !_.isNil(cell) &&
                     !_.isNil(cell.ct) &&
-                    cell.ct.t === "n" &&
+                    cell.ct.t === 'n' &&
                     !_.isNil(cell.v)
                   ) {
                     if (parseInt(`${cell.v}`, 10) === min) {
@@ -788,7 +788,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                           format[0],
                           min,
                           max,
-                          parseInt(`${cell.v}`, 10)
+                          parseInt(`${cell.v}`, 10),
                         );
                       } else {
                         computeMap[`${r}_${c}`] = {
@@ -797,7 +797,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                             format[0],
                             min,
                             max,
-                            parseInt(`${cell.v}`, 10)
+                            parseInt(`${cell.v}`, 10),
                           ),
                         };
                       }
@@ -814,7 +814,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
             }
           }
         }
-      } else if (type === "icons") {
+      } else if (type === 'icons') {
         // 图标集
       } else {
         // 其他
@@ -827,12 +827,12 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
         for (let s = 0; s < cellrange.length; s += 1) {
           // 条件类型判断
           if (
-            conditionName === "greaterThan" ||
-            conditionName === "greaterThanOrEqual" ||
-            conditionName === "lessThan" ||
-            conditionName === "lessThanOrEqual" ||
-            conditionName === "equal" ||
-            conditionName === "textContains"
+            conditionName === 'greaterThan' ||
+            conditionName === 'greaterThanOrEqual' ||
+            conditionName === 'lessThan' ||
+            conditionName === 'lessThanOrEqual' ||
+            conditionName === 'equal' ||
+            conditionName === 'textContains'
           ) {
             // 循环应用范围计算
             for (
@@ -855,8 +855,8 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
                 // 符合条件 - UPDATED WITH STRING COMPARISON SUPPORT
                 if (
-                  conditionName === "greaterThan" &&
-                  compareGreaterThan(cell.v, conditionValue0, ">")
+                  conditionName === 'greaterThan' &&
+                  compareGreaterThan(cell.v, conditionValue0, '>')
                 ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
@@ -876,8 +876,8 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     };
                   }
                 } else if (
-                  conditionName === "greaterThanOrEqual" &&
-                  compareGreaterThan(cell.v, conditionValue0, ">=")
+                  conditionName === 'greaterThanOrEqual' &&
+                  compareGreaterThan(cell.v, conditionValue0, '>=')
                 ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
@@ -890,8 +890,8 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     computeMap[`${r}_${c}`] = { textColor, cellColor, bold };
                   }
                 } else if (
-                  conditionName === "lessThan" &&
-                  compareLessThan(cell.v, conditionValue0, "<")
+                  conditionName === 'lessThan' &&
+                  compareLessThan(cell.v, conditionValue0, '<')
                 ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
@@ -911,8 +911,8 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     };
                   }
                 } else if (
-                  conditionName === "lessThanOrEqual" &&
-                  compareLessThan(cell.v, conditionValue0, "<=")
+                  conditionName === 'lessThanOrEqual' &&
+                  compareLessThan(cell.v, conditionValue0, '<=')
                 ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
@@ -932,7 +932,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     };
                   }
                 } else if (
-                  conditionName === "equal" &&
+                  conditionName === 'equal' &&
                   cell.v.toString() === conditionValue0
                 ) {
                   if (`${r}_${c}` in computeMap) {
@@ -953,7 +953,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     };
                   }
                 } else if (
-                  conditionName === "textContains" &&
+                  conditionName === 'textContains' &&
                   cell.v.toString().indexOf(conditionValue0) !== -1
                 ) {
                   if (`${r}_${c}` in computeMap) {
@@ -976,7 +976,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === "empty") {
+          } else if (conditionName === 'empty') {
             // Format cells that are empty (no value or blank)
             for (
               let r = cellrange[s].row[0];
@@ -1012,7 +1012,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === "between") {
+          } else if (conditionName === 'between') {
             // UPDATED BETWEEN COMPARISON WITH STRING SUPPORT
             // 循环应用范围计算
             for (
@@ -1055,14 +1055,14 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === "occurrenceDate") {
+          } else if (conditionName === 'occurrenceDate') {
             let dBig;
             let dSmall;
-            if (conditionValue0.toString().indexOf("-") === -1) {
+            if (conditionValue0.toString().indexOf('-') === -1) {
               dBig = genarate(conditionValue0)![2].toString();
               dSmall = genarate(conditionValue0)![2].toString();
             } else {
-              const str = conditionValue0.toString().split("-");
+              const str = conditionValue0.toString().split('-');
               dBig = genarate(str[1].trim())![2].toString();
               dSmall = genarate(str[0].trim()![2].toString());
             }
@@ -1084,7 +1084,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 if (
                   !_.isNil(d[r][c]) &&
                   !_.isNil(d[r][c]!.ct) &&
-                  d[r][c]!.ct!.t === "d"
+                  d[r][c]!.ct!.t === 'd'
                 ) {
                   // 单元格值
                   const cellVal = getCellValue(r, c, d);
@@ -1111,7 +1111,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === "duplicateValue") {
+          } else if (conditionName === 'duplicateValue') {
             // 应用范围单元格处理
             const dmap: any = {};
             for (
@@ -1133,7 +1133,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               }
             }
             // 循环应用范围计算
-            if (conditionValue0 === "0") {
+            if (conditionValue0 === '0') {
               // 重复值
               _.forEach(dmap, (x) => {
                 if (x.length > 1) {
@@ -1159,7 +1159,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   }
                 }
               });
-            } else if (conditionValue0 === "1") {
+            } else if (conditionValue0 === '1') {
               // 唯一值
               _.forEach(dmap, (x) => {
                 if (x.length === 1) {
@@ -1185,12 +1185,12 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               });
             }
           } else if (
-            conditionName === "top10" ||
-            conditionName === "top10_percent" ||
-            conditionName === "last10" ||
-            conditionName === "last10_percent" ||
-            conditionName === "aboveAverage" ||
-            conditionName === "belowAverage"
+            conditionName === 'top10' ||
+            conditionName === 'top10_percent' ||
+            conditionName === 'last10' ||
+            conditionName === 'last10_percent' ||
+            conditionName === 'aboveAverage' ||
+            conditionName === 'belowAverage'
           ) {
             // 应用范围单元格值(数值型)
             const dArr = [];
@@ -1212,7 +1212,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 if (
                   !_.isNil(d[r][c]) &&
                   !_.isNil(d[r][c]!.ct) &&
-                  d[r][c]!.ct!.t === "n"
+                  d[r][c]!.ct!.t === 'n'
                 ) {
                   dArr.push(getCellValue(r, c, d));
                 }
@@ -1220,10 +1220,10 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
             }
             // 数组处理
             if (
-              conditionName === "top10" ||
-              conditionName === "top10_percent" ||
-              conditionName === "last10" ||
-              conditionName === "last10_percent"
+              conditionName === 'top10' ||
+              conditionName === 'top10_percent' ||
+              conditionName === 'last10' ||
+              conditionName === 'last10_percent'
             ) {
               // 从大到小排序
               for (let j = 0; j < dArr.length; j += 1) {
@@ -1238,20 +1238,20 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               // 取条件值数组
 
               let cArr;
-              if (conditionName === "top10") {
+              if (conditionName === 'top10') {
                 cArr = dArr.slice(0, conditionValue0); // 前10项数组
-              } else if (conditionName === "top10_percent") {
+              } else if (conditionName === 'top10_percent') {
                 cArr = dArr.slice(
                   0,
-                  Math.floor((conditionValue0 * dArr.length) / 100)
+                  Math.floor((conditionValue0 * dArr.length) / 100),
                 ); // 前10%数组
-              } else if (conditionName === "last10") {
+              } else if (conditionName === 'last10') {
                 cArr = dArr.slice(dArr.length - conditionValue0, dArr.length); // 最后10项数组
-              } else if (conditionName === "last10_percent") {
+              } else if (conditionName === 'last10_percent') {
                 cArr = dArr.slice(
                   dArr.length -
                     Math.floor((conditionValue0 * dArr.length) / 100),
-                  dArr.length
+                  dArr.length,
                 ); // 最后10%数组
               }
               // 循环应用范围计算
@@ -1294,8 +1294,8 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             } else if (
-              conditionName === "aboveAverage" ||
-              conditionName === "belowAverage"
+              conditionName === 'aboveAverage' ||
+              conditionName === 'belowAverage'
             ) {
               // 计算数组平均值
               let sum = 0;
@@ -1304,7 +1304,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               }
               const averageNum = sum / dArr.length;
               // 循环应用范围计算
-              if (conditionName === "aboveAverage") {
+              if (conditionName === 'aboveAverage') {
                 // 高于平均值
                 for (
                   let r = cellrange[s].row[0];
@@ -1344,7 +1344,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     }
                   }
                 }
-              } else if (conditionName === "belowAverage") {
+              } else if (conditionName === 'belowAverage') {
                 // 低于平均值
                 for (
                   let r = cellrange[s].row[0];
@@ -1386,14 +1386,14 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === "formula") {
+          } else if (conditionName === 'formula') {
             const str = cellrange[s].row[0];
             const edr = cellrange[s].row[1];
             const stc = cellrange[s].column[0];
             const edc = cellrange[s].column[1];
 
             let formulaTxt = conditionValue0;
-            if (conditionValue0.toString().slice(0, 1) !== "=") {
+            if (conditionValue0.toString().slice(0, 1) !== '=') {
               formulaTxt = `=${conditionValue0}`;
             }
             for (let r = str; r <= edr; r += 1) {
@@ -1403,17 +1403,17 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 const offsetCol = c - stc;
 
                 if (offsetRow > 0) {
-                  func = `=${functionCopy(ctx, func, "down", offsetRow)}`;
+                  func = `=${functionCopy(ctx, func, 'down', offsetRow)}`;
                 }
 
                 if (offsetCol > 0) {
-                  func = `=${functionCopy(ctx, func, "right", offsetCol)}`;
+                  func = `=${functionCopy(ctx, func, 'right', offsetCol)}`;
                 }
 
                 const funcV = execfunction(ctx, func, r, c);
                 let v = funcV[1];
 
-                if (typeof v !== "boolean") {
+                if (typeof v !== 'boolean') {
                   v = !!Number(v);
                 }
 
@@ -1458,13 +1458,13 @@ export function getComputeMap(ctx: Context) {
   const editKey = ctx.luckysheetfile[index].conditionRules?.editKey;
   if (
     ctx.luckysheet_select_save &&
-    ctx.luckysheetfile[index].conditionRules?.rulesValue !== ""
+    ctx.luckysheetfile[index].conditionRules?.rulesValue !== ''
   ) {
     if (editKey !== null && editKey !== undefined) {
       ruleArr.splice(Number(editKey), 1);
     }
     ruleArr.push({
-      type: "default",
+      type: 'default',
       cellrange: ctx.luckysheet_select_save,
       format: {
         textColor: ctx.luckysheetfile[index].conditionRules?.textColor.color,
@@ -1504,7 +1504,7 @@ export function updateItem(ctx: Context, type: string) {
 
   // 保存当前的规则
   let ruleArr = [];
-  if (type === "delSheet") {
+  if (type === 'delSheet') {
     ruleArr = [];
   } else {
     const rule = {
@@ -1525,7 +1525,7 @@ export function CFSplitRange(
   range1: any,
   range2: any,
   range3: any,
-  type: string
+  type: string,
 ) {
   let range: any = [];
 
@@ -1545,7 +1545,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 全部
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         {
@@ -1553,10 +1553,10 @@ export function CFSplitRange(
           column: [c1 + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1573,7 +1573,7 @@ export function CFSplitRange(
   ) {
     // 选区 行贯穿 条件格式应用范围 上部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
@@ -1582,10 +1582,10 @@ export function CFSplitRange(
           column: [c1 + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [{ row: [range2.row[1] + 1, r2], column: [c1, c2] }];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1602,7 +1602,7 @@ export function CFSplitRange(
   ) {
     // 选区 行贯穿 条件格式应用范围 下部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1611,10 +1611,10 @@ export function CFSplitRange(
           column: [c1 + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [{ row: [r1, range2.row[0] - 1], column: [c1, c2] }];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1631,7 +1631,7 @@ export function CFSplitRange(
   ) {
     // 选区 行贯穿 条件格式应用范围 中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1641,13 +1641,13 @@ export function CFSplitRange(
           column: [c1 + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1664,7 +1664,7 @@ export function CFSplitRange(
   ) {
     // 选区 列贯穿 条件格式应用范围 左部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, r2], column: [range2.column[1] + 1, c2] },
@@ -1673,10 +1673,10 @@ export function CFSplitRange(
           column: [c1 + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [{ row: [r1, r2], column: [range2.column[1] + 1, c2] }];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1693,7 +1693,7 @@ export function CFSplitRange(
   ) {
     // 选区 列贯穿 条件格式应用范围 右部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, r2], column: [c1, range2.column[0] - 1] },
@@ -1702,10 +1702,10 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [{ row: [r1, r2], column: [c1, range2.column[0] - 1] }];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1722,7 +1722,7 @@ export function CFSplitRange(
   ) {
     // 选区 列贯穿 条件格式应用范围 中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, r2], column: [c1, range2.column[0] - 1] },
@@ -1732,13 +1732,13 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, r2], column: [c1, range2.column[0] - 1] },
         { row: [r1, r2], column: [range2.column[1] + 1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1755,7 +1755,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 左上角部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[1]], column: [range2.column[1] + 1, c2] },
@@ -1765,13 +1765,13 @@ export function CFSplitRange(
           column: [c1 + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[1]], column: [range2.column[1] + 1, c2] },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1788,7 +1788,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 右上角部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[1]], column: [c1, range2.column[0] - 1] },
@@ -1798,13 +1798,13 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[1]], column: [c1, range2.column[0] - 1] },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1821,7 +1821,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 左下角部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1831,13 +1831,13 @@ export function CFSplitRange(
           column: [c1 + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
         { row: [range2.row[0], r2], column: [range2.column[1] + 1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1854,7 +1854,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 右下角部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1864,13 +1864,13 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
         { row: [range2.row[0], r2], column: [c1, range2.column[0] - 1] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1887,7 +1887,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 左中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1901,7 +1901,7 @@ export function CFSplitRange(
           column: [c1 + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1911,7 +1911,7 @@ export function CFSplitRange(
         },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1928,7 +1928,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 右中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1942,7 +1942,7 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, c2 + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -1952,7 +1952,7 @@ export function CFSplitRange(
         },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -1969,7 +1969,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 上中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[1]], column: [c1, range2.column[0] - 1] },
@@ -1980,14 +1980,14 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[1]], column: [c1, range2.column[0] - 1] },
         { row: [r1, range2.row[1]], column: [range2.column[1] + 1, c2] },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -2004,7 +2004,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 下中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -2015,14 +2015,14 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
         { row: [range2.row[0], r2], column: [c1, range2.column[0] - 1] },
         { row: [range2.row[0], r2], column: [range2.column[1] + 1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -2039,7 +2039,7 @@ export function CFSplitRange(
   ) {
     // 选区 包含 条件格式应用范围 正中间部分
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -2057,7 +2057,7 @@ export function CFSplitRange(
           column: [range2.column[0] + offset_c, range2.column[1] + offset_c],
         },
       ];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [
         { row: [r1, range2.row[0] - 1], column: [c1, c2] },
@@ -2071,7 +2071,7 @@ export function CFSplitRange(
         },
         { row: [range2.row[1] + 1, r2], column: [c1, c2] },
       ];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [
         {
@@ -2083,13 +2083,13 @@ export function CFSplitRange(
   } else {
     // 选区 在 条件格式应用范围 之外
 
-    if (type === "allPart") {
+    if (type === 'allPart') {
       // 所有部分
       range = [{ row: [r1, r2], column: [c1, c2] }];
-    } else if (type === "restPart") {
+    } else if (type === 'restPart') {
       // 剩余部分
       range = [{ row: [r1, r2], column: [c1, c2] }];
-    } else if (type === "operatePart") {
+    } else if (type === 'operatePart') {
       // 操作部分
       range = [];
     }

@@ -1,15 +1,15 @@
-import React from "react";
-import Dialog from "../Dialog";
+import React from 'react';
+import Dialog from '../Dialog';
 
 type Props = {
-  type: "ok" | "yesno";
+  type: 'ok' | 'yesno';
   onOk?: () => void;
   onCancel?: () => void;
   children?: React.ReactNode;
 };
 
 const MessageBox: React.FC<Props> = ({
-  type = "yesno",
+  type = 'yesno',
   onOk,
   onCancel,
   children,
@@ -19,7 +19,7 @@ const MessageBox: React.FC<Props> = ({
       type={type}
       onOk={onOk}
       onCancel={onCancel}
-      title={type === "yesno" ? "Confirmation" : undefined}
+      title={type === 'yesno' ? 'Confirmation' : undefined}
     >
       {children}
     </Dialog>

@@ -1,10 +1,10 @@
-import numeral from "numeral";
-import _ from "lodash";
-import { isRealNum, valueIsError, detectDateFormat } from "./validation";
+import numeral from 'numeral';
+import _ from 'lodash';
+import { isRealNum, valueIsError, detectDateFormat } from './validation';
 // @ts-ignore
-import SSF from "./ssf";
-import { CellMatrix } from "../types";
-import { getCellValue } from "./cell";
+import SSF from './ssf';
+import { CellMatrix } from '../types';
+import { getCellValue } from './cell';
 
 const base1904 = new Date(1900, 2, 1, 0, 0, 0);
 
@@ -15,7 +15,7 @@ export function datenum_local(v: Date, date1904?: number) {
     v.getDate(),
     v.getHours(),
     v.getMinutes(),
-    v.getSeconds()
+    v.getSeconds(),
   );
   const dnthresh_utc = Date.UTC(1899, 11, 31, 0, 0, 0);
 
@@ -41,36 +41,36 @@ export function genarate(value: string | number | boolean) {
     value = value as string;
     // 表述金额的字符串，如：12,000.00 或者 -12,000.00
     m = value;
-    v = Number(value.split(".")[0].replace(",", ""));
-    let fa = "#,##0";
-    if (value.split(".")[1]) {
-      fa = "#,##0.";
-      for (let i = 0; i < value.split(".")[1].length; i += 1) {
+    v = Number(value.split('.')[0].replace(',', ''));
+    let fa = '#,##0';
+    if (value.split('.')[1]) {
+      fa = '#,##0.';
+      for (let i = 0; i < value.split('.')[1].length; i += 1) {
         fa += 0;
       }
     }
-    ct = { fa, t: "n" };
+    ct = { fa, t: 'n' };
   } else if (value.toString().substring(0, 1) === "'") {
     m = value.toString().substring(1);
-    ct = { fa: "@", t: "s" };
-  } else if (value.toString().toUpperCase() === "TRUE") {
-    m = "TRUE";
-    ct = { fa: "General", t: "b" };
+    ct = { fa: '@', t: 's' };
+  } else if (value.toString().toUpperCase() === 'TRUE') {
+    m = 'TRUE';
+    ct = { fa: 'General', t: 'b' };
     v = true;
-  } else if (value.toString().toUpperCase() === "FALSE") {
-    m = "FALSE";
-    ct = { fa: "General", t: "b" };
+  } else if (value.toString().toUpperCase() === 'FALSE') {
+    m = 'FALSE';
+    ct = { fa: 'General', t: 'b' };
     v = false;
   } else if (valueIsError(value.toString())) {
     m = value.toString();
-    ct = { fa: "General", t: "e" };
+    ct = { fa: 'General', t: 'e' };
   } else if (
     /^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-      value as string
+      value as string,
     )
   ) {
     m = value.toString();
-    ct = { fa: "@", t: "s" };
+    ct = { fa: '@', t: 's' };
   } else if (
     isRealNum(value) &&
     Math.abs(parseFloat(value as string)) > 0 &&
@@ -79,37 +79,37 @@ export function genarate(value: string | number | boolean) {
   ) {
     v = parseFloat(value as string);
     const str = v.toExponential();
-    if (str.indexOf(".") > -1) {
-      let strlen = str.split(".")[1].split("e")[0].length;
+    if (str.indexOf('.') > -1) {
+      let strlen = str.split('.')[1].split('e')[0].length;
       if (strlen > 5) {
         strlen = 5;
       }
 
-      ct = { fa: `#0.${new Array(strlen + 1).join("0")}E+00`, t: "n" };
+      ct = { fa: `#0.${new Array(strlen + 1).join('0')}E+00`, t: 'n' };
     } else {
-      ct = { fa: "#0.E+00", t: "n" };
+      ct = { fa: '#0.E+00', t: 'n' };
     }
 
     m = SSF.format(ct.fa, v);
-  } else if (value.toString().indexOf("%") > -1) {
-    const index = value.toString().indexOf("%");
+  } else if (value.toString().indexOf('%') > -1) {
+    const index = value.toString().indexOf('%');
     const value2 = value.toString().substring(0, index);
-    const value3 = value2.replace(/,/g, "");
+    const value3 = value2.replace(/,/g, '');
 
     if (index === value.toString().length - 1 && isRealNum(value3)) {
-      if (value2.indexOf(".") > -1) {
-        if (value2.indexOf(".") === value2.lastIndexOf(".")) {
-          const value4 = value2.split(".")[0];
-          const value5 = value2.split(".")[1];
+      if (value2.indexOf('.') > -1) {
+        if (value2.indexOf('.') === value2.lastIndexOf('.')) {
+          const value4 = value2.split('.')[0];
+          const value5 = value2.split('.')[1];
 
           let len = value5.length;
           if (len > 9) {
             len = 9;
           }
 
-          if (value4.indexOf(",") > -1) {
+          if (value4.indexOf(',') > -1) {
             let isThousands = true;
-            const ThousandsArr = value4.split(",");
+            const ThousandsArr = value4.split(',');
 
             for (let i = 1; i < ThousandsArr.length; i += 1) {
               if (ThousandsArr[i].length < 3) {
@@ -120,27 +120,27 @@ export function genarate(value: string | number | boolean) {
 
             if (isThousands) {
               ct = {
-                fa: `#,##0.${new Array(len + 1).join("0")}%`,
-                t: "n",
+                fa: `#,##0.${new Array(len + 1).join('0')}%`,
+                t: 'n',
               };
               v = numeral(value).value();
               m = SSF.format(ct.fa, v);
             } else {
               m = value.toString();
-              ct = { fa: "@", t: "s" };
+              ct = { fa: '@', t: 's' };
             }
           } else {
-            ct = { fa: `0.${new Array(len + 1).join("0")}%`, t: "n" };
+            ct = { fa: `0.${new Array(len + 1).join('0')}%`, t: 'n' };
             v = numeral(value).value();
             m = SSF.format(ct.fa, v);
           }
         } else {
           m = value.toString();
-          ct = { fa: "@", t: "s" };
+          ct = { fa: '@', t: 's' };
         }
-      } else if (value2.indexOf(",") > -1) {
+      } else if (value2.indexOf(',') > -1) {
         let isThousands = true;
-        const ThousandsArr = value2.split(",");
+        const ThousandsArr = value2.split(',');
 
         for (let i = 1; i < ThousandsArr.length; i += 1) {
           if (ThousandsArr[i].length < 3) {
@@ -150,35 +150,35 @@ export function genarate(value: string | number | boolean) {
         }
 
         if (isThousands) {
-          ct = { fa: "#,##0%", t: "n" };
+          ct = { fa: '#,##0%', t: 'n' };
           v = numeral(value).value();
           m = SSF.format(ct.fa, v);
         } else {
           m = value.toString();
-          ct = { fa: "@", t: "s" };
+          ct = { fa: '@', t: 's' };
         }
       } else {
-        ct = { fa: "0%", t: "n" };
+        ct = { fa: '0%', t: 'n' };
         v = numeral(value).value();
         m = SSF.format(ct.fa, v);
       }
     } else {
       m = value.toString();
-      ct = { fa: "@", t: "s" };
+      ct = { fa: '@', t: 's' };
     }
-  } else if (value.toString().indexOf(".") > -1) {
-    if (value.toString().indexOf(".") === value.toString().lastIndexOf(".")) {
-      const value1 = value.toString().split(".")[0];
-      const value2 = value.toString().split(".")[1];
+  } else if (value.toString().indexOf('.') > -1) {
+    if (value.toString().indexOf('.') === value.toString().lastIndexOf('.')) {
+      const value1 = value.toString().split('.')[0];
+      const value2 = value.toString().split('.')[1];
 
       let len = value2.length;
       if (len > 9) {
         len = 9;
       }
 
-      if (value1.indexOf(",") > -1) {
+      if (value1.indexOf(',') > -1) {
         let isThousands = true;
-        const ThousandsArr = value1.split(",");
+        const ThousandsArr = value1.split(',');
 
         for (let i = 1; i < ThousandsArr.length; i += 1) {
           if (!isRealNum(ThousandsArr[i]) || ThousandsArr[i].length < 3) {
@@ -188,32 +188,32 @@ export function genarate(value: string | number | boolean) {
         }
 
         if (isThousands) {
-          ct = { fa: `#,##0.${new Array(len + 1).join("0")}`, t: "n" };
+          ct = { fa: `#,##0.${new Array(len + 1).join('0')}`, t: 'n' };
           v = numeral(value).value();
           m = SSF.format(ct.fa, v);
         } else {
           m = value.toString();
-          ct = { fa: "@", t: "s" };
+          ct = { fa: '@', t: 's' };
         }
       } else {
         if (isRealNum(value1) && isRealNum(value2)) {
-          ct = { fa: `0.${new Array(len + 1).join("0")}`, t: "n" };
+          ct = { fa: `0.${new Array(len + 1).join('0')}`, t: 'n' };
           v = numeral(value).value();
           m = SSF.format(ct.fa, v);
         } else {
           m = value.toString();
-          ct = { fa: "@", t: "s" };
+          ct = { fa: '@', t: 's' };
         }
       }
     } else {
       m = value.toString();
-      ct = { fa: "@", t: "s" };
+      ct = { fa: '@', t: 's' };
     }
   } else if (isRealNum(value)) {
     m = parseFloat(value as string).toString();
-    ct = { fa: "General", t: "n" };
+    ct = { fa: 'General', t: 'n' };
     v = parseFloat(value as string);
-  } else if (typeof value === "string") {
+  } else if (typeof value === 'string') {
     const df = detectDateFormat(value.toString());
     if (df) {
       const dateObj = new Date(
@@ -222,43 +222,43 @@ export function genarate(value: string | number | boolean) {
         df.day,
         df.hours,
         df.minutes,
-        df.seconds
+        df.seconds,
       );
       v = datenum_local(dateObj);
-      ct.t = "d";
+      ct.t = 'd';
 
       const map: Record<string, string> = {
-        "yyyy-MM-dd": "yyyy-MM-dd",
-        "yyyy-MM-dd HH:mm": "yyyy-MM-dd HH:mm",
-        "yyyy-MM-ddTHH:mm": "yyyy-MM-dd HH:mm",
-        "yyyy/MM/dd": "yyyy/MM/dd",
-        "yyyy/MM/dd HH:mm": "yyyy/MM/dd HH:mm",
-        "yyyy.MM.dd": "yyyy.MM.dd",
-        "MM/dd/yyyy h:mm AM/PM": "MM/dd/yyyy h:mm AM/PM",
-        "MM/dd/yyyy": "MM/dd/yyyy",
-        "M/d/yyyy": "M/d/yyyy",
-        "MM/dd/yy": "MM/dd/yy",
-        "dd/MM/yyyy": "dd/MM/yyyy",
-        "dd-MM-yyyy": "dd-MM-yyyy",
-        "dd.MM.yyyy": "dd.MM.yyyy",
-        "named-mdy-full": "mmmm d, yyyy",
-        "named-mdy-abbr": "mmm d, yyyy",
-        "named-dmy-full": "d mmmm yyyy",
-        "named-dmy-abbr": "d mmm yyyy",
-        "named-abbr-dashes": "mmm-d-yyyy",
+        'yyyy-MM-dd': 'yyyy-MM-dd',
+        'yyyy-MM-dd HH:mm': 'yyyy-MM-dd HH:mm',
+        'yyyy-MM-ddTHH:mm': 'yyyy-MM-dd HH:mm',
+        'yyyy/MM/dd': 'yyyy/MM/dd',
+        'yyyy/MM/dd HH:mm': 'yyyy/MM/dd HH:mm',
+        'yyyy.MM.dd': 'yyyy.MM.dd',
+        'MM/dd/yyyy h:mm AM/PM': 'MM/dd/yyyy h:mm AM/PM',
+        'MM/dd/yyyy': 'MM/dd/yyyy',
+        'M/d/yyyy': 'M/d/yyyy',
+        'MM/dd/yy': 'MM/dd/yy',
+        'dd/MM/yyyy': 'dd/MM/yyyy',
+        'dd-MM-yyyy': 'dd-MM-yyyy',
+        'dd.MM.yyyy': 'dd.MM.yyyy',
+        'named-mdy-full': 'mmmm d, yyyy',
+        'named-mdy-abbr': 'mmm d, yyyy',
+        'named-dmy-full': 'd mmmm yyyy',
+        'named-dmy-abbr': 'd mmm yyyy',
+        'named-abbr-dashes': 'mmm-d-yyyy',
       };
 
-      ct.fa = map[df.formatType] || "dd/MM/yyyy";
+      ct.fa = map[df.formatType] || 'dd/MM/yyyy';
       m = SSF.format(ct.fa, v);
     } else {
       m = String(value);
-      ct.fa = "General";
-      ct.t = "g";
+      ct.fa = 'General';
+      ct.t = 'g';
     }
   } else {
     m = String(value);
-    ct.fa = "General";
-    ct.t = "g";
+    ct.fa = 'General';
+    ct.t = 'g';
   }
 
   return [m, ct, v];
@@ -269,23 +269,23 @@ export function update(fmt: string, v: any) {
 }
 
 export function is_date(fmt: string, v?: any) {
-  console.log(SSF.is_date(fmt, v), "is_date");
+  console.log(SSF.is_date(fmt, v), 'is_date');
   return SSF.is_date(fmt, v);
 }
 
 function fuzzynum(s: string | number) {
   let v = Number(s);
-  if (typeof s === "number") {
+  if (typeof s === 'number') {
     return s;
   }
   if (!Number.isNaN(v)) return v;
   let wt = 1;
   let ss = s
-    .replace(/([\d]),([\d])/g, "$1$2")
-    .replace(/[$]/g, "")
+    .replace(/([\d]),([\d])/g, '$1$2')
+    .replace(/[$]/g, '')
     .replace(/[%]/g, () => {
       wt *= 100;
-      return "";
+      return '';
     });
   v = Number(ss);
   if (!Number.isNaN(v)) return v / wt;
@@ -299,21 +299,21 @@ function fuzzynum(s: string | number) {
 }
 
 export function valueShowEs(r: number, c: number, d: CellMatrix) {
-  let value = getCellValue(r, c, d, "m");
+  let value = getCellValue(r, c, d, 'm');
   if (value == null) {
-    value = getCellValue(r, c, d, "v");
+    value = getCellValue(r, c, d, 'v');
   } else {
     if (!Number.isNaN(fuzzynum(value))) {
-      if (_.isString(value) && value.indexOf("%") > -1) {
+      if (_.isString(value) && value.indexOf('%') > -1) {
       } else {
-        value = getCellValue(r, c, d, "v");
+        value = getCellValue(r, c, d, 'v');
       }
     }
     // else if (!isNaN(parseDate(value).getDate())){
-    else if (d[r]?.[c]?.ct?.t === "d") {
-    } else if (d[r]?.[c]?.ct?.t === "b") {
+    else if (d[r]?.[c]?.ct?.t === 'd') {
+    } else if (d[r]?.[c]?.ct?.t === 'b') {
     } else {
-      value = getCellValue(r, c, d, "v");
+      value = getCellValue(r, c, d, 'v');
     }
   }
   return value;

@@ -1,4 +1,4 @@
-import _ from "lodash";
+import _ from 'lodash';
 import {
   colLocationByIndex,
   Context,
@@ -6,7 +6,7 @@ import {
   getSheetIndex,
   GlobalCache,
   rowLocationByIndex,
-} from "..";
+} from '..';
 
 function cutVolumn(arr: number[], cutindex: number) {
   if (cutindex <= 0) {
@@ -36,16 +36,16 @@ function frozenTofreezen(ctx: Context, cache: GlobalCache, sheetId: string) {
     };
   }
   let { type } = frozen;
-  if (type === "row") {
-    type = "rangeRow";
-  } else if (type === "column") {
-    type = "rangeColumn";
-  } else if (type === "both") {
-    type = "rangeBoth";
+  if (type === 'row') {
+    type = 'rangeRow';
+  } else if (type === 'column') {
+    type = 'rangeColumn';
+  } else if (type === 'both') {
+    type = 'rangeBoth';
   }
 
   // transform to freezen
-  if (type === "rangeRow" || type === "rangeBoth") {
+  if (type === 'rangeRow' || type === 'rangeBoth') {
     const scrollTop = 0;
     let row_st = _.sortedIndex(ctx.visibledatarow, scrollTop);
 
@@ -74,7 +74,7 @@ function frozenTofreezen(ctx: Context, cache: GlobalCache, sheetId: string) {
       top,
     };
   }
-  if (type === "rangeColumn" || type === "rangeBoth") {
+  if (type === 'rangeColumn' || type === 'rangeBoth') {
     const scrollLeft = 0;
     let col_st = _.sortedIndex(ctx.visibledatacolumn, scrollLeft);
 
@@ -114,7 +114,7 @@ export function initFreeze(ctx: Context, cache: GlobalCache, sheetId: string) {
 
 export function scrollToFrozenRowCol(
   ctx: Context,
-  freeze: Freezen | undefined
+  freeze: Freezen | undefined,
 ) {
   const select_save = ctx.luckysheet_select_save;
   if (!select_save) return;
@@ -201,15 +201,15 @@ export function getFrozenHandleTop(ctx: Context) {
 
   const sheet = ctx.luckysheetfile[idx];
   if (
-    sheet?.frozen?.type === "row" ||
-    sheet?.frozen?.type === "rangeRow" ||
-    sheet?.frozen?.type === "rangeBoth" ||
-    sheet?.frozen?.type === "both"
+    sheet?.frozen?.type === 'row' ||
+    sheet?.frozen?.type === 'rangeRow' ||
+    sheet?.frozen?.type === 'rangeBoth' ||
+    sheet?.frozen?.type === 'both'
   ) {
     return (
       rowLocationByIndex(
         sheet?.frozen?.range?.row_focus || 0,
-        ctx.visibledatarow
+        ctx.visibledatarow,
       )[1] + ctx.scrollTop
     );
   }
@@ -222,15 +222,15 @@ export function getFrozenHandleLeft(ctx: Context) {
 
   const sheet = ctx.luckysheetfile[idx];
   if (
-    sheet?.frozen?.type === "column" ||
-    sheet?.frozen?.type === "rangeColumn" ||
-    sheet?.frozen?.type === "rangeBoth" ||
-    sheet?.frozen?.type === "both"
+    sheet?.frozen?.type === 'column' ||
+    sheet?.frozen?.type === 'rangeColumn' ||
+    sheet?.frozen?.type === 'rangeBoth' ||
+    sheet?.frozen?.type === 'both'
   ) {
     return (
       colLocationByIndex(
         sheet?.frozen?.range?.column_focus || 0,
-        ctx.visibledatacolumn
+        ctx.visibledatacolumn,
       )[1] -
       2 +
       ctx.scrollLeft

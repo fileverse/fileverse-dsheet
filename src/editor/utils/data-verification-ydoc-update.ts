@@ -13,14 +13,13 @@ export const dataVerificationYdocUpdate = ({
   sheetEditorRef,
   ydocRef,
   dsheetId,
-  handleContentPortal
+  handleContentPortal,
 }: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
   dsheetId: string;
-  handleContentPortal?: any
-}
-) => {
+  handleContentPortal?: any;
+}) => {
   const syncContext = getSheetYdocSyncContext({
     sheetEditorRef,
     ydocRef,

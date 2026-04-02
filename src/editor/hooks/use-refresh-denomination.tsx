@@ -8,7 +8,7 @@ const CRYPTO_MAP: Record<string, string> = {
 };
 
 export function numberToColumn(colNumber: number) {
-  let colPart = "";
+  let colPart = '';
   while (colNumber > 0) {
     colNumber -= 1;
     colPart = String.fromCharCode(65 + (colNumber % 26)) + colPart;
@@ -50,6 +50,7 @@ export const useRefreshDenomination = ({
   const refreshDenomination = async () => {
     if (cryptoPriceRef.current === null) return;
     const currentData = sheetEditorRef.current?.getSheet();
+    const currentSubSheetId = currentData?.id;
     const cellData = currentData?.celldata;
     if (!cellData) return;
     const cellUpdated: any[] = [];
@@ -77,9 +78,11 @@ export const useRefreshDenomination = ({
       const column = numberToColumn(cell.c + 1);
       cellUpdated.push(`${column}${cell.r + 1}`);
     }
-    if (cellUpdated.length > 0) {
-      //@ts-expect-error later
-      sheetEditorRef.current?.calculateCellReferencedSubSheetFormula(currentSubSheetId, cellUpdated);
+    if (cellUpdated.length > 0 && currentSubSheetId) {
+      sheetEditorRef.current?.calculateCellReferencedSubSheetFormula(
+        currentSubSheetId,
+        cellUpdated,
+      );
     }
   };
 

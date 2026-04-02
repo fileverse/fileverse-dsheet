@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from 'react';
 
-import { cn } from "@fileverse/ui";
+import { cn } from '@fileverse/ui';
 
 interface DraggableDivProps {
   children?: React.ReactNode;
@@ -40,7 +40,7 @@ export const DraggableDiv = ({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // @ts-ignore
-    if (!e.target.closest("#luckysheet-formula-help-title")) return;
+    if (!e.target.closest('#luckysheet-formula-help-title')) return;
     setIsDragging(true);
 
     setDragOffset({
@@ -51,7 +51,7 @@ export const DraggableDiv = ({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     // @ts-ignore
-    if (!e.target.closest("#luckysheet-formula-help-title")) return;
+    if (!e.target.closest('#luckysheet-formula-help-title')) return;
     setIsDragging(true);
 
     const touch = e.touches[0];
@@ -153,25 +153,25 @@ export const DraggableDiv = ({
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    const element = document.getElementById("luckysheet-formula-help-c");
+    const element = document.getElementById('luckysheet-formula-help-c');
     if (element) {
-      element.style.userSelect = "auto";
+      element.style.userSelect = 'auto';
     }
   };
 
   React.useEffect(() => {
     if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.addEventListener("touchmove", handleTouchMove);
-      document.addEventListener("touchend", handleTouchEnd);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('touchend', handleTouchEnd);
     }
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.removeEventListener("touchmove", handleTouchMove);
-      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [
     isDragging,
@@ -185,16 +185,16 @@ export const DraggableDiv = ({
     <div
       ref={divRef}
       className={cn(
-        "absolute select-none touch-none",
+        'absolute select-none touch-none',
         isDragging
-          ? "cursor-grabbing shadow-2xl z-50"
-          : "cursor-grab shadow-lg",
-        className
+          ? 'cursor-grabbing shadow-2xl z-50'
+          : 'cursor-grab shadow-lg',
+        className,
       )}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        height: "0px",
+        height: '0px',
       }}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}

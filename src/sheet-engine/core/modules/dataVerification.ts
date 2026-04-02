@@ -18,8 +18,8 @@ import {
   mergeBorder,
   rowLocationByIndex,
   setCellValue,
-} from "..";
-import { getRowHeight, setRowHeight } from "../api";
+} from '..';
+import { getRowHeight, setRowHeight } from '../api';
 
 // TODO: 后期增加鼠标可以选择多个选区
 // 开启范围选区
@@ -28,7 +28,7 @@ export function dataRangeSelection(
   cache: GlobalCache,
   rangT: string,
   type: string,
-  value: string
+  value: string,
 ) {
   ctx.rangeDialog!.show = true;
   ctx.rangeDialog!.type = type;
@@ -94,7 +94,7 @@ export function getDropdownList(ctx: Context, txt: string) {
       }
     }
   } else {
-    const arr = txt.split(",");
+    const arr = txt.split(',');
 
     for (let i = 0; i < arr.length; i += 1) {
       const v = arr[i];
@@ -132,7 +132,7 @@ export function validateIdCard(ctx: Context, idCard: string) {
 
       // 如果等于2，则说明校验码是10，身份证号码最后一位应该是X
       if (idCardMod === 2) {
-        if (idCardLast === "X" || idCardLast === "x") {
+        if (idCardLast === 'X' || idCardLast === 'x') {
           return true;
         }
         return false;
@@ -153,14 +153,14 @@ export function validateIdCard(ctx: Context, idCard: string) {
 export function validateCellData(ctx: Context, item: any, cellValue: any) {
   let { value1, value2 } = item;
   const { type, type2 } = item;
-  if (type === "dropdown") {
+  if (type === 'dropdown') {
     const list = getDropdownList(ctx, value1);
 
     // 多选的情况 检查每个都在下拉列表中
     if (type2 && cellValue) {
       return cellValue
         .toString()
-        .split(",")
+        .split(',')
         .every((i: any) => {
           return list.indexOf(i) !== -1;
         });
@@ -177,160 +177,160 @@ export function validateCellData(ctx: Context, item: any, cellValue: any) {
 
     return result;
   }
-  if (type === "checkbox") {
+  if (type === 'checkbox') {
   } else if (
-    type === "number" ||
-    type === "number_integer" ||
-    type === "number_decimal"
+    type === 'number' ||
+    type === 'number_integer' ||
+    type === 'number_decimal'
   ) {
     if (!isRealNum(cellValue)) {
       return false;
     }
 
     cellValue = Number(cellValue);
-    if (type === "number_integer" && cellValue % 1 !== 0) {
+    if (type === 'number_integer' && cellValue % 1 !== 0) {
       return false;
     }
 
-    if (type === "number_decimal" && cellValue % 1 === 0) {
+    if (type === 'number_decimal' && cellValue % 1 === 0) {
       return false;
     }
 
     value1 = Number(value1);
     value2 = Number(value2);
 
-    if (type2 === "between" && (cellValue < value1 || cellValue > value2)) {
+    if (type2 === 'between' && (cellValue < value1 || cellValue > value2)) {
       return false;
     }
 
-    if (type2 === "notBetween" && cellValue >= value1 && cellValue <= value2) {
+    if (type2 === 'notBetween' && cellValue >= value1 && cellValue <= value2) {
       return false;
     }
 
-    if (type2 === "equal" && cellValue !== value1) {
+    if (type2 === 'equal' && cellValue !== value1) {
       return false;
     }
 
-    if (type2 === "notEqualTo" && cellValue === value1) {
+    if (type2 === 'notEqualTo' && cellValue === value1) {
       return false;
     }
 
-    if (type2 === "moreThanThe" && cellValue <= value1) {
+    if (type2 === 'moreThanThe' && cellValue <= value1) {
       return false;
     }
 
-    if (type2 === "lessThan" && cellValue >= value1) {
+    if (type2 === 'lessThan' && cellValue >= value1) {
       return false;
     }
 
-    if (type2 === "greaterOrEqualTo" && cellValue < value1) {
+    if (type2 === 'greaterOrEqualTo' && cellValue < value1) {
       return false;
     }
 
-    if (type2 === "lessThanOrEqualTo" && cellValue > value1) {
+    if (type2 === 'lessThanOrEqualTo' && cellValue > value1) {
       return false;
     }
-  } else if (type === "text_content") {
+  } else if (type === 'text_content') {
     cellValue = cellValue.toString();
     value1 = value1.toString();
 
-    if (type2 === "include" && cellValue.indexOf(value1) === -1) {
+    if (type2 === 'include' && cellValue.indexOf(value1) === -1) {
       return false;
     }
 
-    if (type2 === "exclude" && cellValue.indexOf(value1) > -1) {
+    if (type2 === 'exclude' && cellValue.indexOf(value1) > -1) {
       return false;
     }
 
-    if (type2 === "equal" && cellValue !== value1) {
+    if (type2 === 'equal' && cellValue !== value1) {
       return false;
     }
-  } else if (type === "text_length") {
+  } else if (type === 'text_length') {
     cellValue = cellValue.toString().length;
 
     value1 = Number(value1);
     value2 = Number(value2);
 
-    if (type2 === "between" && (cellValue < value1 || cellValue > value2)) {
+    if (type2 === 'between' && (cellValue < value1 || cellValue > value2)) {
       return false;
     }
 
-    if (type2 === "notBetween" && cellValue >= value1 && cellValue <= value2) {
+    if (type2 === 'notBetween' && cellValue >= value1 && cellValue <= value2) {
       return false;
     }
 
-    if (type2 === "equal" && cellValue !== value1) {
+    if (type2 === 'equal' && cellValue !== value1) {
       return false;
     }
 
-    if (type2 === "notEqualTo" && cellValue === value1) {
+    if (type2 === 'notEqualTo' && cellValue === value1) {
       return false;
     }
 
-    if (type2 === "moreThanThe" && cellValue <= value1) {
+    if (type2 === 'moreThanThe' && cellValue <= value1) {
       return false;
     }
 
-    if (type2 === "lessThan" && cellValue >= value1) {
+    if (type2 === 'lessThan' && cellValue >= value1) {
       return false;
     }
 
-    if (type2 === "greaterOrEqualTo" && cellValue < value1) {
+    if (type2 === 'greaterOrEqualTo' && cellValue < value1) {
       return false;
     }
 
-    if (type2 === "lessThanOrEqualTo" && cellValue > value1) {
+    if (type2 === 'lessThanOrEqualTo' && cellValue > value1) {
       return false;
     }
-  } else if (type === "date") {
+  } else if (type === 'date') {
     if (!isdatetime(cellValue)) {
       return false;
     }
 
     if (
-      type2 === "between" &&
+      type2 === 'between' &&
       (diff(cellValue, value1) < 0 || diff(cellValue, value2) > 0)
     ) {
       return false;
     }
 
     if (
-      type2 === "notBetween" &&
+      type2 === 'notBetween' &&
       diff(cellValue, value1) >= 0 &&
       diff(cellValue, value2) <= 0
     ) {
       return false;
     }
 
-    if (type2 === "equal" && diff(cellValue, value1) !== 0) {
+    if (type2 === 'equal' && diff(cellValue, value1) !== 0) {
       return false;
     }
 
-    if (type2 === "notEqualTo" && diff(cellValue, value1) === 0) {
+    if (type2 === 'notEqualTo' && diff(cellValue, value1) === 0) {
       return false;
     }
 
-    if (type2 === "earlierThan" && diff(cellValue, value1) >= 0) {
+    if (type2 === 'earlierThan' && diff(cellValue, value1) >= 0) {
       return false;
     }
 
-    if (type2 === "noEarlierThan" && diff(cellValue, value1) < 0) {
+    if (type2 === 'noEarlierThan' && diff(cellValue, value1) < 0) {
       return false;
     }
 
-    if (type2 === "laterThan" && diff(cellValue, value1) <= 0) {
+    if (type2 === 'laterThan' && diff(cellValue, value1) <= 0) {
       return false;
     }
 
-    if (type2 === "noLaterThan" && diff(cellValue, value1) > 0) {
+    if (type2 === 'noLaterThan' && diff(cellValue, value1) > 0) {
       return false;
     }
-  } else if (type === "validity") {
-    if (type2 === "identificationNumber" && !validateIdCard(ctx, cellValue)) {
+  } else if (type === 'validity') {
+    if (type2 === 'identificationNumber' && !validateIdCard(ctx, cellValue)) {
       return false;
     }
 
-    if (type2 === "phoneNumber" && !/^1[3456789]\d{9}$/.test(cellValue)) {
+    if (type2 === 'phoneNumber' && !/^1[3456789]\d{9}$/.test(cellValue)) {
       return false;
     }
   }
@@ -357,17 +357,17 @@ export function checkboxChange(ctx: Context, r: number, c: number) {
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: d?.[r]?.[c] ?? null },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       },
       {
         sheetId: ctx.currentSheetId,
-        path: ["dataVerification"],
+        path: ['dataVerification'],
         key: `${r}_${c}`,
         value: JSON.parse(JSON.stringify(item)),
-        type: "update",
+        type: 'update',
       },
     ]);
   }
@@ -375,163 +375,163 @@ export function checkboxChange(ctx: Context, r: number, c: number) {
 
 // 数据无效时的提示信息
 export function getFailureText(ctx: Context, item: any) {
-  let failureText = "";
+  let failureText = '';
   const { lang } = ctx;
 
   const { type, type2, value1, value2 } = item;
-  if (lang === "zh" || lang === "zh-CN") {
+  if (lang === 'zh' || lang === 'zh-CN') {
     const optionLabel_zh = ctx.dataVerification?.optionLabel_zh;
-    if (type === "dropdown") {
-      failureText += "你选择的不是下拉列表中的选项";
-    } else if (type === "checkbox") {
+    if (type === 'dropdown') {
+      failureText += '你选择的不是下拉列表中的选项';
+    } else if (type === 'checkbox') {
     } else if (
-      type === "number" ||
-      type === "number_integer" ||
-      type === "number_decimal"
+      type === 'number' ||
+      type === 'number_integer' ||
+      type === 'number_decimal'
     ) {
       failureText += `你输入的不是${optionLabel_zh[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `和${value2}之间`;
       }
 
       failureText += `的${optionLabel_zh[type]}`;
-    } else if (type === "text_content") {
+    } else if (type === 'text_content') {
       failureText += `你输入的不是内容${optionLabel_zh[type2]}${value1}的文本`;
-    } else if (type === "text_length") {
+    } else if (type === 'text_length') {
       failureText += `你输入的不是长度${optionLabel_zh[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `和${value2}之间`;
       }
 
-      failureText += "的文本";
-    } else if (type === "date") {
+      failureText += '的文本';
+    } else if (type === 'date') {
       failureText += `你输入的不是${optionLabel_zh[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `和${value2}之间`;
       }
 
-      failureText += "的日期";
-    } else if (type === "validity") {
+      failureText += '的日期';
+    } else if (type === 'validity') {
       failureText += `你输入的不是一个正确的${optionLabel_zh[type2]}`;
     }
-  } else if (lang === "zh-TW") {
+  } else if (lang === 'zh-TW') {
     const optionLabel_zh_tw = ctx.dataVerification?.optionLabel_zh_tw;
-    if (type === "dropdown") {
-      failureText += "你選擇的不是下拉清單中的選項";
-    } else if (type === "checkbox") {
+    if (type === 'dropdown') {
+      failureText += '你選擇的不是下拉清單中的選項';
+    } else if (type === 'checkbox') {
     } else if (
-      type === "number" ||
-      type === "number_integer" ||
-      type === "number_decimal"
+      type === 'number' ||
+      type === 'number_integer' ||
+      type === 'number_decimal'
     ) {
       failureText += `你輸入的不是${optionLabel_zh_tw[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `和${value2}之間`;
       }
 
       failureText += `的${optionLabel_zh_tw[type]}`;
-    } else if (type === "text_content") {
+    } else if (type === 'text_content') {
       failureText += `你輸入的不是內容${optionLabel_zh_tw[type2]}${value1}的文本`;
-    } else if (type === "text_length") {
+    } else if (type === 'text_length') {
       failureText += `你輸入的不是長度${optionLabel_zh_tw[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `和${value2}之间`;
       }
 
-      failureText += "的文本";
-    } else if (type === "date") {
+      failureText += '的文本';
+    } else if (type === 'date') {
       failureText += `你輸入的不是${optionLabel_zh_tw[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `和${value2}之间`;
       }
 
-      failureText += "的日期";
-    } else if (type === "validity") {
+      failureText += '的日期';
+    } else if (type === 'validity') {
       failureText += `你輸入的不是一個正確的${optionLabel_zh_tw[type2]}`;
     }
-  } else if (lang === "es") {
+  } else if (lang === 'es') {
     const optionLabel_es = ctx.dataVerification?.optionLabel_es;
-    if (type === "dropdown") {
-      failureText += "No elegiste una opción en la lista desplegable";
-    } else if (type === "checkbox") {
+    if (type === 'dropdown') {
+      failureText += 'No elegiste una opción en la lista desplegable';
+    } else if (type === 'checkbox') {
     } else if (
-      type === "number" ||
-      type === "number_integer" ||
-      type === "number_decimal"
+      type === 'number' ||
+      type === 'number_integer' ||
+      type === 'number_decimal'
     ) {
       failureText += `Lo que introduciste no es${optionLabel_es[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `Y${value2}Entre`;
       }
 
       failureText += `De${optionLabel_es[type]}`;
-    } else if (type === "text_content") {
+    } else if (type === 'text_content') {
       failureText += `Lo que introduciste no fue contenido${optionLabel_es[type2]}${value1}Texto`;
-    } else if (type === "text_length") {
+    } else if (type === 'text_length') {
       failureText += `No introduciste la longitud${optionLabel_es[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `Y${value2}Entre`;
       }
 
-      failureText += "Texto";
-    } else if (type === "date") {
+      failureText += 'Texto';
+    } else if (type === 'date') {
       failureText += `Lo que introduciste no es${optionLabel_es[type2]}${value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += `Y${value2}Entre`;
       }
 
-      failureText += "Fecha";
-    } else if (type === "validity") {
+      failureText += 'Fecha';
+    } else if (type === 'validity') {
       failureText += `Lo que ingresas no es correcto${optionLabel_es[type2]}`;
     }
-  } else if (lang === "hi") {
+  } else if (lang === 'hi') {
     const optionLabel_hi = ctx.dataVerification?.optionLabel_hi;
-    if (type === "dropdown") {
+    if (type === 'dropdown') {
       failureText +=
-        "आपने जो चयन किया है वह ड्रॉप-डाउन सूची में एक विकल्प नहीं है";
-    } else if (type === "checkbox") {
+        'आपने जो चयन किया है वह ड्रॉप-डाउन सूची में एक विकल्प नहीं है';
+    } else if (type === 'checkbox') {
     } else if (
-      type === "number" ||
-      type === "number_integer" ||
-      type === "number_decimal"
+      type === 'number' ||
+      type === 'number_integer' ||
+      type === 'number_decimal'
     ) {
       failureText += `आपने जो दर्ज किया है वह ${optionLabel_hi[item.type]} ${
         optionLabel_hi[item.type2]
       } ${item.value1} नहीं है`;
 
-      if (item.type2 === "between" || item.type2 === "notBetween") {
+      if (item.type2 === 'between' || item.type2 === 'notBetween') {
         failureText += ` and ${item.value2}`;
       }
-    } else if (type === "text_content") {
+    } else if (type === 'text_content') {
       failureText += `आपने जो दर्ज किया है वह पाठ नहीं है जो ${
         optionLabel_hi[item.type2]
       } ${item.value1} है`;
-    } else if (type === "text_length") {
+    } else if (type === 'text_length') {
       failureText += `आपके द्वारा दर्ज किया गया पाठ की लंबाई ${
         optionLabel_hi[item.type2]
       } ${item.value1} नहीं है`;
 
-      if (item.type2 === "between" || item.type2 === "notBetween") {
+      if (item.type2 === 'between' || item.type2 === 'notBetween') {
         failureText += ` और ${item.value2}`;
       }
-    } else if (type === "date") {
+    } else if (type === 'date') {
       failureText += `आपके द्वारा दर्ज की गई तिथि ${
         optionLabel_hi[item.type2]
       } ${item.value1} नहीं है।`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += ` और ${item.value2}`;
       }
-    } else if (type === "validity") {
+    } else if (type === 'validity') {
       failureText += `आपने जो दर्ज किया है वह सही ${
         optionLabel_hi[item.type2]
       } नहीं है।`;
@@ -539,42 +539,42 @@ export function getFailureText(ctx: Context, item: any) {
   } else {
     // default language english (en, en-US, en-GB, etc.)
     const optionLabel_en = ctx.dataVerification?.optionLabel_en;
-    if (type === "dropdown") {
-      failureText += "What you selected is not an option in the drop-down list";
-    } else if (type === "checkbox") {
+    if (type === 'dropdown') {
+      failureText += 'What you selected is not an option in the drop-down list';
+    } else if (type === 'checkbox') {
     } else if (
-      type === "number" ||
-      type === "number_integer" ||
-      type === "number_decimal"
+      type === 'number' ||
+      type === 'number_integer' ||
+      type === 'number_decimal'
     ) {
       failureText += `What you entered is not a ${optionLabel_en[item.type]} ${
         optionLabel_en[item.type2]
       } ${item.value1}`;
 
-      if (item.type2 === "between" || item.type2 === "notBetween") {
+      if (item.type2 === 'between' || item.type2 === 'notBetween') {
         failureText += ` and ${item.value2}`;
       }
-    } else if (type === "text_content") {
+    } else if (type === 'text_content') {
       failureText += `What you entered is not text that ${
         optionLabel_en[item.type2]
       } ${item.value1}`;
-    } else if (type === "text_length") {
+    } else if (type === 'text_length') {
       failureText += `The text you entered is not length ${
         optionLabel_en[item.type2]
       } ${item.value1}`;
 
-      if (item.type2 === "between" || item.type2 === "notBetween") {
+      if (item.type2 === 'between' || item.type2 === 'notBetween') {
         failureText += ` and ${item.value2}`;
       }
-    } else if (type === "date") {
+    } else if (type === 'date') {
       failureText += `The date you entered is not ${
         optionLabel_en[item.type2]
       } ${item.value1}`;
 
-      if (type2 === "between" || type2 === "notBetween") {
+      if (type2 === 'between' || type2 === 'notBetween') {
         failureText += ` and ${item.value2}`;
       }
-    } else if (type === "validity") {
+    } else if (type === 'validity') {
       failureText += `What you entered is not a correct ${
         optionLabel_en[item.type2]
       }`;
@@ -585,149 +585,149 @@ export function getFailureText(ctx: Context, item: any) {
 
 // 获得提示内容
 export function getHintText(ctx: Context, item: any) {
-  let hintValue = item.hintValue || "";
+  let hintValue = item.hintValue || '';
   const { type, type2, value1, value2 } = item;
   const { lang } = ctx;
 
   if (!hintValue) {
-    if (lang === "en") {
+    if (lang === 'en') {
       const optionLabel_en = ctx.dataVerification?.optionLabel_en;
-      if (type === "dropdown") {
-        hintValue += "please select an option in the drop-down list";
-      } else if (type === "checkbox") {
+      if (type === 'dropdown') {
+        hintValue += 'please select an option in the drop-down list';
+      } else if (type === 'checkbox') {
       } else if (
-        type === "number" ||
-        type === "number_integer" ||
-        type === "number_decimal"
+        type === 'number' ||
+        type === 'number_integer' ||
+        type === 'number_decimal'
       ) {
         hintValue += `please enter a ${optionLabel_en[type]} ${optionLabel_en[type2]} ${item.value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += ` and ${value2}`;
         }
-      } else if (type === "text_content") {
+      } else if (type === 'text_content') {
         hintValue += `please enter text ${optionLabel_en[type2]} ${value1}`;
-      } else if (type === "date") {
+      } else if (type === 'date') {
         hintValue += `please enter a date ${optionLabel_en[type2]} ${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += ` and ${value2}`;
         }
-      } else if (type === "validity") {
+      } else if (type === 'validity') {
         hintValue += `please enter the correct ${optionLabel_en[type2]}`;
       }
-    } else if (lang === "zh" || lang === "zh-CN") {
+    } else if (lang === 'zh' || lang === 'zh-CN') {
       const optionLabel_zh = ctx.dataVerification?.optionLabel_zh;
-      if (type === "dropdown") {
-        hintValue += "请选择下拉列表中的选项";
-      } else if (type === "checkbox") {
+      if (type === 'dropdown') {
+        hintValue += '请选择下拉列表中的选项';
+      } else if (type === 'checkbox') {
       } else if (
-        type === "number" ||
-        type === "number_integer" ||
-        type === "number_decimal"
+        type === 'number' ||
+        type === 'number_integer' ||
+        type === 'number_decimal'
       ) {
         hintValue += `请输入${optionLabel_zh[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `和${value2}之间`;
         }
 
         hintValue += `的${optionLabel_zh[type]}`;
-      } else if (type === "text_content") {
+      } else if (type === 'text_content') {
         hintValue += `请输入内容${optionLabel_zh[type2]}${value1}的文本`;
-      } else if (type === "text_length") {
+      } else if (type === 'text_length') {
         hintValue += `请输入长度${optionLabel_zh[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `和${value2}之间`;
         }
 
-        hintValue += "的文本";
-      } else if (type === "date") {
+        hintValue += '的文本';
+      } else if (type === 'date') {
         hintValue += `请输入${optionLabel_zh[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `和${value2}之间`;
         }
 
-        hintValue += "的日期";
-      } else if (type === "validity") {
+        hintValue += '的日期';
+      } else if (type === 'validity') {
         hintValue += `请输入正确的${optionLabel_zh[type2]}`;
       }
-    } else if (lang === "zh-TW") {
+    } else if (lang === 'zh-TW') {
       const optionLabel_zh_tw = ctx.dataVerification?.optionLabel_zh_tw;
-      if (type === "dropdown") {
-        hintValue += "請選擇下拉清單中的選項";
-      } else if (type === "checkbox") {
+      if (type === 'dropdown') {
+        hintValue += '請選擇下拉清單中的選項';
+      } else if (type === 'checkbox') {
       } else if (
-        type === "number" ||
-        type === "number_integer" ||
-        type === "number_decimal"
+        type === 'number' ||
+        type === 'number_integer' ||
+        type === 'number_decimal'
       ) {
         hintValue += `請輸入${optionLabel_zh_tw[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `和${value2}之間`;
         }
 
         hintValue += `的${optionLabel_zh_tw[type]}`;
-      } else if (type === "text_content") {
+      } else if (type === 'text_content') {
         hintValue += `請輸入內容${optionLabel_zh_tw[type2]}${value1}的文本`;
-      } else if (type === "text_length") {
+      } else if (type === 'text_length') {
         hintValue += `請輸入長度${optionLabel_zh_tw[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `和${value2}之間`;
         }
 
-        hintValue += "的文本";
-      } else if (type === "date") {
+        hintValue += '的文本';
+      } else if (type === 'date') {
         hintValue += `請輸入${optionLabel_zh_tw[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `和${value2}之間`;
         }
 
-        hintValue += "的日期";
-      } else if (type === "validity") {
+        hintValue += '的日期';
+      } else if (type === 'validity') {
         hintValue += `請輸入正確的${optionLabel_zh_tw[type2]}`;
       }
-    } else if (lang === "es") {
+    } else if (lang === 'es') {
       const optionLabel_es = ctx.dataVerification?.optionLabel_es;
-      if (type === "dropdown") {
-        hintValue += "Por favor, elija una opción en la lista desplegable";
-      } else if (type === "checkbox") {
+      if (type === 'dropdown') {
+        hintValue += 'Por favor, elija una opción en la lista desplegable';
+      } else if (type === 'checkbox') {
       } else if (
-        type === "number" ||
-        type === "number_integer" ||
-        type === "number_decimal"
+        type === 'number' ||
+        type === 'number_integer' ||
+        type === 'number_decimal'
       ) {
         hintValue += `Por favor, introduzca${optionLabel_es[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `Y${value2}Entre`;
         }
 
         hintValue += `De${optionLabel_es[type]}`;
-      } else if (type === "text_content") {
+      } else if (type === 'text_content') {
         hintValue += `Por favor, introduzca el contenido${optionLabel_es[type2]}${value1}Texto`;
-      } else if (type === "text_length") {
+      } else if (type === 'text_length') {
         hintValue += `Por favor, introduzca la longitud${optionLabel_es[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `Y${value2}Entre`;
         }
 
-        hintValue += "Texto";
-      } else if (type === "date") {
+        hintValue += 'Texto';
+      } else if (type === 'date') {
         hintValue += `Por favor, introduzca${optionLabel_es[type2]}${value1}`;
 
-        if (type2 === "between" || type2 === "notBetween") {
+        if (type2 === 'between' || type2 === 'notBetween') {
           hintValue += `Y${value2}Entre`;
         }
 
-        hintValue += "Fecha";
-      } else if (type === "validity") {
+        hintValue += 'Fecha';
+      } else if (type === 'validity') {
         hintValue += `Por favor, introduzca lo correcto.${optionLabel_es[type2]}`;
       }
     }
@@ -741,27 +741,27 @@ export function cellFocus(
   ctx: Context,
   r: number,
   c: number,
-  clickMode: boolean
+  clickMode: boolean,
 ) {
   const allowEdit = isAllowEdit(ctx);
   const isReadOnly = isAllowEditReadOnly(ctx);
   if (!allowEdit || isReadOnly) return;
   const showHintBox = document.getElementById(
-    "luckysheet-dataVerification-showHintBox"
+    'luckysheet-dataVerification-showHintBox',
   );
   const dropDownBtn = document.getElementById(
-    "luckysheet-dataVerification-dropdown-btn"
+    'luckysheet-dataVerification-dropdown-btn',
   );
   ctx.dataVerificationDropDownList = false;
   if (!showHintBox || !dropDownBtn) return;
-  showHintBox.style.display = "none";
-  dropDownBtn.style.display = "none";
+  showHintBox.style.display = 'none';
+  dropDownBtn.style.display = 'none';
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   const { dataVerification } = ctx.luckysheetfile[index];
   const item = dataVerification?.[`${r}_${c}`];
   if (!item) {
     ctx.dataVerificationDropDownList = false;
-  } else if (item.type === "dropdown") {
+  } else if (item.type === 'dropdown') {
     ctx.dataVerificationDropDownList = true;
   }
   if (!dataVerification) return;
@@ -781,13 +781,13 @@ export function cellFocus(
   if (!item) return;
 
   // 单元格数据验证 类型是 复选
-  if (clickMode && item.type === "checkbox") {
+  if (clickMode && item.type === 'checkbox') {
     checkboxChange(ctx, r, c);
   }
 
   // 单元格数据验证 类型是 下拉列表
-  if (item.type === "dropdown") {
-    dropDownBtn.style.display = "block";
+  if (item.type === 'dropdown') {
+    dropDownBtn.style.display = 'block';
     dropDownBtn.style.maxWidth = `${col - col_pre}px`;
     dropDownBtn.style.maxHeight = `${row - row_pre}px`;
     dropDownBtn.style.left = `${col - 20}px`;
@@ -796,22 +796,22 @@ export function cellFocus(
 
   // 提示语
   if (item.hintShow) {
-    let hintText = "";
+    let hintText = '';
     const { lang } = ctx;
-    if (lang === "en") {
+    if (lang === 'en') {
       hintText = '<span style="color:#f5a623;">Hint: </span>';
-    } else if (lang === "zh" || lang === "zh-CN") {
+    } else if (lang === 'zh' || lang === 'zh-CN') {
       hintText = '<span style="color:#f5a623;">提示：</span>';
-    } else if (lang === "zh-TW") {
+    } else if (lang === 'zh-TW') {
       hintText = '<span style="color:#f5a623;">提示：</span>';
-    } else if (lang === "es") {
+    } else if (lang === 'es') {
       hintText = '<span style="color:#f5a623;">Consejos：</span>';
-    } else if (lang === "hi") {
+    } else if (lang === 'hi') {
       hintText = '<span style="color:#f5a623;">सुझाव: </span>';
     }
     hintText += getHintText(ctx, item);
     showHintBox.innerHTML = hintText;
-    showHintBox.style.display = "block";
+    showHintBox.style.display = 'block';
     showHintBox.style.left = `${col_pre}px`;
     showHintBox.style.top = `${row}px`;
   }
@@ -823,25 +823,25 @@ export function cellFocus(
   }
   const validate = validateCellData(ctx, item, cellValue);
   if (!validate) {
-    let failureText = "";
+    let failureText = '';
     const { lang } = ctx;
     // Add 'Invalid' text in orange and bold before the failureText
     const invalidText =
       '<div style="color:#F4874A;font-weight:500;font-size:14px;margin-bottom:4px;">Invalid</div>';
-    if (lang === "en") {
+    if (lang === 'en') {
       failureText = '<span style="color:#f72626;">Failure: </span>';
-    } else if (lang === "zh" || lang === "zh-CN") {
+    } else if (lang === 'zh' || lang === 'zh-CN') {
       failureText = '<span style="color:#f72626;">失效：</span>';
-    } else if (lang === "zh-TW") {
+    } else if (lang === 'zh-TW') {
       failureText = '<span style="color:#f72626;">失效：</span>';
-    } else if (lang === "es") {
+    } else if (lang === 'es') {
       failureText = '<span style="color:#f72626;">Caducidad: </span>';
-    } else if (lang === "hi") {
+    } else if (lang === 'hi') {
       failureText = '<span style="color:#f72626;">असफलता: </span>';
     }
     failureText = invalidText + failureText + getFailureText(ctx, item);
     showHintBox.innerHTML = failureText;
-    showHintBox.style.display = "block";
+    showHintBox.style.display = 'block';
     showHintBox.style.left = `${col_pre2}px`;
     showHintBox.style.top = `${row_pre2}px`;
   }
@@ -860,28 +860,28 @@ export function setDropdownValue(ctx: Context, value: string, arr: any) {
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   const item =
     ctx.luckysheetfile[index].dataVerification[`${rowIndex}_${colIndex}`];
-  if (item.type2 === "true") {
+  if (item.type2 === 'true') {
     value = item.value1
-      .split(",")
+      .split(',')
       .filter((v: any) => arr.indexOf(v) >= 0)
-      .join(",");
+      .join(',');
   } else {
     ctx.dataVerificationDropDownList = false;
   }
 
   let valueData = item?.value1;
   const color = item?.color;
-  let selectedColor = "";
+  let selectedColor = '';
 
   if (valueData && color) {
     // const color = context.dataVerification!.dataRegulation!.color.split(",")
-    const colorValues = color?.split(",").map((v: string) => v.trim());
+    const colorValues = color?.split(',').map((v: string) => v.trim());
     // Group every 3 values into RGB arrays
     const rgbArray = [];
     for (let i = 0; i < colorValues.length; i += 3) {
-      rgbArray.push(colorValues.slice(i, i + 3).join(", "));
+      rgbArray.push(colorValues.slice(i, i + 3).join(', '));
     }
-    valueData = valueData?.split(",");
+    valueData = valueData?.split(',');
     let valueIndex;
     for (let i = 0; i < valueData?.length; i += 1) {
       if (value.includes(valueData[i])) {
@@ -889,13 +889,13 @@ export function setDropdownValue(ctx: Context, value: string, arr: any) {
         break;
       }
     }
-    selectedColor = typeof valueIndex === "number" ? rgbArray[valueIndex] : "";
+    selectedColor = typeof valueIndex === 'number' ? rgbArray[valueIndex] : '';
   }
 
   setCellValue(ctx, rowIndex, colIndex, d, {
     ct: {
-      fa: "General",
-      t: "g",
+      fa: 'General',
+      t: 'g',
     },
     v: value,
     pillColor: selectedColor,
@@ -904,20 +904,20 @@ export function setDropdownValue(ctx: Context, value: string, arr: any) {
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: {
           r: rowIndex,
           c: colIndex,
           v: d?.[rowIndex]?.[colIndex] ?? null,
         },
         key: `${rowIndex}_${colIndex}`,
-        type: "update",
+        type: 'update',
       },
     ]);
   }
   const currentRowHeight = getRowHeight(ctx, [rowIndex])[rowIndex];
-  // eslint-disable-next-line no-unsafe-optional-chaining
-  const newHeight = 22 * (value.split(",").length || valueData?.length) || 22;
+
+  const newHeight = 22 * (value.split(',').length || valueData?.length) || 22;
   if (currentRowHeight < newHeight) {
     setRowHeight(ctx, {
       [String(rowIndex)]: newHeight,
@@ -931,11 +931,11 @@ export function setDropdownValue(ctx: Context, value: string, arr: any) {
 export function confirmMessage(
   ctx: Context,
   generalDialog: any,
-  dataVerification: any
+  dataVerification: any,
 ): boolean {
   const range = getRangeByTxt(
     ctx,
-    ctx.dataVerification?.dataRegulation?.rangeTxt as string
+    ctx.dataVerification?.dataRegulation?.rangeTxt as string,
   );
   if (range.length === 0) {
     ctx.warnDialog = generalDialog.noSelectionError;
@@ -963,26 +963,26 @@ export function confirmMessage(
   const verifacationT = regulation?.type;
   const { value1, value2, type2 } = regulation;
   // 判断是不是数字
-  const v1 = parseFloat(value1).toString() !== "NaN";
-  const v2 = parseFloat(value2).toString() !== "NaN";
-  if (verifacationT === "dropdown") {
+  const v1 = parseFloat(value1).toString() !== 'NaN';
+  const v2 = parseFloat(value2).toString() !== 'NaN';
+  if (verifacationT === 'dropdown') {
     if (!value1) {
       ctx.warnDialog = dataVerification.tooltipInfo1;
     }
-  } else if (verifacationT === "checkbox") {
+  } else if (verifacationT === 'checkbox') {
     if (!value1 || !value2) {
       ctx.warnDialog = dataVerification.tooltipInfo2;
     }
   } else if (
-    verifacationT === "number" ||
-    verifacationT === "number_integer" ||
-    verifacationT === "number_decimal"
+    verifacationT === 'number' ||
+    verifacationT === 'number_integer' ||
+    verifacationT === 'number_decimal'
   ) {
     if (!v1) {
       ctx.warnDialog = dataVerification.tooltipInfo3;
       return false;
     }
-    if (type2 === "between" || type2 === "notBetween") {
+    if (type2 === 'between' || type2 === 'notBetween') {
       if (!v2) {
         ctx.warnDialog = dataVerification.tooltipInfo3;
         return false;
@@ -992,12 +992,12 @@ export function confirmMessage(
         return false;
       }
     }
-  } else if (verifacationT === "text_content") {
+  } else if (verifacationT === 'text_content') {
     if (!value1) {
       ctx.warnDialog = dataVerification.tooltipInfo5;
       return false;
     }
-  } else if (verifacationT === "text_length") {
+  } else if (verifacationT === 'text_length') {
     if (!v1) {
       ctx.warnDialog = dataVerification.tooltipInfo3;
       return false;
@@ -1006,7 +1006,7 @@ export function confirmMessage(
       ctx.warnDialog = dataVerification.textlengthInteger;
       return false;
     }
-    if (type2 === "between" || type2 === "notBetween") {
+    if (type2 === 'between' || type2 === 'notBetween') {
       if (!v2) {
         ctx.warnDialog = dataVerification.tooltipInfo3;
         return false;
@@ -1020,12 +1020,12 @@ export function confirmMessage(
         return false;
       }
     }
-  } else if (verifacationT === "date") {
+  } else if (verifacationT === 'date') {
     if (!isdatetime(value1)) {
       ctx.warnDialog = dataVerification.tooltipInfo6;
       return false;
     }
-    if (type2 === "between" || type2 === "notBetween") {
+    if (type2 === 'between' || type2 === 'notBetween') {
       if (!isdatetime(value2)) {
         ctx.warnDialog = dataVerification.tooltipInfo6;
         return false;
