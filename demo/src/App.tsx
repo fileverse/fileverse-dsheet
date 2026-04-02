@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { DsheetEditor as DSheetEditor } from '../../src/index';
+import { DSheetEditor, WorkbookInstance } from '../../src/index';
 import {
   Button,
   Tag,
@@ -9,7 +9,6 @@ import {
   DynamicDropdown,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
-import { WorkbookInstance } from '../../src/index';
 
 function App() {
   const [title, setTitle] = useState('Untitled');

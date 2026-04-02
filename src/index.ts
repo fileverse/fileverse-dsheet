@@ -1,5 +1,5 @@
 // Main component
-export { default as DsheetEditor } from './editor/dsheet-editor';
+export { default as DSheetEditor } from './editor/dsheet-editor';
 
 // Utilities
 export { formulaResponseUiSync } from './editor/utils/formula-ui-sync';
