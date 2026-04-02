@@ -1,0 +1,102 @@
+.toolbar-container {
+  width: 100%;
+  max-width: 896px;
+  background-color: white;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--color-border-default, #E8EBEC));
+  overflow: hidden;
+}
+
+.toolbar-header {
+  height: 36px;
+  padding: 4px 16px;
+  border-radius: var(--border-radius-sm, 4px) var(--border-radius-sm, 4px) var(--border-radius-none, 0) var(--border-radius-none, 0);
+  border-bottom: 1px solid hsl(var(--color-border-default, #E8EBEC));
+  background: hsl(var(--color-bg-success-light, #DDFBDF));
+}
+
+.toolbar-title {
+  font-family: "Helvetica Neue";
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.toolbar-content {
+  padding: 4px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.toolbar-button {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.toolbar-button:hover {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.toolbar-button:active {
+  transform: scale(0.95);
+}
+
+.button-text {
+  font-size: 24px;
+  color: #1f2937;
+  font-weight: 500;
+}
+
+.button-text.bold {
+  font-weight: 700;
+}
+
+.button-text.italic {
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+
+.button-text.underline {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.button-text.strikethrough {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.button-text.color-button {
+  position: relative;
+  color: #16a34a;
+}
+
+.button-text.color-button::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: #16a34a;
+  border-radius: 2px;
+}
+
+.button-icon {
+  width: 24px;
+  height: 24px;
+  color: #1f2937;
+}

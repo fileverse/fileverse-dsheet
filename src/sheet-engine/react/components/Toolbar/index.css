@@ -1,0 +1,440 @@
+.fortune-toolbar {
+  display: flex;
+  flex-direction: row;
+  /* background: #fafafc; */
+  position: relative;
+  padding: 4px 8px;
+  border-bottom: 1px solid #e8ebec;
+  white-space: nowrap;
+  align-items: center;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.scrollbar-hidden {
+  overflow: auto; /* enables scrolling */
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.fortune-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 6px;
+  background-color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.fortune-toolbar-menu-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.fortune-toolbar-menu-divider {
+  width: "100%";
+  height: 1px;
+  margin: 8px 0px;
+  background-color: #e0e0e0;
+}
+
+.fortune-toolbar-button,
+.fortune-toolbar-combo {
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  background: 0;
+  outline: none;
+  padding: 2px;
+  list-style: none;
+  text-decoration: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 30px;
+  height: 30px;
+  margin: 0;
+}
+
+.fortune-toolbar-button svg,
+.fortune-toolbar-combo svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.fortune-toolbar-combo-button,
+.fortune-toolbar-combo-arrow {
+  display: flex;
+  align-items: center;
+}
+
+.fortune-toolbar-combo-button.show-arrow {
+  border-radius: 4px 0px 0px 4px;
+}
+
+.fortune-toolbar-button:hover {
+  background-color: #f2f4f5;
+  cursor: pointer;
+}
+
+.fortune-toolbar-combo-arrow:hover {
+  background-color: #f2f4f5;
+  cursor: pointer;
+  height: 30px;
+  border-radius: 0px 4px 4px 0px;
+}
+
+.fortune-toolbar-button:active,
+.fortune-toolbar-combo:active {
+  /* background-color: rgba(0, 0, 0, 0.12); */
+  cursor: pointer;
+}
+
+.fortune-toobar-combo-container {
+  position: relative;
+}
+
+.fortune-toolbar-combo-popup {
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.fortune-toolbar-select::-webkit-scrollbar {
+  display: none;
+}
+
+.fortune-toolbar-select {
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  border: 1px solid hsl(var(--color-border-default));
+  border-radius: 8px;
+  background: white;
+  min-width: 240px;
+}
+
+.fortune-toolbar-color-picker {
+  z-index: 50;
+  height: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  background: rgb(255, 255, 255);
+  transition: all 0.2s ease;
+  border-radius: 0px 0px 4px 4px;
+}
+
+.fortune-toolbar-select {
+  overflow: scroll;
+  max-height: 60vh;
+}
+
+.fortune-toolbar-combo-button {
+  font-size: 12px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 8px;
+  padding-right: 8px;
+  border-radius: 4px;
+  gap: 8px;
+}
+.fortune-toolbar-combo-button:hover {
+  background: hsl(var(--color-bg-default-hover));
+}
+
+.fortune-toolbar-select-option {
+  font-size: 12px;
+  min-width: 60px;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.fortune-toolbar-select-option:hover {
+  background: hsl(var(--color-bg-default-hover));
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+}
+
+.fortune-toolbar-select::-webkit-scrollbar {
+  display: none;
+}
+
+.fortune-toolbar-color-picker-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.fortune-toolbar-combo-text {
+  margin: 0 4px;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  max-width: 56px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fortune-toolbar-color-picker-item {
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease-in;
+  margin: 1px;
+}
+
+.fortune-toolbar-color-picker-item:hover {
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+.fortune-tooltip {
+  visibility: hidden;
+  background-color: #666;
+  color: #fff;
+  text-align: center;
+  border-radius: 2px;
+  padding: 6px;
+  font-size: 12px;
+  position: absolute;
+  z-index: 25;
+  /* higher than toolbar tips */
+  top: 40px;
+  white-space: nowrap;
+}
+
+.fortune-toolbar-button:hover .fortune-tooltip,
+.fortune-toolbar-combo:hover .fortune-tooltip {
+  visibility: visible;
+}
+
+.fortune-toolbar-more-container {
+  position: fixed;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+  top: 40px;
+  right: 80px;
+  max-width: 348px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  background: white;
+  flex-wrap: wrap;
+  z-index: 1002;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid hsl(var(--color-border-default));
+}
+
+.fortune-toolbar-subtext {
+  -webkit-transition: all 0.218s;
+  -moz-transition: all 0.218s;
+  -o-transition: all 0.218s;
+  transition: all 0.218s;
+  font-size: 12px;
+  left: auto;
+  padding-top: 1px;
+  padding-left: 24px;
+  text-align: right;
+  opacity: 0.5;
+  filter: alpha(opacity=50);
+  color: #000;
+  user-select: none;
+  font-family: Arial;
+  line-height: 100%;
+}
+
+.toolbar-item-sub-menu {
+  position: absolute;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 20%);
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  cursor: default;
+  font-size: 12px;
+  z-index: 1004;
+  box-sizing: border-box;
+  user-select: none;
+  outline: none;
+  border-radius: 6px;
+}
+
+#fortune-custom-color {
+  min-width: 164px;
+  background: hsl(var(--color-bg-default));
+  border-radius: 8px;
+  border: 1px solid hsl(var(--color-border-default));
+  font-size: 12px;
+  padding: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  max-height: 400px;
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#fortune-custom-color .color-reset {
+  position: relative;
+  color: #333;
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  user-select: none;
+  background: white;
+  padding: 4px 8px;
+  height: 30px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+#fortune-custom-color .color-reset:hover {
+  background: hsl(var(--color-bg-default-hover));
+  transition: all 0.2s ease-in-out;
+}
+
+#fortune-custom-color .custom-color {
+  position: relative;
+  margin: auto;
+  padding: 10px;
+  border-radius: 6px;
+  background: white;
+  display: flex;
+  align-items: center;
+  margin: 1px 0px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.button-basic {
+  display: inline-block;
+  margin-bottom: 0;
+  font-weight: 400;
+  text-align: center;
+  vertical-align: middle;
+  touch-action: manipulation;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.42857143;
+  border-radius: 2px;
+  user-select: none;
+}
+
+.button-primary {
+  background: #0188fb;
+  border: 1px solid #0188fb;
+  color: #fff;
+  margin-right: -4px;
+}
+
+.fortune-border-select-menu {
+  position: absolute;
+  bottom: 0px;
+}
+
+.fortune-border-color-preview {
+  height: 3px;
+}
+
+.fortune-border-select-option {
+  font-size: 12px;
+  height: 24px;
+  line-height: 24px;
+  min-width: 60px;
+  padding: 8px 12px;
+}
+
+.fortune-border-select-option:hover {
+  background: #efefef;
+  cursor: pointer;
+}
+
+.fortune-border-style-preview {
+  height: 3px;
+  overflow: hidden;
+}
+
+.fortune-border-style-picker-menu {
+  padding: 0px 10px;
+}
+
+.fortune-border-style-picker-menu:hover {
+  background: #efefef;
+  cursor: pointer;
+}
+
+.fortune-border-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding: 8px;
+  min-width: 200px;
+}
+
+.fortune-border-grid-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.fortune-border-grid-item:hover {
+  background-color: hsl(var(--color-bg-default-hover));
+}
+
+.fortune-toolbar-left {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+
+.fortune-toolbar-right {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.custom-color-button > svg > path:first-child {
+  display: none !important;
+}
+
+#search-input-container [cmdk-input-wrapper] {
+  border: 1px solid hsl(var(--color-border-default));
+  border-radius: 8px;
+  margin: 8px 8px 0px 8px;
+}

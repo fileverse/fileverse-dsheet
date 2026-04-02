@@ -12,16 +12,21 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    /* The "typeRoots" configuration specifies the locations where 
-       TypeScript looks for type definitions (.d.ts files) to 
-       include in the compilation process.*/
-    "typeRoots": ["./dist/index.d.ts", "./dist/package/types.d.ts"]
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@sheet-engine/core": ["./src/sheet-engine/core"],
+      "@sheet-engine/core/*": ["./src/sheet-engine/core/*"],
+      "@sheet-engine/react": ["./src/sheet-engine/react"],
+      "@sheet-engine/react/*": ["./src/sheet-engine/react/*"],
+      "@sheet-engine/formula-parser": ["./src/sheet-engine/formula-parser"],
+      "@sheet-engine/formula-parser/*": ["./src/sheet-engine/formula-parser/*"]
+    }
   },
-  /* include /index.ts*/
-  "include": ["./index.ts", "package/**/*", "demo/src/vite-env.d.ts"],
-  "exclude": ["demo", "public"],
+  "include": ["./src/**/*", "demo/src/vite-env.d.ts"],
+  "exclude": ["demo", "public", "node_modules", "dist"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,0 +1,191 @@
+@import "@fileverse/ui/styles";
+/*查找替换弹出框样式*/
+#fortune-search-replace {
+  position: absolute;
+  min-width: 504px;
+  z-index: 1002;
+}
+
+#fortune-search-replace .icon-close {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+}
+
+#fortune-search-replace .tabBox {
+  margin-top: 10px;
+  font-size: 0;
+}
+
+#fortune-search-replace .tabBox span {
+  display: inline-block;
+  text-align: center;
+  width: 100px;
+  border: 1px solid rgb(235, 235, 235);
+  font-size: 14px;
+  line-height: 2;
+}
+
+#fortune-search-replace .tabBox span.on {
+  background-color: #8c89fe;
+  border-color: #726efe;
+  color: #fff;
+}
+
+#fortune-search-replace .ctBox {
+  padding: 5px 10px;
+  border: 1px solid rgb(235, 235, 235);
+  font-size: 14px;
+  min-width: 500px;
+}
+
+#fortune-search-replace .ctBox .row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+#fortune-search-replace .inputBox {
+  height: 90px;
+  position: relative;
+}
+
+#fortune-search-replace .inputBox .textboxs {
+  height: 30px;
+  line-height: 30px;
+}
+
+#fortune-search-replace .checkboxs {
+  height: 90px;
+}
+
+#fortune-search-replace .checkboxs div {
+  height: 30px;
+  line-height: 30px;
+}
+
+#fortune-search-replace .checkboxs input[type="checkbox"] {
+  float: left;
+  margin-top: 9px;
+}
+
+#fortune-search-replace .btnBox {
+  margin-top: 10px;
+}
+
+#fortune-search-replace .btnBox .button-default {
+  margin-right: 8px;
+  margin-left: 0px;
+}
+
+#fortune-search-replace .close-button {
+  margin-left: 0px;
+  margin-top: 10px;
+}
+
+#fortune-search-replace #searchAllbox {
+  overflow-y: scroll;
+  position: relative;
+}
+
+#fortune-search-replace #searchAllbox .boxTitle {
+  width: 100%;
+  height: 30px;
+  line-height: 29px;
+  padding: 0 5px;
+  background-color: #fff;
+  border-bottom: 1px solid #d4d4d4;
+  box-sizing: border-box;
+  position: sticky;
+  left: 0;
+  top: 0;
+}
+
+#fortune-search-replace #searchAllbox .boxTitle span {
+  display: inline-block;
+  text-align: center;
+}
+
+#fortune-search-replace #searchAllbox .boxTitle span:nth-of-type(1) {
+  width: 25%;
+}
+
+#fortune-search-replace #searchAllbox .boxTitle span:nth-of-type(2) {
+  width: 25%;
+}
+
+#fortune-search-replace #searchAllbox .boxTitle span:nth-of-type(3) {
+  width: 50%;
+}
+
+#fortune-search-replace #searchAllbox .boxMain .boxItem {
+  height: 30px;
+  line-height: 29px;
+  border-bottom: 1px solid #d4d4d4;
+  padding: 0 5px;
+  box-sizing: border-box;
+}
+
+#fortune-search-replace #searchAllbox .boxMain .boxItem.on {
+  background-color: #8c89fe;
+  color: #fff;
+}
+
+#fortune-search-replace #searchAllbox .boxMain .boxItem span {
+  display: block;
+  text-align: center;
+  float: left;
+}
+
+#fortune-search-replace #searchAllbox .boxMain .boxItem span:nth-of-type(1) {
+  width: 25%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fortune-search-replace #searchAllbox .boxMain .boxItem span:nth-of-type(2) {
+  width: 25%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#fortune-search-replace #searchAllbox .boxMain .boxItem span:nth-of-type(3) {
+  width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.find-replace-label {
+  min-width: 100px;
+}
+
+.find-replace-table-cell {
+  min-width: 154px;
+}
+
+/* Add scrollbar styles */
+#fortune-search-replace .table-container {
+  scrollbar-width: thin;
+  scrollbar-color: #babac0 transparent;
+}
+
+#fortune-search-replace .table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#fortune-search-replace .table-container::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+#fortune-search-replace .table-container::-webkit-scrollbar-thumb {
+  background-color: #babac0;
+  border-radius: 16px;
+}
+
+#fortune-search-replace .table-container::-webkit-scrollbar-button {
+  display: none;
+}

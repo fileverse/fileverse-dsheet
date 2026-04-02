@@ -1,0 +1,16 @@
+.luckysheet-modal-dialog-controll {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  top: -40px;
+  left: 0;
+  z-index: 301;
+}
+
+.fortune-iframe-boxes-delete-button {
+  background-color: #ffffff;
+  border: 1px solid #e8ebec;
+  border-radius: 8px;
+  box-shadow: 0px 4px 16px -4px #00000026;
+}

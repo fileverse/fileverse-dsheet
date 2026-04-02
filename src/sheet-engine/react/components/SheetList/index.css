@@ -1,0 +1,45 @@
+.fortune-sheet-list {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 120px;
+  position: absolute;
+  z-index: 10002;
+  bottom: 53px;
+  margin-left: 72px;
+  max-height: 60%;
+}
+
+.fortune-sheet-list-item {
+  height: 30px;
+  line-height: 30px;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.fortune-sheet-list-item-name {
+  /* margin-right: 15px; */
+  position: relative;
+}
+
+.luckysheet-sheets-list-item-color {
+  width: 9px;
+  height: 30%;
+  border-radius: 20px;
+}
+
+.fortune-sheet-list :hover {
+  background-color: hsl(var(--color-bg-default-hover));
+  transition: background-color 0.2s ease-in-out;
+}
+
+.fortune-sheet-hidden-button {
+  display: inline-flex;
+  /* position: absolute;
+  right: 0; */
+  justify-content: flex-end;
+}
+
+.fortune-sheet-hidden-button :hover {
+  background-color: #d0d0d0;
+}

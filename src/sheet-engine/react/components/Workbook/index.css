@@ -1,0 +1,49 @@
+.fortune-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC",
+    "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei",
+    sans-serif;
+  background-color: white;
+  position: relative;
+  outline: none;
+}
+
+.fortune-workarea {
+  width: 100%;
+}
+
+.fortune-popover-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1003;
+  /* should below .fortune-context-menu */
+  height: 100%;
+  width: 100%;
+}
+
+.fortune-modal-container {
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+html::-webkit-scrollbar-button {
+  display: none;
+}
+
+.fortune-stat-area {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.cursor-paint {
+  cursor: url("../../assets/paint-roller.png") 16 16, auto;
+}

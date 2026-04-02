@@ -1,0 +1,184 @@
+.luckysheet-formula-help-c {
+  position: absolute;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: #535353;
+  font-size: 12px;
+  background: #fff;
+  z-index: 1003;
+  width: 300px;
+}
+
+.font-family-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* .luckysheet-formula-help-c .luckysheet-formula-help-content {
+  max-height: 300px;
+  overflow-y: scroll;
+} */
+
+.luckysheet-formula-help-content-example {
+  margin-top: 5px;
+}
+
+.luckysheet-formula-help-title {
+  display: block;
+  border-top: 1px solid #ebebeb;
+  border-bottom: 1px solid #ebebeb;
+  background: #f5f5f5;
+  padding: 2px 10px;
+  font-size: 14px;
+}
+
+.luckysheet-formula-help-title,
+.luckysheet-formula-search-item-active {
+  padding: 4px 10px !important;
+  font-size: small;
+  /* background: #f8f9fa !important; */
+  font-weight: 600;
+  border-bottom: 0px !important;
+  border-top: 0px !important;
+  border-radius: 4px;
+}
+
+.luckysheet-formula-help-c,
+.luckysheet-formula-search-c {
+  padding: 6px;
+  user-select: text;
+  top: 25px;
+  background: #ffff;
+  min-width: 300px;
+  /* max-width: 450px; */
+}
+
+#luckysheet-formula-help-c {
+  border-radius: 10px;
+  top: 25px;
+  background: #ffff;
+}
+
+.luckysheet-formula-help-title-formula {
+  width: fit-content;
+}
+
+.luckysheet-formula-help-content {
+  background-color: white;
+  /* margin: 0px 8px 8px 8px; */
+  padding: 2px;
+  border-radius: 0px 0px 10px 10px;
+}
+
+.luckysheet-formula-help-content-param,
+.luckysheet-formula-help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.luckysheet-formula-help-content-param {
+  padding-top: 4px;
+  border-top: 1px solid lightgrey;
+}
+
+.luckysheet-formula-help-content-example {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.luckysheet-arguments-help-section-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.example-title {
+  color: var(--color-text-secondary, #77818A);
+
+/* fv/text/helper/sm-bold */
+font-family: "Helvetica Neue";
+font-size: var(--font-size-2xsm, 12px);
+font-style: normal;
+font-weight: 500;
+line-height: 16px; /* 133.333% */
+}
+
+.example-value {
+  color: var(--color-text-default, #363B3F);
+
+/* fv/text/helper/sm */
+font-family: "Helvetica Neue";
+font-size: var(--font-size-2xsm, 12px);
+font-style: normal;
+font-weight: 400;
+line-height: 16px; /* 133.333% */
+}
+.example-value-code {
+    color: var(--color-text-default, #363B3F);
+
+font-size: var(--font-size-2xsm, 12px);
+font-style: normal;
+font-weight: 400;
+line-height: 16px; /* 133.333% */
+}
+
+.formula-title {
+  display: flex;
+  justify-content: space-between;
+}
+
+.luckysheet-formula-help-title-formula {
+  width: 250px;
+  word-break: break-word;
+}
+
+.luckysheet-arguments-help-section {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  color: #222;
+}
+
+.luckysheet-arguments-help-section-title {
+  padding: 1px 10px;
+  color: #666;
+}
+
+.luckysheet-arguments-help-parameter-content {
+  padding: 1px 0px;
+  display: inline-block;
+  word-wrap: break-word;
+}
+
+.luckysheet-arguments-help-formula {
+  padding: 1px 10px;
+  font-size: 14px;
+}
+
+.luckysheet-arguments-help-parameter-active {
+  background-color: #fff9b2;
+}
+
+.luckysheet-formula-help-collapse {
+  position: absolute;
+  top: 0px;
+  right: 25px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #bbb;
+}
+
+.luckysheet-formula-help-close {
+  position: absolute;
+  top: 0px;
+  right: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  color: #bbb;
+}
+
+.luckysheet-formula-help-close:hover,
+.luckysheet-formula-help-collapse:hover {
+  color: #555;
+}
