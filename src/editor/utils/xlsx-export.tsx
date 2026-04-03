@@ -1,8 +1,19 @@
-import { utils as XLSXUtil, writeFile as XLSXWriteFile } from 'xlsx-js-style';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { utils as XLSXUtil, write as XLSXWrite } from 'xlsx-js-style';
+import { Workbook as ExcelJSWorkbook } from 'exceljs';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
 import { getExportFilenameBase } from './export-filename';
+import { applyBordersToWorksheet } from './xlsx-border-utils';
+import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
+import { exportConditionalFormatting } from './xlsx-cf-export-utils';
+import { patchXlsxCf, type SheetCfPatch } from './xlsx-cf-postprocess';
+import {
+  buildExcelJsRichText,
+  applyRichTextToWorksheet,
+  type CellRichTextValue,
+} from './xlsx-richtext-utils';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -69,11 +80,28 @@ export const handleExportToXLSX = async (
 
     const sheetWithData = workbookRef.current.getAllSheets();
     const workbook = XLSXUtil.book_new();
+    const sheetRichTextMaps: Map<string, CellRichTextValue>[] =
+      sheetWithData.map(() => new Map());
 
     sheetWithData.forEach((sheet, index) => {
       const rows = sheetWithData[index]?.data || [];
 
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);
+
+      // FIX: aoa_to_sheet may type numeric-looking strings as 's'.
+      // Convert them to proper numeric cells so Google Sheets / Excel don't treat them as text.
+      Object.keys(worksheet).forEach((key) => {
+        if (key.startsWith('!')) return;
+        const cell = worksheet[key];
+        if (
+          cell &&
+          (cell.t === 's' || cell.t === undefined) &&
+          cell.v !== '' &&
+          !isNaN(Number(cell.v))
+        ) {
+          worksheet[key] = { ...cell, v: Number(cell.v), t: 'n' };
+        }
+      });
 
       // APPLY MERGED CELLS
       worksheet['!merges'] = [];
@@ -87,22 +115,64 @@ export const handleExportToXLSX = async (
       }
 
       // APPLY COLUMN WIDTH
-      if (sheet.config?.columnlen) {
+      // Write wch (character units) using MDW=7 (Calibri 11pt at 96 DPI, matches Google Sheets:
+      // pixels = charWidth × 7 + 5). Write explicit widths for ALL columns so default-width
+      // columns don't fall back to Excel's built-in default (≈64px) in Google Sheets.
+      // DEFAULT_COL_WCH = (99 - 5) / 7 ≈ 13.43 (pre-computed for 99px default column width).
+      {
+        const MDW = 7;
+        const DEFAULT_COL_WCH = Math.round(((99 - 5) / MDW) * 256) / 256;
+        const colCount = sheet.column || 36;
         worksheet['!cols'] = [];
-        Object.entries(sheet.config.columnlen).forEach(([col, w]) => {
-          worksheet['!cols'][Number(col)] = { wpx: Number(w) };
-        });
+        for (let col = 0; col < colCount; col++) {
+          const explicitPx = sheet.config?.columnlen?.[col];
+          if (explicitPx !== undefined) {
+            const wch = Math.max(
+              0,
+              Math.round(((Number(explicitPx) - 5) / MDW) * 256) / 256,
+            );
+            worksheet['!cols'][col] = { wch };
+          } else {
+            worksheet['!cols'][col] = { wch: DEFAULT_COL_WCH };
+          }
+        }
       }
 
       // ROW HEIGHT
-      if (sheet.config?.rowlen) {
-        worksheet['!rows'] = [];
-        Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
-          worksheet['!rows'][Number(row)] = { hpx: Number(h) };
-        });
+      // Google Sheets renders XLSX row heights using 100 DPI (pt × 100/72),
+      // so we write pt using the inverse: pt = px × 72/100 = px × 0.72.
+      // This is slightly smaller than the standard 96 DPI factor (0.75) and
+      // compensates for Google Sheets rendering rows a bit taller than intended.
+      // DEFAULT_ROW_HPT = 21 × 0.72 = 15.12pt (pre-computed).
+      {
+        const DEFAULT_ROW_HPT = Math.round(21 * 0.72 * 4) / 4;
+        (worksheet as any).sheetFormat = {
+          ...((worksheet as any).sheetFormat || {}),
+          defaultRowHeight: String(DEFAULT_ROW_HPT),
+        };
+        if (sheet.config?.rowlen) {
+          worksheet['!rows'] = [];
+          Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
+            const hpt = Math.round(Number(h) * 0.72 * 4) / 4;
+            worksheet['!rows'][Number(row)] = { hpt };
+          });
+        }
       }
 
       // PROCESS CELL DATA
+      // Log first non-null cell from data to inspect format
+      outer: for (let ri = 0; ri < (sheet.data?.length ?? 0); ri++) {
+        const row = (sheet.data as any)?.[ri];
+        if (!Array.isArray(row)) continue;
+        for (let ci = 0; ci < row.length; ci++) {
+          const cv = row[ci];
+          if (cv && typeof cv === 'object') {
+            break outer;
+          }
+        }
+      }
+      // Track cells styled via celldata so the sheet.data fallback loop below skips them
+      const celldataStyled = new Set<string>();
       (sheet.celldata ?? []).forEach((cell: any) => {
         const r = cell.r;
         const c = cell.c;
@@ -117,16 +187,38 @@ export const handleExportToXLSX = async (
         // VALUE + FORMULA
         // -----------------------------
         if (v.f) newCell.f = v.f.replace(/^=/, '');
-        newCell.v = v.v || v?.ct?.s?.[0]?.v;
+
+        // For inlineStr (rich text), concatenate all runs as the plain-text fallback.
+        // Pass 2 (ExcelJS) will overwrite with the real rich text value.
+        if (!v.f && v.ct?.t === 'inlineStr' && Array.isArray(v.ct.s)) {
+          newCell.v = v.ct.s.map((seg: any) => seg.v ?? '').join('');
+          newCell.t = 's';
+        } else {
+          newCell.v = v.v ?? v?.ct?.s?.[0]?.v;
+        }
         if (v.m) newCell.w = v.m;
+
+        // COLLECT RICH TEXT (skip formula cells — they have no display runs)
+        if (!v.f && v.ct?.t === 'inlineStr' && Array.isArray(v.ct.s)) {
+          const rt = buildExcelJsRichText(v.ct.s);
+          if (rt) sheetRichTextMaps[index].set(cellRef, rt);
+        }
 
         // -----------------------------
         // NUMBER FORMAT
         // -----------------------------
         if (v.ct) {
           if (v.ct.fa) newCell.z = v.ct.fa;
-          //xlsx needs date to be in number format, so we set type to 'n' for date cells. this fixes exporting date from dsheets
-          if (v.ct.t) newCell.t = v.ct.t === 'd' ? 'n' : v.ct.t;
+          // inlineStr is handled above; map 'd' → 'n' for dates; pass through other types
+          if (v.ct.t && v.ct.t !== 'inlineStr') {
+            newCell.t = v.ct.t === 'd' ? 'n' : v.ct.t;
+          }
+        }
+
+        // Ensure numeric values are typed as 'n' so Google Sheets / Excel
+        // don't import them as text (happens when ct.t is absent)
+        if (typeof newCell.v === 'number' && !newCell.t) {
+          newCell.t = 'n';
         }
 
         // -----------------------------
@@ -153,10 +245,13 @@ export const handleExportToXLSX = async (
           strike: v.cl === 1 || undefined,
           underline: v.un === 1 || undefined,
 
-          sz: v.fs ?? undefined,
+          sz: v.fs ?? 10,
           name: v.ff ?? undefined,
 
-          color: v.fc ? { rgb: v.fc.replace('#', '') } : undefined,
+          color: (() => {
+            const hex = parseColorToHex(v.fc);
+            return hex ? { rgb: hex } : undefined;
+          })(),
         };
 
         // ============ ALIGNMENT ============
@@ -183,8 +278,104 @@ export const handleExportToXLSX = async (
           // "0" → overflow → do nothing
         }
 
+        celldataStyled.add(cellRef);
         worksheet[cellRef] = newCell;
       });
+
+      // FORMATTING FALLBACK from sheet.data
+      // celldata is often empty for live/collaborative sheets. For any cell not
+      // already styled above, read formatting properties directly from sheet.data.
+      // Rich text (inlineStr) cells are handled separately below — skip them here
+      // so we don't interfere with the rich-text pipeline.
+      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+        if (!Array.isArray(row)) return;
+        row.forEach((v: any, c: number) => {
+          if (!v || typeof v !== 'object') return;
+          // Skip cells already styled via celldata
+          const cellRef = XLSXUtil.encode_cell({ r, c });
+          if (celldataStyled.has(cellRef)) return;
+          // Only process if there is at least one formatting property
+          const hasFormatting =
+            v.bg ||
+            v.bl ||
+            v.it ||
+            v.cl ||
+            v.un ||
+            v.fs ||
+            v.ff ||
+            v.fc ||
+            v.ht !== undefined ||
+            v.vt !== undefined ||
+            v.tb !== undefined ||
+            v.tr !== undefined;
+          if (!hasFormatting) return;
+
+          let cell: any = worksheet[cellRef] || {};
+          cell = { ...cell };
+          cell.s = cell.s || {};
+
+          // FILL
+          if (v.bg) {
+            const hex = parseColorToHex(v.bg);
+            if (hex) {
+              cell.s.fill = { patternType: 'solid', fgColor: { rgb: hex } };
+            }
+          }
+
+          // FONT
+          cell.s.font = {
+            ...(cell.s.font || {}),
+            bold: v.bl === 1 || undefined,
+            italic: v.it === 1 || undefined,
+            strike: v.cl === 1 || undefined,
+            underline: v.un === 1 || undefined,
+            sz: v.fs ?? 10,
+            name: v.ff ?? undefined,
+            color: (() => {
+              const hex = parseColorToHex(v.fc);
+              return hex ? { rgb: hex } : undefined;
+            })(),
+          };
+
+          // ALIGNMENT
+          const HT_MAP: any = { '0': 'center', '1': 'left', '2': 'right' };
+          const VT_MAP: any = { '0': 'center', '1': 'top', '2': 'bottom' };
+          cell.s.alignment = {
+            ...(cell.s.alignment || {}),
+            horizontal: HT_MAP[v.ht] || undefined,
+            vertical: VT_MAP[v.vt] || undefined,
+            textRotation: v.tr !== undefined ? v.tr : undefined,
+          };
+          if (v.tb === '1') cell.s.alignment.wrapText = true;
+          else if (v.tb === '2') cell.s.alignment.shrinkToFit = true;
+
+          worksheet[cellRef] = cell;
+        });
+      });
+
+      // RICH TEXT from sheet.data (celldata is often empty for live sheets)
+      // aoa_to_sheet leaves inlineStr cells empty since v.v is undefined;
+      // set plain-text fallback here and collect runs for Pass 2.
+      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+        if (!Array.isArray(row)) return;
+        row.forEach((v: any, c: number) => {
+          if (!v || v.ct?.t !== 'inlineStr' || !Array.isArray(v.ct.s)) return;
+          const cellRef = XLSXUtil.encode_cell({ r, c });
+          const plainText = v.ct.s.map((seg: any) => seg.v ?? '').join('');
+          worksheet[cellRef] = {
+            ...(worksheet[cellRef] || {}),
+            v: plainText,
+            t: 's',
+          };
+          const rt = buildExcelJsRichText(v.ct.s);
+          if (rt) sheetRichTextMaps[index].set(cellRef, rt);
+        });
+      });
+
+      // APPLY BORDERS
+      if (sheet.config?.borderInfo) {
+        applyBordersToWorksheet(worksheet, sheet.config.borderInfo);
+      }
 
       const subSheetName =
         sheet.name.length > 30 ? sheet.name.slice(0, 30) : sheet.name;
@@ -201,10 +392,160 @@ export const handleExportToXLSX = async (
       defaultBase: 'Sheet',
     });
 
-    XLSXWriteFile(workbook, `${title}.xlsx`, {
+    // Pass 1: write to buffer with xlsx-js-style (preserves all cell styling)
+    const xlsxBuffer: ArrayBuffer = XLSXWrite(workbook, {
       bookType: 'xlsx',
+      type: 'array',
       compression: true,
     });
+
+    // Pass 2: ExcelJS reads the buffer and adds data validations
+    const excelWorkbook = new ExcelJSWorkbook();
+    await excelWorkbook.xlsx.load(xlsxBuffer);
+
+    const excelModel = (excelWorkbook as any).model;
+    if (excelModel?.styles?.fonts?.[0]) {
+      excelModel.styles.fonts[0] = { ...excelModel.styles.fonts[0], size: 10 };
+    }
+
+    const sheetCfPatches: SheetCfPatch[] = sheetWithData.map(() => ({
+      duplicateValues: [],
+    }));
+
+    sheetWithData.forEach((sheet, index) => {
+      const ws = excelWorkbook.worksheets[index];
+      if (!ws) return;
+
+      // Apply rich text collected during Pass 1
+      applyRichTextToWorksheet(ws, sheetRichTextMaps[index]);
+
+      // Export real conditional formatting first so dropdown-color CF priorities don't conflict
+      const { nextPriority, pendingDuplicateValues } =
+        exportConditionalFormatting(ws, sheet, 1);
+      sheetCfPatches[index] = { duplicateValues: pendingDuplicateValues };
+      let cfPriority = nextPriority;
+
+      if (!sheet.dataVerification) return;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const wsAny = ws as any;
+      if (!wsAny.dataValidations) wsAny.dataValidations = { model: {} };
+      if (!wsAny.dataValidations.model) wsAny.dataValidations.model = {};
+      const dvModel: Record<string, unknown> = wsAny.dataValidations.model;
+      Object.entries(sheet.dataVerification).forEach(([rowColKey, dvRaw]) => {
+        const dv = dvRaw as {
+          type?: string;
+          value1?: string;
+          value2?: string;
+          color?: string;
+          hintShow?: boolean;
+          hintValue?: string;
+          prohibitInput?: boolean;
+        };
+        if (dv.type !== 'dropdown' && dv.type !== 'checkbox') return;
+        const [row, col] = rowColKey.split('_').map(Number);
+        const cellAddress = XLSXUtil.encode_cell({ r: row, c: col });
+
+        if (dv.type === 'checkbox') {
+          const selectedVal = (dv.value1 || 'TRUE').trim();
+          const unselectedVal = (dv.value2 || 'FALSE').trim();
+          const opts = [selectedVal, unselectedVal].filter(Boolean);
+          dvModel[cellAddress] = {
+            type: 'list',
+            allowBlank: true,
+            formulae: [`"${opts.join(',')}"`],
+            showInputMessage: Boolean(dv.hintShow),
+            prompt: dv.hintValue || '',
+            showErrorMessage: Boolean(dv.prohibitInput),
+          };
+          return;
+        }
+        const options = (dv.value1 || '')
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+        if (options.length === 0) return;
+
+        // Write directly to the model in the same format the import reads it
+        dvModel[cellAddress] = {
+          type: 'list',
+          allowBlank: true,
+          formulae: [`"${options.join(',')}"`],
+          showInputMessage: Boolean(dv.hintShow),
+          prompt: dv.hintValue || '',
+          showErrorMessage: Boolean(dv.prohibitInput),
+        };
+
+        // Add conditional formatting so option colors persist in Google Sheets / Excel.
+        // color is a flat comma-separated string of R, G, B triplets (one per option).
+        if (dv.color) {
+          const colorNums = dv.color
+            .split(',')
+            .map((s: string) => parseInt(s.trim(), 10));
+          const toHex2 = (n: number) =>
+            Math.max(0, Math.min(255, n))
+              .toString(16)
+              .padStart(2, '0')
+              .toUpperCase();
+          const cfRules = options
+            .map((option, i) => {
+              const r = colorNums[i * 3];
+              const g = colorNums[i * 3 + 1];
+              const b = colorNums[i * 3 + 2];
+              if (isNaN(r) || isNaN(g) || isNaN(b)) return null;
+              const argb = `FF${toHex2(r)}${toHex2(g)}${toHex2(b)}`;
+              return {
+                type: 'cellIs',
+                operator: 'equal',
+                formulae: [`"${option}"`],
+                priority: cfPriority++,
+                style: {
+                  fill: {
+                    type: 'pattern',
+                    pattern: 'solid',
+                    fgColor: { argb },
+                  },
+                },
+              };
+            })
+            .filter(Boolean);
+          if (cfRules.length > 0) {
+            wsAny.addConditionalFormatting({
+              ref: cellAddress,
+              rules: cfRules,
+            });
+          }
+        }
+      });
+    });
+
+    sheetWithData.forEach((sheet, index) => {
+      if (!sheet.images?.length) return;
+      const ws = excelWorkbook.worksheets[index];
+      if (!ws) return;
+      const defaultColPx = Number(sheet.defaultColWidth) || 99;
+      const defaultRowPx = Number(sheet.defaultRowHeight) || 21;
+      addFortuneImagesToWorksheet(
+        ws,
+        excelWorkbook,
+        sheet.images,
+        sheet,
+        defaultColPx,
+        defaultRowPx,
+      );
+    });
+
+    const rawBuffer = await excelWorkbook.xlsx.writeBuffer();
+    const finalBuffer = await patchXlsxCf(rawBuffer, sheetCfPatches);
+    const blob = new Blob([finalBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Export failed:', error);
   }
