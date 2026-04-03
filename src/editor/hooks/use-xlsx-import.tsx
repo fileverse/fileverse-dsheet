@@ -1,15 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from 'react';
 import SSF from 'ssf';
 import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
-import { Sheet } from '@sheet-engine/react';
-import { WorkbookInstance } from '@sheet-engine/react';
+import { Sheet, WorkbookInstance } from '@sheet-engine/react';
 import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 
 // @ts-expect-error, type is not available from package
-import LuckyExcel from 'luckyexcel';
-const { transformExcelToLucky } = LuckyExcel;
+import { transformExcelToLucky } from 'luckyexcel';
 import {
   extractImagesFromWorksheet,
   convertRawImagesToFortuneSheet,
@@ -32,6 +31,18 @@ const DATA_VERIFICATION_OPTION_COLORS = [
   '244, 239, 234', // Cream
 ];
 const DEFAULT_OPTION_COLOR = DATA_VERIFICATION_OPTION_COLORS[0]; // Light Gray
+
+const CHECKBOX_PAIRS: [string, string][] = [
+  ['true', 'false'],
+  ['yes', 'no'],
+  ['1', '0'],
+];
+
+function isCheckboxPair(a: string, b: string): boolean {
+  const la = a.toLowerCase();
+  const lb = b.toLowerCase();
+  return CHECKBOX_PAIRS.some(([x, y]) => la === x && lb === y);
+}
 
 /** Build dataVerification color string from option count: use color list only when options ≤ 12; if more, use only grey (first) repeated. */
 function buildDataVerificationColor(optionCount: number): string {
@@ -73,16 +84,34 @@ function excelDataValidationToSheetEntry(
   const { row, col } = parsed;
   const rowColKey = `${row}_${col}`;
 
-  const type = dv.type === 'list' ? 'dropdown' : dv.type || 'dropdown';
-  const value1 =
+  const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
           .replace(/^["']|["']$/g, '')
           .replace(/["']/g, '')
       : '';
+  const parts = rawFormula
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+
+  let type = dv.type === 'list' ? 'dropdown' : dv.type || 'dropdown';
+  let value1 = rawFormula;
+  let value2 = '';
+
+  if (
+    dv.type === 'list' &&
+    parts.length === 2 &&
+    isCheckboxPair(parts[0], parts[1])
+  ) {
+    type = 'checkbox';
+    value1 = parts[0];
+    value2 = parts[1];
+  }
 
   // When no color is preset (e.g. from XLSX): one color per option; use predefined list up to 12, then Light Gray for the rest
-  const optionCount = value1 ? value1.split(',').length : 0;
+  const optionCount =
+    type === 'checkbox' ? 1 : value1 ? value1.split(',').length : 0;
   const color = buildDataVerificationColor(optionCount || 1);
 
   const entry: Record<string, unknown> = {
@@ -90,7 +119,7 @@ function excelDataValidationToSheetEntry(
     type2: '',
     rangeTxt: address,
     value1,
-    value2: '',
+    value2,
     validity: '',
     remote: false,
     prohibitInput: dv.type === 'list',
@@ -406,6 +435,9 @@ export const useXLSXImport = ({
         try {
           //@ts-expect-error, later
           await workbook.xlsx.load(arrayBuffer);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const workbookDefaultFontSize: number | undefined = (workbook as any)
+            .model?.styles?.fonts?.[0]?.size;
           // Extract hyperlinks, freeze info, cell formatting, and data validation from all worksheets
           const hyperlinksBySheet: Record<
             number,
@@ -445,7 +477,6 @@ export const useXLSXImport = ({
           const imagesBySheet: Record<number, RawSheetImage[]> = {};
 
           workbook.eachSheet((ws, sheetIndex) => {
-            console.log('ws', ws);
             const idx = sheetIndex - 1; // exceljs is 1-based
 
             // Hyperlinks
@@ -511,7 +542,9 @@ export const useXLSXImport = ({
                   if (font.bold) cellStyle.bl = 1;
                   if (font.italic) cellStyle.it = 1;
                   if (font.underline) cellStyle.un = 1;
-                  if (font.size) cellStyle.fs = font.size;
+                  const effectiveFontSize =
+                    font.size ?? workbookDefaultFontSize;
+                  if (effectiveFontSize) cellStyle.fs = effectiveFontSize;
                   if (font.name) cellStyle.ff = font.name;
                   if (font.color?.argb) {
                     const argb = font.color.argb;
@@ -578,7 +611,6 @@ export const useXLSXImport = ({
             if (Array.isArray(cfs) && cfs.length > 0) {
               const sheetCf: Record<string, unknown>[] = [];
               for (const cf of cfs) {
-                console.log('cf', cf);
                 const ref = cf.ref;
                 const rules = cf.rules || [];
                 for (const rule of rules) {
@@ -653,6 +685,36 @@ export const useXLSXImport = ({
                     ...hyperlinksBySheet[sheetIndex],
                   };
                 }
+                // Correct column widths before image position conversion so that
+                // nativeColToPx uses the same MDW=7 values the grid renders with.
+                if (sheet.config?.columnlen) {
+                  const corrected: Record<string, number> = {};
+                  Object.entries(sheet.config.columnlen).forEach(
+                    ([col, px]) => {
+                      const wch = (Number(px) - 5) / 8 + 0.83;
+                      corrected[col] = Math.round(wch * 7 + 5);
+                    },
+                  );
+                  sheet.config.columnlen = corrected;
+                }
+
+                // Drop rowlen entries at or near the default row height so Fortune
+                // uses its own default for rows the user never manually resized.
+                // Also done before image conversion so nativeRowToPx uses the
+                // same rowlen the grid renders with.
+                if (sheet.config?.rowlen) {
+                  const defaultRowPx = Math.round(
+                    Number(sheet.defaultRowHeight) || 21,
+                  );
+                  const filtered: Record<string, number> = {};
+                  Object.entries(sheet.config.rowlen).forEach(([row, h]) => {
+                    if (Math.abs(Math.round(Number(h)) - defaultRowPx) > 1) {
+                      filtered[row] = Number(h);
+                    }
+                  });
+                  sheet.config.rowlen = filtered;
+                }
+
                 // Attach images — convert fractional col/row to pixels using
                 // FortuneSheet's actual column/row dimensions so positions match.
                 if (imagesBySheet[sheetIndex]) {
