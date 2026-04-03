@@ -49,6 +49,15 @@ export {
   rangeDrag,
   rangeSetValue,
   remapFormulaReferencesByMap,
+  getFormulaRangeIndexAtCaret,
+  isCaretAtValidFormulaRangeInsertionPoint,
+  markRangeSelectionDirty,
+  getFormulaRangeIndexForKeyboardSync,
+  isFormulaReferenceInputMode,
+  functionStrChange,
+  setFormulaEditorOwner,
+  getAllFunctionGroup,
+  suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
 
 // freeze

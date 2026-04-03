@@ -35,6 +35,7 @@ import {
   clearFilter,
   applyLocation,
   insertDuneChart,
+  getFormulaEditorOwner,
   Cell,
   api,
   getSheetIndex,
@@ -184,12 +185,19 @@ export const CurrencySelector = ({
       // Try to match with crypto or fiat
       const allOptions = [
         ...CRYPTO_OPTIONS,
-        ...locale(context).currencyDetail.map((c: { name: string; value: string; pos: string; geckoId: string }) => ({
-          label: c.name,
-          value: c.value,
-          icon: undefined,
-          type: 'fiat',
-        })),
+        ...locale(context).currencyDetail.map(
+          (c: {
+            name: string;
+            value: string;
+            pos: string;
+            geckoId: string;
+          }) => ({
+            label: c.name,
+            value: c.value,
+            icon: undefined,
+            type: 'fiat',
+          }),
+        ),
       ];
       const found = [...allOptions]
         .sort((a, b) => b.value.length - a.value.length) // sort longest first
@@ -449,6 +457,17 @@ const Toolbar: React.FC<{
 }) => {
   const { context, setContext, refs, settings, handleUndo, handleRedo } =
     useContext(WorkbookContext);
+
+  const restoreEditorFocusAfterToolbarAction = useCallback(() => {
+    if (context.luckysheetCellUpdate.length === 0) return;
+    requestAnimationFrame(() => {
+      const owner = getFormulaEditorOwner(context);
+      const target =
+        owner === 'fx' ? refs.fxInput.current : refs.cellInput.current;
+      target?.focus();
+    });
+  }, [context, refs.cellInput, refs.fxInput]);
+
   const contextRef = useRef(context);
   const containerRef = useRef<HTMLDivElement>(null);
   const [toolbarWrapIndex, setToolbarWrapIndex] = useState(-1);
@@ -787,27 +806,73 @@ const Toolbar: React.FC<{
           >
             {(setOpen) => (
               <Select>
-                {defaultFormat.map(({ text, value, example }: { text: string; value: string; example: string }, ii: number) => {
-                  if (value === 'split') {
-                    return <MenuDivider key={ii} />;
-                  }
-                  if (value === 'fmtOtherSelf') {
+                {defaultFormat.map(
+                  (
+                    {
+                      text,
+                      value,
+                      example,
+                    }: { text: string; value: string; example: string },
+                    ii: number,
+                  ) => {
+                    if (value === 'split') {
+                      return <MenuDivider key={ii} />;
+                    }
+                    if (value === 'fmtOtherSelf') {
+                      return (
+                        <Option
+                          key={value}
+                          onClick={() => {
+                            showDialog(
+                              <FormatSearch
+                                onCancel={hideDialog}
+                                type="currency"
+                              />,
+                              undefined,
+                              'Currency Format',
+                            );
+                            setOpen(false);
+                          }}
+                        >
+                          <div className="fortune-toolbar-menu-line">
+                            <div className="flex gap-2 items-center">
+                              {currentFmt === text ? (
+                                <LucideIcon name="Check" className="w-4 h-4" />
+                              ) : (
+                                <span className="w-4 h-4" />
+                              )}
+                              <div>{text}</div>
+                            </div>
+                            <LucideIcon
+                              name="ChevronRight"
+                              className="w-4 h-4 color-icon-secondary"
+                            />
+                          </div>
+                        </Option>
+                      );
+                    }
                     return (
                       <Option
                         key={value}
                         onClick={() => {
-                          showDialog(
-                            <FormatSearch
-                              onCancel={hideDialog}
-                              type="currency"
-                            />,
-                            undefined,
-                            'Currency Format',
-                          );
                           setOpen(false);
+                          setContext((ctx) => {
+                            const d = getFlowdata(ctx);
+                            if (d == null) return;
+                            updateFormat(
+                              ctx,
+                              refs.cellInput.current!,
+                              d,
+                              'ct',
+                              value,
+                            );
+                          });
                         }}
                       >
-                        <div className="fortune-toolbar-menu-line">
+                        <div
+                          style={{ overflowX: 'scroll' }}
+                          className="fortune-toolbar-menu-line scrollbar-hidden w-full"
+                        >
                           <div className="flex gap-2 items-center">
                             {currentFmt === text ? (
                               <LucideIcon name="Check" className="w-4 h-4" />
@@ -816,49 +881,14 @@ const Toolbar: React.FC<{
                             )}
                             <div>{text}</div>
                           </div>
-                          <LucideIcon
-                            name="ChevronRight"
-                            className="w-4 h-4 color-icon-secondary"
-                          />
+                          <div className="fortune-toolbar-subtext">
+                            {example}
+                          </div>
                         </div>
                       </Option>
                     );
-                  }
-                  return (
-                    <Option
-                      key={value}
-                      onClick={() => {
-                        setOpen(false);
-                        setContext((ctx) => {
-                          const d = getFlowdata(ctx);
-                          if (d == null) return;
-                          updateFormat(
-                            ctx,
-                            refs.cellInput.current!,
-                            d,
-                            'ct',
-                            value,
-                          );
-                        });
-                      }}
-                    >
-                      <div
-                        style={{ overflowX: 'scroll' }}
-                        className="fortune-toolbar-menu-line scrollbar-hidden w-full"
-                      >
-                        <div className="flex gap-2 items-center">
-                          {currentFmt === text ? (
-                            <LucideIcon name="Check" className="w-4 h-4" />
-                          ) : (
-                            <span className="w-4 h-4" />
-                          )}
-                          <div>{text}</div>
-                        </div>
-                        <div className="fortune-toolbar-subtext">{example}</div>
-                      </div>
-                    </Option>
-                  );
-                })}
+                  },
+                )}
               </Select>
             )}
           </Combo>
@@ -2049,6 +2079,7 @@ const Toolbar: React.FC<{
       ref={containerRef}
       className="fortune-toolbar"
       aria-label={toolbar.toolbar}
+      onMouseUpCapture={restoreEditorFocusAfterToolbarAction}
     >
       <DataVerificationPortal visible={showDataValidation} />
       <ConditionalFormatPortal

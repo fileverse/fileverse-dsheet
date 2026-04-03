@@ -7,6 +7,7 @@ import {
   rowLocationByIndex,
   updateContextWithSheetData,
   api,
+  remapFormulaReferencesByMap,
 } from '@sheet-engine/core';
 import WorkbookContext from '../../../context';
 
@@ -144,7 +145,7 @@ export const useRowDragAndDrop = (
     let ghostHeightPx = 24;
     let ghostLabel = `${dragRef.current.source + 1} row`;
 
-    const selectedBlock = selectedLocationRef.current?.find(
+    const selectedBlock = selectedLocationRef?.current?.find(
       (s) => s.r1 <= dragRef.current.source && dragRef.current.source <= s.r2,
     );
 
@@ -307,76 +308,37 @@ export const useRowDragAndDrop = (
           d?.forEach((row) => {
             row.forEach((cell) => {
               if (cell) {
-                const otherAffectedRows: any[] = [];
+                const rowMap: Record<number, number> = {};
                 if (sourceIndex < targetIndex) {
                   const start =
                     selectedSourceRow?.[selectedSourceRow.length - 1];
                   const last =
                     selectedTargetRow?.[selectedTargetRow.length - 1];
                   for (let c = start + 1; c < last; c += 1) {
-                    otherAffectedRows.push({
-                      source: c,
-                      target: c - selectedSourceRow.length,
-                    });
+                    rowMap[c] = c - selectedSourceRow.length;
                   }
                   selectedSourceRow.forEach((c: number, index: number) => {
-                    otherAffectedRows.push({
-                      source: c,
-                      target: selectedTargetRow[index],
-                    });
+                    rowMap[c] = selectedTargetRow[index];
                   });
                 } else {
                   const start = selectedTargetRow?.[0];
                   const last = selectedSourceRow?.[0];
                   for (let c = start; c < last; c += 1) {
-                    otherAffectedRows.push({
-                      source: c,
-                      target: c + +selectedSourceRow.length,
-                    });
+                    rowMap[c] = c + selectedSourceRow.length;
                   }
                   selectedSourceRow.forEach((c: number, index: number) => {
-                    otherAffectedRows.push({
-                      source: c,
-                      target: selectedTargetRow[index],
-                    });
+                    rowMap[c] = selectedTargetRow[index];
                   });
                 }
-                // otherAffectedRows.forEach(({source, target}) => {
-                //   if (cell.f) cell.f = cell.f.replace(new RegExp(`\\b([A-Z]+)${source}\\b`, 'g'), (match, p1) => {
-                //     return `${p1}${target}`;
-                //   });
-                // });
 
                 if (cell.f) {
-                  let formula = cell.f;
-                  const replacements: any[] = [];
-
-                  // Collect all replacement positions first
-                  otherAffectedRows.forEach(({ source, target }) => {
-                    const regex = new RegExp(`\\b([A-Z]+)${source}\\b`, 'g');
-                    let match;
-
-                    while ((match = regex.exec(formula)) !== null) {
-                      replacements.push({
-                        start: match.index,
-                        end: match.index + match[0].length,
-                        original: match[0],
-                        replacement: `${match[1]}${target}`,
-                      });
-                    }
-                  });
-
-                  // Sort by position (descending) and apply replacements from end to start
-                  replacements.sort((a, b) => b.start - a.start);
-
-                  replacements.forEach((rep) => {
-                    formula =
-                      formula.substring(0, rep.start) +
-                      rep.replacement +
-                      formula.substring(rep.end);
-                  });
-
-                  cell.f = formula;
+                  const sheetName = _sheet.name || '';
+                  cell.f = remapFormulaReferencesByMap(
+                    cell.f,
+                    sheetName,
+                    sheetName,
+                    { rowMap },
+                  );
                 }
               }
             });
@@ -438,7 +400,7 @@ export const useRowDragAndDrop = (
 
           _sheet.calcChain?.forEach((item) => {
             if (selectedSourceRow.includes(item.r)) {
-              const index = selectedSourceRow.indexOf(item.c);
+              const index = selectedSourceRow.indexOf(item.r);
               item.r = selectedTargetRow[index];
             } else if (item.r > sourceIndex && item.r < targetIndex) {
               item.r -= selectedSourceRow.length;

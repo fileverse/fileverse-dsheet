@@ -38,10 +38,11 @@ const ContentEditable: React.FC<ContentEditableProps> = ({ ...props }) => {
       if (root.current != null) {
         html = root.current.innerHTML;
       }
-      if (onChange && html !== lastHtml.current) {
-        onChange(html || '', isBlur);
+      const htmlStr = html || '';
+      if (onChange && htmlStr !== lastHtml.current) {
+        onChange(htmlStr, isBlur);
       }
-      lastHtml.current = html || '';
+      lastHtml.current = htmlStr;
     },
     [root, onChange],
   );

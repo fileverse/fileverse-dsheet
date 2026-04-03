@@ -86,6 +86,16 @@ export {
   israngeseleciton,
   createRangeHightlight,
   maybeRecoverDirtyRangeSelection,
+  getFormulaRangeIndexAtCaret,
+  isCaretAtValidFormulaRangeInsertionPoint,
+  markRangeSelectionDirty,
+  setFormulaEditorOwner,
+  functionHTMLGenerate,
+  suppressFormulaRangeSelectionForInitialEdit,
+  rangeSetValue,
+  getFormulaRangeIndexForKeyboardSync,
+  createFormulaRangeSelect,
+  isFormulaReferenceInputMode,
   // freeze
   initFreeze,
   // inline-string

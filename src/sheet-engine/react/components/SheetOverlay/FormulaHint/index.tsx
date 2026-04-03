@@ -1,6 +1,13 @@
 import { locale } from '@sheet-engine/core';
 import { Button, TextField, LucideIcon, Tooltip } from '@fileverse/ui';
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import WorkbookContext from '../../../context';
 import './index.css';
 import { DraggableDiv } from './dragable-div';
@@ -37,36 +44,68 @@ const FormulaHint = (props: any) => {
     ETHERSCAN_API_KEY: 'Etherscan API key',
   };
   const hintRef = useRef<HTMLDivElement>(null);
-  const [top, setTop] = useState(0);
+  const cellHeightPx =
+    firstSelection?.height_move != null
+      ? Number(firstSelection.height_move)
+      : 24;
+  const belowCellTop = cellHeightPx + 4;
+  const [top, setTop] = useState(belowCellTop);
   const [showDelayedHint, setShowDelayedHint] = useState(false);
-  const calcuatePopUpPlacement = () => {
-    if (
-      !firstSelection?.top?.toString() ||
-      !firstSelection.height_move?.toString() ||
-      !hintRef.current
-    )
+
+  const measureFormulaHintPlacement = useCallback(() => {
+    if (firstSelection?.top == null || firstSelection.height_move == null) {
+      setTop(belowCellTop);
       return;
-    const hintHeight = 360;
-    const inputBoxTop =
-      parseInt(
-        document.getElementById('luckysheet-input-box')?.style.top || '0',
-        10,
-      ) - 85;
-    const inputBottom = inputBoxTop + firstSelection.height_move;
-    const availableBelow = window.innerHeight - inputBottom;
-    const hintAbove = hintHeight > availableBelow;
-    const selectionHeight = firstSelection?.height_move || 0;
-    const divOffset = hintRef.current?.offsetHeight || 0;
-    let topV = hintAbove
-      ? selectionHeight - (divOffset + 30)
-      : selectionHeight + 4;
-    const el = document.getElementsByClassName('fx-hint')?.[0];
-    // @ts-ignore
-    if (el && el?.style?.display !== 'none') {
+    }
+
+    const cellH = Number(firstSelection.height_move) || cellHeightPx;
+    const innerEl = hintRef.current;
+    const popupHeight = Math.min(innerEl?.offsetHeight || 360, 360);
+    const inputBox = document.getElementById('luckysheet-input-box');
+    const rect = inputBox?.getBoundingClientRect();
+    if (!rect) {
+      setTop(cellH + 4);
+      return;
+    }
+
+    const cellBottomViewport = rect.top + cellH;
+    const availableBelow = window.innerHeight - cellBottomViewport - 12;
+    const preferBelow = popupHeight <= availableBelow;
+
+    let topV = preferBelow ? cellH + 4 : -(popupHeight + 8);
+
+    const fxHint = document.getElementsByClassName('fx-hint')?.[0] as
+      | HTMLElement
+      | undefined;
+    if (fxHint && fxHint.style.display !== 'none') {
       topV = 25;
     }
     setTop(topV);
-  };
+  }, [
+    belowCellTop,
+    cellHeightPx,
+    firstSelection?.height_move,
+    firstSelection?.top,
+  ]);
+
+  useLayoutEffect(() => {
+    if (!fn) {
+      return undefined;
+    }
+    measureFormulaHintPlacement();
+    const id = requestAnimationFrame(measureFormulaHintPlacement);
+    return () => {
+      cancelAnimationFrame(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `fn` only used for guard; functionName/context.functionHint cover changes
+  }, [
+    functionName,
+    context.functionHint,
+    measureFormulaHintPlacement,
+    showFormulaHint,
+    commaCount,
+    showFunctionBody,
+  ]);
 
   const hexToRgbString = (hex: string) => {
     // Remove the '#' if present
@@ -90,15 +129,9 @@ const FormulaHint = (props: any) => {
   };
 
   useEffect(() => {
-    calcuatePopUpPlacement();
-  }, []);
-
-  useEffect(() => {
-    if (!top) {
-      setTimeout(() => {
-        setShowDelayedHint(true);
-      }, 40);
-    }
+    setShowDelayedHint(false);
+    const t = setTimeout(() => setShowDelayedHint(true), 40);
+    return () => clearTimeout(t);
   }, [top]);
 
   if (!fn) return null;
@@ -122,7 +155,7 @@ const FormulaHint = (props: any) => {
           <Tooltip
             text="Hide formula suggestions (F10)"
             position="top"
-            open
+            open={true}
             style={{
               position: 'absolute',
               left: '210px',
@@ -207,7 +240,7 @@ const FormulaHint = (props: any) => {
                   );
                   setShouldShowFunctionBody(!showFunctionBody);
                   setTimeout(() => {
-                    calcuatePopUpPlacement();
+                    measureFormulaHintPlacement();
                   }, 50);
                 }
                 dragHasMoved.current = false;
@@ -348,6 +381,7 @@ const FormulaHint = (props: any) => {
               >
                 {fn.API_KEY && (
                   <div
+                    className="luckysheet-formula-help-content-api"
                     style={{
                       borderLeft: `4px solid ${
                         isKeyAdded ? '#177E23' : '#fb923c'
@@ -435,6 +469,7 @@ const FormulaHint = (props: any) => {
                 )}
 
                 <div
+                  id="luckysheet-formula-help-content-example"
                   style={{
                     backgroundColor: 'white',
                     padding: '6px',

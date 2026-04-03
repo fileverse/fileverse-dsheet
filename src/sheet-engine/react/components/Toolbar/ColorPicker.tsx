@@ -112,7 +112,11 @@ const ColorPicker: React.FC<Props> = ({ onPick }) => {
             <div
               key={c}
               className="fortune-toolbar-color-picker-item"
-              onClick={() => onPick(c)}
+              onMouseDown={(e) => {
+                // Apply color before focus leaves the contenteditable editor.
+                e.preventDefault();
+                onPick(c);
+              }}
               tabIndex={0}
               style={{
                 backgroundColor: c,

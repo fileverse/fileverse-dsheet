@@ -7,17 +7,13 @@ import {
   colLocationByIndex,
   updateContextWithSheetData,
   api,
+  indexToColumnChar,
+  remapFormulaReferencesByMap,
 } from '@sheet-engine/core';
 import WorkbookContext from '../../../context';
 
 export function numberToColumnName(num: number): string {
-  let columnName = '';
-  while (num >= 0) {
-    const remainder = num % 26;
-    columnName = String.fromCharCode(65 + remainder) + columnName;
-    num = Math.floor(num / 26) - 1; // Move to the next significant position
-  }
-  return columnName;
+  return indexToColumnChar(num);
 }
 
 export const useColumnDragAndDrop = (
@@ -159,7 +155,7 @@ export const useColumnDragAndDrop = (
     let ghostWidthPx = 60;
     let ghostLabel = `Col ${String.fromCharCode(65 + dragRef.current.source)}`;
 
-    const selectedBlock = selectedLocationRef.current?.find(
+    const selectedBlock = selectedLocationRef?.current?.find(
       (s) => s.c1 <= dragRef.current.source && dragRef.current.source <= s.c2,
     );
 
@@ -329,74 +325,37 @@ export const useColumnDragAndDrop = (
           d?.forEach((row) => {
             row.forEach((cell) => {
               if (cell) {
-                const otherAffectedCols: any[] = [];
+                const colMap: Record<number, number> = {};
                 if (sourceIndex < targetIndex) {
                   const start =
                     selectedSourceCol?.[selectedSourceCol.length - 1];
                   const last =
                     selectedTargetCol?.[selectedTargetCol.length - 1];
                   for (let c = start + 1; c <= last; c += 1) {
-                    otherAffectedCols.push({
-                      source: numberToColumnName(c),
-                      target: numberToColumnName(c - selectedSourceCol.length),
-                    });
+                    colMap[c] = c - selectedSourceCol.length;
                   }
-                  // to visit back on this logix if need + methond or array is fine.
                   selectedSourceCol.forEach((c: number, index: number) => {
-                    otherAffectedCols.push({
-                      source: numberToColumnName(c),
-                      target: numberToColumnName(selectedTargetCol[index]),
-                    });
+                    colMap[c] = selectedTargetCol[index];
                   });
                 } else if (sourceIndex > targetIndex) {
                   const start = selectedTargetCol?.[0];
                   const last = selectedSourceCol?.[0];
                   for (let c = start; c < last; c += 1) {
-                    otherAffectedCols.push({
-                      source: numberToColumnName(c),
-                      target: numberToColumnName(c + selectedSourceCol.length),
-                    });
+                    colMap[c] = c + selectedSourceCol.length;
                   }
                   selectedSourceCol.forEach((c: number, index: number) => {
-                    otherAffectedCols.push({
-                      source: numberToColumnName(c),
-                      target: numberToColumnName(selectedTargetCol[index]),
-                    });
+                    colMap[c] = selectedTargetCol[index];
                   });
                 }
 
                 if (cell.f) {
-                  let formula = cell.f;
-                  const replacements: any[] = [];
-
-                  // Collect all replacement positions first
-                  otherAffectedCols.forEach((col) => {
-                    const regex = new RegExp(`\\b${col.source}(\\d+)\\b`, 'g');
-                    let match;
-
-                    while ((match = regex.exec(formula)) !== null) {
-                      if (/^\d+$/.test(match[1])) {
-                        replacements.push({
-                          start: match.index,
-                          end: match.index + match[0].length,
-                          original: match[0],
-                          replacement: `${col.target}${match[1]}`,
-                        });
-                      }
-                    }
-                  });
-
-                  // Sort by position (descending) and apply replacements from end to start
-                  replacements?.sort((a, b) => b.start - a.start);
-
-                  replacements?.forEach((rep) => {
-                    formula =
-                      formula.substring(0, rep.start) +
-                      rep.replacement +
-                      formula.substring(rep.end);
-                  });
-
-                  cell.f = formula;
+                  const sheetName = _sheet.name || '';
+                  cell.f = remapFormulaReferencesByMap(
+                    cell.f,
+                    sheetName,
+                    sheetName,
+                    { colMap },
+                  );
                 }
               }
             });

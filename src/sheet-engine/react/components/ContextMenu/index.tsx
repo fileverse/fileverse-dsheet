@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 import {
   locale,
   handleCopy,
@@ -32,6 +33,7 @@ import React, {
   useLayoutEffect,
   useState,
 } from 'react';
+import regeneratorRuntime from 'regenerator-runtime';
 import Tippy from '@tippyjs/react';
 import { LucideIcon } from '@fileverse/ui';
 import { SplitColumn } from '../SplitColumn';
@@ -47,7 +49,7 @@ import Menu from './Menu';
 import 'tippy.js/dist/tippy.css';
 // import ConditionalFormat from "../ConditionFormat";
 import SVGIcon from '../SVGIcon';
-import { LucideIcon as LocalLucidIcon } from '../../components/SheetOverlay/LucideIcon';
+import { LucideIcon as LocalLucidIcon } from '../SheetOverlay/LucideIcon';
 
 const ContextMenu: React.FC = () => {
   const { showDialog } = useDialog();
@@ -324,7 +326,7 @@ const ContextMenu: React.FC = () => {
           </Menu>
         );
       }
-      if (name === 'paste') {
+      if (name === 'paste' && regeneratorRuntime) {
         return (
           <Menu
             key={name}

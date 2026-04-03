@@ -1,198 +1,425 @@
-import React, { useContext, useState, useMemo, useCallback } from 'react';
-import {
-  cancelNormalSelected,
-  locale,
-  setCaretPosition,
-} from '@sheet-engine/core';
 import _ from 'lodash';
+import React, {
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { LucideIcon, Tooltip } from '@fileverse/ui';
+import { UNFilter } from './constant';
 import WorkbookContext from '../../context';
 import './index.css';
 
-export const FormulaSearch: React.FC<{ onCancel: () => void }> = ({
-  onCancel: _onCancel,
-}) => {
+const FormulaSearch: React.FC<
+  React.HTMLAttributes<HTMLDivElement> & { from?: string }
+> = ({ from, ...divProps }) => {
   const {
     context,
-    setContext,
-    refs: { cellInput, globalCache },
+    settings: { isAuthorized },
   } = useContext(WorkbookContext);
-  const [selectedType, setSelectedType] = useState(20);
-  const [selectedFuncIndex, setSelectedFuncIndex] = useState(0);
-  const [searchText, setSearchText] = useState('');
-  const { formulaMore, functionlist, button } = locale(context);
-
-  const typeList = useMemo(
-    () => [
-      // @ts-ignore
-      { t: 20, n: formulaMore.Crypto },
-      { t: 0, n: formulaMore.Math },
-      { t: 1, n: formulaMore.Statistical },
-      { t: 2, n: formulaMore.Lookup },
-      { t: 3, n: formulaMore.luckysheet },
-      { t: 4, n: formulaMore.dataMining },
-      { t: 5, n: formulaMore.Database },
-      { t: 6, n: formulaMore.Date },
-      { t: 7, n: formulaMore.Filter },
-      { t: 8, n: formulaMore.Financial },
-      { t: 9, n: formulaMore.Engineering },
-      { t: 10, n: formulaMore.Logical },
-      { t: 11, n: formulaMore.Operator },
-      { t: 12, n: formulaMore.Text },
-      { t: 13, n: formulaMore.Parser },
-      { t: 14, n: formulaMore.Array },
-      { t: -1, n: formulaMore.other },
-    ],
-    [formulaMore],
+  const authedFunction = [
+    'COINGECKO',
+    'ETHERSCAN',
+    'DEFILLAMA',
+    'GNOSIS',
+    'BASE',
+    'EOA',
+    'PNL',
+    'SAFE',
+    'BLOCKSCOUT',
+    'LENS',
+    'FARCASTER',
+    'Ethereum',
+    'SMARTCONTRACT',
+    'DUNESIM',
+  ];
+  const filteredDefaultCandidates = context.defaultCandidates.filter(
+    (item) => !authedFunction.includes(item.n),
   );
+  const unfilteredDefaultCandidates = UNFilter.filter(
+    (item) => item.n !== 'PNL',
+  );
+  const finalDefaultCandidates = !isAuthorized
+    ? filteredDefaultCandidates
+    : context.defaultCandidates.slice(0, 10);
 
-  const filteredFunctionList = useMemo(() => {
-    if (searchText) {
-      const list = [];
-      const text = _.cloneDeep(searchText.toUpperCase());
-      for (let i = 0; i < functionlist.length; i += 1) {
-        if (/^[a-zA-Z]+$/.test(text)) {
-          if (functionlist[i].n.indexOf(text) !== -1) {
-            list.push(functionlist[i]);
-          }
-        } else if (functionlist[i].a.indexOf(text) !== -1) {
-          list.push(functionlist[i]);
-        }
-      }
-      return list;
-    }
-    return _.filter(functionlist, (v) => v.t === selectedType);
-  }, [functionlist, selectedType, searchText]);
+  const finalFunctionCandidates = isAuthorized
+    ? context.functionCandidates
+    : context.functionCandidates.filter((item) => item.t !== 20);
 
-  const onConfirm = useCallback(() => {
-    // console.log(FUNCTION_LOCALE, functionlist);
-    // return
-    const last =
-      context.luckysheet_select_save?.[
-        context.luckysheet_select_save.length - 1
-      ];
-    let row_index = last?.row_focus;
-    let col_index = last?.column_focus;
-    if (!last) {
-      row_index = 0;
-      col_index = 0;
-    } else {
-      if (row_index == null) {
-        [row_index] = last.row;
-      }
-      if (col_index == null) {
-        [col_index] = last.column;
-      }
+  const firstSelection = context.luckysheet_select_save?.[0];
+  const cellHeightPx =
+    firstSelection?.height_move != null
+      ? Number(firstSelection.height_move)
+      : 24;
+  /** Default below cell; 0 covered the active cell until layout ran. */
+  const belowCellTop = cellHeightPx + 4;
+
+  const hintRef = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState(belowCellTop);
+
+  const applyPlacement = useCallback(() => {
+    if (firstSelection?.top == null || firstSelection.height_move == null) {
+      setTop(belowCellTop);
+      return;
     }
-    const formulaTxt = `<span dir="auto" class="luckysheet-formula-text-color">=</span><span dir="auto" class="luckysheet-formula-text-color">${filteredFunctionList[
-      selectedFuncIndex
-    ].n.toUpperCase()}</span><span dir="auto" class="luckysheet-formula-text-color">(</span>`;
-    setContext((ctx) => {
-      if (cellInput.current != null) {
-        ctx.luckysheetCellUpdate = [row_index, col_index];
-        globalCache.doNotUpdateCell = true;
-        cellInput.current.innerHTML = formulaTxt;
-        const spans = cellInput.current.childNodes;
-        if (!_.isEmpty(spans)) {
-          setCaretPosition(
-            ctx,
-            spans[spans.length - 1] as HTMLSpanElement,
-            0,
-            1,
-          );
-        }
-        ctx.functionHint =
-          filteredFunctionList[selectedFuncIndex].n.toUpperCase();
-        ctx.functionCandidates = [];
-        if (_.isEmpty(ctx.formulaCache.functionlistMap)) {
-          for (let i = 0; i < functionlist.length; i += 1) {
-            ctx.formulaCache.functionlistMap[functionlist[i].n] =
-              functionlist[i];
-          }
-        }
-        _onCancel();
-      }
-    });
+
+    const fromFx = from === 'fx';
+    const cellH = Number(firstSelection.height_move) || cellHeightPx;
+
+    if (fromFx) {
+      setTop(25);
+      return;
+    }
+
+    const innerEl = hintRef.current;
+    const popupHeight = Math.min(innerEl?.offsetHeight || 360, 360);
+    const inputBox = document.getElementById('luckysheet-input-box');
+    const rect = inputBox?.getBoundingClientRect();
+    if (!rect) {
+      setTop(cellH + 4);
+      return;
+    }
+
+    const cellBottomViewport = rect.top + cellH;
+    const availableBelow = window.innerHeight - cellBottomViewport - 12;
+    const preferBelow = popupHeight <= availableBelow;
+
+    let topV = preferBelow ? cellH + 4 : -(popupHeight + 8);
+
+    const fxHint = document.getElementsByClassName('fx-hint')?.[0] as
+      | HTMLElement
+      | undefined;
+    if (fxHint && fxHint.style.display !== 'none') {
+      topV = 25;
+    }
+    setTop(topV);
   }, [
-    cellInput,
-    context.luckysheet_select_save,
-    filteredFunctionList,
-    globalCache,
-    selectedFuncIndex,
-    setContext,
-    _onCancel,
-    functionlist,
+    belowCellTop,
+    cellHeightPx,
+    firstSelection?.height_move,
+    firstSelection?.top,
+    from,
   ]);
 
-  const onCancel = useCallback(() => {
-    setContext((ctx) => {
-      cancelNormalSelected(ctx);
-      if (cellInput.current) {
-        cellInput.current.innerHTML = '';
-      }
-    });
-    _onCancel();
-  }, [_onCancel, cellInput, setContext]);
+  useLayoutEffect(() => {
+    applyPlacement();
+    const id = requestAnimationFrame(applyPlacement);
+    return () => {
+      cancelAnimationFrame(id);
+    };
+  }, [
+    applyPlacement,
+    context.defaultCandidates?.length,
+    context.functionCandidates?.length,
+    context.functionHint,
+  ]);
+
+  if (
+    _.isEmpty(context.functionCandidates) &&
+    _.isEmpty(context.defaultCandidates)
+  )
+    return null;
 
   return (
-    <div id="luckysheet-search-formula">
-      <div className="inpbox">
-        <div>{formulaMore.findFunctionTitle}：</div>
-        <input
-          className="formulaInputFocus"
-          id="searchFormulaListInput"
-          placeholder={formulaMore.tipInputFunctionName}
-          spellCheck="false"
-          onChange={(e) => setSearchText(e.target.value)}
-        />
-      </div>
-      <div className="selbox">
-        <span>{formulaMore.selectCategory}：</span>
-        <select
-          id="formulaTypeSelect"
-          onChange={(e) => {
-            setSelectedType(parseInt(e.target.value, 10));
-            setSelectedFuncIndex(0);
-          }}
-        >
-          {typeList.map((v) => (
-            <option key={v.t} value={v.t}>
-              {v.n}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="listbox" style={{ height: 200 }}>
-        <div>{formulaMore.selectFunctionTitle}：</div>
-        <div className="formulaList">
-          {filteredFunctionList.map((v, index) => (
+    <div
+      className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${
+        from === 'fx' ? 'fx-search' : 'cell-search'
+      }`}
+      id="luckysheet-formula-search-c-p"
+      style={{
+        top,
+      }}
+    >
+      <div
+        {...divProps}
+        ref={hintRef}
+        id="luckysheet-formula-search-c"
+        className="luckysheet-formula-search-c"
+      >
+        {context.defaultCandidates.length > 0 && (
+          <>
             <div
-              className={`listBox${index === selectedFuncIndex ? ' on' : ''}`}
-              key={v.n}
-              onClick={() => setSelectedFuncIndex(index)}
-              tabIndex={0}
+              style={{ marginBottom: '4px' }}
+              className="w-full flex flex-col p-2 gap-1"
             >
-              <div>{v.n}</div>
-              <div>{v.a}</div>
+              <h4 className="text-helper-sm-bold color-text-secondary">
+                Onchain functions
+              </h4>
+              <p className="text-helper-text-sm color-text-secondary">
+                Every onchain function is a native data structure allowing
+                dSheets to read and structure data from smart contracts and
+                APIs.
+              </p>
             </div>
-          ))}
-        </div>
+            {!isAuthorized && (
+              <div
+                style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
+                className="w-full flex flex-col p-2 gap-1"
+              >
+                <h4 className="font-semibold">dSheets account required</h4>
+                <p className="text-helper-text-sm color-text-secondary">
+                  Use more onchain functions by creating a dSheets account.{' '}
+                  <span
+                    className="sign-fortune"
+                    style={{ color: '#5C0AFF', cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      document.getElementById('triggerAuth')?.click();
+                    }}
+                  >
+                    Signup/Login
+                  </span>
+                </p>
+                <div className="flex gap-2 mt-2 mb-2">
+                  {unfilteredDefaultCandidates.map((v, index) => {
+                    return (
+                      <img
+                        key={index}
+                        src={v.LOGO}
+                        alt="Service Logo"
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {context.defaultCandidates.length > 0 ? (
+          <>
+            {finalDefaultCandidates.map((v, index) => {
+              return (
+                <div
+                  key={v.n}
+                  data-func={v.n}
+                  style={{
+                    cursor: 'pointer',
+                  }}
+                  className={`luckysheet-formula-search-item ${
+                    index === 0 ? 'luckysheet-formula-search-item-active' : ''
+                  }`}
+                >
+                  <div
+                    style={{ display: 'flex', justifyContent: 'space-between' }}
+                  >
+                    <div className="luckysheet-formula-search-func color-text-default text-body-sm">
+                      {v.n}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'end',
+                        minWidth: '68px',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {v.LOGO && (
+                        <img
+                          src={v.LOGO}
+                          alt="Service Logo"
+                          style={{ width: '16px' }}
+                        />
+                      )}
+                      {v.SECONDARY_LOGO && (
+                        <img
+                          src={v.SECONDARY_LOGO}
+                          alt="Service Logo"
+                          style={{ width: '16px' }}
+                        />
+                      )}
+                      {v.API_KEY && (
+                        <Tooltip
+                          text={
+                            localStorage.getItem(v.API_KEY)
+                              ? 'API Key added'
+                              : 'API key required'
+                          }
+                        >
+                          <div
+                            style={{
+                              borderRadius: '4px',
+                              backgroundColor: `${
+                                localStorage.getItem(v.API_KEY)
+                                  ? '#177E23'
+                                  : '#e8ebec'
+                              }`,
+                              width: '16px',
+                              height: '16px',
+                            }}
+                            className="flex justify-center"
+                          >
+                            <LucideIcon
+                              name="Key"
+                              style={{
+                                color: localStorage.getItem(v.API_KEY)
+                                  ? 'white'
+                                  : '#77818A',
+                                width: '12px',
+                                height: '12px',
+                              }}
+                            />
+                          </div>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </div>
+                  <div className="luckysheet-formula-search-detail mt-1 text-helper-text-sm  color-text-default">
+                    {v.d}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            {finalFunctionCandidates.length > 0 &&
+              finalFunctionCandidates.map((v, index) => {
+                return (
+                  <div
+                    key={v.n}
+                    data-func={v.n}
+                    className={`luckysheet-formula-search-item ${
+                      index === 0 ? 'luckysheet-formula-search-item-active' : ''
+                    }`}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div className="luckysheet-formula-search-func color-text-default text-body-sm">
+                        {v.n}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'end',
+                          width: '68px',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {v.LOGO && (
+                          <img
+                            src={v.LOGO}
+                            alt="Service Logo"
+                            style={{ width: '16px' }}
+                          />
+                        )}
+                        {v.SECONDARY_LOGO && (
+                          <img
+                            src={v.SECONDARY_LOGO}
+                            alt="Service Logo"
+                            style={{ width: '16px' }}
+                          />
+                        )}
+                        {v.API_KEY && (
+                          <Tooltip
+                            text={
+                              localStorage.getItem(v.API_KEY)
+                                ? 'API Key added'
+                                : 'API Key required'
+                            }
+                          >
+                            <div
+                              style={{
+                                borderRadius: '4px',
+                                backgroundColor: `${
+                                  localStorage.getItem(v.API_KEY)
+                                    ? '#177E23'
+                                    : '#e8ebec'
+                                }`,
+                                width: '16px',
+                                height: '16px',
+                              }}
+                              className="flex justify-center"
+                            >
+                              <LucideIcon
+                                name="Key"
+                                style={{
+                                  color: localStorage.getItem(v.API_KEY)
+                                    ? 'white'
+                                    : '#77818A',
+                                  width: '12px',
+                                  height: '12px',
+                                }}
+                              />
+                            </div>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </div>
+                    <div className="luckysheet-formula-search-detail mt-1 text-helper-text-sm color-text-secondary">
+                      {v.d}
+                    </div>
+                  </div>
+                );
+              })}
+            {finalFunctionCandidates.length === 0 && (
+              <span>
+                {!isAuthorized && (
+                  <div
+                    style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
+                    className="w-full flex flex-col p-2 gap-1"
+                  >
+                    <h4
+                      className="text-helper-sm-bold"
+                      style={{ fontWeight: 'bold' }}
+                    >
+                      dSheets account required
+                    </h4>
+                    <p className="text-helper-text-sm color-text-secondary">
+                      Use more onchain functions by creating a dSheets account.{' '}
+                      <span
+                        className="sign-fortune"
+                        style={{ color: '#5C0AFF', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          document.getElementById('triggerAuth')?.click();
+                        }}
+                      >
+                        Signup/Login
+                      </span>
+                    </p>
+                    <div className="flex gap-2 mt-2 mb-2">
+                      {unfilteredDefaultCandidates.map((v, index) => {
+                        return (
+                          <img
+                            key={index}
+                            src={v.LOGO}
+                            alt="Service Logo"
+                            style={{ width: '16px', height: '16px' }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </span>
+            )}
+          </>
+        )}
       </div>
-      <div className="fortune-dialog-box-button-container">
+      <div className="p-2 pt-0">
+        <hr className="color-border-default mb-2" />
         <div
-          className="fortune-message-box-button button-primary"
-          onClick={onConfirm}
-          tabIndex={0}
+          style={{ paddingLeft: '10px', paddingRight: '10px' }}
+          className="flex gap-1 items-center color-border-default text-helper-sm"
         >
-          {button.confirm}
-        </div>
-        <div
-          className="fortune-message-box-button button-default"
-          onClick={onCancel}
-          tabIndex={0}
-        >
-          {button.cancel}
+          <div className="border p-1 color-text-default rounded">Tab</div>
+          <p className="color-text-secondary">to insert</p>
         </div>
       </div>
     </div>
   );
 };
+
+export default FormulaSearch;

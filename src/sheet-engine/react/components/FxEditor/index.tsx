@@ -8,35 +8,53 @@ import {
   escapeScriptTag,
   moveHighlightCell,
   handleFormulaInput,
+  getFormulaRangeIndexAtCaret,
+  isCaretAtValidFormulaRangeInsertionPoint,
+  markRangeSelectionDirty,
   rangeHightlightselected,
+  getFormulaEditorOwner,
+  setFormulaEditorOwner,
+  createRangeHightlight,
   valueShowEs,
   isShowHidenCR,
   escapeHTMLTag,
+  functionHTMLGenerate,
   isAllowEdit,
+  suppressFormulaRangeSelectionForInitialEdit,
 } from '@sheet-engine/core';
 import React, {
   useContext,
   useState,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useMemo,
 } from 'react';
 import './index.css';
 import _ from 'lodash';
+import { Tooltip } from '@fileverse/ui';
 import WorkbookContext from '../../context';
 import ContentEditable from '../SheetOverlay/ContentEditable';
 import NameBox from './NameBox';
-import FormulaSearch from '../../components/SheetOverlay/FormulaSearch';
-import FormulaHint from '../../components/SheetOverlay/FormulaHint';
+import FormulaSearch from '../SheetOverlay/FormulaSearch';
+import FormulaHint from '../SheetOverlay/FormulaHint';
 import usePrevious from '../../hooks/usePrevious';
-import { LucideIcon } from '../../components/SheetOverlay/LucideIcon';
+import { useFormulaEditorHistory } from '../../hooks/useFormulaEditorHistory';
+import { useRerenderOnFormulaCaret } from '../../hooks/useRerenderOnFormulaCaret';
+import { LucideIcon } from '../SheetOverlay/LucideIcon';
 
 import {
   countCommasBeforeCursor,
+  getCursorPosition,
+  getFunctionNameFromFormulaCaretSpans,
+  isEditorUndoRedoKeyEvent,
   isLetterNumberPattern,
-  moveCursorToEnd,
-} from '../../components/SheetOverlay/helper';
+  setCursorPosition,
+  buildFormulaSuggestionText,
+  shouldShowFormulaFunctionList,
+} from '../SheetOverlay/helper';
+import { isFormulaSegmentBoundaryKey } from '../SheetOverlay/formula-segment-boundary';
 
 const FxEditor: React.FC = () => {
   const hideFormulaHintLocal = localStorage.getItem('formulaMore') === 'true';
@@ -44,13 +62,28 @@ const FxEditor: React.FC = () => {
   const [showFormulaHint, setShowFormulaHint] = useState(!hideFormulaHintLocal);
   const [commaCount, setCommaCount] = useState(0);
   const { context, setContext, refs } = useContext(WorkbookContext);
-  const lastKeyDownEventRef = useRef<KeyboardEvent | null>(null);
+  const lastKeyDownEventRef = useRef<KeyboardEvent>(null);
+  const {
+    preTextRef,
+    resetFormulaHistory,
+    handleFormulaHistoryUndoRedo,
+    capturePreEditorHistoryState,
+    appendEditorHistoryFromPrimaryEditor,
+  } = useFormulaEditorHistory(
+    refs.fxInput,
+    refs.cellInput,
+    refs.fxInput,
+    setContext,
+    'fx',
+  );
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [isHidenRC, setIsHidenRC] = useState<boolean>(false);
   const firstSelection = context.luckysheet_select_save?.[0];
   const prevFirstSelection = usePrevious(firstSelection);
+  const prevCellUpdate = usePrevious<any[]>(context.luckysheetCellUpdate);
   const prevSheetId = usePrevious(context.currentSheetId);
   const recentText = useRef('');
+  const formulaAnchorCellRef = useRef<[number, number] | null>(null);
 
   const handleShowFormulaHint = () => {
     localStorage.setItem('formulaMore', String(showFormulaHint));
@@ -58,8 +91,22 @@ const FxEditor: React.FC = () => {
   };
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'F10') {
+        event.preventDefault();
+        handleShowFormulaHint();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showFormulaHint]);
+
+  useEffect(() => {
     // 当选中行列是处于隐藏状态的话则不允许编辑
     setIsHidenRC(isShowHidenCR(context));
+    if (context.luckysheetCellUpdate.length > 0) {
+      return;
+    }
     if (
       _.isEqual(prevFirstSelection, firstSelection) &&
       context.currentSheetId === prevSheetId
@@ -93,7 +140,93 @@ const FxEditor: React.FC = () => {
     context.luckysheetfile,
     context.currentSheetId,
     context.luckysheet_select_save,
+    context.luckysheetCellUpdate.length,
   ]);
+
+  useLayoutEffect(() => {
+    const fxInput = refs.fxInput.current;
+    if (context.luckysheetCellUpdate.length === 0 || !fxInput) {
+      return;
+    }
+
+    if (refs.globalCache.doNotUpdateCell) {
+      delete refs.globalCache.doNotUpdateCell;
+      return;
+    }
+
+    if (
+      _.isEqual(prevCellUpdate, context.luckysheetCellUpdate) &&
+      prevSheetId === context.currentSheetId
+    ) {
+      return;
+    }
+
+    const [rowIndex, colIndex] = context.luckysheetCellUpdate;
+    if (_.isNil(rowIndex) || _.isNil(colIndex)) {
+      return;
+    }
+
+    const pending = refs.globalCache.pendingTypeOverCell;
+    if (pending && pending[0] === rowIndex && pending[1] === colIndex) {
+      refs.globalCache.overwriteCell = false;
+      refs.globalCache.ignoreWriteCell = false;
+      // pendingTypeOverCell cleared in InputBox useEffect after commit (Strict Mode safe).
+      return;
+    }
+
+    const flowdata = getFlowdata(context);
+    if (!flowdata) {
+      return;
+    }
+    const cell = flowdata?.[rowIndex]?.[colIndex];
+    let value = '';
+    const overwrite = refs.globalCache.overwriteCell;
+
+    if (cell && !overwrite) {
+      if (isInlineStringCell(cell)) {
+        value = getInlineStringNoStyle(rowIndex, colIndex, flowdata);
+      } else if (cell.f) {
+        value = getCellValue(rowIndex, colIndex, flowdata, 'f');
+      } else {
+        value = valueShowEs(rowIndex, colIndex, flowdata);
+      }
+    }
+
+    refs.globalCache.overwriteCell = false;
+    if (!refs.globalCache.ignoreWriteCell && value) {
+      fxInput.innerHTML = escapeHTMLTag(escapeScriptTag(value));
+    } else if (!refs.globalCache.ignoreWriteCell && !overwrite) {
+      const valueD = getCellValue(rowIndex, colIndex, flowdata, 'f');
+      fxInput.innerText = valueD;
+    }
+    refs.globalCache.ignoreWriteCell = false;
+  }, [
+    context.luckysheetCellUpdate,
+    context.luckysheetfile,
+    context.currentSheetId,
+    prevCellUpdate,
+    prevSheetId,
+    refs.fxInput,
+    refs.globalCache,
+  ]);
+
+  useEffect(() => {
+    if (_.isEmpty(context.luckysheetCellUpdate)) {
+      delete refs.globalCache.pendingTypeOverCell;
+      resetFormulaHistory();
+    }
+  }, [context.luckysheetCellUpdate, resetFormulaHistory, refs.globalCache]);
+
+  useEffect(() => {
+    if (_.isEmpty(context.luckysheetCellUpdate) || !refs.fxInput.current) {
+      formulaAnchorCellRef.current = null;
+      return;
+    }
+    const inputText = refs.fxInput.current.innerText?.trim() || '';
+    if (!inputText.startsWith('=')) {
+      formulaAnchorCellRef.current = null;
+    }
+  }, [context.luckysheetCellUpdate, refs.fxInput]);
 
   const onFocus = useCallback(() => {
     if (context.allowEdit === false) {
@@ -105,6 +238,7 @@ const FxEditor: React.FC = () => {
       isAllowEdit(context, context.luckysheet_select_save)
     ) {
       setContext((draftCtx) => {
+        setFormulaEditorOwner(draftCtx, 'fx');
         const last =
           draftCtx.luckysheet_select_save![
             draftCtx.luckysheet_select_save!.length - 1
@@ -113,11 +247,39 @@ const FxEditor: React.FC = () => {
         const row_index = last.row_focus;
         const col_index = last.column_focus;
 
-        draftCtx.luckysheetCellUpdate = [row_index, col_index];
-        refs.globalCache.doNotFocus = true;
+        if (!_.isNil(row_index) && !_.isNil(col_index)) {
+          const flowdata = getFlowdata(draftCtx);
+          const cellAt = flowdata?.[row_index]?.[col_index] as
+            | { f?: string }
+            | null
+            | undefined;
+          if (cellAt?.f != null && String(cellAt.f).trim() !== '') {
+            suppressFormulaRangeSelectionForInitialEdit(draftCtx);
+          }
+        }
+
+        // draftCtx.luckysheetCellUpdate = [row_index, col_index];
+        // refs.globalCache.doNotFocus = true;
+        const currentUpdate = draftCtx.luckysheetCellUpdate || [];
+        const alreadyEditingSameCell =
+          currentUpdate.length === 2 &&
+          currentUpdate[0] === row_index &&
+          currentUpdate[1] === col_index;
+
+        if (!alreadyEditingSameCell) {
+          // Preserve mouse-placed caret on first FX focus-open. Without this,
+          // the follow-up FX sync effect can rewrite innerHTML and clear the
+          // click position (especially for formula text starting with "=").
+          refs.globalCache.doNotUpdateCell = true;
+          draftCtx.luckysheetCellUpdate = [row_index, col_index];
+          refs.globalCache.doNotFocus = true;
+        }
         // formula.rangeResizeTo = $("#luckysheet-functionbox-cell");
       });
     }
+    setContext((draftCtx) => {
+      setFormulaEditorOwner(draftCtx, 'fx');
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     context.config,
@@ -134,21 +296,34 @@ const FxEditor: React.FC = () => {
   );
   const insertSelectedFormula = useCallback(
     (formulaName: string) => {
-      const ht = `<span dir="auto" class="luckysheet-formula-text-color">=</span><span dir="auto" class="luckysheet-formula-text-func">${formulaName}</span><span dir="auto" class="luckysheet-formula-text-lpar">(</span>`;
-      refs.fxInput.current!.innerHTML = ht;
-      const cellEditor = document.getElementById('luckysheet-rich-text-editor');
-      if (cellEditor) {
-        cellEditor.innerHTML = ht;
-      }
+      const fxEditor = refs.fxInput.current;
+      if (!fxEditor) return;
 
-      moveCursorToEnd(refs.fxInput.current!);
+      const cellEditor = document.getElementById(
+        'luckysheet-rich-text-editor',
+      ) as HTMLDivElement | null;
+      const { text, caretOffset } = buildFormulaSuggestionText(
+        fxEditor,
+        formulaName,
+      );
+      const safeText = escapeScriptTag(text);
+      const html = safeText.startsWith('=')
+        ? functionHTMLGenerate(safeText)
+        : escapeHTMLTag(safeText);
+
+      fxEditor.innerHTML = html;
+      if (cellEditor) {
+        cellEditor.innerHTML = html;
+      }
+      setCursorPosition(fxEditor, caretOffset);
+      setShowSearchHint(shouldShowFormulaFunctionList(fxEditor));
       setContext((draftCtx) => {
         draftCtx.functionCandidates = [];
         draftCtx.defaultCandidates = [];
-        draftCtx.functionHint = formulaName;
+        draftCtx.functionHint = (formulaName || '').toUpperCase();
       });
     },
-    [setContext],
+    [refs.fxInput, setContext],
   );
 
   const clearSearchItemActiveClass = useCallback(() => {
@@ -173,6 +348,7 @@ const FxEditor: React.FC = () => {
     (e: React.MouseEvent) => {
       // @ts-expect-error later
       if (e.target.className.includes('sign-fortune')) return;
+      preTextRef.current = refs.fxInput?.current!.innerText;
       recentText.current = refs.fxInput?.current!.innerText;
       const formulaName = getActiveFormula()?.querySelector(
         '.luckysheet-formula-search-func',
@@ -190,16 +366,170 @@ const FxEditor: React.FC = () => {
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const anchor = formulaAnchorCellRef.current;
+        if (anchor != null) {
+          const [anchorRow, anchorCol] = anchor;
+          // skipNextAnchorSelectionSyncRef.current = true;
+          setTimeout(() => {
+            setContext((draftCtx) => {
+              draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
+              draftCtx.luckysheet_select_save = [
+                {
+                  row: [anchorRow, anchorRow],
+                  column: [anchorCol, anchorCol],
+                  row_focus: anchorRow,
+                  column_focus: anchorCol,
+                },
+              ];
+              markRangeSelectionDirty(draftCtx);
+              // Keep completed referenced-cell highlights persistent in Fx editor
+              // after delete/backspace, same behavior as in-cell editor.
+              const el = refs.fxInput.current;
+              if (el && el.innerText.trim().startsWith('=')) {
+                createRangeHightlight(draftCtx, el.innerHTML);
+                rangeHightlightselected(draftCtx, el);
+              }
+            });
+          }, 0);
+        }
+      }
       if (context.allowEdit === false) {
         return;
       }
+      setContext((draftCtx) => {
+        setFormulaEditorOwner(draftCtx, 'fx');
+      });
       const currentCommaCount = countCommasBeforeCursor(refs.fxInput?.current!);
       setCommaCount(currentCommaCount);
       lastKeyDownEventRef.current = new KeyboardEvent(e.type, e.nativeEvent);
-      const { key } = e;
+      if (!isEditorUndoRedoKeyEvent(e.nativeEvent)) {
+        capturePreEditorHistoryState();
+      }
+      const isPotentialContentKey =
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        (e.key.length === 1 ||
+          e.key === 'Backspace' ||
+          e.key === 'Delete' ||
+          e.key === 'Enter' ||
+          e.key === 'Tab');
+      if (isPotentialContentKey) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (getFormulaEditorOwner(context) !== 'fx') return;
+            appendEditorHistoryFromPrimaryEditor(() =>
+              getCursorPosition(refs.fxInput.current!),
+            );
+          });
+        });
+      }
       recentText.current = refs.fxInput.current!.innerText;
-      if (key === 'ArrowLeft' || key === 'ArrowRight') {
+      const { key } = e;
+      const currentInputText = refs.fxInput.current?.innerText?.trim() || '';
+
+      if (
+        (key === '=' || currentInputText.startsWith('=')) &&
+        context.luckysheetCellUpdate.length === 2 &&
+        formulaAnchorCellRef.current == null
+      ) {
+        setContext((draftCtx) => {
+          draftCtx.formulaCache.rangeSelectionActive = null;
+        });
+        formulaAnchorCellRef.current = [
+          context.luckysheetCellUpdate[0],
+          context.luckysheetCellUpdate[1],
+        ];
+      }
+
+      if (key === '(' && currentInputText.startsWith('=')) {
+        setContext((draftCtx) => {
+          draftCtx.formulaCache.rangeSelectionActive = null;
+        });
+      }
+
+      if (
+        isFormulaSegmentBoundaryKey(key) &&
+        context.luckysheetCellUpdate.length > 0 &&
+        currentInputText.startsWith('=') &&
+        formulaAnchorCellRef.current
+      ) {
+        setContext((draftCtx) => {
+          draftCtx.formulaCache.rangeSelectionActive = null;
+        });
+        const [anchorRow, anchorCol] = formulaAnchorCellRef.current;
+        setTimeout(() => {
+          setContext((draftCtx) => {
+            draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
+            draftCtx.luckysheet_select_save = [
+              {
+                row: [anchorRow, anchorRow],
+                column: [anchorCol, anchorCol],
+                row_focus: anchorRow,
+                column_focus: anchorCol,
+              },
+            ];
+            draftCtx.formulaRangeSelect = undefined;
+            draftCtx.formulaCache.selectingRangeIndex = -1;
+            draftCtx.formulaCache.func_selectedrange = undefined;
+            draftCtx.formulaCache.rangechangeindex = undefined;
+            draftCtx.formulaCache.rangestart = false;
+            draftCtx.formulaCache.rangedrag_column_start = false;
+            draftCtx.formulaCache.rangedrag_row_start = false;
+            createRangeHightlight(
+              draftCtx,
+              refs.fxInput.current?.innerHTML ||
+                refs.cellInput.current?.innerHTML ||
+                '',
+            );
+            moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
+          });
+        }, 0);
+      }
+
+      // Block bubbling so in-editor Left/Right still run `rangeHightlightselected`
+      // below — except for type-to-edit plain text, where core must see
+      // Shift/Cmd/Ctrl + Arrow (including Cmd+Shift+Arrow) to commit and move the grid.
+      const isArrowKey =
+        key === 'ArrowUp' ||
+        key === 'ArrowDown' ||
+        key === 'ArrowLeft' ||
+        key === 'ArrowRight';
+      const isDirectPlainTypeEdit =
+        context.luckysheetCellUpdate.length > 0 &&
+        refs.globalCache?.enteredEditByTyping === true &&
+        !currentInputText.startsWith('=');
+      const sheetArrowShortcut =
+        isArrowKey && (e.metaKey || e.ctrlKey || e.shiftKey);
+      if (
+        (key === 'ArrowLeft' || key === 'ArrowRight') &&
+        !(isDirectPlainTypeEdit && sheetArrowShortcut)
+      ) {
         e.stopPropagation();
+      }
+
+      if ((e.metaKey || e.ctrlKey) && context.luckysheetCellUpdate.length > 0) {
+        if (e.code === 'KeyZ' || e.code === 'KeyY') {
+          const isRedo =
+            e.code === 'KeyY' || (e.code === 'KeyZ' && (e as any).shiftKey);
+          // Always intercept undo/redo in-editor to avoid native browser
+          // history fighting our snapshot stack.
+          e.preventDefault();
+          e.stopPropagation();
+
+          const attempt = (triesLeft: number) => {
+            const handled = handleFormulaHistoryUndoRedo(isRedo);
+            if (handled) return;
+            if (triesLeft <= 0) return;
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => attempt(triesLeft - 1));
+            });
+          };
+
+          attempt(2);
+          return;
+        }
       }
 
       if (
@@ -218,7 +548,11 @@ const FxEditor: React.FC = () => {
         return;
       }
 
-      if (e.key === 'ArrowUp' && context.luckysheetCellUpdate.length > 0) {
+      if (
+        !(e.metaKey || e.ctrlKey) &&
+        e.key === 'ArrowUp' &&
+        context.luckysheetCellUpdate.length > 0
+      ) {
         if (document.getElementById('luckysheet-formula-search-c')) {
           const formulaSearchContainer = document.getElementById(
             'luckysheet-formula-search-c',
@@ -249,6 +583,7 @@ const FxEditor: React.FC = () => {
         }
         e.preventDefault();
       } else if (
+        !(e.metaKey || e.ctrlKey) &&
         e.key === 'ArrowDown' &&
         context.luckysheetCellUpdate.length > 0
       ) {
@@ -386,8 +721,11 @@ const FxEditor: React.FC = () => {
       });
     },
     [
+      capturePreEditorHistoryState,
       context.allowEdit,
-      context.luckysheetCellUpdate.length,
+      context.luckysheetCellUpdate,
+      handleFormulaHistoryUndoRedo,
+      refs.cellInput,
       refs.fxInput,
       setContext,
     ],
@@ -418,20 +756,67 @@ const FxEditor: React.FC = () => {
 
   const onChange = useCallback(() => {
     if (context.isFlvReadOnly) return;
-    handleHideShowHint();
+    const fxEl = refs.fxInput.current;
     if (
-      refs.fxInput?.current?.innerText.includes('=') &&
-      /^=?[A-Za-z]*$/.test(getLastInputSpanText())
+      fxEl &&
+      context.luckysheetCellUpdate.length === 2 &&
+      formulaAnchorCellRef.current == null
     ) {
-      setShowSearchHint(true);
-    } else {
-      setShowSearchHint(false);
+      const t = fxEl.innerText?.trim() || '';
+      if (t.startsWith('=')) {
+        formulaAnchorCellRef.current = [
+          context.luckysheetCellUpdate[0],
+          context.luckysheetCellUpdate[1],
+        ];
+      }
     }
+    handleHideShowHint();
+    setShowSearchHint(
+      shouldShowFormulaFunctionList(refs.fxInput?.current ?? null),
+    );
 
     const currentCommaCount = countCommasBeforeCursor(refs.fxInput?.current!);
     setCommaCount(currentCommaCount);
     const e = lastKeyDownEventRef.current;
-    if (!e) return;
+    if (!e) {
+      const fx = refs.fxInput.current;
+      const cell = refs.cellInput.current;
+      const isFormula = (el: HTMLDivElement | null) =>
+        !!(
+          el?.innerText?.trim().startsWith('=') ||
+          el?.textContent?.trim().startsWith('=')
+        );
+      const sel = window.getSelection();
+      let editor: HTMLDivElement | null = null;
+      if (sel?.rangeCount) {
+        const node = sel.getRangeAt(0).startContainer;
+        if (fx?.contains(node) && isFormula(fx)) editor = fx;
+        else if (cell?.contains(node) && isFormula(cell)) editor = cell;
+      }
+      if (!editor && isFormula(fx)) editor = fx;
+      else if (!editor && isFormula(cell)) editor = cell;
+      if (editor) {
+        setContext((draftCtx) => {
+          if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
+          if (getFormulaEditorOwner(draftCtx) !== 'fx') return;
+          if (
+            draftCtx.formulaCache.rangestart ||
+            draftCtx.formulaCache.rangedrag_column_start ||
+            draftCtx.formulaCache.rangedrag_row_start
+          ) {
+            rangeHightlightselected(draftCtx, editor!);
+            return;
+          }
+          draftCtx.formulaCache.selectingRangeIndex = -1;
+          createRangeHightlight(draftCtx, editor!.innerHTML);
+          rangeHightlightselected(draftCtx, editor!);
+        });
+      }
+      return;
+    }
+    if (isEditorUndoRedoKeyEvent(e)) {
+      return;
+    }
     const kcode = e.keyCode;
     if (!kcode) return;
 
@@ -461,7 +846,49 @@ const FxEditor: React.FC = () => {
         );
       });
     }
-  }, [refs.cellInput, refs.fxInput, setContext]);
+    requestAnimationFrame(() => {
+      if (getFormulaEditorOwner(context) !== 'fx') return;
+      appendEditorHistoryFromPrimaryEditor(() =>
+        getCursorPosition(refs.fxInput.current!),
+      );
+    });
+  }, [
+    appendEditorHistoryFromPrimaryEditor,
+    context.isFlvReadOnly,
+    context.luckysheetCellUpdate,
+    refs.cellInput,
+    refs.fxInput,
+    setContext,
+  ]);
+
+  const refreshFxFormulaRangeHighlights = useCallback(() => {
+    const el = refs.fxInput.current;
+    if (!el) return;
+    setContext((draftCtx) => {
+      if (draftCtx.luckysheetCellUpdate.length === 0) return;
+      if (getFormulaEditorOwner(draftCtx) !== 'fx') return;
+      if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
+      const t = el.innerText?.trim() ?? '';
+      if (!t.startsWith('=')) return;
+      if (
+        draftCtx.formulaCache.rangestart ||
+        draftCtx.formulaCache.rangedrag_column_start ||
+        draftCtx.formulaCache.rangedrag_row_start
+      ) {
+        rangeHightlightselected(draftCtx, el);
+        return;
+      }
+      draftCtx.formulaCache.selectingRangeIndex = -1;
+      createRangeHightlight(draftCtx, el.innerHTML);
+      rangeHightlightselected(draftCtx, el);
+    });
+  }, [refs.fxInput, setContext]);
+
+  useRerenderOnFormulaCaret(
+    refs.fxInput,
+    context.luckysheetCellUpdate.length > 0,
+    refreshFxFormulaRangeHighlights,
+  );
 
   // Helper function to extract function name from input text
   const getFunctionNameFromInput = useCallback(() => {
@@ -487,13 +914,19 @@ const FxEditor: React.FC = () => {
     return null;
   }, []);
 
-  // Get function name from context.functionHint (current cursor position) or from input text
-  const functionName = context.functionHint || getFunctionNameFromInput();
+  const functionName =
+    getFunctionNameFromFormulaCaretSpans(refs.fxInput.current) ??
+    context.functionHint ??
+    getFunctionNameFromInput();
 
   // Get function object using the detected function name
   const fn = functionName
     ? context.formulaCache.functionlistMap[functionName]
     : null;
+
+  const showFxFormulaChrome =
+    context.luckysheetCellUpdate.length > 0 &&
+    getFormulaEditorOwner(context) === 'fx';
 
   const allowEdit = useMemo(() => {
     if (context.allowEdit === false) {
@@ -542,7 +975,14 @@ const FxEditor: React.FC = () => {
 
   return (
     <div>
-      <div className="fortune-fx-editor" ref={divRef}>
+      <div
+        className={
+          showFxFormulaChrome
+            ? 'fortune-fx-editor fortune-fx-editor--formula-owner'
+            : 'fortune-fx-editor'
+        }
+        ref={divRef}
+      >
         <NameBox />
         <div
           className="fortune-fx-icon"
@@ -567,10 +1007,29 @@ const FxEditor: React.FC = () => {
           <ContentEditable
             onMouseUp={() => {
               handleHideShowHint();
-              const currentCommaCount = countCommasBeforeCursor(
-                refs.fxInput?.current!,
-              );
+              setContext((draftCtx) => {
+                setFormulaEditorOwner(draftCtx, 'fx');
+              });
+              const editor = refs.fxInput?.current!;
+              const currentCommaCount = countCommasBeforeCursor(editor);
               setCommaCount(currentCommaCount);
+
+              setContext((draftCtx) => {
+                if (draftCtx.formulaCache.rangeSelectionActive !== true) return;
+
+                const clickedInsideManagedRange =
+                  getFormulaRangeIndexAtCaret(editor) !== null;
+                const atValidInsertionPoint =
+                  isCaretAtValidFormulaRangeInsertionPoint(editor);
+
+                if (clickedInsideManagedRange || !atValidInsertionPoint) {
+                  markRangeSelectionDirty(draftCtx);
+                  if (editor.innerText?.trim().startsWith('=')) {
+                    createRangeHightlight(draftCtx, editor.innerHTML);
+                    rangeHightlightselected(draftCtx, editor);
+                  }
+                }
+              });
             }}
             innerRef={(e) => {
               refs.fxInput.current = e;
@@ -585,60 +1044,82 @@ const FxEditor: React.FC = () => {
             tabIndex={0}
             allowEdit={allowEdit && !context.isFlvReadOnly}
           />
-          {showSearchHint && (
-            <FormulaSearch
-              // @ts-ignore
-              from="fx"
-              onMouseMove={(e) => {
-                if (document.getElementById('luckysheet-formula-search-c')) {
-                  // apply hovered state on the function item
-                  const hoveredItem = (e.target as HTMLElement).closest(
-                    '.luckysheet-formula-search-item',
-                  ) as HTMLElement | null;
-                  if (!hoveredItem) return;
+          {(context.functionCandidates.length > 0 ||
+            context.functionHint ||
+            context.defaultCandidates.length > 0 ||
+            fn) &&
+            showFxFormulaChrome && (
+              <>
+                {showSearchHint && (
+                  <FormulaSearch
+                    // @ts-ignore
+                    from="fx"
+                    onMouseMove={(e) => {
+                      if (
+                        document.getElementById('luckysheet-formula-search-c')
+                      ) {
+                        // apply hovered state on the function item
+                        const hoveredItem = (e.target as HTMLElement).closest(
+                          '.luckysheet-formula-search-item',
+                        ) as HTMLElement | null;
+                        if (!hoveredItem) return;
 
-                  clearSearchItemActiveClass();
-                  hoveredItem.classList.add(
-                    'luckysheet-formula-search-item-active',
-                  );
-                }
-                e.preventDefault();
-              }}
-              onMouseDown={(e) => {
-                selectActiveFormulaOnClick(e);
-              }}
-            />
-          )}
+                        clearSearchItemActiveClass();
+                        hoveredItem.classList.add(
+                          'luckysheet-formula-search-item-active',
+                        );
+                      }
+                      e.preventDefault();
+                    }}
+                    onMouseDown={(e) => {
+                      selectActiveFormulaOnClick(e);
+                    }}
+                  />
+                )}
 
-          <div className="fx-hint">
-            {showFormulaHint && fn && (
-              <FormulaHint
-                handleShowFormulaHint={handleShowFormulaHint}
-                showFormulaHint={showFormulaHint}
-                commaCount={commaCount}
-                functionName={functionName}
-              />
+                <div className="fx-hint">
+                  {showFormulaHint && fn && !showSearchHint && (
+                    <FormulaHint
+                      handleShowFormulaHint={handleShowFormulaHint}
+                      showFormulaHint={showFormulaHint}
+                      commaCount={commaCount}
+                      functionName={functionName}
+                    />
+                  )}
+                  {!showFormulaHint && fn && !showSearchHint && (
+                    <Tooltip
+                      text="Turn on formula suggestions (F10)"
+                      position="top"
+                      open={true}
+                      style={{
+                        position: 'absolute',
+                        top: '-50px',
+                        left: '-130px',
+                        width: '210px',
+                      }}
+                    >
+                      <div
+                        className="luckysheet-hin absolute show-more-btn"
+                        onClick={() => {
+                          handleShowFormulaHint();
+                        }}
+                      >
+                        <LucideIcon
+                          name="DSheetTextDisabled"
+                          fill="black"
+                          style={{
+                            width: '14px',
+                            height: '14px',
+                            margin: 'auto',
+                            marginTop: '1px',
+                          }}
+                        />
+                      </div>
+                    </Tooltip>
+                  )}
+                </div>
+              </>
             )}
-            {!showFormulaHint && fn && (
-              <div
-                className="luckysheet-hin absolute show-more-btn"
-                onClick={() => {
-                  handleShowFormulaHint();
-                }}
-              >
-                <LucideIcon
-                  name="DSheetTextDisabled"
-                  fill="black"
-                  style={{
-                    width: '14px',
-                    height: '14px',
-                    margin: 'auto',
-                    marginTop: '1px',
-                  }}
-                />
-              </div>
-            )}
-          </div>
 
           {/* {focused && (
           <>

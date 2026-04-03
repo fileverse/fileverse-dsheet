@@ -23,6 +23,7 @@ import {
   getCellHyperlink,
   showLinkCard,
   isAllowEdit,
+  israngeseleciton,
   Context,
   GlobalCache,
   onCellsMoveStart,
@@ -51,6 +52,21 @@ import DropDownList from '../DataVerification/DropdownList';
 import IframeBoxs from '../IFrameBoxs/iFrameBoxs';
 import ErrorBoxes from '../ErrorState';
 
+/** Subtle fill + dotted border for formula range overlay (`#rrggbb` from core `colors`). */
+function formulaRangeHighlightHcStyle(hex: string) {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) {
+    return { backgroundColor: hex, borderColor: hex } as const;
+  }
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return {
+    backgroundColor: `rgba(${r},${g},${b},0.08)`,
+    borderColor: hex,
+  } as const;
+}
+
 const SheetOverlay: React.FC = () => {
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
   const { info, rightclick } = locale(context);
@@ -76,6 +92,17 @@ const SheetOverlay: React.FC = () => {
             refs.canvas.current!.getContext('2d')!,
           );
 
+          // After picking a cell reference from the formula bar, do not move
+          // focus to the in-cell editor — that breaks the next reference click
+          // (rangeSetValue / caret logic assume the active formula editor).
+          const keepFormulaBarFocused =
+            draftCtx.luckysheetCellUpdate.length > 0 &&
+            draftCtx.formulaCache.formulaEditorOwner === 'fx' &&
+            (draftCtx.formulaCache.rangestart ||
+              draftCtx.formulaCache.rangedrag_column_start ||
+              draftCtx.formulaCache.rangedrag_row_start ||
+              israngeseleciton(draftCtx));
+
           if (
             !_.isEmpty(draftCtx.luckysheet_select_save?.[0]) &&
             refs.cellInput.current
@@ -88,7 +115,11 @@ const SheetOverlay: React.FC = () => {
               });
             } else {
               setTimeout(() => {
-                refs.cellInput.current?.focus();
+                if (keepFormulaBarFocused && refs.fxInput.current) {
+                  refs.fxInput.current.focus({ preventScroll: true });
+                } else {
+                  refs.cellInput.current?.focus();
+                }
               });
             }
           }
@@ -445,10 +476,6 @@ const SheetOverlay: React.FC = () => {
               className="fortune-selection-copy fortune-formula-functionrange-select"
               style={context.formulaRangeSelect}
             >
-              <div className="fortune-selection-copy-top fortune-copy" />
-              <div className="fortune-selection-copy-right fortune-copy" />
-              <div className="fortune-selection-copy-bottom fortune-copy" />
-              <div className="fortune-selection-copy-left fortune-copy" />
               <div className="fortune-selection-copy-hc" />
             </div>
           )}
@@ -461,26 +488,10 @@ const SheetOverlay: React.FC = () => {
                 className="fortune-selection-highlight fortune-formula-functionrange-highlight"
                 style={_.omit(v, 'backgroundColor')}
               >
-                {['top', 'right', 'bottom', 'left'].map((d) => (
-                  <div
-                    key={d}
-                    data-type={d}
-                    className={`fortune-selection-copy-${d} fortune-copy`}
-                    style={{ backgroundColor }}
-                  />
-                ))}
                 <div
                   className="fortune-selection-copy-hc"
-                  style={{ backgroundColor }}
+                  style={formulaRangeHighlightHcStyle(backgroundColor)}
                 />
-                {['lt', 'rt', 'lb', 'rb'].map((d) => (
-                  <div
-                    key={d}
-                    data-type={d}
-                    className={`fortune-selection-highlight-${d} luckysheet-highlight`}
-                    style={{ backgroundColor }}
-                  />
-                ))}
               </div>
             );
           })}
@@ -570,10 +581,6 @@ const SheetOverlay: React.FC = () => {
                       height: row - row_pre - 1,
                     }}
                   >
-                    <div className="fortune-selection-copy-top fortune-copy" />
-                    <div className="fortune-selection-copy-right fortune-copy" />
-                    <div className="fortune-selection-copy-bottom fortune-copy" />
-                    <div className="fortune-selection-copy-left fortune-copy" />
                     <div className="fortune-selection-copy-hc" />
                   </div>
                 );
