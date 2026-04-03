@@ -62,7 +62,7 @@ const FxEditor: React.FC = () => {
   const [showFormulaHint, setShowFormulaHint] = useState(!hideFormulaHintLocal);
   const [commaCount, setCommaCount] = useState(0);
   const { context, setContext, refs } = useContext(WorkbookContext);
-  const lastKeyDownEventRef = useRef<KeyboardEvent>(null);
+  const lastKeyDownEventRef = useRef<KeyboardEvent | null>(null);
   const {
     preTextRef,
     resetFormulaHistory,
@@ -76,7 +76,7 @@ const FxEditor: React.FC = () => {
     setContext,
     'fx',
   );
-  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement | null>(null);
   const [isHidenRC, setIsHidenRC] = useState<boolean>(false);
   const firstSelection = context.luckysheet_select_save?.[0];
   const prevFirstSelection = usePrevious(firstSelection);

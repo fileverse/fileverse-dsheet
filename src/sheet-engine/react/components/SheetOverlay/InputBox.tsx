@@ -85,8 +85,8 @@ function measureCellEditorContentWidth(el: HTMLElement | null): number {
 
 const InputBox: React.FC = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
-  const inputRef = useRef<HTMLDivElement>(null);
-  const lastKeyDownEventRef = useRef<KeyboardEvent>(null);
+  const inputRef = useRef<HTMLDivElement | null>(null);
+  const lastKeyDownEventRef = useRef<KeyboardEvent | null>(null);
   const prevCellUpdate = usePrevious<any[]>(context.luckysheetCellUpdate);
   const prevSheetId = usePrevious<string>(context.currentSheetId);
   const [isHidenRC, setIsHidenRC] = useState<boolean>(false);
