@@ -36,16 +36,19 @@ export {
   groupValuesRefresh,
   setCaretPosition,
   getrangeseleciton,
+  getFormulaEditorOwner,
   rangeHightlightselected,
   handleFormulaInput,
   israngeseleciton,
   createRangeHightlight,
   createFormulaRangeSelect,
+  maybeRecoverDirtyRangeSelection,
   delFunctionGroup,
   functionHTMLGenerate,
   onFormulaRangeDragEnd,
   rangeDrag,
   rangeSetValue,
+  remapFormulaReferencesByMap,
 } from './formula';
 
 // freeze

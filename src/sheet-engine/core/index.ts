@@ -80,10 +80,12 @@ export {
   groupValuesRefresh,
   setCaretPosition,
   getrangeseleciton,
+  getFormulaEditorOwner,
   rangeHightlightselected,
   handleFormulaInput,
   israngeseleciton,
   createRangeHightlight,
+  maybeRecoverDirtyRangeSelection,
   // freeze
   initFreeze,
   // inline-string
@@ -237,6 +239,7 @@ export {
   // formula (internal)
   execfunction,
   insertUpdateFunctionGroup,
+  remapFormulaReferencesByMap,
   // ConditionFormat (internal)
   checkCF,
   getComputeMap,

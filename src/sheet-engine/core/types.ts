@@ -1,15 +1,15 @@
-import { Patch as ImmerPatch } from 'immer';
-import { PatchOptions } from './utils';
+import { Patch as ImmerPatch } from "immer";
+import { PatchOptions } from "./utils";
 
 export type Op = {
   op:
-    | 'replace'
-    | 'remove'
-    | 'add'
-    | 'insertRowCol'
-    | 'deleteRowCol'
-    | 'addSheet'
-    | 'deleteSheet';
+  | "replace"
+  | "remove"
+  | "add"
+  | "insertRowCol"
+  | "deleteRowCol"
+  | "addSheet"
+  | "deleteSheet";
   id?: string;
   path: (string | number)[];
   value?: any;
@@ -207,7 +207,7 @@ export type Sheet = {
   dynamicArray_compute?: any;
   dynamicArray?: any[];
   frozen?: {
-    type: 'row' | 'column' | 'both' | 'rangeRow' | 'rangeColumn' | 'rangeBoth';
+    type: "row" | "column" | "both" | "rangeRow" | "rangeColumn" | "rangeBoth";
     range?: { row_focus: number; column_focus: number };
   };
   liveQueryList?: Record<string, LiveQueryData>;
@@ -302,12 +302,14 @@ export type Freezen = {
 };
 
 export type GlobalCache = {
+  /** True when the current edit session was started by typing into the sheet (not F2 / double-click / Enter-to-edit). */
+  enteredEditByTyping?: boolean;
+  /** When set, in-cell / formula-bar hydration from sheet data is skipped for this cell (type-to-edit replacement). */
+  pendingTypeOverCell?: [number, number];
   verticalScrollLock?: boolean;
   horizontalScrollLock?: boolean;
   overwriteCell?: boolean;
   overwriteCellFirstChar?: string;
-  /** True when current cell was opened for edit by typing (not double-click). Used so arrow keys commit+move only in that case. */
-  enteredEditByTyping?: boolean;
   ignoreWriteCell?: boolean;
   doNotFocus?: boolean;
   doNotUpdateCell?: boolean;

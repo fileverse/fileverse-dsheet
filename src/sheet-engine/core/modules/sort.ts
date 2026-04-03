@@ -1,5 +1,6 @@
-import numeral from 'numeral';
-import _ from 'lodash';
+/* eslint-disable no-plusplus */
+import numeral from "numeral";
+import _ from "lodash";
 // import { execfunction, functionCopy, update } from ".";
 import {
   Cell,
@@ -11,14 +12,15 @@ import {
   isdatetime,
   isRealNull,
   isRealNum,
+  remapFormulaReferencesByMap,
   setCellValue,
-} from '..';
-import { jfrefreshgrid } from './refresh';
+} from "..";
+import { jfrefreshgrid } from "./refresh";
 
 export function orderbydata(
   isAsc: boolean,
   index: number,
-  data: (Cell | null)[][],
+  data: (Cell | null)[][]
 ) {
   if (isAsc == null) {
     isAsc = true;
@@ -49,7 +51,7 @@ export function orderbydata(
       return x1Value - y1Value;
     }
     if (!isRealNum(x1) && !isRealNum(y1)) {
-      return x1.localeCompare(y1, 'zh');
+      return x1.localeCompare(y1, "zh");
     }
     if (!isRealNum(x1)) {
       return 1;
@@ -60,16 +62,19 @@ export function orderbydata(
     return 0;
   };
   const d = (x: any, y: any) => a(y, x);
-  const sortedData = _.clone(data);
-  sortedData.sort(isAsc ? a : d);
+  const sortedWithIndex = data.map((row, i) => ({
+    row,
+    originalIndex: i,
+  }));
+  sortedWithIndex.sort((x, y) => (isAsc ? a(x.row, y.row) : d(x.row, y.row)));
 
-  // calc row offsets
-  const rowOffsets = sortedData.map((r, i) => {
-    const origIndex = _.findIndex(data, (origR) => origR === r);
-    return i - origIndex;
+  const sortedData = sortedWithIndex.map((item) => item.row);
+  const rowMap: Record<number, number> = {};
+  sortedWithIndex.forEach((item, newIndex) => {
+    rowMap[item.originalIndex] = newIndex;
   });
 
-  return { sortedData, rowOffsets };
+  return { sortedData, rowMap };
 }
 
 export function sortDataRange(
@@ -81,9 +86,9 @@ export function sortDataRange(
   str: number,
   edr: number,
   stc: number,
-  edc: number,
+  edc: number
 ) {
-  const { sortedData /* rowOffsets */ } = orderbydata(isAsc, index, dataRange);
+  const { sortedData, rowMap } = orderbydata(isAsc, index, dataRange);
 
   for (let r = str; r <= edr; r += 1) {
     for (let c = stc; c <= edc; c += 1) {
@@ -104,6 +109,39 @@ export function sortDataRange(
     }
   }
 
+  // Sort is a row permutation. Remap references to moved rows for formulas
+  // on the current sheet so they keep pointing to the same logical rows.
+  const absoluteRowMap: Record<number, number> = {};
+  Object.keys(rowMap).forEach((k) => {
+    const oldLocal = parseInt(k, 10);
+    absoluteRowMap[str + oldLocal] = str + rowMap[oldLocal];
+  });
+
+  const sheetIdx = getSheetIndex(ctx, ctx.currentSheetId);
+  const sheet = sheetIdx == null ? null : ctx.luckysheetfile[sheetIdx];
+  const sheetName = sheet?.name || "";
+  if (sheetData && sheetName) {
+    for (let r = 0; r < sheetData.length; r += 1) {
+      const row = sheetData[r];
+      if (!row) continue;
+      for (let c = 0; c < row.length; c += 1) {
+        const cell = row[c];
+        if (!cell?.f) continue;
+        cell.f = remapFormulaReferencesByMap(cell.f, sheetName, sheetName, {
+          rowMap: absoluteRowMap,
+        });
+      }
+    }
+  }
+
+  // Keep formula dependency locations aligned with row permutation.
+  sheet?.calcChain?.forEach((item: any) => {
+    const mapped = absoluteRowMap[item.r];
+    if (!_.isNil(mapped)) {
+      item.r = mapped;
+    }
+  });
+
   // let allParam = {};
   // if (ctx.config.rowlen != null) {
   //   let cfg = _.assign({}, ctx.config);
@@ -123,17 +161,17 @@ export function sortDataRange(
       path: string[];
       key?: string;
       value: any;
-      type?: 'update' | 'delete';
+      type?: "update" | "delete";
     }[] = [];
     for (let r = str; r <= edr; r += 1) {
       const row = sheetData[r] || [];
       for (let c = stc; c <= edc; c += 1) {
         changes.push({
           sheetId: ctx.currentSheetId,
-          path: ['celldata'],
+          path: ["celldata"],
           value: { r, c, v: row?.[c] ?? null },
           key: `${r}_${c}`,
-          type: 'update',
+          type: "update",
         });
       }
     }
@@ -144,7 +182,7 @@ export function sortDataRange(
 export function sortSelection(
   ctx: Context,
   isAsc: boolean,
-  colIndex: number = 0,
+  colIndex: number = 0
 ) {
   // if (!checkProtectionAuthorityNormal(ctx.currentSheetIndex, "sort")) {
   //   return;
@@ -240,7 +278,7 @@ function createRowsOrColumnsForSpilledValues(
   startRow: number,
   startColumn: number,
   spillRows: number,
-  spillCols: number,
+  spillCols: number
 ) {
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;
@@ -249,7 +287,7 @@ function createRowsOrColumnsForSpilledValues(
     path: string[];
     key?: string;
     value: any;
-    type?: 'update' | 'delete';
+    type?: "update" | "delete";
   }[] = [];
 
   // update luckysheetfile metadata if needed
@@ -267,7 +305,7 @@ function createRowsOrColumnsForSpilledValues(
       sheet.column = requiredColCount;
     }
   } catch (error) {
-    console.error('Failed to update sheet metadata for spill operation', error);
+    console.error("Failed to update sheet metadata for spill operation", error);
   }
 
   const requiredRowCount = startRow + spillRows;
@@ -291,10 +329,10 @@ function createRowsOrColumnsForSpilledValues(
     for (let c = Math.max(prevLen, startColumn); c < requiredColCount; c += 1) {
       cellChanges.push({
         sheetId: ctx.currentSheetId,
-        path: ['celldata'],
+        path: ["celldata"],
         value: { r: rowIndex, c, v: flowdata[rowIndex][c] ?? null },
         key: `${rowIndex}_${c}`,
-        type: 'update',
+        type: "update",
       });
     }
   }
@@ -309,14 +347,14 @@ export function spillSortResult(
   startRow: number,
   startCol: number,
   formulaResult: any, // expects { f: string, v: any[][] }
-  flowdata?: CellMatrix,
+  flowdata?: CellMatrix
 ): boolean {
   const formulaString = formulaResult?.f;
   const formulaValue = formulaResult?.v;
 
   // make sure it is a SORT formula result
   if (
-    typeof formulaString !== 'string' ||
+    typeof formulaString !== "string" ||
     !(
       /= *SORT\s*\(/i.test(formulaString) ||
       /= *XLOOKUP\s*\(/i.test(formulaString) ||
@@ -342,7 +380,7 @@ export function spillSortResult(
     startRow,
     startCol,
     rowCount,
-    colCount,
+    colCount
   );
 
   const sheetData = flowdata || getFlowdata(ctx);
@@ -352,7 +390,7 @@ export function spillSortResult(
   setCellValue(ctx, startRow, startCol, sheetData, {
     ...formulaResult,
     v: valueMatrix[0][0],
-    tb: '1',
+    tb: "1",
   });
 
   // spill the rest of the result to the grid
@@ -362,8 +400,8 @@ export function spillSortResult(
       const cellValue = valueMatrix[r][c];
       setCellValue(ctx, startRow + r, startCol + c, sheetData, {
         v: cellValue,
-        ct: { fa: 'General', t: typeof cellValue === 'number' ? 'n' : 'g' },
-        tb: '1',
+        ct: { fa: "General", t: typeof cellValue === "number" ? "n" : "g" },
+        tb: "1",
       });
     }
   }
@@ -374,7 +412,7 @@ export function spillSortResult(
       path: string[];
       key?: string;
       value: any;
-      type?: 'update' | 'delete';
+      type?: "update" | "delete";
     }[] = [];
     for (let r = 0; r < rowCount; r += 1) {
       const rr = startRow + r;
@@ -383,10 +421,10 @@ export function spillSortResult(
         const cc = startCol + c;
         cellChanges.push({
           sheetId: ctx.currentSheetId,
-          path: ['celldata'],
+          path: ["celldata"],
           value: { r: rr, c: cc, v: row?.[cc] ?? null },
           key: `${rr}_${cc}`,
-          type: 'update',
+          type: "update",
         });
       }
     }

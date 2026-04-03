@@ -1,13 +1,15 @@
-import _ from 'lodash';
-import { Freezen } from '..';
-import { Context, getFlowdata } from '../context';
+import _ from "lodash";
+import { Freezen } from "..";
+import { Context, getFlowdata } from "../context";
 import {
   cancelActiveImgItem,
   cancelPaintModel,
   functionHTMLGenerate,
   israngeseleciton,
+  maybeRecoverDirtyRangeSelection,
   rangeHightlightselected,
   rangeSetValue,
+  getFormulaEditorOwner,
   onCommentBoxMove,
   onCommentBoxMoveEnd,
   onCommentBoxResize,
@@ -30,52 +32,52 @@ import {
   onIframeMoveEnd,
   onIframeResizeEnd,
   overShowError,
-} from '../modules';
+} from "../modules";
 import {
   getFrozenHandleLeft,
   getFrozenHandleTop,
   scrollToFrozenRowCol,
-} from '../modules/freeze';
+} from "../modules/freeze";
 import {
   cancelFunctionrangeSelected,
   mergeBorder,
   mergeMoveMain,
   updateCell,
   luckysheetUpdateCell,
-} from '../modules/cell';
+} from "../modules/cell";
 import {
   colLocation,
   colLocationByIndex,
   rowLocation,
   rowLocationByIndex,
-} from '../modules/location';
+} from "../modules/location";
 import {
   checkProtectionAllSelected,
   checkProtectionSelectLockedOrUnLockedCells,
-} from '../modules/protection';
+} from "../modules/protection";
 import {
   normalizeSelection,
   pasteHandlerOfPaintModel,
-} from '../modules/selection';
-import { Settings } from '../settings';
-import { GlobalCache } from '../types';
-import { getSheetIndex, isAllowEdit } from '../utils';
-import { onDropCellSelectEnd, onDropCellSelect } from '../modules/dropCell';
+} from "../modules/selection";
+import { Settings } from "../settings";
+import { GlobalCache } from "../types";
+import { getSheetIndex, isAllowEdit } from "../utils";
+import { onDropCellSelectEnd, onDropCellSelect } from "../modules/dropCell";
 import {
   handleFormulaInput,
   rangeDragColumn,
   rangeDragRow,
-} from '../modules/formula';
+} from "../modules/formula";
 import {
   showLinkCard,
   onRangeSelectionModalMove,
   onRangeSelectionModalMoveEnd,
-} from '../modules/hyperlink';
+} from "../modules/hyperlink";
 import {
   onSearchDialogMove,
   onSearchDialogMoveEnd,
-} from '../modules/searchReplace';
-import { getColumnAutoFitWidth } from '../paste-helpers/calculate-range-cell-size';
+} from "../modules/searchReplace";
+import { getColumnAutoFitWidth } from "../paste-helpers/calculate-range-cell-size";
 
 let mouseWheelUniqueTimeout: ReturnType<typeof setTimeout>;
 let scrollLockTimeout: ReturnType<typeof setTimeout>;
@@ -85,7 +87,7 @@ export function handleGlobalWheel(
   e: WheelEvent,
   cache: GlobalCache,
   scrollbarX: HTMLDivElement,
-  scrollbarY: HTMLDivElement,
+  scrollbarY: HTMLDivElement
 ) {
   removeEditingComment(ctx, cache);
   if (cache.searchDialog?.mouseEnter && ctx.showSearch && ctx.showReplace)
@@ -200,7 +202,7 @@ export function fixPositionOnFrozenCells(
   x: number,
   y: number,
   mouseX: number,
-  mouseY: number,
+  mouseY: number
 ) {
   let inHorizontalFreeze = false;
   let inVerticalFreeze = false;
@@ -236,7 +238,7 @@ export function handleCellAreaMouseDown(
   cellInput: HTMLDivElement,
   container: HTMLDivElement,
   fxInput?: HTMLDivElement | null,
-  canvas?: CanvasRenderingContext2D,
+  canvas?: CanvasRenderingContext2D
 ) {
   if (!fxInput?.innerHTML && ctx) {
     ctx.defaultCandidates = [];
@@ -326,7 +328,7 @@ export function handleCellAreaMouseDown(
         row_index >= obj_s.row[0] &&
         row_index <= obj_s.row[1] &&
         col_index >= obj_s.column[0] &&
-        col_index <= obj_s.column[1],
+        col_index <= obj_s.column[1]
     );
     if (isInSelection) return;
   }
@@ -362,28 +364,25 @@ export function handleCellAreaMouseDown(
 
   // 公式相关
   if (ctx.luckysheetCellUpdate.length > 0) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(
-      `<div>${
-        document.getElementById('luckysheet-rich-text-editor')?.innerHTML
-      }</div>`,
-      'text/html',
-    );
-    const spans = doc.querySelectorAll('span');
-    const firstSpan = spans[0];
-    const lastSpan = spans[spans.length - 1];
+    // const parser = new DOMParser();
+    // const doc = parser.parseFromString(
+    //   `<div>${
+    //     document.getElementById("luckysheet-rich-text-editor")?.innerHTML
+    //   }</div>`,
+    //   "text/html"
+    // );
+    // const spans = doc.querySelectorAll("span");
+    // const firstSpan = spans[0];
 
     if (
-      (ctx.formulaCache.rangestart ||
-        ctx.formulaCache.rangedrag_column_start ||
-        ctx.formulaCache.rangedrag_row_start ||
-        israngeseleciton(ctx) ||
-        (firstSpan?.innerText.includes('=') &&
-          !lastSpan?.innerText.includes(')'))) &&
-      lastSpan &&
-      ctx.luckysheetCellUpdate.length === 2
+      ctx.formulaCache.rangestart ||
+      ctx.formulaCache.rangedrag_column_start ||
+      ctx.formulaCache.rangedrag_row_start ||
+      israngeseleciton(ctx)
     ) {
       // 公式选区
+      const formulaEditorForCmdComma =
+        getFormulaEditorOwner(ctx) === "fx" && fxInput ? fxInput : cellInput;
       let rowseleted = [row_index, row_index_ed];
       let columnseleted = [col_index, col_index_ed];
 
@@ -468,7 +467,7 @@ export function handleCellAreaMouseDown(
           top,
           height,
           left,
-          width,
+          width
         );
         if (changeparam != null) {
           // @ts-ignore
@@ -494,23 +493,25 @@ export function handleCellAreaMouseDown(
 
         ctx.formulaCache.func_selectedrange = last;
       } else if (
-        e.ctrlKey &&
-        _.last(cellInput.querySelectorAll('span'))?.innerText !== ','
+        (e.ctrlKey || e.metaKey) &&
+        _.last(formulaEditorForCmdComma.querySelectorAll("span"))?.innerText !==
+        ","
       ) {
-        // 按住ctrl 选择选区时  先处理上一个选区
-        let vText = cellInput.innerText;
+        // Hold Ctrl/Cmd while clicking cells to append comma-separated refs (second+ click).
+        let didCmdCommaFormulaHtml = false;
+        let vText = formulaEditorForCmdComma.innerText;
 
-        if (vText[vText.length - 1] === ')') {
+        if (vText[vText.length - 1] === ")") {
           vText = vText.substring(0, vText.length - 1); // 先删除最后侧的圆括号)
         }
 
         if (vText.length > 0) {
-          const lastWord = vText.substring(vText.length - 1, 1);
-          if (lastWord !== ',' && lastWord !== '=' && lastWord !== '(') {
-            vText += ',';
+          const lastWord = vText.slice(-1);
+          if (lastWord !== "," && lastWord !== "=" && lastWord !== "(") {
+            vText += ",";
           }
         }
-        if (vText.length > 0 && vText.substring(0, 1) === '=') {
+        if (vText.length > 0 && vText.substring(0, 1) === "=") {
           vText = functionHTMLGenerate(vText);
 
           if (window.getSelection) {
@@ -521,7 +522,7 @@ export function handleCellAreaMouseDown(
               _.indexOf(
                 currSelection.anchorNode?.parentNode?.parentNode?.childNodes,
                 // @ts-ignore
-                currSelection.anchorNode?.parentNode,
+                currSelection.anchorNode?.parentNode
               ),
               currSelection.anchorOffset,
             ];
@@ -534,21 +535,30 @@ export function handleCellAreaMouseDown(
 
           /* 在显示前重新 + 右侧的圆括号) */
           cellInput.innerHTML = vText;
+          if (fxInput) fxInput.innerHTML = vText;
 
           cancelFunctionrangeSelected(ctx);
           createRangeHightlight(ctx, vText);
+          didCmdCommaFormulaHtml = true;
         }
 
         ctx.formulaCache.rangestart = false;
         ctx.formulaCache.rangedrag_column_start = false;
         ctx.formulaCache.rangedrag_row_start = false;
 
-        if (fxInput) fxInput.innerHTML = vText;
-
-        rangeHightlightselected(ctx, cellInput);
+        rangeHightlightselected(ctx, formulaEditorForCmdComma);
 
         // 再进行 选区的选择
         israngeseleciton(ctx);
+        if (didCmdCommaFormulaHtml) {
+          // After a comma (or refreshed formula HTML), the next ref must be a new range
+          // span, not replace the previous one. israngeseleciton may not run when the
+          // selection is on the sheet; last-child is the delimiter after which to insert.
+          ctx.formulaCache.rangechangeindex = undefined;
+          const ch = formulaEditorForCmdComma.childNodes;
+          ctx.formulaCache.rangeSetValueTo =
+            ch.length > 0 ? ch[ch.length - 1] : undefined;
+        }
         ctx.formulaCache.func_selectedrange = {
           left,
           width,
@@ -580,6 +590,12 @@ export function handleCellAreaMouseDown(
         };
       }
 
+      ctx.formulaCache.rangestart = true;
+      ctx.formulaCache.rangedrag_column_start = false;
+      ctx.formulaCache.rangedrag_row_start = false;
+      ctx.formulaCache.rangeSelectionActive = true;
+
+      // eslint-disable-next-line no-console
       rangeSetValue(
         ctx,
         cellInput,
@@ -587,12 +603,10 @@ export function handleCellAreaMouseDown(
           row: rowseleted,
           column: columnseleted,
         },
-        fxInput,
+        fxInput
       );
 
-      ctx.formulaCache.rangestart = true;
-      ctx.formulaCache.rangedrag_column_start = false;
-      ctx.formulaCache.rangedrag_row_start = false;
+      rangeHightlightselected(ctx, cellInput);
 
       ctx.formulaCache.selectingRangeIndex = ctx.formulaCache.rangechangeindex!;
       if (
@@ -601,7 +615,7 @@ export function handleCellAreaMouseDown(
         createRangeHightlight(
           ctx,
           cellInput.innerHTML,
-          ctx.formulaCache.rangechangeindex!,
+          ctx.formulaCache.rangechangeindex!
         );
       }
       createFormulaRangeSelect(ctx, {
@@ -670,7 +684,7 @@ export function handleCellAreaMouseDown(
       ctx.luckysheetCellUpdate[1],
       cellInput,
       undefined,
-      canvas,
+      canvas
     );
     ctx.luckysheet_select_status = true;
 
@@ -683,7 +697,7 @@ export function handleCellAreaMouseDown(
       ctx,
       row_index,
       col_index,
-      ctx.currentSheetId,
+      ctx.currentSheetId
     )
   ) {
     ctx.luckysheet_select_status = true;
@@ -1113,7 +1127,7 @@ export function handleCellAreaMouseDown(
           top,
           height,
           left,
-          width,
+          width
         );
         if (changeparam != null) {
           // @ts-ignore
@@ -1162,6 +1176,7 @@ export function handleCellAreaMouseDown(
         column_focus: col_index,
       });
     } else {
+      // eslint-disable-next-line prefer-const
       ctx.luckysheet_select_save = [
         {
           left: col_pre,
@@ -1230,7 +1245,7 @@ export function handleCellAreaMouseDown(
 
   ctx.luckysheet_select_save = normalizeSelection(
     ctx,
-    ctx.luckysheet_select_save,
+    ctx.luckysheet_select_save
   );
 
   if (ctx.hooks.afterCellMouseDown) {
@@ -1252,14 +1267,14 @@ export function handleCellAreaDoubleClick(
   globalCache: GlobalCache,
   settings: Settings,
   e: MouseEvent,
-  container: HTMLElement,
+  container: HTMLElement
 ) {
   // if ($(event.target).hasClass("luckysheet-mousedown-cancel")) {
   //   return;
   // }
   const flowdata = getFlowdata(ctx);
 
-  if (!flowdata || ctx.formulaCache.functionlistMap[ctx.functionHint || ''])
+  if (!flowdata || ctx.formulaCache.functionlistMap[ctx.functionHint || ""])
     return;
 
   if (
@@ -1314,14 +1329,14 @@ export function handleCellAreaDoubleClick(
 
   if (
     dataVerification &&
-    dataVerification[`${row_index}_${col_index}`]?.type === 'dropdown'
+    dataVerification[`${row_index}_${col_index}`]?.type === "dropdown"
   ) {
     return;
   }
 
   if (dataVerification) {
     const item = dataVerification[`${row_index}_${col_index}`];
-    if (item && item.type === 'checkbox') return;
+    if (item && item.type === "checkbox") return;
   }
 
   const margeset = mergeBorder(ctx, flowdata, row_index, col_index);
@@ -1437,6 +1452,7 @@ export function handleCellAreaDoubleClick(
   }
 
   globalCache.enteredEditByTyping = false;
+  delete globalCache.pendingTypeOverCell;
   luckysheetUpdateCell(ctx, row_index, col_index);
   // }
 }
@@ -1447,7 +1463,7 @@ export function handleContextMenu(
   e: MouseEvent,
   workbookContainer: HTMLDivElement,
   container: HTMLDivElement,
-  area: 'cell' | 'rowHeader' | 'columnHeader',
+  area: "cell" | "rowHeader" | "columnHeader"
 ) {
   if (!ctx.allowEdit) {
     return;
@@ -1490,8 +1506,8 @@ export function handleContextMenu(
   };
   // select current cell when clicking the right button
   e.preventDefault();
-  if (area === 'cell') {
-    _.set(ctx.contextMenu, 'headerMenu', undefined);
+  if (area === "cell") {
+    _.set(ctx.contextMenu, "headerMenu", undefined);
     const rect = container.getBoundingClientRect();
     const mouseX = e.pageX - rect.left - window.scrollX;
     const mouseY = e.pageY - rect.top - window.scrollY;
@@ -1502,7 +1518,7 @@ export function handleContextMenu(
       _selected_x,
       _selected_y,
       mouseX,
-      mouseY,
+      mouseY
     );
     const row_location = rowLocation(selected_y, ctx.visibledatarow);
     const row = row_location[1];
@@ -1521,7 +1537,7 @@ export function handleContextMenu(
         row_index >= obj_s.row[0] &&
         row_index <= obj_s.row[1] &&
         col_index >= obj_s.column[0] &&
-        col_index <= obj_s.column[1],
+        col_index <= obj_s.column[1]
     );
     if (!isInSelection && (e.metaKey || e.ctrlKey)) {
       // 选区添加
@@ -1535,7 +1551,7 @@ export function handleContextMenu(
           row_pre,
           row,
           col_pre,
-          col,
+          col
         );
         if (changeparam != null) {
           // @ts-ignore
@@ -1587,7 +1603,7 @@ export function handleContextMenu(
         row_pre,
         row,
         col_pre,
-        col,
+        col
       );
       if (changeparam != null) {
         // @ts-ignore
@@ -1628,8 +1644,8 @@ export function handleContextMenu(
         column_focus: col_index,
       },
     ];
-  } else if (area === 'rowHeader') {
-    _.set(ctx.contextMenu, 'headerMenu', 'row');
+  } else if (area === "rowHeader") {
+    _.set(ctx.contextMenu, "headerMenu", "row");
     const rect = container.getBoundingClientRect();
     const mouseY = e.pageY - rect.top - window.scrollY;
     const _selected_y = mouseY + ctx.scrollTop;
@@ -1638,7 +1654,7 @@ export function handleContextMenu(
       0,
       _selected_y,
       0,
-      mouseY,
+      mouseY
     );
     const row_location = rowLocation(selected_y, ctx.visibledatarow);
     const row = row_location[1];
@@ -1651,7 +1667,7 @@ export function handleContextMenu(
         obj_s.row != null &&
         row_index >= obj_s.row[0] &&
         row_index <= obj_s.row[1] &&
-        !obj_s.column_select,
+        !obj_s.column_select
     );
 
     if (isInSelection) return;
@@ -1680,8 +1696,8 @@ export function handleContextMenu(
       column_focus: 0,
       row_select: true,
     });
-  } else if (area === 'columnHeader') {
-    _.set(ctx.contextMenu, 'headerMenu', 'column');
+  } else if (area === "columnHeader") {
+    _.set(ctx.contextMenu, "headerMenu", "column");
     const rect = container.getBoundingClientRect();
     const mouseX = e.pageX - rect.left - window.scrollX;
     const _selected_x = mouseX + ctx.scrollLeft;
@@ -1690,7 +1706,7 @@ export function handleContextMenu(
       _selected_x,
       0,
       mouseX,
-      0,
+      0
     );
     const row_index = ctx.visibledatarow.length - 1;
     const row = ctx.visibledatarow[row_index];
@@ -1706,7 +1722,7 @@ export function handleContextMenu(
         obj_s.row != null &&
         col_index >= obj_s.column[0] &&
         col_index <= obj_s.column[1] &&
-        !obj_s.row_select,
+        !obj_s.row_select
     );
 
     if (isInSelection) return;
@@ -1743,7 +1759,7 @@ export function mouseRender(
   scrollX: HTMLDivElement,
   scrollY: HTMLDivElement,
   container: HTMLDivElement,
-  fxInput?: HTMLDivElement | null,
+  fxInput?: HTMLDivElement | null
 ) {
   const rect = container.getBoundingClientRect();
   if (
@@ -1800,7 +1816,7 @@ export function mouseRender(
       _x,
       _y,
       mouseX - ctx.rowHeaderWidth,
-      mouseY - ctx.columnHeaderHeight,
+      mouseY - ctx.columnHeaderHeight
     );
 
     const row_location = rowLocation(y, ctx.visibledatarow);
@@ -1817,7 +1833,7 @@ export function mouseRender(
         ctx,
         row_index,
         col_index,
-        ctx.currentSheetId,
+        ctx.currentSheetId
       )
     ) {
       ctx.luckysheet_select_status = false;
@@ -1825,7 +1841,7 @@ export function mouseRender(
     }
 
     const last = _.cloneDeep(
-      ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
+      ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1]
     );
 
     if (
@@ -1902,7 +1918,7 @@ export function mouseRender(
       top,
       height,
       left,
-      width,
+      width
     );
     if (changeparam != null) {
       // @ts-ignore
@@ -2182,6 +2198,22 @@ export function mouseRender(
     //   }
     //   $("#luckysheet-dataVerificationRange-dialog input").val(range);
   } else if (ctx.formulaCache.rangestart) {
+    if (
+      ctx.formulaCache.rangeSelectionActive === false &&
+      !maybeRecoverDirtyRangeSelection(ctx)
+    ) {
+      // Close the formula input like `Enter` would when the last
+      // programmatically inserted range token was manually modified.
+      if (ctx.luckysheetCellUpdate.length > 0) {
+        updateCell(
+          ctx,
+          ctx.luckysheetCellUpdate[0],
+          ctx.luckysheetCellUpdate[1],
+          cellInput
+        );
+      }
+      return;
+    }
     rangeDrag(
       ctx,
       e,
@@ -2189,9 +2221,23 @@ export function mouseRender(
       scrollX.scrollLeft,
       scrollY.scrollTop,
       container,
-      fxInput,
+      fxInput
     );
   } else if (ctx.formulaCache.rangedrag_row_start) {
+    if (
+      ctx.formulaCache.rangeSelectionActive === false &&
+      !maybeRecoverDirtyRangeSelection(ctx)
+    ) {
+      if (ctx.luckysheetCellUpdate.length > 0) {
+        updateCell(
+          ctx,
+          ctx.luckysheetCellUpdate[0],
+          ctx.luckysheetCellUpdate[1],
+          cellInput
+        );
+      }
+      return;
+    }
     rangeDragRow(
       ctx,
       e,
@@ -2199,9 +2245,23 @@ export function mouseRender(
       scrollX.scrollLeft,
       scrollY.scrollTop,
       container,
-      fxInput,
+      fxInput
     );
   } else if (ctx.formulaCache.rangedrag_column_start) {
+    if (
+      ctx.formulaCache.rangeSelectionActive === false &&
+      !maybeRecoverDirtyRangeSelection(ctx)
+    ) {
+      if (ctx.luckysheetCellUpdate.length > 0) {
+        updateCell(
+          ctx,
+          ctx.luckysheetCellUpdate[0],
+          ctx.luckysheetCellUpdate[1],
+          cellInput
+        );
+      }
+      return;
+    }
     rangeDragColumn(
       ctx,
       e,
@@ -2209,7 +2269,7 @@ export function mouseRender(
       scrollX.scrollLeft,
       scrollY.scrollTop,
       container,
-      fxInput,
+      fxInput
     );
   } else if (ctx.luckysheet_rows_selected_status) {
     // const mouse = mouseposition(event.pageX, event.pageY);
@@ -2411,13 +2471,13 @@ export function mouseRender(
       window.scrollX;
     if (x < rect.width + ctx.scrollLeft - 100) {
       const changeSizeLine = container.querySelector(
-        '.fortune-change-size-line',
+        ".fortune-change-size-line"
       );
       if (changeSizeLine) {
         (changeSizeLine as HTMLDivElement).style.left = `${x}px`;
       }
       const changeSizeCol = container.querySelector(
-        '.fortune-cols-change-size',
+        ".fortune-cols-change-size"
       );
       if (changeSizeCol) {
         (changeSizeCol as HTMLDivElement).style.left = `${x - 2}px`;
@@ -2433,13 +2493,13 @@ export function mouseRender(
       window.scrollY;
     if (y < rect.height + ctx.scrollTop - 20) {
       const changeSizeLine = container.querySelector(
-        '.fortune-change-size-line',
+        ".fortune-change-size-line"
       );
       if (changeSizeLine) {
         (changeSizeLine as HTMLDivElement).style.top = `${y}px`;
       }
       const changeSizeRow = container.querySelector(
-        '.fortune-rows-change-size',
+        ".fortune-rows-change-size"
       );
       if (changeSizeRow) {
         (changeSizeRow as HTMLDivElement).style.top = `${y}px`;
@@ -2458,19 +2518,19 @@ export function mouseRender(
     const col = x > (col_pre + col_curr) / 2 ? col_curr : col_pre;
 
     if (x < rect.width + ctx.scrollLeft - 100) {
-      const freezeLine = container.querySelector('.fortune-freeze-drag-line');
+      const freezeLine = container.querySelector(".fortune-freeze-drag-line");
       if (freezeLine) {
         (freezeLine as HTMLDivElement).style.left = `${Math.max(0, col - 2)}px`;
       }
       const freezeHandle = container.querySelector(
-        '.fortune-cols-freeze-handle',
+        ".fortune-cols-freeze-handle"
       );
       if (freezeHandle) {
         (freezeHandle as HTMLDivElement).style.left = `${x}px`;
       }
       // reuse change-size-line
       const changeSizeLine = container.querySelector(
-        '.fortune-change-size-line',
+        ".fortune-change-size-line"
       );
       if (changeSizeLine) {
         (changeSizeLine as HTMLDivElement).style.left = `${x}px`;
@@ -2489,19 +2549,19 @@ export function mouseRender(
     const row = y > (row_curr + row_pre) / 2 ? row_curr : row_pre;
 
     if (y < rect.height + ctx.scrollTop - 20) {
-      const freezeLine = container.querySelector('.fortune-freeze-drag-line');
+      const freezeLine = container.querySelector(".fortune-freeze-drag-line");
       if (freezeLine) {
         (freezeLine as HTMLDivElement).style.top = `${Math.max(0, row - 2)}px`;
       }
       const freezeHandle = container.querySelector(
-        '.fortune-rows-freeze-handle',
+        ".fortune-rows-freeze-handle"
       );
       if (freezeHandle) {
         (freezeHandle as HTMLDivElement).style.top = `${y}px`;
       }
       // reuse change-size-line
       const changeSizeLine = container.querySelector(
-        '.fortune-change-size-line',
+        ".fortune-change-size-line"
       );
       if (changeSizeLine) {
         (changeSizeLine as HTMLDivElement).style.top = `${y}px`;
@@ -3432,7 +3492,7 @@ export function handleOverlayMouseMove(
   scrollX: HTMLDivElement,
   scrollY: HTMLDivElement,
   container: HTMLDivElement,
-  fxInput?: HTMLDivElement | null,
+  fxInput?: HTMLDivElement | null
 ) {
   if (onCommentBoxResize(ctx, globalCache, e)) return;
   if (onCommentBoxMove(ctx, globalCache, e)) return;
@@ -3442,7 +3502,7 @@ export function handleOverlayMouseMove(
 
   // overShowComment(ctx, e, scrollX, scrollY, container); // 有批注显示
   const containerMain = document.getElementsByClassName(
-    'fortune-cell-area',
+    "fortune-cell-area"
   )[0] as HTMLDivElement;
 
   let rect = containerMain?.getBoundingClientRect();
@@ -3721,7 +3781,7 @@ export function handleOverlayMouseMove(
       scrollX,
       scrollY,
       container,
-      fxInput,
+      fxInput
     );
     // ctx.jfautoscrollTimeout = window.requestAnimationFrame(mouseRender);
   }
@@ -3736,7 +3796,7 @@ export function handleOverlayMouseUp(
   scrollbarY: HTMLDivElement,
   container: HTMLDivElement,
   cellInput: HTMLDivElement | null,
-  fxInput: HTMLDivElement | null,
+  fxInput: HTMLDivElement | null
 ) {
   const rect = container.getBoundingClientRect();
   // 批注框 移动结束
@@ -3755,11 +3815,21 @@ export function handleOverlayMouseUp(
     ctx.formulaCache.rangedrag_column_start ||
     ctx.formulaCache.rangedrag_row_start
   ) {
-    if (document.activeElement?.id === 'luckysheet-functionbox-cell') {
+    if (getFormulaEditorOwner(ctx) === "fx") {
       handleFormulaInput(ctx, cellInput!, fxInput!, 0, undefined, false);
     } else {
       handleFormulaInput(ctx, fxInput, cellInput!, 0, undefined, false);
     }
+
+    // Formula drag mouseup should not fall through into the normal sheet
+    // mouseup finalization flow, which is meant for committing/ending a
+    // regular cell selection/edit session.
+    ctx.luckysheet_select_status = false;
+    ctx.luckysheet_scroll_status = false;
+    ctx.luckysheet_rows_selected_status = false;
+    ctx.luckysheet_cols_selected_status = false;
+    e.preventDefault();
+    return;
   }
   // if (
   //   luckysheetConfigsetting &&
@@ -4170,7 +4240,7 @@ export function handleOverlayMouseUp(
         });
     } else {
       cfg.rowlen[ctx.luckysheet_rows_change_size_start[1]] = Math.ceil(
-        size / ctx.zoomRatio,
+        size / ctx.zoomRatio
       );
     }
 
@@ -4274,7 +4344,7 @@ export function handleOverlayMouseUp(
         });
     } else {
       cfg.columnlen[ctx.luckysheet_cols_change_size_start[1]] = Math.ceil(
-        size / ctx.zoomRatio,
+        size / ctx.zoomRatio
       );
     }
 
@@ -4317,7 +4387,7 @@ export function handleOverlayMouseUp(
       e.pageX - rect.left - ctx.rowHeaderWidth + scrollLeft - window.scrollX;
     const [col_pre, col_curr, col_index_curr] = colLocation(
       x,
-      ctx.visibledatacolumn,
+      ctx.visibledatacolumn
     );
     const col_index =
       x > (col_curr + col_pre) / 2 ? col_index_curr : col_index_curr - 1;
@@ -4326,21 +4396,21 @@ export function handleOverlayMouseUp(
     if (col_index < 0) {
       const { frozen } = ctx.luckysheetfile[idx];
       if (frozen) {
-        if (frozen.type === 'rangeBoth' || frozen.type === 'both') {
-          frozen.type = 'rangeRow';
-        } else if (frozen.type === 'column' || frozen.type === 'rangeColumn') {
+        if (frozen.type === "rangeBoth" || frozen.type === "both") {
+          frozen.type = "rangeRow";
+        } else if (frozen.type === "column" || frozen.type === "rangeColumn") {
           delete ctx.luckysheetfile[idx].frozen;
         }
       }
       const freezeHandle = container.querySelector(
-        '.fortune-cols-freeze-handle',
+        ".fortune-cols-freeze-handle"
       ) as HTMLDivElement;
       if (freezeHandle) {
         freezeHandle.style.left = `${ctx.scrollLeft}px`;
       }
     } else if (!ctx.luckysheetfile[idx].frozen) {
       ctx.luckysheetfile[idx].frozen = {
-        type: 'rangeColumn',
+        type: "rangeColumn",
         range: { column_focus: col_index, row_focus: 0 },
       };
     } else {
@@ -4350,12 +4420,12 @@ export function handleOverlayMouseUp(
       } else {
         frozen.range.column_focus = col_index;
       }
-      if (frozen?.type === 'rangeRow' || frozen?.type === 'row') {
-        frozen.type = 'rangeBoth';
+      if (frozen?.type === "rangeRow" || frozen?.type === "row") {
+        frozen.type = "rangeBoth";
       }
     }
     const freezeHandle = container.querySelector(
-      '.fortune-cols-freeze-handle',
+      ".fortune-cols-freeze-handle"
     ) as HTMLDivElement;
     if (freezeHandle) {
       freezeHandle.style.left = `${getFrozenHandleLeft(ctx)}px`;
@@ -4371,7 +4441,7 @@ export function handleOverlayMouseUp(
       e.pageY - rect.top - ctx.columnHeaderHeight + scrollTop - window.scrollY;
     const [row_pre, row_curr, row_index_curr] = rowLocation(
       y,
-      ctx.visibledatarow,
+      ctx.visibledatarow
     );
     const row_index =
       y > (row_curr + row_pre) / 2 ? row_index_curr : row_index_curr - 1;
@@ -4380,15 +4450,15 @@ export function handleOverlayMouseUp(
     if (row_index < 0) {
       const { frozen } = ctx.luckysheetfile[idx];
       if (frozen) {
-        if (frozen.type === 'rangeBoth' || frozen.type === 'both') {
-          frozen.type = 'rangeColumn';
-        } else if (frozen.type === 'row' || frozen.type === 'rangeRow') {
+        if (frozen.type === "rangeBoth" || frozen.type === "both") {
+          frozen.type = "rangeColumn";
+        } else if (frozen.type === "row" || frozen.type === "rangeRow") {
           delete ctx.luckysheetfile[idx].frozen;
         }
       }
     } else if (!ctx.luckysheetfile[idx].frozen) {
       ctx.luckysheetfile[idx].frozen = {
-        type: 'rangeRow',
+        type: "rangeRow",
         range: { column_focus: 0, row_focus: row_index },
       };
     } else {
@@ -4398,12 +4468,12 @@ export function handleOverlayMouseUp(
       } else {
         frozen.range.row_focus = row_index;
       }
-      if (frozen?.type === 'rangeColumn' || frozen?.type === 'column') {
-        frozen.type = 'rangeBoth';
+      if (frozen?.type === "rangeColumn" || frozen?.type === "column") {
+        frozen.type = "rangeBoth";
       }
     }
     const freezeHandle = container.querySelector(
-      '.fortune-rows-freeze-handle',
+      ".fortune-rows-freeze-handle"
     ) as HTMLDivElement;
     if (freezeHandle) {
       freezeHandle.style.top = `${getFrozenHandleTop(ctx)}px`;
@@ -4438,7 +4508,7 @@ export function handleRowHeaderMouseDown(
   e: MouseEvent,
   container: HTMLDivElement,
   cellInput: HTMLDivElement,
-  fxInput: HTMLDivElement | null,
+  fxInput: HTMLDivElement | null
 ) {
   ctx.luckysheet_scroll_status = true;
   if (!checkProtectionAllSelected(ctx, ctx.currentSheetId)) {
@@ -4484,7 +4554,7 @@ export function handleRowHeaderMouseDown(
         row_index >= obj_s.row[0] &&
         row_index <= obj_s.row[1] &&
         obj_s.column[0] === 0 &&
-        obj_s.column[1] === (flowdata?.[0]?.length ?? 0) - 1,
+        obj_s.column[1] === (flowdata?.[0]?.length ?? 0) - 1
     );
     if (isInSelection) return;
   }
@@ -4514,7 +4584,7 @@ export function handleRowHeaderMouseDown(
         top,
         height,
         col_pre,
-        col,
+        col
       );
       if (changeparam != null) {
         // @ts-ignore
@@ -4574,7 +4644,7 @@ export function handleRowHeaderMouseDown(
           top,
           height,
           col_pre,
-          col,
+          col
         );
         if (changeparam != null) {
           // columnseleted = changeparam[0];
@@ -4596,11 +4666,11 @@ export function handleRowHeaderMouseDown(
         ctx.formulaCache.func_selectedrange = last;
       } else if (
         e.ctrlKey &&
-        _.last(cellInput.querySelectorAll('span'))?.innerText !== ','
+        _.last(cellInput.querySelectorAll("span"))?.innerText !== ","
       ) {
         // 按住ctrl 选择选区时  先处理上一个选区
         let vText = `${cellInput.innerText},`;
-        if (vText.length > 0 && vText.substring(0, 1) === '=') {
+        if (vText.length > 0 && vText.substring(0, 1) === "=") {
           vText = functionHTMLGenerate(vText);
 
           if (window.getSelection) {
@@ -4611,7 +4681,7 @@ export function handleRowHeaderMouseDown(
               _.indexOf(
                 currSelection.anchorNode?.parentNode?.parentNode?.childNodes,
                 // @ts-ignore
-                currSelection.anchorNode?.parentNode,
+                currSelection.anchorNode?.parentNode
               ),
               currSelection.anchorOffset,
             ];
@@ -4680,6 +4750,7 @@ export function handleRowHeaderMouseDown(
         ctx.formulaCache.rangedrag_row_start ||
         israngeseleciton(ctx)
       ) {
+        // eslint-disable-next-line no-console
         rangeSetValue(
           ctx,
           cellInput,
@@ -4687,8 +4758,9 @@ export function handleRowHeaderMouseDown(
             row: rowseleted,
             column: [null, null],
           },
-          fxInput,
+          fxInput
         );
+        rangeHightlightselected(ctx, cellInput);
       }
       // else if (
       //   $("#luckysheet-ifFormulaGenerator-multiRange-dialog").is(":visible")
@@ -4705,6 +4777,7 @@ export function handleRowHeaderMouseDown(
       ctx.formulaCache.rangedrag_row_start = true;
       ctx.formulaCache.rangestart = false;
       ctx.formulaCache.rangedrag_column_start = false;
+      ctx.formulaCache.rangeSelectionActive = true;
 
       ctx.formulaCache.selectingRangeIndex = ctx.formulaCache.rangechangeindex!;
       if (
@@ -4713,7 +4786,7 @@ export function handleRowHeaderMouseDown(
         createRangeHightlight(
           ctx,
           cellInput.innerHTML,
-          ctx.formulaCache.rangechangeindex!,
+          ctx.formulaCache.rangechangeindex!
         );
       }
       createFormulaRangeSelect(ctx, {
@@ -4768,7 +4841,7 @@ export function handleRowHeaderMouseDown(
       ctx,
       ctx.luckysheetCellUpdate[0],
       ctx.luckysheetCellUpdate[1],
-      cellInput,
+      cellInput
     );
     ctx.luckysheet_rows_selected_status = true;
   } else {
@@ -4779,7 +4852,7 @@ export function handleRowHeaderMouseDown(
     if (e.shiftKey) {
       // 按住shift点击行索引选取范围
       const last = _.cloneDeep(
-        ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
+        ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1]
       ); // 选区最后一个
       if (
         !last ||
@@ -4883,7 +4956,7 @@ export function handleColumnHeaderMouseDown(
   e: MouseEvent,
   container: HTMLElement,
   cellInput: HTMLDivElement,
-  fxInput: HTMLDivElement | null,
+  fxInput: HTMLDivElement | null
 ) {
   ctx.luckysheet_scroll_status = true;
   if (!checkProtectionAllSelected(ctx, ctx.currentSheetId)) {
@@ -4930,7 +5003,7 @@ export function handleColumnHeaderMouseDown(
         col_index >= obj_s.column[0] &&
         col_index <= obj_s.column[1] &&
         obj_s.row[0] === 0 &&
-        obj_s.row[1] === (flowdata?.length ?? 0) - 1,
+        obj_s.row[1] === (flowdata?.length ?? 0) - 1
     );
     if (isInSelection) return;
   }
@@ -4960,7 +5033,7 @@ export function handleColumnHeaderMouseDown(
         row_pre,
         row,
         left,
-        width,
+        width
       );
       if (changeparam != null) {
         // @ts-ignore
@@ -5017,7 +5090,7 @@ export function handleColumnHeaderMouseDown(
           row_pre,
           row,
           left,
-          width,
+          width
         );
         if (changeparam != null) {
           // @ts-ignore
@@ -5036,11 +5109,11 @@ export function handleColumnHeaderMouseDown(
         ctx.formulaCache.func_selectedrange = last;
       } else if (
         e.ctrlKey &&
-        _.last(cellInput.querySelectorAll('span'))?.innerText !== ','
+        _.last(cellInput.querySelectorAll("span"))?.innerText !== ","
       ) {
         // 按住ctrl 选择选区时  先处理上一个选区
         let vText = `${cellInput.innerText},`;
-        if (vText.length > 0 && vText.substring(0, 1) === '=') {
+        if (vText.length > 0 && vText.substring(0, 1) === "=") {
           vText = functionHTMLGenerate(vText);
 
           if (window.getSelection) {
@@ -5051,7 +5124,7 @@ export function handleColumnHeaderMouseDown(
               _.indexOf(
                 currSelection.anchorNode?.parentNode?.parentNode?.childNodes,
                 // @ts-ignore
-                currSelection.anchorNode?.parentNode,
+                currSelection.anchorNode?.parentNode
               ),
               currSelection.anchorOffset,
             ];
@@ -5122,6 +5195,7 @@ export function handleColumnHeaderMouseDown(
         ctx.formulaCache.rangedrag_row_start ||
         israngeseleciton(ctx)
       ) {
+        // eslint-disable-next-line no-console
         rangeSetValue(
           ctx,
           cellInput,
@@ -5129,8 +5203,9 @@ export function handleColumnHeaderMouseDown(
             row: [null, null],
             column: columnseleted,
           },
-          fxInput,
+          fxInput
         );
+        rangeHightlightselected(ctx, cellInput);
       }
       // else if (
       //   $("#luckysheet-ifFormulaGenerator-multiRange-dialog").is(":visible")
@@ -5147,6 +5222,7 @@ export function handleColumnHeaderMouseDown(
       ctx.formulaCache.rangedrag_column_start = true;
       ctx.formulaCache.rangestart = false;
       ctx.formulaCache.rangedrag_row_start = false;
+      ctx.formulaCache.rangeSelectionActive = true;
 
       ctx.formulaCache.selectingRangeIndex = ctx.formulaCache.rangechangeindex!;
       if (
@@ -5155,7 +5231,7 @@ export function handleColumnHeaderMouseDown(
         createRangeHightlight(
           ctx,
           cellInput.innerHTML,
-          ctx.formulaCache.rangechangeindex!,
+          ctx.formulaCache.rangechangeindex!
         );
       }
       createFormulaRangeSelect(ctx, {
@@ -5182,7 +5258,7 @@ export function handleColumnHeaderMouseDown(
       ctx,
       ctx.luckysheetCellUpdate[0],
       ctx.luckysheetCellUpdate[1],
-      cellInput,
+      cellInput
     );
     ctx.luckysheet_cols_selected_status = true;
   } else {
@@ -5193,7 +5269,7 @@ export function handleColumnHeaderMouseDown(
     if (e.shiftKey) {
       // 按住shift点击列索引选取范围
       const last = _.cloneDeep(
-        ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
+        ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1]
       ); // 选区最后一个
 
       let _left = 0;
@@ -5302,7 +5378,7 @@ export function handleColSizeHandleMouseDown(
   e: MouseEvent,
   headerContainer: HTMLDivElement,
   workbookContainer: HTMLDivElement,
-  cellArea: HTMLDivElement,
+  cellArea: HTMLDivElement
 ) {
   // //有批注在编辑时
   removeEditingComment(ctx, globalCache);
@@ -5334,17 +5410,16 @@ export function handleColSizeHandleMouseDown(
   ctx.luckysheet_cols_change_size = true;
   ctx.luckysheet_scroll_status = true;
   const changeSizeLine = workbookContainer.querySelector(
-    '.fortune-change-size-line',
+    ".fortune-change-size-line"
   );
   if (changeSizeLine) {
     const ele = changeSizeLine as HTMLDivElement;
-    ele.style.height = `${
-      cellArea.getBoundingClientRect().height + scrollTop
-    }px`;
-    ele.style.borderWidth = '0 1px 0 0';
-    ele.style.top = '0';
+    ele.style.height = `${cellArea.getBoundingClientRect().height + scrollTop
+      }px`;
+    ele.style.borderWidth = "0 1px 0 0";
+    ele.style.top = "0";
     ele.style.left = `${col - 3}px`;
-    ele.style.width = '1px';
+    ele.style.width = "1px";
   }
   // $(
   //   "#luckysheet-sheettable, #luckysheet-cols-h-c, .luckysheet-cols-h-cells, .luckysheet-cols-h-cells canvas"
@@ -5361,7 +5436,7 @@ export function handleColSizeHandleDoubleClick(
   ctx: Context,
   globalCache: GlobalCache,
   e: MouseEvent,
-  headerContainer: HTMLDivElement,
+  headerContainer: HTMLDivElement
 ) {
   const { scrollLeft } = ctx;
 
@@ -5426,7 +5501,7 @@ export function handleRowSizeHandleMouseDown(
   e: MouseEvent,
   headerContainer: HTMLDivElement,
   workbookContainer: HTMLDivElement,
-  cellArea: HTMLDivElement,
+  cellArea: HTMLDivElement
 ) {
   // 有批注在编辑时
   removeEditingComment(ctx, globalCache);
@@ -5465,17 +5540,16 @@ export function handleRowSizeHandleMouseDown(
   ctx.luckysheet_rows_change_size = true;
   ctx.luckysheet_scroll_status = true;
   const changeSizeLine = workbookContainer.querySelector(
-    '.fortune-change-size-line',
+    ".fortune-change-size-line"
   );
   if (changeSizeLine) {
     const ele = changeSizeLine as HTMLDivElement;
-    ele.style.width = `${
-      cellArea.getBoundingClientRect().width + scrollLeft
-    }px`;
-    ele.style.borderWidth = '0 0 1px 0';
+    ele.style.width = `${cellArea.getBoundingClientRect().width + scrollLeft
+      }px`;
+    ele.style.borderWidth = "0 0 1px 0";
     ele.style.top = `${row - 3}px`;
-    ele.style.left = '0';
-    ele.style.height = '1px';
+    ele.style.left = "0";
+    ele.style.height = "1px";
   }
   // $(
   //   "#luckysheet-sheettable, #luckysheet-cols-h-c, .luckysheet-cols-h-cells, .luckysheet-cols-h-cells canvas"
@@ -5493,7 +5567,7 @@ export function handleColFreezeHandleMouseDown(
   e: MouseEvent,
   headerContainer: HTMLDivElement,
   workbookContainer: HTMLDivElement,
-  cellArea: HTMLDivElement,
+  cellArea: HTMLDivElement
 ) {
   // 有批注在编辑时
   removeEditingComment(ctx, globalCache);
@@ -5513,31 +5587,29 @@ export function handleColFreezeHandleMouseDown(
   ctx.luckysheet_cols_freeze_drag = true;
   ctx.luckysheet_scroll_status = true;
   const freezeDragLine = workbookContainer.querySelector(
-    '.fortune-freeze-drag-line',
+    ".fortune-freeze-drag-line"
   );
   if (freezeDragLine) {
     const ele = freezeDragLine as HTMLDivElement;
-    ele.style.height = `${
-      cellArea.getBoundingClientRect().height + scrollTop
-    }px`;
-    ele.style.borderWidth = '0 3px 0 0';
-    ele.style.top = '0';
+    ele.style.height = `${cellArea.getBoundingClientRect().height + scrollTop
+      }px`;
+    ele.style.borderWidth = "0 3px 0 0";
+    ele.style.top = "0";
     ele.style.left = `${col - 3}px`;
-    ele.style.width = '1px';
+    ele.style.width = "1px";
   }
   // reuse change-size-line
   const changeSizeLine = workbookContainer.querySelector(
-    '.fortune-change-size-line',
+    ".fortune-change-size-line"
   );
   if (changeSizeLine) {
     const ele = changeSizeLine as HTMLDivElement;
-    ele.style.height = `${
-      cellArea.getBoundingClientRect().height + scrollTop
-    }px`;
-    ele.style.borderWidth = '0 1px 0 0';
-    ele.style.top = '0';
+    ele.style.height = `${cellArea.getBoundingClientRect().height + scrollTop
+      }px`;
+    ele.style.borderWidth = "0 1px 0 0";
+    ele.style.top = "0";
     ele.style.left = `${col - 3}px`;
-    ele.style.width = '1px';
+    ele.style.width = "1px";
   }
   e.stopPropagation();
 }
@@ -5548,7 +5620,7 @@ export function handleRowFreezeHandleMouseDown(
   e: MouseEvent,
   headerContainer: HTMLDivElement,
   workbookContainer: HTMLDivElement,
-  cellArea: HTMLDivElement,
+  cellArea: HTMLDivElement
 ) {
   // 有批注在编辑时
   removeEditingComment(ctx, globalCache);
@@ -5568,31 +5640,29 @@ export function handleRowFreezeHandleMouseDown(
   ctx.luckysheet_rows_freeze_drag = true;
   ctx.luckysheet_scroll_status = true;
   const freezeDragLine = workbookContainer.querySelector(
-    '.fortune-freeze-drag-line',
+    ".fortune-freeze-drag-line"
   );
   if (freezeDragLine) {
     const ele = freezeDragLine as HTMLDivElement;
-    ele.style.width = `${
-      cellArea.getBoundingClientRect().width + scrollLeft
-    }px`;
-    ele.style.borderWidth = '0 0 3px 0';
+    ele.style.width = `${cellArea.getBoundingClientRect().width + scrollLeft
+      }px`;
+    ele.style.borderWidth = "0 0 3px 0";
     ele.style.top = `${row - 3}px`;
-    ele.style.left = '0';
-    ele.style.height = '1px';
+    ele.style.left = "0";
+    ele.style.height = "1px";
   }
   // reuse change-size-line
   const changeSizeLine = workbookContainer.querySelector(
-    '.fortune-change-size-line',
+    ".fortune-change-size-line"
   );
   if (changeSizeLine) {
     const ele = changeSizeLine as HTMLDivElement;
-    ele.style.width = `${
-      cellArea.getBoundingClientRect().width + scrollLeft
-    }px`;
-    ele.style.borderWidth = '0 0 1px 0';
+    ele.style.width = `${cellArea.getBoundingClientRect().width + scrollLeft
+      }px`;
+    ele.style.borderWidth = "0 0 1px 0";
     ele.style.top = `${row - 3}px`;
-    ele.style.left = '0';
-    ele.style.height = '1px';
+    ele.style.left = "0";
+    ele.style.height = "1px";
   }
   e.stopPropagation();
 }
