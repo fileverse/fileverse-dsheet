@@ -41,6 +41,10 @@ function getBorderFix() {
   return [-1, 0, 0, -1];
 }
 
+function hasCellDisplayContent(cell: any) {
+  return !_.isEmpty(cell?.v) || _.isEmpty(cell?.m) || isInlineStringCell(cell);
+}
+
 function setLineDash(
   canvasborder: CanvasRenderingContext2D,
   type: any,
@@ -1329,7 +1333,7 @@ export class Canvas {
             if (mergeCell) {
               const mergeCellOffset =
                 borderOffset[
-                  `${bdRow + mergeCell.rs - 1}_${bdCol + mergeCell.cs - 1}`
+                `${bdRow + mergeCell.rs - 1}_${bdCol + mergeCell.cs - 1}`
                 ];
               mergeCellEndX = mergeCellOffset.endX;
               mergeCellEndY = mergeCellOffset.endY;
@@ -1471,7 +1475,7 @@ export class Canvas {
 
         if (
           cell &&
-          (!_.isEmpty(cell.v) || isInlineStringCell(cell)) &&
+          hasCellDisplayContent(cell) &&
           _.isNil(cell.mc) &&
           cell.tb === '1'
         ) {
@@ -2367,19 +2371,19 @@ export class Canvas {
 
       const textInfo = cell
         ? getCellTextInfo(
-            cell,
-            renderCtx,
-            this.sheetCtx,
-            {
-              cellWidth,
-              cellHeight,
-              space_width,
-              space_height,
-              r,
-              c,
-            },
-            this.sheetCtx,
-          )
+          cell,
+          renderCtx,
+          this.sheetCtx,
+          {
+            cellWidth,
+            cellHeight,
+            space_width,
+            space_height,
+            r,
+            c,
+          },
+          this.sheetCtx,
+        )
         : undefined;
 
       // 若单元格有条件格式图标集
@@ -2630,19 +2634,19 @@ export class Canvas {
 
     const textInfo = cell
       ? getCellTextInfo(
-          cell,
-          renderCtx,
-          this.sheetCtx,
-          {
-            cellWidth,
-            cellHeight,
-            space_width,
-            space_height,
-            r,
-            c,
-          },
-          this.sheetCtx,
-        )
+        cell,
+        renderCtx,
+        this.sheetCtx,
+        {
+          cellWidth,
+          cellHeight,
+          space_width,
+          space_height,
+          r,
+          c,
+        },
+        this.sheetCtx,
+      )
       : undefined;
 
     // 交替颜色
@@ -2709,7 +2713,7 @@ export class Canvas {
 
     // 追溯单元格是 非空单元格或合并单元格 则追溯终止
     const cell = data[r][traceC];
-    if (cell && (!_.isEmpty(cell.v) || cell.mc)) {
+    if (cell && (hasCellDisplayContent(cell) || cell.mc)) {
       return {
         success: false,
         r,
