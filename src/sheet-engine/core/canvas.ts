@@ -1495,19 +1495,26 @@ export class Canvas {
 
           const startX = c - 1 < 0 ? 0 : this.sheetCtx.visibledatacolumn[c - 1];
           const endX = this.sheetCtx.visibledatacolumn[c];
+          const hasExplicitHorizonAlign = !_.isNil(cell?.ht);
+          const effectiveHorizonAlign =
+            !hasExplicitHorizonAlign &&
+              horizonAlign === '2' &&
+              endX - startX < textMetrics
+              ? '1'
+              : horizonAlign;
 
           let stc;
           let edc;
 
           if (endX - startX < textMetrics) {
-            if (horizonAlign === '0') {
+            if (effectiveHorizonAlign === '0') {
               // 居中对齐
               const trace_forward = this.cellOverflow_trace(
                 r,
                 c,
                 c - 1,
                 'forward',
-                horizonAlign,
+                effectiveHorizonAlign,
                 textMetrics,
               );
               const trace_backward = this.cellOverflow_trace(
@@ -1515,7 +1522,7 @@ export class Canvas {
                 c,
                 c + 1,
                 'backward',
-                horizonAlign,
+                effectiveHorizonAlign,
                 textMetrics,
               );
 
@@ -1530,14 +1537,14 @@ export class Canvas {
               } else {
                 edc = trace_backward.c - 1;
               }
-            } else if (horizonAlign === '1') {
+            } else if (effectiveHorizonAlign === '1') {
               // 左对齐
               const trace = this.cellOverflow_trace(
                 r,
                 c,
                 c + 1,
                 'backward',
-                horizonAlign,
+                effectiveHorizonAlign,
                 textMetrics,
               );
               stc = c;
@@ -1547,14 +1554,14 @@ export class Canvas {
               } else {
                 edc = trace.c - 1;
               }
-            } else if (horizonAlign === '2') {
+            } else if (effectiveHorizonAlign === '2') {
               // 右对齐
               const trace = this.cellOverflow_trace(
                 r,
                 c,
                 c - 1,
                 'forward',
-                horizonAlign,
+                effectiveHorizonAlign,
                 textMetrics,
               );
               edc = c;
@@ -2376,6 +2383,7 @@ export class Canvas {
           this.sheetCtx,
           {
             cellWidth,
+            originCellWidth: cellWidth,
             cellHeight,
             space_width,
             space_height,
@@ -2604,6 +2612,13 @@ export class Canvas {
     }
 
     const endX = this.sheetCtx.visibledatacolumn[edc] - scrollWidth;
+    let sourceStartX;
+    if (c === 0) {
+      sourceStartX = -scrollWidth;
+    } else {
+      sourceStartX = this.sheetCtx.visibledatacolumn[c - 1] - scrollWidth;
+    }
+    const sourceEndX = this.sheetCtx.visibledatacolumn[c] - scrollWidth;
 
     //
     const flowdata = getFlowdata(this.sheetCtx);
@@ -2612,6 +2627,7 @@ export class Canvas {
     }
     const cell = flowdata[r][c];
     const cellWidth = endX - startX - 2;
+    const originCellWidth = sourceEndX - sourceStartX - 2;
     const cellHeight = endY - startY - 2;
     const space_width = 2;
     const space_height = 2; // 宽高方向 间隙
@@ -2639,6 +2655,7 @@ export class Canvas {
         this.sheetCtx,
         {
           cellWidth,
+          originCellWidth,
           cellHeight,
           space_width,
           space_height,

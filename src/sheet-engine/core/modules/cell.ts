@@ -58,7 +58,13 @@ export function normalizedCellAttr(
   } else if (attr.substring(0, 2) === "bs") {
     value ||= "none";
   } else if (attr === "ht" || attr === "vt") {
-    const defaultValue = attr === "ht" ? "1" : "0";
+    // Spreadsheet-style default alignment:
+    // - text: left
+    // - number/date-time-like numeric cells: right
+    const isNumericCell =
+      !!cell &&
+      ((cell as Cell).ct?.t === "n" || typeof (cell as Cell).v === "number");
+    const defaultValue = attr === "ht" ? (isNumericCell ? "2" : "1") : "0";
     value = !_.isNil(value) ? value.toString() : defaultValue;
     if (["0", "1", "2"].indexOf(value.toString()) === -1) {
       value = defaultValue;
@@ -363,8 +369,6 @@ export function setCellValue(
 
           // cell.m = mask[0].toString();
         }
-        // Right-align numeric formula results (e.g. SUM in a currency-formatted cell)
-        cell.ht = 2;
       }
     } else if (!_.isNil(cell.ct) && cell.ct.fa === "@") {
       cell.m = vupdateStr;
@@ -395,8 +399,6 @@ export function setCellValue(
         if (cell?.ct) {
           cell.ct = { ...cell.ct, fa, t: "n" };
         }
-        // Right-align numeric/currency values so alignment is preserved after edit
-        cell.ht = 2;
       }
 
       let mask = update(fa, vupdate);
@@ -409,10 +411,6 @@ export function setCellValue(
           cell.m = m == null ? "" : String(m);
           cell.ct = ct as Cell["ct"];
           cell.v = v as Cell["v"];
-        }
-        // Keep numbers right-aligned when format was replaced (e.g. format didn't apply)
-        if (isRealNum(vupdate)) {
-          cell.ht = 2;
         }
       } else {
         if (v.m) {
@@ -444,8 +442,6 @@ export function setCellValue(
         const format = getNumberFormat(strValue, commaPresent);
 
         cell.m = v.m ? v.m : update(format, cell.v);
-        // Right-align numeric values so alignment is preserved after edit
-        cell.ht = 2;
         cell.ct = { fa: format, t: "n" };
         if (cell.v === Infinity || cell.v === -Infinity) {
           cell.m = cell.v.toString();
@@ -464,15 +460,6 @@ export function setCellValue(
         if (mask) {
           cell.m = mask[0].toString();
           [, cell.ct, cell.v] = mask;
-          if (
-            v?.ct &&
-            v.ct.t === "n" &&
-            cell?.ct &&
-            cell.ct.t !== "n" &&
-            cell?.ht === 2
-          ) {
-            cell.ht = 1;
-          }
         }
       }
     }
@@ -1146,7 +1133,6 @@ export function updateCell(
               t: "n",
             };
           }
-          value.ht = 2;
         }
 
         // 打进单元格的sparklines的配置串， 报错需要单独处理。
