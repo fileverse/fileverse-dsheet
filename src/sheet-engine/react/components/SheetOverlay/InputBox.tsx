@@ -131,7 +131,7 @@ const InputBox: React.FC = () => {
       : null;
   const isComposingRef = useRef(false);
   const formulaAnchorCellRef = useRef<[number, number] | null>(null);
-  const skipNextAnchorSelectionSyncRef = useRef(false);
+  const suppressAnchorSelectionSyncRef = useRef<[number, number] | null>(null);
   const lastHandledMouseDragSignatureRef = useRef('');
   const {
     preTextRef,
@@ -357,6 +357,7 @@ const InputBox: React.FC = () => {
   useEffect(() => {
     if (_.isEmpty(context.luckysheetCellUpdate) || !refs.cellInput.current) {
       formulaAnchorCellRef.current = null;
+      suppressAnchorSelectionSyncRef.current = null;
       lastHandledMouseDragSignatureRef.current = '';
       return;
     }
@@ -364,6 +365,7 @@ const InputBox: React.FC = () => {
     const inputText = refs.cellInput.current.innerText?.trim() || '';
     if (!inputText.startsWith('=')) {
       formulaAnchorCellRef.current = null;
+      suppressAnchorSelectionSyncRef.current = null;
       lastHandledMouseDragSignatureRef.current = '';
     }
   }, [context.luckysheetCellUpdate, refs.cellInput]);
@@ -558,18 +560,15 @@ const InputBox: React.FC = () => {
       const keyboardSyncRangeIndex =
         getFormulaRangeIndexForKeyboardSync(cellInputEl);
 
-      if (
-        skipNextAnchorSelectionSyncRef.current &&
-        formulaAnchorCellRef.current
-      ) {
-        const [anchorRow, anchorCol] = formulaAnchorCellRef.current;
+      if (suppressAnchorSelectionSyncRef.current) {
+        const [anchorRow, anchorCol] = suppressAnchorSelectionSyncRef.current;
         const isAnchorSelection =
           currentSelection.row_focus === anchorRow &&
           currentSelection.column_focus === anchorCol;
         if (isAnchorSelection) {
-          skipNextAnchorSelectionSyncRef.current = false;
           return;
         }
+        suppressAnchorSelectionSyncRef.current = null;
       }
 
       const isFormulaMode = isFormulaReferenceInputMode(ctx);
@@ -758,7 +757,7 @@ const InputBox: React.FC = () => {
           draftCtx.formulaCache.rangeSelectionActive = null;
         });
         const [anchorRow, anchorCol] = formulaAnchorCellRef.current;
-        skipNextAnchorSelectionSyncRef.current = true;
+        suppressAnchorSelectionSyncRef.current = [anchorRow, anchorCol];
         setTimeout(() => {
           setContext((draftCtx) => {
             draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
@@ -907,7 +906,7 @@ const InputBox: React.FC = () => {
         const anchor = formulaAnchorCellRef.current;
         if (anchor != null) {
           const [anchorRow, anchorCol] = anchor;
-          skipNextAnchorSelectionSyncRef.current = true;
+          suppressAnchorSelectionSyncRef.current = [anchorRow, anchorCol];
           setTimeout(() => {
             setContext((draftCtx) => {
               draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
