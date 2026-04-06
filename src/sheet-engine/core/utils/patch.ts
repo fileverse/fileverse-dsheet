@@ -106,7 +106,7 @@ function additionalCellOps(
             op: 'replace',
             id,
             path: ['data', startIndex + j, i],
-            value: cell,
+            value: _.cloneDeep(cell),
           });
         }
       }
@@ -120,7 +120,7 @@ function additionalCellOps(
             op: 'replace',
             id,
             path: ['data', i, startIndex + j],
-            value: cell,
+            value: _.cloneDeep(cell),
           });
         }
       }

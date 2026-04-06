@@ -233,9 +233,8 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const changeMap = new Map<string, any>();
 
         const upsert = (change: any) => {
-          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${
-            change.key ?? ''
-          }`;
+          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${change.key ?? ''
+            }`;
           changeMap.set(k, change);
         };
 
@@ -532,10 +531,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterUndo != null &&
-            newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
+              newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
               ? {
-                  config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
-                }
+                config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
+              }
               : {}),
           };
           if (isBorderUndo) {
@@ -573,10 +572,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterRedo != null &&
-            newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
+              newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
               ? {
-                  config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
-                }
+                config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
+              }
               : {}),
           };
           if (isBorderUndo) {
@@ -1309,7 +1308,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           id="placeholder-data-verification placeholder-conditional-format"
         }}>Click</button> */}
         {/* <div
-          id="placeholder-data-verification"
+          id="placeholder-conditional-format"
           style={{
             width: "500px",
             height: "500px",
