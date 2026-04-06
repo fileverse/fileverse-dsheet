@@ -1,8 +1,16 @@
 import * as formulajs from "@fileverse-dev/formulajs";
 import SUPPORTED_FORMULAS from "./../../supported-formulas";
 import { ERROR_NAME } from "./../../error";
+import en from "./../../../core/locale/en";
 
 export const SYMBOL = SUPPORTED_FORMULAS;
+
+const FUNCTIONLIST_MAP_EN = (en.functionlist || []).reduce((acc, item) => {
+  if (item?.n) {
+    acc[item.n.toUpperCase()] = item;
+  }
+  return acc;
+}, Object.create(null));
 
 export default function func(symbol) {
   return function __formulaFunction(...params) {
@@ -15,6 +23,18 @@ export default function func(symbol) {
     if (symbolParts.length === 1) {
       if (formulajs[symbolParts[0]]) {
         foundFormula = true;
+        const functionDetails = FUNCTIONLIST_MAP_EN[symbolParts[0]] || null;
+        // eslint-disable-next-line no-console -- debug: args + locale metadata before formulajs
+        console.log("[formulajs]", symbolParts[0], {
+          args: params,
+          functionDetails,
+          debug: {
+            requestedSymbol: symbol,
+            resolvedSymbol: symbolParts[0],
+            isSupportedInParser: SUPPORTED_FORMULAS.includes(symbol),
+            hasFormulaJsEntry: typeof formulajs[symbolParts[0]] === "function",
+          },
+        });
         result = formulajs[symbolParts[0]](...params);
       }
     } else {
@@ -33,6 +53,18 @@ export default function func(symbol) {
       }
       if (nestedFormula) {
         foundFormula = true;
+        const functionDetails = FUNCTIONLIST_MAP_EN[symbolParts[0]] || null;
+        // eslint-disable-next-line no-console -- debug: args + locale metadata before formulajs
+        console.log("[formulajs]", symbol, {
+          args: params,
+          functionDetails,
+          debug: {
+            requestedSymbol: symbol,
+            resolvedSymbol: symbolParts.join("."),
+            isSupportedInParser: SUPPORTED_FORMULAS.includes(symbol),
+            hasFormulaJsEntry: typeof nestedFormula === "function",
+          },
+        });
         result = nestedFormula(...params);
       }
     }

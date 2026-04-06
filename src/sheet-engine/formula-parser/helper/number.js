@@ -1,27 +1,51 @@
 /**
- * Convert value into number.
+ * Entire string must be a decimal number (Sheets-like; rejects "2a", "1x", etc.).
+ * Allows optional sign, exponent.
+ */
+const STRICT_DECIMAL_STRING =
+  /^[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?$/i;
+
+/**
+ * Convert value into number for arithmetic (+ - * / ^, unary +/-, numeric literals).
+ * Strings that are not strictly numeric (no parseFloat prefix tricks) become NaN.
  *
- * @param {String|Number} number
- * @returns {*}
+ * @param {*} number
+ * @returns {number|NaN}
  */
 export function toNumber(number) {
-  let result;
-
-  if (typeof number === "number") {
-    result = number;
-  } else if (typeof number === "string") {
-    result =
-      number.indexOf(".") > -1 ? parseFloat(number) : parseInt(number, 10);
+  if (number == null || number === "") {
+    return 0;
   }
 
-  return result;
+  if (typeof number === "number") {
+    return Number.isNaN(number) ? NaN : number;
+  }
+
+  if (typeof number === "boolean") {
+    return number ? 1 : 0;
+  }
+
+  if (typeof number === "string") {
+    const t = number.trim();
+    if (t === "") {
+      return 0;
+    }
+    if (!STRICT_DECIMAL_STRING.test(t)) {
+      return NaN;
+    }
+    const n = Number(t);
+    return Number.isNaN(n) ? NaN : n;
+  }
+
+  const n = Number(number);
+  return Number.isNaN(n) ? NaN : n;
 }
 
 /**
- * Invert provided number.
+ * Invert provided number (unary minus).
  *
- * @param {Number} number
- * @returns {Number} Returns inverted number.
+ * @param {*} number
+ * @returns {number}
  */
 export function invertNumber(number) {
   return -1 * toNumber(number);

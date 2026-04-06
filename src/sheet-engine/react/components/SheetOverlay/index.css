@@ -187,7 +187,7 @@
   position: absolute;
   pointer-events: none;
   z-index: 15;
-  border: 2.5px solid #efc703;
+  border: 1.5px solid #efc703;
   margin: -1px 0 0 -1px;
   display: none;
   box-sizing: content-box;
@@ -580,9 +580,7 @@
   top: 0;
 }
 
-.luckysheet-postil-show-active
-  .luckysheet-postil-dialog-move
-  .luckysheet-postil-dialog-move-item {
+.luckysheet-postil-show-active .luckysheet-postil-dialog-move .luckysheet-postil-dialog-move-item {
   border-color: #0188fb;
 }
 
