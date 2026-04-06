@@ -27,6 +27,17 @@ const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
     }
   });
 };
+/** Shallow clone for inserted row/column cells: keep style; do not copy v, m, f (or ps / hl). */
+const cloneCellTemplateStripContent = (cell: any) => {
+  const t = { ...cell };
+  delete t.v;
+  delete t.m;
+  delete t.f;
+  delete t.ps;
+  delete t.hl;
+  return t;
+};
+
 const getMergeBounds = (mergeMap: Record<string, any> | null | undefined) => {
   if (!mergeMap) return null;
   let minR = Infinity;
@@ -508,9 +519,9 @@ export function insertRowCol(
             }
           } else if (CFr1 === index) {
             if (direction === "lefttop") {
-              CFr1 += count;
+              // Expand range downward so new rows at `index` stay inside the rule (do not shift the whole rule).
               CFr2 += count;
-            } else if (direction === "rightbottom" && CFr2 > index) {
+            } else if (direction === "rightbottom" && CFr2 >= index) {
               CFr2 += count;
             }
           } else {
@@ -526,9 +537,8 @@ export function insertRowCol(
             }
           } else if (CFc1 === index) {
             if (direction === "lefttop") {
-              CFc1 += count;
               CFc2 += count;
-            } else if (direction === "rightbottom" && CFc2 > index) {
+            } else if (direction === "rightbottom" && CFc2 >= index) {
               CFc2 += count;
             }
           } else {
@@ -568,9 +578,8 @@ export function insertRowCol(
           }
         } else if (AFr1 === index) {
           if (direction === "lefttop") {
-            AFr1 += count;
             AFr2 += count;
-          } else if (direction === "rightbottom" && AFr2 > index) {
+          } else if (direction === "rightbottom" && AFr2 >= index) {
             AFr2 += count;
           }
         } else {
@@ -586,9 +595,8 @@ export function insertRowCol(
           }
         } else if (AFc1 === index) {
           if (direction === "lefttop") {
-            AFc1 += count;
             AFc2 += count;
-          } else if (direction === "rightbottom" && AFc2 > index) {
+          } else if (direction === "rightbottom" && AFc2 >= index) {
             AFc2 += count;
           }
         } else {
@@ -636,43 +644,43 @@ export function insertRowCol(
 
       if (type === "row") {
         if (index < r) {
-          newDataVerification[`${r + count}_${c}`] = item;
+          newDataVerification[`${r + count}_${c}`] = _.cloneDeep(item);
         } else if (index === r) {
           if (direction === "lefttop") {
-            newDataVerification[`${r + count}_${c}`] = item;
+            newDataVerification[`${r + count}_${c}`] = _.cloneDeep(item);
 
             for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r + i}_${c}`] = item;
+              newDataVerification[`${r + i}_${c}`] = _.cloneDeep(item);
             }
           } else {
-            newDataVerification[`${r}_${c}`] = item;
+            newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
 
             for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r + i + 1}_${c}`] = item;
+              newDataVerification[`${r + i + 1}_${c}`] = _.cloneDeep(item);
             }
           }
         } else {
-          newDataVerification[`${r}_${c}`] = item;
+          newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
         }
       } else if (type === "column") {
         if (index < c) {
-          newDataVerification[`${r}_${c + count}`] = item;
+          newDataVerification[`${r}_${c + count}`] = _.cloneDeep(item);
         } else if (index === c) {
           if (direction === "lefttop") {
-            newDataVerification[`${r}_${c + count}`] = item;
+            newDataVerification[`${r}_${c + count}`] = _.cloneDeep(item);
 
             for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r}_${c + i}`] = item;
+              newDataVerification[`${r}_${c + i}`] = _.cloneDeep(item);
             }
           } else {
-            newDataVerification[`${r}_${c}`] = item;
+            newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
 
             for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r}_${c + i + 1}`] = item;
+              newDataVerification[`${r}_${c + i + 1}`] = _.cloneDeep(item);
             }
           }
         } else {
-          newDataVerification[`${r}_${c}`] = item;
+          newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
         }
       }
     });
@@ -821,7 +829,7 @@ export function insertRowCol(
       cfg.rowhidden = rowhidden_new;
     }
 
-    // 空行模板
+    // 空行模板（非合并单元格也要复制样式；不复制 v / m / f / ps / 超链接）
     const row = [];
     const curRow = [...d][index];
     for (let c = 0; c < d[0].length; c += 1) {
@@ -831,14 +839,13 @@ export function insertRowCol(
         if (cell.mc.rs) {
           cell.mc.rs += count;
         }
-        templateCell = { ...cell };
+        templateCell = cloneCellTemplateStripContent(cell);
         if (!d?.[index + 1]?.[c]?.mc) {
           templateCell.mc = undefined;
         }
-        delete templateCell.v;
-        delete templateCell.m;
-        delete templateCell.ps;
-        delete templateCell.f;
+      } else if (cell != null) {
+        templateCell = cloneCellTemplateStripContent(cell);
+        delete templateCell.mc;
       }
       row.push(templateCell);
     }
@@ -1058,7 +1065,7 @@ export function insertRowCol(
       cfg.colhidden = colhidden_new;
     }
 
-    // 空列模板
+    // 空列模板（同上：整列复制样式）
     const col = [];
     const curd = [...d];
     for (let r = 0; r < d.length; r += 1) {
@@ -1068,14 +1075,13 @@ export function insertRowCol(
         if (cell.mc.cs) {
           cell.mc.cs += count;
         }
-        templateCell = { ...cell };
+        templateCell = cloneCellTemplateStripContent(cell);
         if (!curd?.[r]?.[index + 1]?.mc) {
           templateCell.mc = undefined;
         }
-        delete templateCell.v;
-        delete templateCell.m;
-        delete templateCell.ps;
-        delete templateCell.f;
+      } else if (cell != null) {
+        templateCell = cloneCellTemplateStripContent(cell);
+        delete templateCell.mc;
       }
       col.push(templateCell);
     }
