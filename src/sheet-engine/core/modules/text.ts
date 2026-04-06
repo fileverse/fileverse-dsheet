@@ -870,7 +870,7 @@ export function getCellTextInfo(
             textWidth += sc.measureText.width;
             textHeight = Math.max(
               sc.measureText.actualBoundingBoxAscent +
-                sc.measureText.actualBoundingBoxDescent,
+              sc.measureText.actualBoundingBoxDescent,
             );
             // console.log(sc.v,sc.measureText.width,sc.measureText.actualBoundingBoxAscent,sc.measureText.actualBoundingBoxDescent);
           }
@@ -1763,13 +1763,22 @@ export function getCellTextInfo(
 
       const width = textWidthAll;
       const height = textHeightAll;
+      const originCellWidth = option.originCellWidth ?? cellWidth;
+      const hasExplicitHorizonAlign =
+        _.isObject(cell) && !_.isNil((cell as Cell).ht);
+      const effectiveHorizonAlign =
+        !hasExplicitHorizonAlign &&
+        horizonAlign === '2' &&
+        width > originCellWidth
+          ? '1'
+          : horizonAlign;
 
       let left = space_width + textHeight * Math.sin(rtPI) * isRotateUp; // 默认为1，左对齐
-      if (horizonAlign === '0') {
+      if (effectiveHorizonAlign === '0') {
         // 居中对齐
         left =
           cellWidth / 2 - width / 2 + textHeight * Math.sin(rtPI) * isRotateUp;
-      } else if (horizonAlign === '2') {
+      } else if (effectiveHorizonAlign === '2') {
         // 右对齐
         left =
           cellWidth -
