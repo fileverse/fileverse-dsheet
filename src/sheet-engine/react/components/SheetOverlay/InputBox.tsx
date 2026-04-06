@@ -110,12 +110,25 @@ const InputBox: React.FC = () => {
   const hideFormulaHintLocal = localStorage.getItem('formulaMore') === 'true';
   const [showFormulaHint, setShowFormulaHint] = useState(!hideFormulaHintLocal);
   const [showSearchHint, setShowSearchHint] = useState(false);
+  const formulaSearchTopLockRef = useRef<{
+    cellKey: string;
+    top: number;
+  } | null>(null);
   /** Bumped on editor input so layout can re-check content vs cell width. */
   const [editorLayoutTick, setEditorLayoutTick] = useState(0);
   /** When true, add CELL_EDIT_INPUT_EXTRA_RIGHT_PX to the right padding (only if content+extra exceeds cell width). */
   const [cellEditorExtendRight, setCellEditorExtendRight] = useState(false);
   const row_index = firstSelection?.row_focus!;
   const col_index = firstSelection?.column_focus!;
+  const formulaSearchActiveCellKey =
+    !_.isEmpty(context.luckysheetCellUpdate) && firstSelection
+      ? `${context.currentSheetId}:${firstSelection.row_focus}:${firstSelection.column_focus}`
+      : null;
+  const lockedFormulaSearchTop =
+    formulaSearchActiveCellKey &&
+    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      ? formulaSearchTopLockRef.current.top
+      : null;
   const isComposingRef = useRef(false);
   const formulaAnchorCellRef = useRef<[number, number] | null>(null);
   const skipNextAnchorSelectionSyncRef = useRef(false);
@@ -158,6 +171,30 @@ const InputBox: React.FC = () => {
     localStorage.setItem('formulaMore', String(showFormulaHint));
     setShowFormulaHint(!showFormulaHint);
   };
+
+  useEffect(() => {
+    // Unlock formula search popup top when leaving edit mode or changing cell.
+    if (!formulaSearchActiveCellKey) {
+      formulaSearchTopLockRef.current = null;
+      return;
+    }
+    if (formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey) {
+      formulaSearchTopLockRef.current = null;
+    }
+  }, [formulaSearchActiveCellKey]);
+
+  const handleFormulaSearchTopComputed = useCallback(
+    (computedTop: number) => {
+      if (!formulaSearchActiveCellKey) return;
+      if (formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey)
+        return;
+      formulaSearchTopLockRef.current = {
+        cellKey: formulaSearchActiveCellKey,
+        top: computedTop,
+      };
+    },
+    [formulaSearchActiveCellKey],
+  );
 
   const getLastInputSpanText = () => {
     const parser = new DOMParser();
@@ -882,6 +919,8 @@ const InputBox: React.FC = () => {
                   column_focus: anchorCol,
                 },
               ];
+              // Recompute selection box immediately so UI snaps back to anchor cell.
+              moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
               // markRangeSelectionDirty clears formulaRangeHighlight; rebuild from the
               // live editor so argument highlights return after handleFormulaInput ran.
@@ -1668,6 +1707,8 @@ const InputBox: React.FC = () => {
           <>
             {showSearchHint && (
               <FormulaSearch
+                lockedTop={lockedFormulaSearchTop}
+                onTopComputed={handleFormulaSearchTopComputed}
                 onMouseMove={(e) => {
                   if (document.getElementById('luckysheet-formula-search-c')) {
                     // apply hovered state on the function item
@@ -1701,7 +1742,6 @@ const InputBox: React.FC = () => {
                 <Tooltip
                   text="Turn on formula suggestions (F10)"
                   position="top"
-                  open={true}
                   style={{
                     position: 'absolute',
                     top: '-50px',

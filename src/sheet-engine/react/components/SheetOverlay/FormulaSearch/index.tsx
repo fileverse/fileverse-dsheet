@@ -5,9 +5,18 @@ import { UNFilter } from './constant';
 import WorkbookContext from '../../../context';
 import './index.css';
 
-const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
-  props,
-) => {
+type FormulaSearchProps = React.HTMLAttributes<HTMLDivElement> & {
+  from?: 'fx' | 'cell';
+  lockedTop?: number | null;
+  onTopComputed?: (top: number) => void;
+};
+
+const FormulaSearch: React.FC<FormulaSearchProps> = ({
+  lockedTop = null,
+  onTopComputed,
+  from,
+  ...divProps
+}) => {
   const {
     context,
     settings: { isAuthorized },
@@ -45,7 +54,15 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
   const firstSelection = context.luckysheet_select_save?.[0];
   const hintRef = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(0);
+
   const calcuatePopUpPlacement = () => {
+    if (lockedTop !== null) {
+      if (top !== lockedTop) {
+        setTop(lockedTop);
+      }
+      return;
+    }
+
     if (
       !firstSelection?.top?.toString() ||
       !firstSelection.height_move?.toString() ||
@@ -72,11 +89,21 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
       topV = 25;
     }
     setTop(topV);
+    onTopComputed?.(topV);
   };
 
   useEffect(() => {
     calcuatePopUpPlacement();
-  });
+    // Re-evaluate only when candidates/selection context changes.
+    // The locked top, if provided, prevents re-position jump while editing.
+  }, [
+    lockedTop,
+    firstSelection?.top,
+    firstSelection?.height_move,
+    context.functionCandidates?.length,
+    context.defaultCandidates?.length,
+    context.functionHint,
+  ]);
 
   if (
     _.isEmpty(context.functionCandidates) &&
@@ -87,8 +114,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
   return (
     <div
       className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${
-        // @ts-ignore
-        props?.from === 'fx' ? 'fx-search' : 'cell-search'
+        from === 'fx' ? 'fx-search' : 'cell-search'
       }`}
       id="luckysheet-formula-search-c-p"
       style={{
@@ -96,7 +122,7 @@ const FormulaSearch: React.FC<React.HTMLAttributes<HTMLDivElement>> = (
       }}
     >
       <div
-        {...props}
+        {...divProps}
         ref={hintRef}
         id="luckysheet-formula-search-c"
         className="luckysheet-formula-search-c"

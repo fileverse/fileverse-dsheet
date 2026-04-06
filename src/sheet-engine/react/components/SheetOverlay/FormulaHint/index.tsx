@@ -155,7 +155,6 @@ const FormulaHint = (props: any) => {
           <Tooltip
             text="Hide formula suggestions (F10)"
             position="top"
-            open={true}
             style={{
               position: 'absolute',
               left: '210px',

@@ -79,6 +79,19 @@ const FxEditor: React.FC = () => {
   const inputContainerRef = useRef<HTMLDivElement | null>(null);
   const [isHidenRC, setIsHidenRC] = useState<boolean>(false);
   const firstSelection = context.luckysheet_select_save?.[0];
+  const formulaSearchTopLockRef = useRef<{
+    cellKey: string;
+    top: number;
+  } | null>(null);
+  const formulaSearchActiveCellKey =
+    !_.isEmpty(context.luckysheetCellUpdate) && firstSelection
+      ? `${context.currentSheetId}:${firstSelection.row_focus}:${firstSelection.column_focus}`
+      : null;
+  const lockedFormulaSearchTop =
+    formulaSearchActiveCellKey &&
+    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      ? formulaSearchTopLockRef.current.top
+      : null;
   const prevFirstSelection = usePrevious(firstSelection);
   const prevCellUpdate = usePrevious<any[]>(context.luckysheetCellUpdate);
   const prevSheetId = usePrevious(context.currentSheetId);
@@ -89,6 +102,30 @@ const FxEditor: React.FC = () => {
     localStorage.setItem('formulaMore', String(showFormulaHint));
     setShowFormulaHint(!showFormulaHint);
   };
+
+  useEffect(() => {
+    // Unlock formula search popup top when leaving edit mode or changing cell.
+    if (!formulaSearchActiveCellKey) {
+      formulaSearchTopLockRef.current = null;
+      return;
+    }
+    if (formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey) {
+      formulaSearchTopLockRef.current = null;
+    }
+  }, [formulaSearchActiveCellKey]);
+
+  const handleFormulaSearchTopComputed = useCallback(
+    (computedTop: number) => {
+      if (!formulaSearchActiveCellKey) return;
+      if (formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey)
+        return;
+      formulaSearchTopLockRef.current = {
+        cellKey: formulaSearchActiveCellKey,
+        top: computedTop,
+      };
+    },
+    [formulaSearchActiveCellKey],
+  );
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -382,6 +419,8 @@ const FxEditor: React.FC = () => {
                   column_focus: anchorCol,
                 },
               ];
+              // Recompute selection box immediately so UI snaps back to anchor cell.
+              moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
               // Keep completed referenced-cell highlights persistent in Fx editor
               // after delete/backspace, same behavior as in-cell editor.
@@ -1054,6 +1093,8 @@ const FxEditor: React.FC = () => {
                   <FormulaSearch
                     // @ts-ignore
                     from="fx"
+                    lockedTop={lockedFormulaSearchTop}
+                    onTopComputed={handleFormulaSearchTopComputed}
                     onMouseMove={(e) => {
                       if (
                         document.getElementById('luckysheet-formula-search-c')
@@ -1090,7 +1131,6 @@ const FxEditor: React.FC = () => {
                     <Tooltip
                       text="Turn on formula suggestions (F10)"
                       position="top"
-                      open={true}
                       style={{
                         position: 'absolute',
                         top: '-50px',
