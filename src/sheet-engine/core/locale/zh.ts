@@ -11220,7 +11220,7 @@ export default {
     { text: '', value: 'split', example: '' },
     {
       text: '会计',
-      value: `${currency}(0.00)`,
+      value: `_("${currency}"* #,##0.00_);_("${currency}"* \\(#,##0.00\\);_("${currency}"* "-"??_);_(@_)`,
       example: `${currency}(1200.09)`,
     },
     // { "text": "财务", "value": "(#.####)", "example": "(1200.09)" },

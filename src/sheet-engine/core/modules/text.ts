@@ -23,6 +23,60 @@ const textHeightCache: any = {};
 let measureTextCache: any = {};
 let measureTextCellInfoCache: any = {};
 
+function getAccountingCurrencySymbol(format?: string): string | null {
+  if (!format) {
+    return null;
+  }
+  const quotedToken = format.match(/_\("([^"]*)"\*/);
+  if (quotedToken?.[1]) {
+    return quotedToken[1];
+  }
+  const fallbackQuoted = format.match(/"([^"]*)"\*/);
+  return fallbackQuoted?.[1] || null;
+}
+
+function formatAccountingDisplayValue(
+  value: string,
+  format: string | undefined,
+  cellWidth: number | undefined,
+  renderCtx: CanvasRenderingContext2D,
+  horizontalPadding: number,
+): string {
+  if (!format || !format.includes('*') || !cellWidth || cellWidth <= 0) {
+    return value;
+  }
+
+  const symbol = getAccountingCurrencySymbol(format);
+  if (!symbol) {
+    return value;
+  }
+
+  const normalizedValue = value.trim();
+  const symbolIndex = normalizedValue.indexOf(symbol);
+  if (symbolIndex === -1) {
+    return value;
+  }
+
+  const prefix = normalizedValue.slice(0, symbolIndex).trim();
+  const numericPart = normalizedValue.slice(symbolIndex + symbol.length).trim();
+  if (!numericPart) {
+    return value;
+  }
+
+  const symbolWidth = renderCtx.measureText(symbol).width;
+  const numberWidth = renderCtx.measureText(numericPart).width;
+  const spaceWidth = Math.max(1, renderCtx.measureText(' ').width || 1);
+  const availableGap = cellWidth - horizontalPadding - symbolWidth - numberWidth;
+  const gapSpaces = Math.floor(availableGap / spaceWidth);
+
+  if (gapSpaces <= 1) {
+    return value;
+  }
+
+  const leftToken = `${prefix}${symbol}`;
+  return `${leftToken}${' '.repeat(gapSpaces)}${numericPart}`;
+}
+
 export function clearMeasureTextCache() {
   measureTextCache = {};
   measureTextCellInfoCache = {};
@@ -529,6 +583,17 @@ export function getCellTextInfo(
 
     if (_.isEmpty(value)) {
       return null;
+    }
+
+    const accountingFormat = cell?.ct?.fa;
+    if (_.isString(value) && _.isString(accountingFormat)) {
+      value = formatAccountingDisplayValue(
+        value,
+        accountingFormat,
+        cellWidth,
+        renderCtx,
+        space_width * 2,
+      );
     }
   }
 
