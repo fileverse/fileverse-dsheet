@@ -105,14 +105,135 @@ export function seletedHighlistByindex(
   return null;
 }
 
+/**
+ * Updates `ctx.primaryCellActive` from a selection list (multi-cell → active focus cell;
+ * else null). Pass `selection` explicitly when normalizing a **new** array that is not
+ * yet assigned to `ctx.luckysheet_select_save`.
+ */
+export function syncPrimaryCellActiveFromSelection(
+  ctx: Context,
+  selection?: SheetType["luckysheet_select_save"] | null
+) {
+  const sel = selection ?? ctx.luckysheet_select_save;
+  if (!sel?.length) {
+    ctx.primaryCellActive = null;
+    return;
+  }
+  const last = sel[sel.length - 1];
+  const multi =
+    last.row[0] !== last.row[1] || last.column[0] !== last.column[1];
+  if (!multi) {
+    ctx.primaryCellActive = null;
+    return;
+  }
+  if (!_.isNil(last.row_focus) && !_.isNil(last.column_focus)) {
+    ctx.primaryCellActive = { r: last.row_focus, c: last.column_focus };
+  } else {
+    const rLo = Math.min(last.row[0], last.row[1]);
+    const cLo = Math.min(last.column[0], last.column[1]);
+    ctx.primaryCellActive = { r: rLo, c: cLo };
+  }
+}
+
+/**
+ * Multi-cell range only: move `row_focus` / `column_focus` (and primary) in
+ * column-major order — forward: down then next column right, wrapping top-left;
+ * backward (Shift+Enter): up then previous column left, wrapping bottom-right.
+ * Does not enter edit mode. Returns false if not a multi-cell selection.
+ */
+export function advancePrimaryCellInLastMultiSelection(
+  ctx: Context,
+  forward = true
+): boolean {
+  const sel = ctx.luckysheet_select_save;
+  if (!sel?.length) return false;
+  const last = sel[sel.length - 1];
+  const r0 = last.row[0];
+  const r1 = last.row[1];
+  const c0 = last.column[0];
+  const c1 = last.column[1];
+  if (r0 === r1 && c0 === c1) return false;
+
+  const rLo = Math.min(r0, r1);
+  const rHi = Math.max(r0, r1);
+  const cLo = Math.min(c0, c1);
+  const cHi = Math.max(c0, c1);
+
+  const inRange = (r: number, c: number) =>
+    r >= rLo && r <= rHi && c >= cLo && c <= cHi;
+
+  let curR: number;
+  let curC: number;
+  const p = ctx.primaryCellActive;
+  if (p != null && inRange(p.r, p.c)) {
+    curR = p.r;
+    curC = p.c;
+  } else if (
+    !_.isNil(last.row_focus) &&
+    !_.isNil(last.column_focus) &&
+    inRange(last.row_focus, last.column_focus)
+  ) {
+    curR = last.row_focus;
+    curC = last.column_focus;
+  } else {
+    curR = rLo;
+    curC = cLo;
+  }
+
+  let nr: number;
+  let nc: number;
+  if (forward) {
+    if (curR < rHi) {
+      nr = curR + 1;
+      nc = curC;
+    } else if (curC < cHi) {
+      nr = rLo;
+      nc = curC + 1;
+    } else {
+      nr = rLo;
+      nc = cLo;
+    }
+  } else if (curR > rLo) {
+    nr = curR - 1;
+    nc = curC;
+  } else if (curC > cLo) {
+    nr = rHi;
+    nc = curC - 1;
+  } else {
+    nr = rHi;
+    nc = cHi;
+  }
+
+  last.row_focus = nr;
+  last.column_focus = nc;
+  normalizeSelection(ctx, sel);
+  return true;
+}
+
+/**
+ * Pin the primary-cell highlight to a sheet cell. Prefer calling inside the same
+ * `setContext` (draft) as your selection update, after `normalizeSelection`, so a
+ * later normalize in the same commit does not overwrite it. The next user-driven
+ * selection that runs `normalizeSelection` will re-sync from the new range.
+ */
+export function setPrimaryCellActive(ctx: Context, r: number, c: number) {
+  ctx.primaryCellActive = { r, c };
+}
+
 export function normalizeSelection(
   ctx: Context,
   selection: SheetType["luckysheet_select_save"]
 ) {
-  if (!selection) return selection;
+  if (!selection) {
+    ctx.primaryCellActive = null;
+    return selection;
+  }
 
   const flowdata = getFlowdata(ctx);
-  if (!flowdata) return selection;
+  if (!flowdata) {
+    syncPrimaryCellActiveFromSelection(ctx, selection);
+    return selection;
+  }
 
   for (let i = 0; i < selection.length; i += 1) {
     const r1 = selection[i].row[0];
@@ -136,6 +257,7 @@ export function normalizeSelection(
 
     if (_.isNil(rf) || _.isNil(cf)) {
       console.error("normalizeSelection: rf and cf is nil");
+      ctx.primaryCellActive = null;
       return selection;
     }
 
@@ -175,6 +297,7 @@ export function normalizeSelection(
     // selection[i].height_move = row - row_pre - 1;
     selection[i].height_move = row - row_pre <= 0 ? 0 : row - row_pre - 1;
   }
+  syncPrimaryCellActiveFromSelection(ctx, selection);
   return selection;
 }
 

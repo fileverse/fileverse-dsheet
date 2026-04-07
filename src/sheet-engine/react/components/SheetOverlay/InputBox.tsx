@@ -34,6 +34,7 @@ import {
   markRangeSelectionDirty,
   rangeHightlightselected,
   setFormulaEditorOwner,
+  normalizeSelection,
 } from '@sheet-engine/core';
 import React, {
   useContext,
@@ -682,6 +683,7 @@ const InputBox: React.FC = () => {
             : dragRange.column_focus,
         },
       ];
+      normalizeSelection(ctx, ctx.luckysheet_select_save);
     });
   }, [
     formulaMouseDragSignature,
@@ -769,6 +771,10 @@ const InputBox: React.FC = () => {
                 column_focus: anchorCol,
               },
             ];
+            normalizeSelection(
+              draftCtx,
+              draftCtx.luckysheet_select_save,
+            );
             // Reference before delimiter is complete; clear the active range-select
             // overlay, but keep completed referenced-cell highlights visible.
             draftCtx.formulaRangeSelect = undefined;
@@ -918,6 +924,10 @@ const InputBox: React.FC = () => {
                   column_focus: anchorCol,
                 },
               ];
+              normalizeSelection(
+                draftCtx,
+                draftCtx.luckysheet_select_save,
+              );
               // Recompute selection box immediately so UI snaps back to anchor cell.
               moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
@@ -961,7 +971,14 @@ const InputBox: React.FC = () => {
           document.execCommand('insertHTML', false, '\n '); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
           document.execCommand('delete', false);
           e.stopPropagation();
-        } else selectActiveFormula(e);
+        } else {
+          selectActiveFormula(e);
+          // Let Enter bubble to Workbook `handleGlobalEnter` (commit / multi-range
+          // advance). Block contenteditable newline if formula list did not consume it.
+          if (!e.defaultPrevented) {
+            e.preventDefault();
+          }
+        }
       } else if (e.key === 'Tab' && context.luckysheetCellUpdate.length > 0) {
         selectActiveFormula(e);
         e.preventDefault();

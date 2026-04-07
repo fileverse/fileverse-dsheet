@@ -4,6 +4,7 @@ import { Context, getFlowdata } from "../context";
 import { updateCell, cancelNormalSelected } from "../modules/cell";
 import {
   handleFormulaInput,
+  isLegacyFormulaRangeMode,
   israngeseleciton,
   maybeRecoverDirtyRangeSelection,
   markRangeSelectionDirty,
@@ -25,6 +26,8 @@ import {
   moveHighlightRange,
   selectAll,
   selectionCache,
+  advancePrimaryCellInLastMultiSelection,
+  normalizeSelection,
 } from "../modules/selection";
 import {
   cancelPaintModel,
@@ -51,16 +54,6 @@ function getTypeOverInitialContent(e: KeyboardEvent): string | undefined {
   if (e.key === "Backspace" || e.key === "Delete") return "";
   if (e.key.length === 1) return e.key;
   return undefined;
-}
-
-function isLegacyFormulaRangeMode(ctx: Context): boolean {
-  return (
-    !!ctx.formulaCache.rangestart ||
-    !!ctx.formulaCache.rangedrag_column_start ||
-    !!ctx.formulaCache.rangedrag_row_start ||
-    ctx.formulaCache.rangeSelectionActive === true ||
-    israngeseleciton(ctx)
-  );
 }
 
 export function handleGlobalEnter(
@@ -92,6 +85,18 @@ export function handleGlobalEnter(
     //   );
     // } else {
     const lastCellUpdate = _.clone(ctx.luckysheetCellUpdate);
+    const legacyFormulaRange = isLegacyFormulaRangeMode(ctx);
+    const selSnapshot =
+      ctx.luckysheet_select_save != null
+        ? _.cloneDeep(ctx.luckysheet_select_save)
+        : undefined;
+    const lastBefore =
+      selSnapshot?.[selSnapshot.length - 1];
+    const wasMulti =
+      !!lastBefore &&
+      (lastBefore.row[0] !== lastBefore.row[1] ||
+        lastBefore.column[0] !== lastBefore.column[1]);
+
     updateCell(
       ctx,
       ctx.luckysheetCellUpdate[0],
@@ -102,18 +107,31 @@ export function handleGlobalEnter(
     );
     cache.enteredEditByTyping = false;
     clearTypeOverPending(cache);
-    ctx.luckysheet_select_save = [
-      {
-        row: [lastCellUpdate[0], lastCellUpdate[0]],
-        column: [lastCellUpdate[1], lastCellUpdate[1]],
-        row_focus: lastCellUpdate[0],
-        column_focus: lastCellUpdate[1],
-      },
-    ];
-    const rowStep = e.shiftKey
-      ? -hideCRCount(ctx, "ArrowUp")
-      : hideCRCount(ctx, "ArrowDown");
-    moveHighlightCell(ctx, "down", rowStep, "rangeOfSelect");
+
+    if (wasMulti && !legacyFormulaRange && selSnapshot) {
+      ctx.luckysheet_select_save = _.cloneDeep(selSnapshot);
+      const lastSel =
+        ctx.luckysheet_select_save[ctx.luckysheet_select_save.length - 1];
+      lastSel.row_focus = lastCellUpdate[0];
+      lastSel.column_focus = lastCellUpdate[1];
+      normalizeSelection(ctx, ctx.luckysheet_select_save);
+      advancePrimaryCellInLastMultiSelection(ctx, !e.shiftKey);
+      // Leave edit mode closed (`updateCell` → `cancelNormalSelected`); only move
+      // the range primary, same as Enter when not editing.
+    } else {
+      ctx.luckysheet_select_save = [
+        {
+          row: [lastCellUpdate[0], lastCellUpdate[0]],
+          column: [lastCellUpdate[1], lastCellUpdate[1]],
+          row_focus: lastCellUpdate[0],
+          column_focus: lastCellUpdate[1],
+        },
+      ];
+      const rowStep = e.shiftKey
+        ? -hideCRCount(ctx, "ArrowUp")
+        : hideCRCount(ctx, "ArrowDown");
+      moveHighlightCell(ctx, "down", rowStep, "rangeOfSelect");
+    }
     // }
 
     // // 若有参数弹出框，隐藏
@@ -135,6 +153,15 @@ export function handleGlobalEnter(
     if ((ctx.luckysheet_select_save?.length ?? 0) > 0) {
       const last =
         ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1];
+
+      const isMultiRange =
+        last.row[0] !== last.row[1] || last.column[0] !== last.column[1];
+      if (isMultiRange && !isLegacyFormulaRangeMode(ctx)) {
+        if (advancePrimaryCellInLastMultiSelection(ctx, !e.shiftKey)) {
+          e.preventDefault();
+          return;
+        }
+      }
 
       const row_index = last.row_focus;
       const col_index = last.column_focus;

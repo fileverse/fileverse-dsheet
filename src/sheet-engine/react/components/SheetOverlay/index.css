@@ -187,9 +187,20 @@
   position: absolute;
   pointer-events: none;
   z-index: 15;
-  border: 1.5px solid #efc703;
+  border: 2px solid #efc703;
   margin: -1px 0 0 -1px;
   display: none;
+  box-sizing: content-box;
+  background: rgba(239, 199, 5, 0.02);
+}
+
+/* Primary cell (`context.primaryCellActive`): same yellow as range, no fill handle */
+.luckysheet-primary-cell-active {
+  position: absolute;
+  pointer-events: none;
+  z-index: 17;
+  border: 2px solid #efc703;
+  margin: -1px 0 0 -1px;
   box-sizing: content-box;
   background: rgba(239, 199, 5, 0.02);
 }

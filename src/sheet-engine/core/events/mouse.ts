@@ -57,6 +57,7 @@ import {
 } from "../modules/protection";
 import {
   normalizeSelection,
+  syncPrimaryCellActiveFromSelection,
   pasteHandlerOfPaintModel,
 } from "../modules/selection";
 import { Settings } from "../settings";
@@ -1953,6 +1954,8 @@ export function mouseRender(
     }
 
     ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1] = last;
+
+    syncPrimaryCellActiveFromSelection(ctx);
 
     scrollToFrozenRowCol(ctx, globalCache.freezen?.[ctx.currentSheetId]);
     // luckysheetFreezen.scrollFreezen();
@@ -4944,6 +4947,7 @@ export function handleRowHeaderMouseDown(
       ctx.luckysheet_select_status = true;
       ctx.luckysheet_scroll_status = true;
     }
+    syncPrimaryCellActiveFromSelection(ctx);
     // selectHightlightShow();
     // 允许编辑后的后台更新时
     // server.saveParam("mv", ctx.currentSheetId, ctx.luckysheet_select_save);
@@ -5364,6 +5368,8 @@ export function handleColumnHeaderMouseDown(
       ctx.luckysheet_select_status = true;
       ctx.luckysheet_scroll_status = true;
     }
+
+    syncPrimaryCellActiveFromSelection(ctx);
 
     // selectHightlightShow();
 

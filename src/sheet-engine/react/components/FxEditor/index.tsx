@@ -21,6 +21,9 @@ import {
   functionHTMLGenerate,
   isAllowEdit,
   suppressFormulaRangeSelectionForInitialEdit,
+  normalizeSelection,
+  advancePrimaryCellInLastMultiSelection,
+  isLegacyFormulaRangeMode,
 } from '@sheet-engine/core';
 import React, {
   useContext,
@@ -419,6 +422,10 @@ const FxEditor: React.FC = () => {
                   column_focus: anchorCol,
                 },
               ];
+              normalizeSelection(
+                draftCtx,
+                draftCtx.luckysheet_select_save,
+              );
               // Recompute selection box immediately so UI snaps back to anchor cell.
               moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
@@ -509,6 +516,10 @@ const FxEditor: React.FC = () => {
                 column_focus: anchorCol,
               },
             ];
+            normalizeSelection(
+              draftCtx,
+              draftCtx.luckysheet_select_save,
+            );
             draftCtx.formulaRangeSelect = undefined;
             draftCtx.formulaCache.selectingRangeIndex = -1;
             draftCtx.formulaCache.func_selectedrange = undefined;
@@ -669,21 +680,54 @@ const FxEditor: React.FC = () => {
               //   );
               // } else {
               const lastCellUpdate = _.clone(draftCtx.luckysheetCellUpdate);
+              const legacyFormulaRange = isLegacyFormulaRangeMode(draftCtx);
+              const selSnapshot =
+                draftCtx.luckysheet_select_save != null
+                  ? _.cloneDeep(draftCtx.luckysheet_select_save)
+                  : undefined;
+              const lastBefore =
+                selSnapshot?.[selSnapshot.length - 1];
+              const wasMulti =
+                !!lastBefore &&
+                (lastBefore.row[0] !== lastBefore.row[1] ||
+                  lastBefore.column[0] !== lastBefore.column[1]);
+
               updateCell(
                 draftCtx,
                 draftCtx.luckysheetCellUpdate[0],
                 draftCtx.luckysheetCellUpdate[1],
                 refs.fxInput.current!,
               );
-              draftCtx.luckysheet_select_save = [
-                {
-                  row: [lastCellUpdate[0], lastCellUpdate[0]],
-                  column: [lastCellUpdate[1], lastCellUpdate[1]],
-                  row_focus: lastCellUpdate[0],
-                  column_focus: lastCellUpdate[1],
-                },
-              ];
-              moveHighlightCell(draftCtx, 'down', 1, 'rangeOfSelect');
+
+              if (wasMulti && !legacyFormulaRange && selSnapshot) {
+                draftCtx.luckysheet_select_save = _.cloneDeep(selSnapshot);
+                const lastSel =
+                  draftCtx.luckysheet_select_save[
+                    draftCtx.luckysheet_select_save.length - 1
+                  ];
+                lastSel.row_focus = lastCellUpdate[0];
+                lastSel.column_focus = lastCellUpdate[1];
+                normalizeSelection(
+                  draftCtx,
+                  draftCtx.luckysheet_select_save,
+                );
+                advancePrimaryCellInLastMultiSelection(draftCtx, !e.shiftKey);
+                // Stay out of edit mode after commit (same as in-cell Enter path).
+              } else {
+                draftCtx.luckysheet_select_save = [
+                  {
+                    row: [lastCellUpdate[0], lastCellUpdate[0]],
+                    column: [lastCellUpdate[1], lastCellUpdate[1]],
+                    row_focus: lastCellUpdate[0],
+                    column_focus: lastCellUpdate[1],
+                  },
+                ];
+                normalizeSelection(
+                  draftCtx,
+                  draftCtx.luckysheet_select_save,
+                );
+                moveHighlightCell(draftCtx, 'down', 1, 'rangeOfSelect');
+              }
               // $("#luckysheet-rich-text-editor").focus();
               // }
               e.preventDefault();

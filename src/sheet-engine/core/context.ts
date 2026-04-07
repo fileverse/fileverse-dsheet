@@ -138,6 +138,12 @@ export type Context = {
 
   luckysheet_select_status: boolean;
   luckysheet_select_save: Sheet['luckysheet_select_save'];
+  /**
+   * Sheet row/column (0-based) for the extra primary-cell outline. Kept in context so
+   * features can move it via `setPrimaryCellActive`; it is auto-synced from the
+   * top-left of the last multi-cell selection whenever `normalizeSelection` runs.
+   */
+  primaryCellActive: { r: number; c: number } | null;
   luckysheet_selection_range: Sheet['luckysheet_selection_range'];
   formulaRangeHighlight: ({
     rangeIndex: number;
@@ -445,6 +451,7 @@ export function defaultContext(refs: RefValues): Context {
 
     luckysheet_select_status: false,
     luckysheet_select_save: undefined,
+    primaryCellActive: null,
     luckysheet_selection_range: [],
     formulaRangeHighlight: [],
     formulaRangeSelect: undefined,

@@ -52,6 +52,36 @@ import DropDownList from '../DataVerification/DropdownList';
 import IframeBoxs from '../IFrameBoxs/iFrameBoxs';
 import ErrorBoxes from '../ErrorState';
 
+/**
+ * Cell to outline as "primary" for multi-cell ranges: `context.primaryCellActive`, else
+ * focus cell, else top-left (covers drag-extend before cache sync).
+ */
+function getPrimaryCellHighlightRc(
+  ctx: Context,
+): { r: number; c: number } | null {
+  if (ctx.primaryCellActive != null) {
+    return ctx.primaryCellActive;
+  }
+  const sel = ctx.luckysheet_select_save;
+  if (!sel?.length) return null;
+  const last = sel[sel.length - 1];
+  if (
+    last.row[0] === last.row[1] &&
+    last.column[0] === last.column[1]
+  ) {
+    return null;
+  }
+  if (
+    last.row_focus != null &&
+    last.column_focus != null
+  ) {
+    return { r: last.row_focus, c: last.column_focus };
+  }
+  const rLo = Math.min(last.row[0], last.row[1]);
+  const cLo = Math.min(last.column[0], last.column[1]);
+  return { r: rLo, c: cLo };
+}
+
 /** Subtle fill + dotted border for formula range overlay (`#rrggbb` from core `colors`). */
 function formulaRangeHighlightHcStyle(hex: string) {
   const h = hex.replace('#', '');
@@ -596,14 +626,21 @@ const SheetOverlay: React.FC = () => {
           />
           {(context.luckysheet_select_save?.length ?? 0) > 0 && (
             <div id="luckysheet-cell-selected-boxs">
-              {context.luckysheet_select_save!.map((selection, index) => (
+              {context.luckysheet_select_save!.map((selection, index) => {
+                const isEditing =
+                  (context.luckysheetCellUpdate?.length ?? 0) > 0;
+                const isMultiCell =
+                  selection.row[0] !== selection.row[1] ||
+                  selection.column[0] !== selection.column[1];
+                // Single-cell edit: hide the duplicate chrome (input covers the cell).
+                // Multi-cell: keep the range visible while typing into the active cell.
+                const hideSelectionWhileEditing = isEditing && !isMultiCell;
+                return (
                 <div
                   key={index}
                   id="luckysheet-cell-selected"
                   className={`luckysheet-cell-selected${
-                    (context.luckysheetCellUpdate?.length ?? 0) > 0
-                      ? ' luckysheet-cell-selected-edit-mode'
-                      : ''
+                    isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
                   }`}
                   style={_.assign(
                     {
@@ -615,7 +652,8 @@ const SheetOverlay: React.FC = () => {
                       height: selection.height_move
                         ? selection.height_move - 1.8
                         : selection.height_move,
-                      display: 'block',
+                      borderWidth: isMultiCell ? 1 : 2,
+                      display: hideSelectionWhileEditing ? 'none' : 'block',
                     },
                     fixRowStyleOverflowInFreeze(
                       context,
@@ -684,9 +722,61 @@ const SheetOverlay: React.FC = () => {
                     <div className="luckysheet-cs-touchhandle-btn" />
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
+          {(() => {
+            const editing = (context.luckysheetCellUpdate?.length ?? 0) > 0;
+            if (editing) {
+              const sel = context.luckysheet_select_save;
+              const last = sel?.[sel.length - 1];
+              if (!last) return null;
+              const multi =
+                last.row[0] !== last.row[1] ||
+                last.column[0] !== last.column[1];
+              if (!multi) return null;
+            }
+            const primary = getPrimaryCellHighlightRc(context);
+            if (primary == null) return null;
+            const { r: r1, c: c1 } = primary;
+            const row = context.visibledatarow[r1];
+            const col = context.visibledatacolumn[c1];
+            if (row == null || col == null) return null;
+            const row_pre =
+              r1 - 1 === -1 ? 0 : context.visibledatarow[r1 - 1];
+            const col_pre =
+              c1 - 1 === -1 ? 0 : context.visibledatacolumn[c1 - 1];
+            const rawW = col - col_pre - 1;
+            const rawH = row - row_pre - 1;
+            return (
+              <div
+                className="luckysheet-primary-cell-active"
+                aria-hidden
+                style={_.assign(
+                  {
+                    left: col_pre,
+                    top: row_pre,
+                    width: rawW ? rawW - 1.8 : rawW,
+                    height: rawH ? rawH - 1.8 : rawH,
+                    display: 'block',
+                  },
+                  fixRowStyleOverflowInFreeze(
+                    context,
+                    r1,
+                    r1,
+                    refs.globalCache.freezen?.[context.currentSheetId],
+                  ),
+                  fixColumnStyleOverflowInFreeze(
+                    context,
+                    c1,
+                    c1,
+                    refs.globalCache.freezen?.[context.currentSheetId],
+                  ),
+                )}
+              />
+            );
+          })()}
           {(context.presences?.length ?? 0) > 0 &&
             context.presences!.map((presence, index) => {
               if (presence.sheetId !== context.currentSheetId) {

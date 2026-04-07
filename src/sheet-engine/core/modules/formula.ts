@@ -3522,6 +3522,17 @@ function setRangeSetValueToFromCaretPosition(
   return false;
 }
 
+/** True while picking a range for a formula (sheet selection drives references). */
+export function isLegacyFormulaRangeMode(ctx: Context): boolean {
+  return (
+    !!ctx.formulaCache.rangestart ||
+    !!ctx.formulaCache.rangedrag_column_start ||
+    !!ctx.formulaCache.rangedrag_row_start ||
+    ctx.formulaCache.rangeSelectionActive === true ||
+    israngeseleciton(ctx)
+  );
+}
+
 export function israngeseleciton(ctx: Context, istooltip?: boolean) {
   if (istooltip == null) {
     istooltip = false;
