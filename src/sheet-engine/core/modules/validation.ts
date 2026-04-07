@@ -125,6 +125,7 @@ function isValidDateParts(year: number, month: number, day: number): boolean {
 }
 
 export function detectDateFormat(str: string): DateFormatInfo | null {
+  console.log("detectDateFormat", str);
   if (!str || str.toString().length < 5) return null;
   const s = str.toString().trim();
   let m: RegExpExecArray | null;
