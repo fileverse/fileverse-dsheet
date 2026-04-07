@@ -13,7 +13,7 @@ import {
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
 import { genarate, update } from "./format";
-import { clearCellError, getRowHeight } from "../api";
+import { clearCellError } from "../api";
 import {
   delFunctionGroup,
   execfunction,
@@ -1309,38 +1309,35 @@ export function updateCell(
         ctx.luckysheetfile[
           getSheetIndex(ctx, ctx.currentSheetId as string) as number
         ].config || {};
-      if (!(cfg.columnlen?.[c] && cfg.rowlen?.[r])) {
-        // let currentRowLen = defaultrowlen;
-        // if(!_.isNil(cfg["rowlen"][r])){
-        //     currentRowLen = cfg["rowlen"][r];
-        // }
+      if (!cfg.customHeight?.[r] && canvas) {
+        let nextRowLen = defaultrowlen;
+        const rowData = d[r] || [];
 
-        const cellWidth = cfg.columnlen?.[c] || ctx.defaultcollen;
+        for (let col = 0; col < rowData.length; col += 1) {
+          const rowCell = rowData[col];
+          if (!rowCell) continue;
+          if (!(rowCell?.tb === "2" || isInlineStringCell(rowCell))) continue;
 
-        const textInfo = canvas
-          ? getCellTextInfo(d[r][c] as Cell, canvas, ctx, {
+          const cellWidth = cfg.columnlen?.[col] || ctx.defaultcollen;
+          const textInfo = getCellTextInfo(rowCell as Cell, canvas, ctx, {
             r,
-            c,
+            c: col,
             cellWidth,
-          })
-          : null;
-
-        let currentRowLen = defaultrowlen;
-        // console.log("rowlen", textInfo);
-        if (textInfo) {
-          currentRowLen = textInfo.textHeightAll + 2;
+          });
+          if (textInfo) {
+            nextRowLen = Math.max(nextRowLen, textInfo.textHeightAll + 2);
+          }
         }
 
-        const previousRowHeight = getRowHeight(ctx, [r])[r];
-
-        if (
-          currentRowLen > defaultrowlen &&
-          !cfg.customHeight?.[r] &&
-          previousRowHeight < currentRowLen
-        ) {
-          if (_.isNil(cfg.rowlen)) cfg.rowlen = {};
-          cfg.rowlen[r] = currentRowLen;
+        if (_.isNil(cfg.rowlen)) cfg.rowlen = {};
+        if (nextRowLen > defaultrowlen) {
+          cfg.rowlen[r] = nextRowLen;
+        } else if (!_.isNil(cfg.rowlen?.[r])) {
+          delete cfg.rowlen[r];
         }
+
+        // Keep active sheet render config in sync so height reflects immediately.
+        ctx.config = cfg;
       }
     }
 
