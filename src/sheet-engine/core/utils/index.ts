@@ -454,12 +454,17 @@ export function processArray(cellReferences: any, d: any, flowData: any) {
   });
 
   let formated;
+  let dateFormatted;
   coordinates.forEach((coord: any) => {
     const [row, col] = coord;
 
     // Check if coordinates are within bounds
     if (row >= 0 && row < d.length && col >= 0 && col < d[row].length) {
+      const cellType = flowData?.[row][col]?.ct?.t;
       const fa = flowData?.[row][col]?.ct?.fa;
+      if (cellType === 'd' && fa) {
+        dateFormatted = fa;
+      }
       if (
         fa &&
         (fa?.includes('#,##0') || fa?.includes('#,##0.') || fa?.includes('%'))
@@ -469,7 +474,7 @@ export function processArray(cellReferences: any, d: any, flowData: any) {
     }
   });
 
-  return formated;
+  return dateFormatted || formated;
 }
 
 export function getNumberFormat(strValue: any, commaPresent: boolean) {
