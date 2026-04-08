@@ -10,6 +10,7 @@ import {
   getInlineStringHTML,
   mergeBorder,
   mergeMoveMain,
+  recalcAutoRowHeightForRow,
 } from "./cell";
 import { isInlineStringCell } from "./inline-string";
 import { delFunctionGroup } from "./formula";
@@ -2207,6 +2208,8 @@ export function deleteSelectedCellText(ctx: Context): string {
     const d = getFlowdata(ctx);
     if (!d) return "dataNullError";
 
+    const rowsToRecalcAutoHeight = new Set<number>();
+
     let has_PartMC = false;
 
     for (let s = 0; s < selection.length; s += 1) {
@@ -2244,6 +2247,15 @@ export function deleteSelectedCellText(ctx: Context): string {
       for (let r = r1; r <= r2; r += 1) {
         for (let c = c1; c <= c2; c += 1) {
           const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
+
+          const oldCellBefore =
+            d[r][c] != null ? (_.cloneDeep(d[r][c]) as any) : null;
+          const prevHadWrapOrInline =
+            oldCellBefore != null &&
+            ((oldCellBefore.tb === "2" &&
+              !_.isNil(oldCellBefore.v) &&
+              oldCellBefore.v !== "") ||
+              isInlineStringCell(oldCellBefore));
 
           const { dataVerification } = ctx.luckysheetfile[index];
           if (dataVerification && dataVerification?.[`${r}_${c}`]) {
@@ -2304,12 +2316,25 @@ export function deleteSelectedCellText(ctx: Context): string {
               type: "update",
             });
           }
+
+          if (prevHadWrapOrInline) {
+            rowsToRecalcAutoHeight.add(r);
+          }
         }
       }
       if (changes.length > 0 && ctx?.hooks?.updateCellYdoc) {
         ctx.hooks.updateCellYdoc(changes);
       }
     }
+
+    const canvasCtx =
+      ctx.getRefs?.()?.canvas?.current?.getContext("2d") ?? null;
+    if (canvasCtx && rowsToRecalcAutoHeight.size > 0) {
+      for (const rowIndex of rowsToRecalcAutoHeight) {
+        recalcAutoRowHeightForRow(ctx, rowIndex, d, canvasCtx);
+      }
+    }
+
     // jfrefreshgrid(d, ctx.luckysheet_select_save);
 
     // // 清空编辑框的内容

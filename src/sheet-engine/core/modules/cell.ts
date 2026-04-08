@@ -38,6 +38,58 @@ import { spillSortResult } from "./sort";
 // let rangedrag_column_start = false;
 // let rangedrag_row_start = false;
 
+/** Extra px below measured text for auto row height (wrap + multiline edits). */
+const AUTO_ROW_HEIGHT_VERTICAL_PADDING = 8;
+
+/**
+ * Recompute auto row height for one row from wrap/inline cells; updates cfg.rowlen and ctx.config.
+ * Used from updateCell and deleteSelectedCellText (bulk clear).
+ */
+export function recalcAutoRowHeightForRow(
+  ctx: Context,
+  r: number,
+  d: CellMatrix,
+  canvas: CanvasRenderingContext2D | null | undefined,
+): void {
+  if (!canvas) return;
+
+  const sheetIdx = getSheetIndex(ctx, ctx.currentSheetId as string) as number;
+  const cfg = ctx.luckysheetfile[sheetIdx]?.config || {};
+  if (cfg.customHeight?.[r]) return;
+
+  const { defaultrowlen } = ctx;
+  let nextRowLen = defaultrowlen;
+  const rowData = d[r] || [];
+
+  for (let col = 0; col < rowData.length; col += 1) {
+    const rowCell = rowData[col];
+    if (!rowCell) continue;
+    if (!(rowCell?.tb === "2" || isInlineStringCell(rowCell))) continue;
+
+    const cellWidth = cfg.columnlen?.[col] || ctx.defaultcollen;
+    const textInfo = getCellTextInfo(rowCell as Cell, canvas, ctx, {
+      r,
+      c: col,
+      cellWidth,
+    });
+    if (textInfo) {
+      nextRowLen = Math.max(
+        nextRowLen,
+        textInfo.textHeightAll + AUTO_ROW_HEIGHT_VERTICAL_PADDING,
+      );
+    }
+  }
+
+  if (_.isNil(cfg.rowlen)) cfg.rowlen = {};
+  if (nextRowLen > defaultrowlen) {
+    cfg.rowlen[r] = nextRowLen;
+  } else if (!_.isNil(cfg.rowlen?.[r])) {
+    delete cfg.rowlen[r];
+  }
+
+  ctx.config = cfg;
+}
+
 export function normalizedCellAttr(
   cell: Cell,
   attr: keyof Cell,
@@ -1295,50 +1347,29 @@ export function updateCell(
     }
     */
 
-    if ((curv?.tb === "2" && curv.v) || isInlineStringCell(d[r][c])) {
-      // 自动换行
-      const { defaultrowlen } = ctx;
+    const cfg =
+      ctx.luckysheetfile[
+        getSheetIndex(ctx, ctx.currentSheetId as string) as number
+      ].config || {};
 
-      // const canvas = $("#luckysheetTableContent").get(0).getContext("2d");
-      // offlinecanvas.textBaseline = 'top'; //textBaseline以top计算
+    // oldValue = cell before this edit. When content is deleted, new cell may be empty;
+    // still recompute row height if the previous cell had wrap (tb "2") or inlineStr.
+    const prevHadWrapOrInline =
+      (oldValue?.tb === "2" &&
+        !_.isNil(oldValue?.v) &&
+        oldValue?.v !== "") ||
+      isInlineStringCell(oldValue);
 
-      // let fontset = luckysheetfontformat(d[r][c]);
-      // offlinecanvas.font = fontset;
+    const newCell = d[r][c];
+    const newHasWrapOrInline =
+      (newCell?.tb === "2" &&
+        !_.isNil(newCell?.v) &&
+        newCell?.v !== "") ||
+      isInlineStringCell(newCell);
 
-      const cfg =
-        ctx.luckysheetfile[
-          getSheetIndex(ctx, ctx.currentSheetId as string) as number
-        ].config || {};
-      if (!cfg.customHeight?.[r] && canvas) {
-        let nextRowLen = defaultrowlen;
-        const rowData = d[r] || [];
-
-        for (let col = 0; col < rowData.length; col += 1) {
-          const rowCell = rowData[col];
-          if (!rowCell) continue;
-          if (!(rowCell?.tb === "2" || isInlineStringCell(rowCell))) continue;
-
-          const cellWidth = cfg.columnlen?.[col] || ctx.defaultcollen;
-          const textInfo = getCellTextInfo(rowCell as Cell, canvas, ctx, {
-            r,
-            c: col,
-            cellWidth,
-          });
-          if (textInfo) {
-            nextRowLen = Math.max(nextRowLen, textInfo.textHeightAll + 2);
-          }
-        }
-
-        if (_.isNil(cfg.rowlen)) cfg.rowlen = {};
-        if (nextRowLen > defaultrowlen) {
-          cfg.rowlen[r] = nextRowLen;
-        } else if (!_.isNil(cfg.rowlen?.[r])) {
-          delete cfg.rowlen[r];
-        }
-
-        // Keep active sheet render config in sync so height reflects immediately.
-        ctx.config = cfg;
-      }
+    if ((prevHadWrapOrInline || newHasWrapOrInline) && !cfg.customHeight?.[r] && canvas) {
+      // 自动换行 — recompute row height (grow/shrink) from wrap + inline cells
+      recalcAutoRowHeightForRow(ctx, r, d, canvas);
     }
 
     // 动态数组
