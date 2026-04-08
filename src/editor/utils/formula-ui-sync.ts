@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Cell, WorkbookInstance } from '@sheet-engine/react';
 import { isNumericOnly, isHexValue } from './generic';
-import { update } from '@sheet-engine/core';
+import { isNumericCellType, update } from '@sheet-engine/core';
 
 export type FormulaSyncType = {
   row: number;
@@ -316,7 +316,10 @@ export const buildCellFormat = (
     return { ...existingCt, t: 's', fa, s: cloneInlineStyles(existingCt.s) };
   }
   // drop inline styles for numeric values to avoid internal  mutations (fs/tb) errors
-  const fa = existingCt.t === 'n' && existingCt.fa ? existingCt.fa : 'General';
+  const fa =
+    isNumericCellType({ ct: existingCt, v: value }) && existingCt.fa
+      ? existingCt.fa
+      : 'General';
   const { s: _dropS, ...restCt } = existingCt || ({} as any);
   return { ...restCt, t: 'n', fa };
 };

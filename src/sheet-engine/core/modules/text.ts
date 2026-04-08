@@ -5,6 +5,7 @@ import { locale } from '../locale';
 import { Cell } from '../types';
 import { normalizedCellAttr } from './cell';
 import { isInlineStringCell } from './inline-string';
+import { isRealNum } from './validation';
 
 function checkWordByteLength(value: string) {
   return Math.ceil(value.charCodeAt(0).toString(2).length / 8);
@@ -424,7 +425,7 @@ export function getCellTextInfo(
   }
 
   // 水平对齐
-  const horizonAlign = normalizedCellAttr(cell, 'ht');
+  let horizonAlign = normalizedCellAttr(cell, 'ht');
   // 垂直对齐
   const verticalAlign = normalizedCellAttr(cell, 'vt');
 
@@ -594,6 +595,17 @@ export function getCellTextInfo(
         renderCtx,
         space_width * 2,
       );
+    }
+
+    // Google Sheets-like default: when no explicit horizontal alignment is set,
+    // numeric content should render right-aligned under General/Automatic.
+    if (!_.isNil(cell) && _.isNil((cell as Cell).ht)) {
+      const numericCandidate = !_.isNil((cell as Cell).v)
+        ? (cell as Cell).v
+        : value;
+      if (isRealNum(numericCandidate)) {
+        horizonAlign = '2';
+      }
     }
   }
 
