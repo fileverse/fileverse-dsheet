@@ -727,6 +727,10 @@ export function insertRowCol(
   if (type === "row") {
     type1 = "r";
 
+    const refRowHeightBeforeInsert =
+      cfg.rowlen?.[index] ?? file.defaultRowHeight ?? ctx.defaultrowlen;
+    const refRowCustomBefore = cfg.customHeight?.[index];
+
     // 行高配置变动
     if (cfg.rowlen != null) {
       const rowlen_new: any = {};
@@ -783,27 +787,18 @@ export function insertRowCol(
       cfg.customHeight = customHeight_new;
     }
 
-    // 自定义行高配置变动
-    if (cfg.customHeight != null) {
-      const customHeight_new: any = {};
-
-      _.forEach(cfg.customHeight, (v, rstr) => {
-        const r = parseFloat(rstr);
-
-        if (r < index) {
-          customHeight_new[r] = cfg.customHeight![r];
-        } else if (r === index) {
-          if (direction === "lefttop") {
-            customHeight_new[r + count] = cfg.customHeight![r];
-          } else if (direction === "rightbottom") {
-            customHeight_new[r] = cfg.customHeight![r];
-          }
-        } else {
-          customHeight_new[r + count] = cfg.customHeight![r];
-        }
-      });
-
-      cfg.customHeight = customHeight_new;
+    if (cfg.rowlen == null) {
+      cfg.rowlen = {};
+    }
+    const newRowStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      cfg.rowlen![newRowStart + i] = refRowHeightBeforeInsert;
+    }
+    if (refRowCustomBefore === 1) {
+      cfg.customHeight ||= {};
+      for (let i = 0; i < count; i += 1) {
+        cfg.customHeight[newRowStart + i] = 1;
+      }
     }
 
     // 隐藏行配置变动
@@ -962,6 +957,10 @@ export function insertRowCol(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     type1 = "c";
 
+    const refColWidthBeforeInsert =
+      cfg.columnlen?.[index] ?? file.defaultColWidth ?? ctx.defaultcollen;
+    const refColCustomBefore = cfg.customWidth?.[index];
+
     // 列宽配置变动
     if (cfg.columnlen != null) {
       const columnlen_new: any = {};
@@ -1019,27 +1018,18 @@ export function insertRowCol(
       cfg.customWidth = customWidth_new;
     }
 
-    // 自定义列宽配置变动
-    if (cfg.customWidth != null) {
-      const customWidth_new: any = {};
-
-      _.forEach(cfg.customWidth, (v, cstr) => {
-        const c = parseFloat(cstr);
-
-        if (c < index) {
-          customWidth_new[c] = cfg.customWidth![c];
-        } else if (c === index) {
-          if (direction === "lefttop") {
-            customWidth_new[c + count] = cfg.customWidth![c];
-          } else if (direction === "rightbottom") {
-            customWidth_new[c] = cfg.customWidth![c];
-          }
-        } else {
-          customWidth_new[c + count] = cfg.customWidth![c];
-        }
-      });
-
-      cfg.customWidth = customWidth_new;
+    if (cfg.columnlen == null) {
+      cfg.columnlen = {};
+    }
+    const newColStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      cfg.columnlen![newColStart + i] = refColWidthBeforeInsert;
+    }
+    if (refColCustomBefore === 1) {
+      cfg.customWidth ||= {};
+      for (let i = 0; i < count; i += 1) {
+        cfg.customWidth[newColStart + i] = 1;
+      }
     }
 
     // 隐藏列配置变动
