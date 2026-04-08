@@ -8,6 +8,7 @@ import { getSheetIndex } from "./utils";
 import { setRowHeight, setColumnWidth } from "./api";
 import { adjustFormulaForPaste } from "./events/paste";
 import { convertSpanToShareString } from "./modules/inline-string";
+import { genarate } from "./modules/format";
 
 export const DEFAULT_FONT_SIZE = 10;
 
@@ -346,13 +347,19 @@ const buildCellFromTd = (
       ct: { fa: "General", t: "inlineStr", s: [{ v: normalizedText }] },
     };
   } else {
-    // Store as plain text without auto-detecting date/currency/percentage formats,
-    // matching the behaviour of the plain-text paste path in pasteHandler.
     cell.v = normalizedText;
     cell.m = normalizedText;
     cell.ct = { fa: "General", t: "g" };
     if (HEX_REGEX.test(normalizedText)) {
       cell.ct = { fa: "@", t: "s" };
+    } else {
+      const generated = genarate(normalizedText);
+      if (generated?.[1]?.t === "n") {
+        const [m, ct, v] = generated;
+        cell.v = v;
+        cell.m = m != null ? String(m) : normalizedText;
+        cell.ct = ct;
+      }
     }
   }
 
@@ -423,13 +430,14 @@ const buildCellFromTd = (
   cell.fs = fontSize;
   cell.fc = td.style.color || styles.color;
 
-  // Horizontal align
-  const ht = td.style.textAlign || styles["text-align"] || "left";
-  if (ht === "center") {
+  // Preserve explicit horizontal alignment from pasted HTML (e.g. dsheet->dsheet),
+  // but do not force a default alignment when text-align is not provided.
+  const htStyle = td.style.textAlign || styles["text-align"];
+  if (htStyle === "center") {
     cell.ht = 0;
-  } else if (ht === "right") {
+  } else if (htStyle === "right") {
     cell.ht = 2;
-  } else {
+  } else if (htStyle === "left") {
     cell.ht = 1;
   }
 
