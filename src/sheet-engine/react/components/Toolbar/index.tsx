@@ -781,6 +781,8 @@ const Toolbar: React.FC<{
 
             if (curr.t === 'd') {
               currentFmt = hasTime ? 'Date time' : 'Date';
+            } else if (curr.t === 'g' && curr.fa === 'General') {
+              currentFmt = defaultFormat[defaultFormat.length - 1].text;
             } else if (
               curr.t === 'n' ||
               curr.fa.includes('#,##0') ||

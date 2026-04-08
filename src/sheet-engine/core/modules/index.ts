@@ -287,6 +287,7 @@ export {
   isdatetime,
   isRealNull,
   isRealNum,
+  isNumericCellType,
 } from './validation';
 
 // formula (additional internal exports)

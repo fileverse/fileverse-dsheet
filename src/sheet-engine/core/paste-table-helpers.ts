@@ -9,6 +9,7 @@ import { setRowHeight, setColumnWidth } from "./api";
 import { adjustFormulaForPaste } from "./events/paste";
 import { convertSpanToShareString } from "./modules/inline-string";
 import { genarate } from "./modules/format";
+import { isRealNum } from "./modules/validation";
 
 export const DEFAULT_FONT_SIZE = 10;
 
@@ -355,10 +356,14 @@ const buildCellFromTd = (
     } else {
       const generated = genarate(normalizedText);
       if (generated?.[1]?.t === "n") {
-        const [m, ct, v] = generated;
+        const [, , v] = generated;
         cell.v = v;
-        cell.m = m != null ? String(m) : normalizedText;
-        cell.ct = ct;
+        cell.m = normalizedText;
+        cell.ct = { fa: "General", t: "g" };
+      } else if (isRealNum(normalizedText)) {
+        cell.v = parseFloat(normalizedText);
+        cell.m = normalizedText;
+        cell.ct = { fa: "General", t: "g" };
       }
     }
   }

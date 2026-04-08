@@ -8,7 +8,7 @@ import { getSheetIndex, isAllowEdit, isAllowEditReadOnly } from '../utils';
 import { getBorderInfoCompute } from './border';
 import { genarate, update } from './format';
 import * as formula from './formula';
-import { isRealNum } from './validation';
+import { isRealNum, isNumericCellType } from './validation';
 import { CFSplitRange } from './ConditionFormat';
 import { normalizeSelection } from './selection';
 import { jfrefreshgrid } from './refresh';
@@ -944,7 +944,7 @@ export function getTypeItemHide(ctx: Context) {
         const cell = flowdata[r][c];
 
         if (cell !== null && cell.v != null && cell.f == null) {
-          if (cell.ct != null && cell.ct.t === 'n') {
+          if (cell.ct != null && isNumericCellType(cell)) {
             hasNumber = true;
           } else if (cell.ct != null && cell.ct.t === 'd') {
             hasDate = true;
@@ -1806,7 +1806,7 @@ function getCopyData(
       // 单元格值类型
       let str;
       if (data?.v != null && data.f == null) {
-        if (!!data.ct && data.ct.t === 'n') {
+        if (!!data.ct && isNumericCellType(data)) {
           str = 'number';
           extendNumberBeforeStr = null;
           extendNumberAfterStr = null;

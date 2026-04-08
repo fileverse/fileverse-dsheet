@@ -63,7 +63,10 @@ export function normalizedCellAttr(
     // - number/date-time-like numeric cells: right
     const isNumericCell =
       !!cell &&
-      ((cell as Cell).ct?.t === "n" || typeof (cell as Cell).v === "number");
+      ((cell as Cell).ct?.t === "n" ||
+        typeof (cell as Cell).v === "number" ||
+        isRealNum((cell as Cell).v) ||
+        isRealNum((cell as Cell).m));
     const defaultValue = attr === "ht" ? (isNumericCell ? "2" : "1") : "0";
     value = !_.isNil(value) ? value.toString() : defaultValue;
     if (["0", "1", "2"].indexOf(value.toString()) === -1) {
@@ -326,7 +329,7 @@ export function setCellValue(
     ) {
       cell.v = parseFloat(vupdate);
       if (_.isNil(cell.ct)) {
-        cell.ct = { fa: "General", t: "n" };
+        cell.ct = { fa: "General", t: "g" };
       }
 
       // if output is number fetch fa from referenced cells
@@ -438,11 +441,8 @@ export function setCellValue(
         }
         cell.v =
           vupdate; /* 备注：如果使用parseFloat，1.1111111111111111会转换为1.1111111111111112 ? */
-        const strValue = String(vupdate);
-        const format = getNumberFormat(strValue, commaPresent);
-
-        cell.m = v.m ? v.m : update(format, cell.v);
-        cell.ct = { fa: format, t: "n" };
+        cell.m = v.m ? v.m : String(cell.v);
+        cell.ct = { fa: "General", t: "g" };
         if (cell.v === Infinity || cell.v === -Infinity) {
           cell.m = cell.v.toString();
         } else if (cell.v != null && !cell.m) {

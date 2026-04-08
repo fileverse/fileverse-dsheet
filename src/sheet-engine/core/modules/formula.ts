@@ -19,7 +19,7 @@ import {
   mergeMoveMain,
   setCellValue,
 } from "./cell";
-import { error, detectErrorFromValue } from "./validation";
+import { error, detectErrorFromValue, isNumericCellType } from "./validation";
 import { locale } from "../locale";
 import { colors } from "./color";
 import { colLocation, mousePosition, rowLocation } from "./location";
@@ -242,7 +242,7 @@ export class FormulaCache {
       return Number(splitedNumberString);
     }
     // FLV crypto denomination --END--
-    if (cell?.ct?.t === "n" && !String(cell?.m).includes("%")) {
+    if (isNumericCellType(cell) && !String(cell?.m).includes("%")) {
       const n = Number(cell?.v);
       return Number.isNaN(n) ? cell.v : n;
     }

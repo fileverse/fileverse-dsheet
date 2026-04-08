@@ -241,6 +241,7 @@ export {
   isdatetime,
   isRealNull,
   isRealNum,
+  isNumericCellType,
   // formula (internal)
   iscelldata,
   getcellrange,

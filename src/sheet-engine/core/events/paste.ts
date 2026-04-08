@@ -753,16 +753,6 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               } else {
                 // Not a date: preserve destination format, just update value
                 originCell.v = value;
-                if (genCt?.t) {
-                  if (_.isNil(originCell.ct)) {
-                    originCell.ct = {
-                      fa: "General",
-                      t: genCt.t,
-                    };
-                  } else {
-                    originCell.ct.t = genCt.t;
-                  }
-                }
                 if (originCell.ct != null && originCell.ct.fa != null) {
                   if (
                     originCell.ct.t === "d" &&
@@ -844,7 +834,11 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               const [m, ct, v] = genarate(originalValueStr) ?? [];
               cell.v = v ?? originalValueStr;
               cell.m = m != null ? String(m) : originalValueStr;
-              cell.ct = ct ?? { fa: "General", t: "g" };
+              if (ct?.t === "n") {
+                cell.ct = { fa: "General", t: "g" };
+              } else {
+                cell.ct = ct ?? { fa: "General", t: "g" };
+              }
             }
           }
 

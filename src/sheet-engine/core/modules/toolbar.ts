@@ -1107,7 +1107,10 @@ export function handleNumberDecrease(ctx: Context, cellInput: HTMLDivElement) {
   let foucsStatus = normalizedAttr(flowdata, row_index, col_index, "ct");
   const cell = flowdata[row_index][col_index];
 
-  if (foucsStatus == null || foucsStatus.t !== "n") {
+  if (
+    foucsStatus == null ||
+    (foucsStatus.t !== "n" && !(foucsStatus.t === "g" && isRealNum(cell?.v)))
+  ) {
     return;
   }
 
@@ -1197,7 +1200,10 @@ export function handleNumberIncrease(ctx: Context, cellInput: HTMLDivElement) {
   let foucsStatus = normalizedAttr(flowdata, row_index, col_index, "ct");
   const cell = flowdata[row_index][col_index];
 
-  if (foucsStatus == null || foucsStatus.t !== "n") {
+  if (
+    foucsStatus == null ||
+    (foucsStatus.t !== "n" && !(foucsStatus.t === "g" && isRealNum(cell?.v)))
+  ) {
     return;
   }
 

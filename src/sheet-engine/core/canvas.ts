@@ -14,6 +14,7 @@ import { getSheetIndex, indexToColumnChar } from './utils';
 import { getBorderInfoComputeRange } from './modules/border';
 import { checkCF, getComputeMap, validateCellData } from './modules';
 import { cellFadeAnimator } from './animate';
+import { isNumericCellType } from './modules/validation';
 
 export const defaultStyle = {
   fillStyle: '#000000',
@@ -2444,7 +2445,7 @@ export class Canvas {
       // 若单元格格式为自定义数字格式（[red]） 文本颜色为红色
       if (
         (cell?.ct?.fa?.indexOf('[Red]') ?? -1) > -1 &&
-        cell?.ct?.t === 'n' &&
+        isNumericCellType(cell) &&
         (cell?.v as number) < 0
       ) {
         renderCtx.fillStyle = '#ff0000';
