@@ -753,6 +753,16 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               } else {
                 // Not a date: preserve destination format, just update value
                 originCell.v = value;
+                if (genCt?.t) {
+                  if (_.isNil(originCell.ct)) {
+                    originCell.ct = {
+                      fa: "General",
+                      t: genCt.t,
+                    };
+                  } else {
+                    originCell.ct.t = genCt.t;
+                  }
+                }
                 if (originCell.ct != null && originCell.ct.fa != null) {
                   if (
                     originCell.ct.t === "d" &&
