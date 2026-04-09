@@ -26,7 +26,7 @@ export const DEFAULT_SHEET_DATA = [
     config: {},
     order: 0,
     row: 500,
-    column: 36,
+    column: 26,
   },
 ];
 
