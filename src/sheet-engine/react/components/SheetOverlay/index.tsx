@@ -319,10 +319,10 @@ const SheetOverlay: React.FC = () => {
   const onKeyDownForZoom = useCallback(
     (ev: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const isWinLike = !isMac;
       const isInsertByPlusShortcut =
-        isMac &&
-        ev.metaKey &&
-        ev.altKey &&
+        ((isMac && ev.metaKey && ev.altKey) ||
+          (isWinLike && ev.ctrlKey && ev.altKey)) &&
         (ev.code === 'Equal' ||
           ev.code === 'NumpadAdd' ||
           ev.key === '+' ||
@@ -330,7 +330,7 @@ const SheetOverlay: React.FC = () => {
 
       if (isInsertByPlusShortcut) {
         const selection = context.luckysheet_select_save?.[0];
-        if (selection) {
+        if (selection?.column_select || selection?.row_select) {
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
@@ -357,10 +357,12 @@ const SheetOverlay: React.FC = () => {
       }
 
       const isDeleteByMinusShortcut =
-        isMac && ev.metaKey && ev.altKey && (ev.code === 'Minus' || ev.key === '-');
+        ((isMac && ev.metaKey && ev.altKey) ||
+          (isWinLike && ev.ctrlKey && ev.altKey)) &&
+        (ev.code === 'Minus' || ev.key === '-');
       if (isDeleteByMinusShortcut) {
         const selection = context.luckysheet_select_save?.[0];
-        if (selection) {
+        if (selection?.column_select || selection?.row_select) {
           setContext((draftCtx) => {
             const sheetIndex = getSheetIndex(draftCtx, draftCtx.currentSheetId);
             const sheet = sheetIndex != null ? draftCtx.luckysheetfile[sheetIndex] : null;
