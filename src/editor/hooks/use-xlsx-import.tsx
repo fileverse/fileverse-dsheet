@@ -15,6 +15,7 @@ import {
   RawSheetImage,
 } from '../utils/xlsx-image-utils';
 import { removeFileExtension } from '../utils/export-filename';
+import { toast } from '@fileverse/ui';
 
 /** Predefined option colors for data validation dropdowns (when XLSX has no color). */
 const DATA_VERIFICATION_OPTION_COLORS = [
@@ -88,8 +89,8 @@ function excelDataValidationToSheetEntry(
   const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
-          .replace(/^["']|["']$/g, '')
-          .replace(/["']/g, '')
+        .replace(/^["']|["']$/g, '')
+        .replace(/["']/g, '')
       : '';
   const parts = rawFormula
     .split(',')
@@ -448,12 +449,12 @@ export const useXLSXImport = ({
             number,
             {
               type:
-                | 'row'
-                | 'column'
-                | 'both'
-                | 'rangeRow'
-                | 'rangeColumn'
-                | 'rangeBoth';
+              | 'row'
+              | 'column'
+              | 'both'
+              | 'rangeRow'
+              | 'rangeColumn'
+              | 'rangeBoth';
               range: { row_focus: number; column_focus: number };
             }
           > = {};
@@ -580,6 +581,17 @@ export const useXLSXImport = ({
             // Extract images — pixel positions are deferred to sheets.map
             const sheetImages = extractImagesFromWorksheet(ws, workbook);
             if (sheetImages.length > 0) imagesBySheet[idx] = sheetImages;
+
+            // Log table data if present (for inspection purposes)
+            const wsTables = (ws as any).tables;
+            if (wsTables && Object.keys(wsTables).length > 0) {
+              toast({
+                title: 'Tables are not fully supported',
+                description: 'Table styles will not be applied',
+                variant: 'warning',
+                showCloseButton: true,
+              });
+            }
 
             // Extract data validation for this sheet (row_column keys for dataVerification)
             const dvModel = (
@@ -746,9 +758,9 @@ export const useXLSXImport = ({
                 // Built during the celldata loop below; only allocated when merges exist
                 const celldataMap = sheet.config?.merge
                   ? new Map<
-                      string,
-                      { r: number; c: number; v: Record<string, unknown> }
-                    >()
+                    string,
+                    { r: number; c: number; v: Record<string, unknown> }
+                  >()
                   : null;
                 if (sheet.celldata) {
                   for (const cell of sheet.celldata) {
