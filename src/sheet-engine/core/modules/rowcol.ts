@@ -305,18 +305,6 @@ export function insertRowCol(
           return m;
         })
       : null;
-  const snapRowHl =
-    usePerRowTemplates && file.hyperlink != null
-      ? [firstTemplateRow!].map((sr) => {
-          const m: Record<number, any> = {};
-          _.forEach(file.hyperlink, (v, key) => {
-            const r = Number(key.split("_")[0]);
-            const c = Number(key.split("_")[1]);
-            if (r === sr) m[c] = v;
-          });
-          return m;
-        })
-      : null;
   const snapColDv =
     usePerColTemplates && file.dataVerification != null
       ? [firstTemplateCol!].map((sc) => {
@@ -325,18 +313,6 @@ export function insertRowCol(
             const r = Number(key.split("_")[0]);
             const c = Number(key.split("_")[1]);
             if (c === sc) m[r] = _.cloneDeep(v);
-          });
-          return m;
-        })
-      : null;
-  const snapColHl =
-    usePerColTemplates && file.hyperlink != null
-      ? [firstTemplateCol!].map((sc) => {
-          const m: Record<number, any> = {};
-          _.forEach(file.hyperlink, (v, key) => {
-            const r = Number(key.split("_")[0]);
-            const c = Number(key.split("_")[1]);
-            if (c === sc) m[r] = v;
           });
           return m;
         })
@@ -1369,16 +1345,6 @@ export function insertRowCol(
       });
     }
   }
-  if (snapRowHl) {
-    const newRowStart = direction === "lefttop" ? index : index + 1;
-    for (let i = 0; i < count; i += 1) {
-      const destR = newRowStart + i;
-      _.forEach(snapRowHl[0], (item, cStr) => {
-        const c = Number(cStr);
-        newHyperlink[`${destR}_${c}`] = _.cloneDeep(item);
-      });
-    }
-  }
   if (snapColDv) {
     const newColStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
@@ -1386,16 +1352,6 @@ export function insertRowCol(
       _.forEach(snapColDv[0], (item, rStr) => {
         const r = Number(rStr);
         newDataVerification[`${r}_${destC}`] = _.cloneDeep(item);
-      });
-    }
-  }
-  if (snapColHl) {
-    const newColStart = direction === "lefttop" ? index : index + 1;
-    for (let i = 0; i < count; i += 1) {
-      const destC = newColStart + i;
-      _.forEach(snapColHl[0], (item, rStr) => {
-        const r = Number(rStr);
-        newHyperlink[`${r}_${destC}`] = _.cloneDeep(item);
       });
     }
   }
