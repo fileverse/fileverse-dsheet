@@ -1095,7 +1095,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const isDashKey = e.key === '-' || e.code === 'Minus';
         const isSecondShortcut = isMac
           ? e.ctrlKey && e.altKey && isDashKey // Ctrl + Option + -
-          : e.ctrlKey && e.altKey && isDashKey; // Ctrl + Alt + -
+          : false; // Windows keeps Ctrl+Alt+- for direct delete behavior
 
         if (isSecondShortcut) {
           waitingForDelRow = true;
