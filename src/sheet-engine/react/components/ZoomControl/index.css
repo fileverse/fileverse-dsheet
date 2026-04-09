@@ -1,0 +1,59 @@
+.fortune-zoom-container {
+  white-space: nowrap;
+  overflow: visible;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  border-left: 1px solid hsl(var(--color-border-default));
+  border-right: 1px solid hsl(var(--color-border-default));
+}
+
+.fortune-zoom-button {
+  display: flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  border-radius: 3px;
+  color: var(--color-text-default);
+  font-size: 14px;
+}
+
+.fortune-zoom-button:hover {
+  background-color: hsl(var(--color-button-secondary-hover));
+}
+
+.fortune-zoom-ratio {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 48px;
+  color: #1e1e1f;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fortune-zoom-ratio-current {
+  width: 100%;
+}
+
+.fortune-zoom-ratio-item:hover {
+  background: #efefef;
+}
+
+.fortune-zoom-ratio-menu {
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  line-height: 24px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  padding: 10px 0px 10px 0px;
+  border-radius: 6px;
+  background: white;
+  z-index: 1004;
+}
+
+.fortune-zoom-ratio-text {
+  padding: 0px 10px 0px 10px;
+}

@@ -1,0 +1,89 @@
+import * as Y from 'yjs';
+import { WorkbookInstance } from '@sheet-engine/react';
+import { MutableRefObject } from 'react';
+import { getExportFilenameBase } from './export-filename';
+
+export const handleExportToCSV = (
+  workbookRef: MutableRefObject<WorkbookInstance | null>,
+  ydocRef: MutableRefObject<Y.Doc | null>,
+  _dsheetId?: string,
+  getDocumentTitle?: () => string,
+) => {
+  if (!workbookRef.current || !ydocRef.current) return;
+
+  try {
+    const activeSheet = workbookRef.current.getSheet();
+
+    if (
+      !activeSheet ||
+      !activeSheet.celldata ||
+      activeSheet.celldata.length === 0
+    ) {
+      console.error('No data to export');
+      return;
+    }
+
+    // Find the maximum row and column indices
+    let maxRow = 0;
+    let maxCol = 0;
+
+    activeSheet.celldata.forEach((cell) => {
+      maxRow = Math.max(maxRow, cell.r);
+      maxCol = Math.max(maxCol, cell.c);
+    });
+
+    const rows: string[][] = [];
+    for (let i = 0; i <= maxRow; i++) {
+      rows[i] = Array(maxCol + 1).fill('');
+    }
+
+    activeSheet.celldata.forEach((cell) => {
+      const value =
+        cell.v && cell.v.v !== undefined && cell.v.v !== null ? cell.v.v : '';
+      rows[cell.r][cell.c] = String(value);
+    });
+
+    // Convert rows to CSV format
+    const csvContent = rows
+      .map((row) => {
+        return row
+          .map((cell) => {
+            // Handle values that need to be quoted (contain commas, quotes, or newlines)
+            if (cell === null || cell === undefined) {
+              return '';
+            }
+
+            const cellStr = String(cell);
+            if (
+              cellStr.includes(',') ||
+              cellStr.includes('"') ||
+              cellStr.includes('\n')
+            ) {
+              // Escape quotes by doubling them and wrap in quotes
+              return `"${cellStr.replace(/"/g, '""')}"`;
+            }
+            return cellStr;
+          })
+          .join(',');
+      })
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const title = getExportFilenameBase({
+      getDocumentTitle,
+      documentTitleFallback:
+        typeof document !== 'undefined' ? document.title : '',
+      sheetNameFallback: activeSheet.name,
+      defaultBase: 'Sheet',
+    });
+    link.setAttribute('download', `${activeSheet.name + ' - ' + title}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('CSV export failed:', error);
+  }
+};

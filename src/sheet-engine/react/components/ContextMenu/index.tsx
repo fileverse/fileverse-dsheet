@@ -1,0 +1,1212 @@
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+import {
+  locale,
+  handleCopy,
+  handlePasteByClick,
+  deleteRowCol,
+  insertRowCol,
+  removeActiveImage,
+  deleteSelectedCellText,
+  sortSelection,
+  createFilter,
+  showImgChooser,
+  handleLink,
+  hideSelected,
+  showSelected,
+  getSheetIndex,
+  api,
+  isAllowEdit,
+  jfrefreshgrid,
+  newComment,
+  getFreezeState,
+  toggleFreeze,
+  clearFilter,
+  clearSelectedCellFormat,
+  clearColumnsCellsFormat,
+  clearRowsCellsFormat,
+} from '@sheet-engine/core';
+import _ from 'lodash';
+import React, {
+  useContext,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+  useState,
+} from 'react';
+import regeneratorRuntime from 'regenerator-runtime';
+import Tippy from '@tippyjs/react';
+import { LucideIcon } from '@fileverse/ui';
+import { SplitColumn } from '../SplitColumn';
+import { ResetColumnWidth } from '../ResetColumnWidth';
+// import DataVerification from "../DataVerification";
+import WorkbookContext, { SetContextOptions } from '../../context';
+import { useAlert } from '../../hooks/useAlert';
+import { useDialog } from '../../hooks/useDialog';
+import Divider from './Divider';
+import './index.css';
+import Menu from './Menu';
+// import CustomSort from "../CustomSort";
+import 'tippy.js/dist/tippy.css';
+// import ConditionalFormat from "../ConditionFormat";
+import SVGIcon from '../SVGIcon';
+import { LucideIcon as LocalLucidIcon } from '../SheetOverlay/LucideIcon';
+
+const ContextMenu: React.FC = () => {
+  const { showDialog } = useDialog();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { context, setContext, settings, refs } = useContext(WorkbookContext);
+  const { contextMenu } = context;
+  const { showAlert } = useAlert();
+  const { rightclick, drag, generalDialog, info, splitText } = locale(context);
+
+  const [activeMenu, setActiveMenu] = useState('');
+
+  const addRowColRightAvobe = (
+    type: 'row' | 'column',
+    direction: 'lefttop' | 'rightbottom',
+  ) => {
+    const positionCol = context.luckysheet_select_save?.[0]?.column?.[0];
+    const positionRow = context.luckysheet_select_save?.[0]?.row?.[0];
+    const position = type === 'row' ? positionRow : positionCol;
+    if (position == null) return;
+    const count = 1;
+    if (count < 1) return;
+    // const direction = "rightbottom";
+    const insertRowColOp: SetContextOptions['insertRowColOp'] = {
+      type,
+      index: position,
+      count,
+      direction,
+      id: context.currentSheetId,
+    };
+    setContext(
+      (draftCtx) => {
+        try {
+          insertRowCol(draftCtx, insertRowColOp);
+          draftCtx.contextMenu = {};
+        } catch (err: any) {
+          if (err.message === 'maxExceeded')
+            showAlert(rightclick.columnOverLimit, 'ok');
+          else if (err.message === 'readOnly')
+            showAlert(rightclick.cannotInsertOnColumnReadOnly, 'ok');
+          draftCtx.contextMenu = {};
+        }
+      },
+      {
+        insertRowColOp,
+      },
+    );
+  };
+
+  const getMenuElement = useCallback(
+    (name: string, i: number) => {
+      const selection = context.luckysheet_select_save?.[0];
+      if (name === '|') {
+        return <Divider key={`divider-${i}`} />;
+      }
+      if (name === 'split-text') {
+        return (
+          <Menu
+            key="split-text"
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              if (_.isUndefined(context.luckysheet_select_save)) {
+                showDialog(splitText.tipNoSelect, 'ok');
+              } else {
+                const currentColumn =
+                  context.luckysheet_select_save[
+                    context.luckysheet_select_save.length - 1
+                  ].column;
+                if (context.luckysheet_select_save.length > 1) {
+                  showDialog(splitText.tipNoMulti, 'ok');
+                } else if (currentColumn[0] !== currentColumn[1]) {
+                  showDialog(splitText.tipNoMultiColumn, 'ok');
+                } else {
+                  showDialog(
+                    <SplitColumn />,
+                    undefined,
+                    'Split text to columns',
+                  );
+                }
+              }
+              setContext((draftCtx) => {
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <SVGIcon name="split-flv" width={18} height={18} />
+              Split text to columns
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'freeze-row') {
+        const freezeState = getFreezeState(context);
+        const isFrozen = freezeState.isRowFrozen;
+        const isEntireRowSelected = selection?.row_select === true;
+
+        if (!isEntireRowSelected) return null;
+
+        return (
+          <Menu
+            key="freeze-row"
+            onClick={() => {
+              setContext((draftCtx) => {
+                if (isFrozen) {
+                  toggleFreeze(draftCtx, 'unfreeze-row');
+                } else {
+                  toggleFreeze(draftCtx, 'row');
+                }
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Snowflake" />
+              <p>{isFrozen ? 'Unfreeze row' : 'Freeze upto current row'}</p>
+            </div>
+          </Menu>
+        );
+      }
+
+      if (name === 'freeze-column') {
+        const freezeState = getFreezeState(context);
+        const isFrozen = freezeState.isColFrozen;
+        const isEntireColumnSelected = selection?.column_select === true;
+
+        if (!isEntireColumnSelected) return null;
+
+        return (
+          <Menu
+            key="freeze-column"
+            onClick={() => {
+              setContext((draftCtx) => {
+                if (isFrozen) {
+                  toggleFreeze(draftCtx, 'unfreeze-column');
+                } else {
+                  toggleFreeze(draftCtx, 'column');
+                  // Force a refresh of the grid after freezing
+                  jfrefreshgrid(draftCtx, null, undefined, false);
+                }
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Snowflake" />
+              <p>
+                {isFrozen ? 'Unfreeze column' : 'Freeze upto current column'}
+              </p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'comment') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              setContext((draftCtx) => {
+                newComment(
+                  draftCtx,
+                  refs.globalCache,
+                  selection?.row_focus!,
+                  selection?.column_focus!,
+                );
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="MessageSquarePlus" />
+              <p>Comment</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'dataVerification') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              setContext((draftCtx) => {
+                draftCtx.contextMenu = {};
+              });
+              // @ts-ignore
+              window.dataVerificationClick(context.luckysheet_select_save);
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="ShieldCheck" />
+              <p>Data Validation</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'searchReplace') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              setContext((draftCtx) => {
+                draftCtx.showSearch = true;
+                draftCtx.showReplace = true;
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Search" />
+              <p>Find and Replace</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'copy') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              setContext((draftCtx) => {
+                if (draftCtx.luckysheet_select_save?.length! > 1) {
+                  showAlert(rightclick.noMulti, 'ok');
+                  draftCtx.contextMenu = {};
+                  return;
+                }
+                handleCopy(draftCtx);
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Copy" />
+              <p>{rightclick.copy}</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'cut') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              setContext((draftCtx) => {
+                if (draftCtx.luckysheet_select_save?.length! > 1) {
+                  showAlert(rightclick.noMulti, 'ok');
+                  draftCtx.contextMenu = {};
+                  return;
+                }
+                handleCopy(draftCtx);
+
+                if (draftCtx.activeImg != null) {
+                  removeActiveImage(draftCtx);
+                } else {
+                  const msg = deleteSelectedCellText(draftCtx);
+                  if (msg === 'partMC') {
+                    showDialog(generalDialog.partiallyError, 'ok');
+                  } else if (msg === 'allowEdit') {
+                    showDialog(generalDialog.readOnlyError, 'ok');
+                  } else if (msg === 'dataNullError') {
+                    showDialog(generalDialog.dataNullError, 'ok');
+                  }
+                }
+                jfrefreshgrid(draftCtx, null, undefined);
+
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Scissors" />
+              <p>Cut</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'paste' && regeneratorRuntime) {
+        return (
+          <Menu
+            key={name}
+            onClick={async () => {
+              const clipboardText = await navigator.clipboard.readText();
+              setContext((draftCtx) => {
+                handlePasteByClick(draftCtx, clipboardText);
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Clipboard" />
+              <p>{rightclick.paste}</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'insert-column') {
+        return selection?.row_select
+          ? null
+          : ['left'].map((dir) => (
+              <Menu
+                key={`add-col-${dir}`}
+                onClick={() => {
+                  addRowColRightAvobe('column', 'lefttop');
+                }}
+              >
+                <div className="context-item">
+                  <LocalLucidIcon name="AddColLeft" />
+                  <div>Insert column to the left</div>
+                </div>
+              </Menu>
+            ));
+      }
+      if (name === 'insert-column-right') {
+        return selection?.row_select
+          ? null
+          : ['left'].map((dir) => (
+              <Menu
+                key={`add-col-right-${dir}`}
+                onClick={() => {
+                  addRowColRightAvobe('column', 'rightbottom');
+                }}
+              >
+                <div className="context-item">
+                  <LocalLucidIcon name="AddColRight" />
+                  <div>Insert column to the right</div>
+                </div>
+              </Menu>
+            ));
+      }
+      if (name === 'insert-row-above') {
+        return selection?.column_select
+          ? null
+          : ['left'].map((dir) => (
+              <Menu
+                key={`add-row-above-${dir}`}
+                onClick={() => {
+                  addRowColRightAvobe('row', 'lefttop');
+                }}
+              >
+                <div className="context-item">
+                  <LocalLucidIcon name="AddRowAboveLocal" />
+                  <div>Insert row above</div>
+                </div>
+              </Menu>
+            ));
+      }
+      if (name === 'insert-row') {
+        return selection?.column_select
+          ? null
+          : ['left'].map((dir) => (
+              <Menu
+                key={`add-row-below-${dir}`}
+                onClick={() => {
+                  addRowColRightAvobe('row', 'rightbottom');
+                }}
+              >
+                <div className="context-item">
+                  <LocalLucidIcon name="AddRowBelowLocal" />
+                  <div>Insert row below</div>
+                </div>
+              </Menu>
+            ));
+      }
+      if (name === 'delete-column') {
+        return (
+          selection?.column_select && (
+            <Menu
+              key="delete-col"
+              onClick={() => {
+                if (!selection) return;
+                const [st_index, ed_index] = selection.column;
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'column',
+                  start: st_index,
+                  end: ed_index,
+                  id: context.currentSheetId,
+                };
+                setContext(
+                  (draftCtx) => {
+                    if (draftCtx.luckysheet_select_save?.length! > 1) {
+                      showAlert(rightclick.noMulti, 'ok');
+                      draftCtx.contextMenu = {};
+                      draftCtx.dataVerificationDropDownList = false;
+                      return;
+                    }
+                    const slen = ed_index - st_index + 1;
+                    const index = getSheetIndex(
+                      draftCtx,
+                      context.currentSheetId,
+                    ) as number;
+                    if (
+                      draftCtx.luckysheetfile[index].data?.[0]?.length! <= slen
+                    ) {
+                      showAlert(rightclick.cannotDeleteAllColumn, 'ok');
+                      draftCtx.contextMenu = {};
+                      return;
+                    }
+                    try {
+                      deleteRowCol(draftCtx, deleteRowColOp);
+                    } catch (e: any) {
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteColumnReadOnly, 'ok');
+                      }
+                    }
+                    draftCtx.contextMenu = {};
+                  },
+                  { deleteRowColOp },
+                );
+              }}
+            >
+              <div className="context-item">
+                <LucideIcon name="Trash2" />
+                <div>
+                  {rightclick.deleteSelected}
+                  {rightclick.column}
+                </div>
+              </div>
+            </Menu>
+          )
+        );
+      }
+      if (name === 'cell-delete-column') {
+        return (
+          !selection?.row_select && (
+            <Menu
+              key="cell-delete-col"
+              onClick={() => {
+                if (!selection) return;
+                const [st_index, ed_index] = selection.column;
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'column',
+                  start: st_index,
+                  end: ed_index,
+                  id: context.currentSheetId,
+                };
+                setContext(
+                  (draftCtx) => {
+                    if (draftCtx.luckysheet_select_save?.length! > 1) {
+                      showAlert(rightclick.noMulti, 'ok');
+                      draftCtx.contextMenu = {};
+                      draftCtx.dataVerificationDropDownList = false;
+                      return;
+                    }
+                    const slen = ed_index - st_index + 1;
+                    const index = getSheetIndex(
+                      draftCtx,
+                      context.currentSheetId,
+                    ) as number;
+                    if (
+                      draftCtx.luckysheetfile[index].data?.[0]?.length! <= slen
+                    ) {
+                      showAlert(rightclick.cannotDeleteAllColumn, 'ok');
+                      draftCtx.contextMenu = {};
+                      return;
+                    }
+                    try {
+                      deleteRowCol(draftCtx, deleteRowColOp);
+                    } catch (e: any) {
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteColumnReadOnly, 'ok');
+                      }
+                    }
+                    draftCtx.contextMenu = {};
+                  },
+                  { deleteRowColOp },
+                );
+              }}
+            >
+              <div className="context-item">
+                <LucideIcon name="Trash2" />
+                <div>
+                  {rightclick.deleteSelected}
+                  {rightclick.column}
+                </div>
+              </div>
+            </Menu>
+          )
+        );
+      }
+      if (name === 'delete-row') {
+        return (
+          selection?.row_select && (
+            <Menu
+              key="delete-row"
+              onClick={() => {
+                if (!selection) return;
+                const [st_index, ed_index] = selection.row;
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'row',
+                  start: st_index,
+                  end: ed_index,
+                  id: context.currentSheetId,
+                };
+                setContext(
+                  (draftCtx) => {
+                    if (draftCtx.luckysheet_select_save?.length! > 1) {
+                      showAlert(rightclick.noMulti, 'ok');
+                      draftCtx.contextMenu = {};
+                      return;
+                    }
+                    const slen = ed_index - st_index + 1;
+                    const index = getSheetIndex(
+                      draftCtx,
+                      context.currentSheetId,
+                    ) as number;
+                    if (draftCtx.luckysheetfile[index].data?.length! <= slen) {
+                      showAlert(rightclick.cannotDeleteAllRow, 'ok');
+                      draftCtx.contextMenu = {};
+                      return;
+                    }
+                    try {
+                      deleteRowCol(draftCtx, deleteRowColOp);
+                    } catch (e: any) {
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteRowReadOnly, 'ok');
+                      }
+                    }
+                    draftCtx.contextMenu = {};
+                  },
+                  { deleteRowColOp },
+                );
+              }}
+            >
+              <div className="context-item">
+                <LucideIcon name="Trash2" />
+                <div>
+                  {rightclick.deleteSelected}
+                  {rightclick.row}
+                </div>
+              </div>
+            </Menu>
+          )
+        );
+      }
+      if (name === 'cell-delete-row') {
+        return (
+          !selection?.column_select && (
+            <Menu
+              key="cell-delete-row"
+              onClick={() => {
+                if (!selection) return;
+                const [st_index, ed_index] = selection.row;
+                const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+                  type: 'row',
+                  start: st_index,
+                  end: ed_index,
+                  id: context.currentSheetId,
+                };
+                setContext(
+                  (draftCtx) => {
+                    if (draftCtx.luckysheet_select_save?.length! > 1) {
+                      showAlert(rightclick.noMulti, 'ok');
+                      draftCtx.contextMenu = {};
+                      return;
+                    }
+                    const slen = ed_index - st_index + 1;
+                    const index = getSheetIndex(
+                      draftCtx,
+                      context.currentSheetId,
+                    ) as number;
+                    if (draftCtx.luckysheetfile[index].data?.length! <= slen) {
+                      showAlert(rightclick.cannotDeleteAllRow, 'ok');
+                      draftCtx.contextMenu = {};
+                      return;
+                    }
+                    try {
+                      deleteRowCol(draftCtx, deleteRowColOp);
+                    } catch (e: any) {
+                      if (e.message === 'readOnly') {
+                        showAlert(rightclick.cannotDeleteRowReadOnly, 'ok');
+                      }
+                    }
+                    draftCtx.contextMenu = {};
+                  },
+                  { deleteRowColOp },
+                );
+              }}
+            >
+              <div className="context-item">
+                <LucideIcon name="Trash2" />
+                <div>
+                  {rightclick.deleteSelected}
+                  {rightclick.row}
+                </div>
+              </div>
+            </Menu>
+          )
+        );
+      }
+      if (name === 'hide-row') {
+        return (
+          selection?.row_select &&
+          ['hideSelected'].map((item) => (
+            <Menu
+              key={item}
+              onClick={() => {
+                setContext((draftCtx) => {
+                  let msg = '';
+                  if (item === 'hideSelected') {
+                    msg = hideSelected(draftCtx, 'row');
+                  } else if (item === 'showHide') {
+                    showSelected(draftCtx, 'row');
+                  }
+                  if (msg === 'noMulti') {
+                    showDialog(drag.noMulti);
+                  }
+                  draftCtx.contextMenu = {};
+                });
+              }}
+            >
+              <div className="context-item">
+                <LucideIcon name="EyeOff" />
+                <div>{(rightclick as any)[item] + rightclick.row}</div>
+              </div>
+            </Menu>
+          ))
+        );
+      }
+      if (name === 'hide-column') {
+        return (
+          selection?.column_select === true &&
+          ['hideSelected'].map((item) => (
+            <Menu
+              key={item}
+              onClick={() => {
+                setContext((draftCtx) => {
+                  let msg = '';
+                  if (item === 'hideSelected') {
+                    msg = hideSelected(draftCtx, 'column');
+                  } else if (item === 'showHide') {
+                    showSelected(draftCtx, 'column');
+                  }
+                  if (msg === 'noMulti') {
+                    showDialog(drag.noMulti);
+                  }
+                  draftCtx.contextMenu = {};
+                });
+              }}
+            >
+              <div className="context-item">
+                <LucideIcon name="EyeOff" />
+                <div>{(rightclick as any)[item] + rightclick.column}</div>
+              </div>
+            </Menu>
+          ))
+        );
+      }
+      if (name === 'set-row-height') {
+        const rowHeight = selection?.height || context.defaultrowlen;
+        const shownRowHeight = context.luckysheet_select_save?.some(
+          (section) =>
+            section.height_move !==
+            (rowHeight + 1) * (section.row[1] - section.row[0] + 1) - 1,
+        )
+          ? ''
+          : rowHeight;
+        return context.luckysheet_select_save?.some(
+          (section) => section.row_select,
+        ) ? (
+          <Menu
+            key="set-row-height"
+            onClick={(e, container) => {
+              const targetRowHeight = container.querySelector('input')?.value;
+              setContext((draftCtx) => {
+                if (
+                  _.isUndefined(targetRowHeight) ||
+                  targetRowHeight === '' ||
+                  parseInt(targetRowHeight, 10) <= 0 ||
+                  parseInt(targetRowHeight, 10) > 545
+                ) {
+                  showAlert(info.tipRowHeightLimit, 'ok');
+                  draftCtx.contextMenu = {};
+                  return;
+                }
+                const numRowHeight = parseInt(targetRowHeight, 10);
+                const rowHeightList: Record<string, number> = {};
+                _.forEach(draftCtx.luckysheet_select_save, (section) => {
+                  for (
+                    let rowNum = section.row[0];
+                    rowNum <= section.row[1];
+                    rowNum += 1
+                  ) {
+                    rowHeightList[rowNum] = numRowHeight;
+                  }
+                });
+                api.setRowHeight(draftCtx, rowHeightList, {}, true);
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <SVGIcon name="resize-flv" width={16} height={16} />
+              <div>
+                Resize row height
+                {/* {rightclick.row + ""}
+                  {rightclick.height} */}
+                <input
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  tabIndex={0}
+                  type="number"
+                  min={1}
+                  max={545}
+                  className="luckysheet-mousedown-cancel"
+                  placeholder={rightclick.number}
+                  defaultValue={shownRowHeight}
+                  style={{ width: '40px' }}
+                />
+                px
+              </div>
+            </div>
+          </Menu>
+        ) : null;
+      }
+      if (name === 'set-column-width') {
+        // const colWidth = selection?.width || context.defaultcollen;
+        // const shownColWidth = context.luckysheet_select_save?.some(
+        //   (section) =>
+        //     section.width_move !==
+        //     (colWidth + 1) * (section.column[1] - section.column[0] + 1) - 1
+        // )
+        //   ? ""
+        //   : colWidth;
+        return context.luckysheet_select_save?.some(
+          (section) => section.column_select,
+        ) ? (
+          <Menu
+            key="set-column-width"
+            onClick={() => {
+              showDialog(<ResetColumnWidth />, undefined, 'Resize column');
+              setContext((draftCtx) => {
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <SVGIcon name="resize-flv" width={16} height={16} />
+              <div>Resize column width</div>
+            </div>
+          </Menu>
+        ) : null;
+      }
+      if (name === 'clear') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              setContext((draftCtx) => {
+                const allowEdit = isAllowEdit(draftCtx);
+                if (!allowEdit) return;
+
+                if (draftCtx.activeImg != null) {
+                  removeActiveImage(draftCtx);
+                } else {
+                  const msg = deleteSelectedCellText(draftCtx);
+                  if (msg === 'partMC') {
+                    showDialog(generalDialog.partiallyError, 'ok');
+                  } else if (msg === 'allowEdit') {
+                    showDialog(generalDialog.readOnlyError, 'ok');
+                  } else if (msg === 'dataNullError') {
+                    showDialog(generalDialog.dataNullError, 'ok');
+                  }
+                }
+                draftCtx.contextMenu = {};
+                jfrefreshgrid(draftCtx, null, undefined);
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Eraser" />
+              <p>{rightclick.clearContent}</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'ascSort') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              setContext((draftCtx) => {
+                sortSelection(draftCtx, true);
+                draftCtx.contextMenu = {};
+                draftCtx.contextMenu = {};
+              });
+              // showDialog(
+              //   <DataVerification />,
+              //   undefined,
+              //   toolbar.dataVerification
+              // );
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="ArrowDown01" />
+              <p>Ascending sort</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'desSort') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              setContext((draftCtx) => {
+                sortSelection(draftCtx, false);
+                draftCtx.contextMenu = {};
+                draftCtx.contextMenu = {};
+              });
+              // showDialog(
+              //   <DataVerification />,
+              //   undefined,
+              //   toolbar.dataVerification
+              // );
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="ArrowDown10" />
+              <p>Descending sort</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'sort') {
+        const { sort } = locale(context);
+        return (
+          <Tippy
+            key={name}
+            placement="right-start"
+            interactive
+            interactiveBorder={50}
+            offset={[0, 0]}
+            arrow={false}
+            zIndex={3000}
+            appendTo={document.body}
+            onShow={() => {
+              setActiveMenu('sort');
+            }}
+            onHide={() => {
+              if (activeMenu === 'sort') setActiveMenu('');
+            }}
+            content={
+              <div
+                className="fortune-toolbar-select"
+                style={{ minWidth: '11.25rem' }}
+              >
+                <div className="flex flex-col color-text-default text-body-sm">
+                  <Menu
+                    onClick={() => {
+                      setContext((draftCtx) => {
+                        sortSelection(draftCtx, true);
+                        draftCtx.contextMenu = {};
+                      });
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '40px' }}
+                    >
+                      <LucideIcon name="ArrowUp" />
+                      <p>{sort.asc}</p>
+                    </div>
+                  </Menu>
+                  <Menu
+                    onClick={() => {
+                      setContext((draftCtx) => {
+                        sortSelection(draftCtx, false);
+                        draftCtx.contextMenu = {};
+                      });
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '40px' }}
+                    >
+                      <LucideIcon name="ArrowDown" />
+                      <p>{sort.desc}</p>
+                    </div>
+                  </Menu>
+                  {/* <Menu
+                    onClick={() => {
+                      setContext((draftCtx) => {
+                        showDialog(<CustomSort />);
+                        draftCtx.contextMenu = {};
+                      });
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: "40px" }}
+                    >
+                      <SVGIcon
+                        name="sort"
+                        width={22}
+                        style={{ marginRight: "4px" }}
+                      />
+                      <p>{sort.custom}</p>
+                    </div>
+                  </Menu> */}
+                </div>
+              </div>
+            }
+            trigger="mouseenter focus"
+            hideOnClick={false}
+          >
+            <div>
+              <Menu isActive={activeMenu === 'sort'}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="context-item">
+                    <LucideIcon name="ArrowDownUp" />
+                    <p>{rightclick.sortSelection}</p>
+                  </div>
+                  <LucideIcon name="ChevronRight" width={16} height={16} />
+                </div>
+              </Menu>
+            </div>
+          </Tippy>
+        );
+      }
+      if (name === 'filter') {
+        const { filter } = locale(context);
+        return (
+          <Tippy
+            key={name}
+            placement="right-start"
+            interactive
+            interactiveBorder={50}
+            offset={[0, 0]}
+            arrow={false}
+            zIndex={3000}
+            appendTo={document.body}
+            content={
+              <div
+                className="fortune-toolbar-select"
+                style={{ minWidth: '11.25rem' }}
+              >
+                <div className="flex flex-col color-text-default text-body-sm">
+                  <Menu
+                    onClick={() => {
+                      setContext((draftCtx) => {
+                        createFilter(draftCtx);
+                        draftCtx.contextMenu = {};
+                      });
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '32px' }}
+                    >
+                      <LucideIcon name="Filter" className="w-4 h-4" />
+                      <p>{filter.filter}</p>
+                    </div>
+                  </Menu>
+                  <Menu
+                    onClick={() => {
+                      setContext((draftCtx) => {
+                        clearFilter(draftCtx);
+                        draftCtx.contextMenu = {};
+                      });
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '32px' }}
+                    >
+                      <LucideIcon name="Eraser" />
+                      <p>{filter.clearFilter}</p>
+                    </div>
+                  </Menu>
+                </div>
+              </div>
+            }
+            trigger="mouseenter focus"
+            hideOnClick={false}
+            onShow={() => {
+              setActiveMenu('filter');
+            }}
+            onHide={() => {
+              if (activeMenu === 'filter') setActiveMenu('');
+            }}
+          >
+            <div>
+              <Menu isActive={activeMenu === 'filter'}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="context-item">
+                    <LucideIcon name="Filter" />
+                    <p>{rightclick.filterSelection}</p>
+                  </div>
+                  <LucideIcon
+                    name="ChevronRight"
+                    width={16}
+                    height={16}
+                    className="w-4 h-4 color-text-secondary"
+                  />
+                </div>
+              </Menu>
+            </div>
+          </Tippy>
+        );
+      }
+      if (name === 'image') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              setContext((draftCtx) => {
+                showImgChooser();
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            {rightclick.image}
+          </Menu>
+        );
+      }
+      if (name === 'link') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              setContext((draftCtx) => {
+                handleLink(draftCtx, refs.cellInput.current ?? undefined);
+                draftCtx.contextMenu = {};
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="Link" />
+              <p>{rightclick.link}</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'conditionFormat') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              setContext((draftCtx) => {
+                draftCtx.contextMenu = {};
+              });
+              // @ts-ignore
+              window.conditionalFormatClick(context.luckysheet_select_save);
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="PaintbrushVertical" />
+              <p>Conditional formatting</p>
+            </div>
+          </Menu>
+        );
+      }
+      if (name === 'clear-format') {
+        return (
+          <Menu
+            key={name}
+            onClick={() => {
+              if (context.allowEdit === false) return;
+              setContext((draftCtx) => {
+                draftCtx.contextMenu = {};
+                // @ts-ignore
+                if (draftCtx.contextMenu.headerMenu === 'row') {
+                  clearRowsCellsFormat(draftCtx);
+                } else if (draftCtx.contextMenu.headerMenu === true) {
+                  clearColumnsCellsFormat(draftCtx);
+                } else if (!draftCtx.contextMenu.headerMenu) {
+                  clearSelectedCellFormat(draftCtx);
+                }
+              });
+            }}
+          >
+            <div className="context-item">
+              <LucideIcon name="RemoveFormatting" />
+              <p>Clear formatting</p>
+            </div>
+          </Menu>
+        );
+      }
+      return null;
+    },
+    [
+      context,
+      setContext,
+      refs.globalCache,
+      rightclick,
+      showAlert,
+      showDialog,
+      drag.noMulti,
+      info.tipRowHeightLimit,
+      info.tipColumnWidthLimit,
+      generalDialog.partiallyError,
+      generalDialog.readOnlyError,
+      generalDialog.dataNullError,
+      activeMenu,
+    ],
+  );
+
+  useLayoutEffect(() => {
+    // re-position the context menu if it overflows the window
+    if (!containerRef.current) {
+      return;
+    }
+    const winH = window.innerHeight;
+    const winW = window.innerWidth;
+    const rect = containerRef.current.getBoundingClientRect();
+    const workbookRect =
+      refs.workbookContainer.current?.getBoundingClientRect();
+    if (!workbookRect) {
+      return;
+    }
+    const menuW = rect.width;
+    const menuH = rect.height;
+    let top = contextMenu.y || 0;
+    let left = contextMenu.x || 0;
+
+    let hasOverflow = false;
+    if (workbookRect.left + left + menuW > winW) {
+      left -= menuW;
+      hasOverflow = true;
+    }
+    if (workbookRect.top + top + menuH > winH) {
+      top -= menuH;
+      hasOverflow = true;
+    }
+    if (top < 0) {
+      top = 0;
+      hasOverflow = true;
+    }
+    if (hasOverflow) {
+      setContext((draftCtx) => {
+        draftCtx.contextMenu.x = left;
+        draftCtx.contextMenu.y = top;
+      });
+    }
+  }, [contextMenu.x, contextMenu.y, refs.workbookContainer, setContext]);
+
+  if (_.isEmpty(context.contextMenu)) return null;
+
+  return (
+    <div
+      className="fortune-context-menu luckysheet-cols-menu"
+      ref={containerRef}
+      onContextMenu={(e) => e.stopPropagation()}
+      style={{ left: contextMenu.x, top: contextMenu.y }}
+    >
+      {context.contextMenu.headerMenu === true ||
+      /* @ts-ignore */
+      context.contextMenu.headerMenu === 'row'
+        ? settings.headerContextMenu.map((menu, i) => {
+            return getMenuElement(menu, i);
+          })
+        : settings.cellContextMenu.map((menu, i) => getMenuElement(menu, i))}
+    </div>
+  );
+};
+
+export default ContextMenu;

@@ -1,0 +1,40 @@
+.luckysheet-scrollbar-ltr {
+  position: absolute;
+  overflow: hidden;
+  z-index: 1003;
+}
+
+.luckysheet-scrollbar-ltr div {
+  height: 1px;
+  width: 1px;
+}
+
+.luckysheet-scrollbar-x {
+  bottom: 0px;
+  overflow-x: scroll;
+}
+
+.luckysheet-scrollbar-y {
+  right: 0px;
+  top: 0px;
+  overflow-y: scroll;
+}
+
+.luckysheet-scrollbar-ltr::-webkit-scrollbar {
+  background-color: transparent;
+  width: 8px;
+  height: 8px;
+}
+
+.luckysheet-scrollbar-ltr::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+.luckysheet-scrollbar-ltr::-webkit-scrollbar-thumb {
+  background-color: #babac0;
+  border-radius: 16px;
+}
+
+.luckysheet-scrollbar-ltr::-webkit-scrollbar-button {
+  display: none;
+}

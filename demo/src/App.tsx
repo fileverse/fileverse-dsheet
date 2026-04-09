@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import DSheetEditor from '../../package/dsheet-editor';
+import { DSheetEditor, WorkbookInstance } from '../../src/index';
 import {
   Button,
   Tag,
@@ -9,7 +9,6 @@ import {
   DynamicDropdown,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
-import { WorkbookInstance } from '@fileverse-dev/fortune-react';
 
 function App() {
   const [title, setTitle] = useState('Untitled');
@@ -20,10 +19,11 @@ function App() {
   // Use a stable dsheetId
   const dsheetId = 'demo-dsheet-6';
   // @ts-expect-error later
-  window.NEXT_PUBLIC_PROXY_BASE_URL = 'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
+  window.NEXT_PUBLIC_PROXY_BASE_URL =
+    'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
 
   // Handle data changes in the sheet - kept empty as we don't need to log anything
-  const handleSheetChange = useCallback(() => { }, []);
+  const handleSheetChange = useCallback(() => {}, []);
 
   const renderNavbar = (): JSX.Element => {
     return (
@@ -73,7 +73,7 @@ function App() {
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 ">
                   <Button
                     variant={'ghost'}
-                    onClick={() => { }}
+                    onClick={() => {}}
                     className="flex justify-start gap-2"
                   >
                     <LucideIcon name="Share2" size="sm" />
@@ -110,11 +110,13 @@ function App() {
     );
   };
 
-
   const [isNewSheet, setIsNewSheet] = useState(false);
 
-
-  useEffect(() => { setTimeout(() => { setIsNewSheet(true) }, 5000) }, [])
+  useEffect(() => {
+    setTimeout(() => {
+      setIsNewSheet(true);
+    }, 5000);
+  }, []);
 
   const EditorPage = () => (
     <div>

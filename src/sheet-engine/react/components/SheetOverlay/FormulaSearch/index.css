@@ -1,0 +1,53 @@
+.luckysheet-formula-search-c-p {
+  position: absolute;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: #535353;
+  font-size: 12px;
+  background: #fff;
+  z-index: 1003;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.luckysheet-formula-search-c {
+  color: #535353;
+  font-size: 12px;
+  background: #fff;
+  width: 300px;
+  max-height: 325px;
+  overflow-y: auto;
+    border-radius: 10px;
+
+}
+
+.luckysheet-formula-search-c .luckysheet-formula-search-item {
+  background: #fff;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.luckysheet-formula-search-c
+  .luckysheet-formula-search-item
+  .luckysheet-formula-search-detail {
+  display: none;
+  color: #77818a;
+}
+
+.luckysheet-formula-search-c
+  .luckysheet-formula-search-item
+  .luckysheet-formula-search-func {
+  font-size: 14px;
+}
+
+.luckysheet-formula-search-c .luckysheet-formula-search-item-active {
+  display: block;
+  border-top: 1px solid #ebebeb;
+  border-bottom: 1px solid #ebebeb;
+  background: #f2f4f5;
+}
+
+.luckysheet-formula-search-c
+  .luckysheet-formula-search-item-active
+  .luckysheet-formula-search-detail {
+  display: block;
+}

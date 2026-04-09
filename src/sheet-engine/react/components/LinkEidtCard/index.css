@@ -1,0 +1,258 @@
+.fortune-link-modify-modal {
+  position: absolute;
+  overflow: hidden;
+  background-color: #fff;
+  z-index: 300;
+  padding: 16px 20px 20px 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+}
+
+.fortune-link-cards-container {
+  position: absolute;
+  display: flex;
+  gap: 16px;
+  z-index: 300;
+}
+
+.fortune-link-card {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 16px;
+  width: fit-content;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 300;
+}
+
+.fortune-link-card--editing {
+  min-width: 280px;
+}
+
+.fortune-link-type-select {
+  width: 100% !important;
+}
+
+.fortune-link-type-dropdown {
+  z-index: 999999 !important;
+}
+
+.fortune-sheet-dropdown {
+  z-index: 999999 !important;
+}
+
+.fortune-input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fortune-input-with-icon .input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #666;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fortune-input-with-icon .input-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.fortune-link-input {
+  width: 100% !important;
+  padding-left: 36px !important;
+}
+
+.fortune-sheet-select {
+  width: 100% !important;
+  padding-left: 36px !important;
+}
+
+/* Ensure Select dropdowns appear above everything */
+[data-radix-portal] {
+  z-index: 999999 !important;
+}
+
+.fortune-insert-button {
+  width: 100% !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 12px !important;
+  font-weight: 500 !important;
+}
+
+.fortune-link-modify-modal.link-toolbar {
+  display: flex;
+  flex-direction: row;
+  padding: 2px 8px 2px 16px;
+  align-items: center;
+}
+
+.fortune-link-modify-modal .link-content {
+  margin-right: 6px;
+}
+
+.fortune-link-modify-modal .link-content:hover {
+  color: #2674fb;
+  cursor: pointer;
+}
+
+.fortune-link-modify-modal .divider {
+  width: 1px;
+  height: 16px;
+  margin: 0px 6px;
+  background-color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.fortune-link-modify-modal .fortune-toolbar-button {
+  padding: 6px;
+}
+
+.fortune-link-modify-modal .fortune-toolbar-button:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+}
+
+.fortune-link-modify-modal.range-selection-modal {
+  width: 380px;
+  padding: 22px;
+  user-select: auto;
+  background-color: #fff;
+}
+
+.fortune-link-modify-line {
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fortune-link-modify-line:first-child {
+  padding-top: 0;
+}
+
+.fortune-link-modify-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 4px;
+}
+
+.fortune-link-modify-input {
+  width: 100% !important;
+}
+
+.fortune-link-modify-select {
+  width: 100% !important;
+}
+
+.input-with-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-selector .fortune-link-modify-input {
+  padding-right: 32px !important;
+}
+
+.fortune-link-modify-cell-selector {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  border-radius: 4px;
+}
+
+.fortune-link-modify-cell-selector:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.fortune-link-modify-modal .modal-title {
+  font-weight: 600;
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.88);
+  margin-bottom: 16px;
+  line-height: 24px;
+}
+
+.fortune-link-modify-modal .range-selection-input {
+  width: 100% !important;
+}
+
+.fortune-link-modify-modal .modal-icon-close {
+  position: absolute;
+  right: 22px;
+  top: 22px;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.fortune-link-modify-modal .modal-icon-close:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.fortune-link-modify-modal .validation-input-tip {
+  font-size: 12px;
+  color: #ef4e2f;
+  margin-top: 4px;
+}
+
+.fortune-link-modify-modal .button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.fortune-link-modify-modal .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 20px;
+  margin-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.fortune-link-modify-modal.range-selection-modal .modal-footer {
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Error state styling for fileverse/ui components */
+.fortune-link-modify-modal .error-input input,
+.fortune-link-card .error-input input {
+  border-color: #ef4e2f !important;
+}
+
+.fortune-link-modify-modal .error-input input:focus,
+.fortune-link-card .error-input input:focus {
+  border-color: #ef4e2f !important;
+  box-shadow: 0 0 0 2px rgba(239, 78, 47, 0.2) !important;
+}
