@@ -221,6 +221,53 @@ export function setPrimaryCellActive(ctx: Context, r: number, c: number) {
   ctx.primaryCellActive = { r, c };
 }
 
+/**
+ * After formula segment / delete handling, move selection focus to the edited cell
+ * (r,c). If the sheet already has a multi-cell range and (r,c) is inside it, keep
+ * that range so Enter-primary navigation + typing do not collapse the yellow box.
+ */
+export function snapSheetSelectionFocusToCellPreserveMultiRange(
+  ctx: Context,
+  r: number,
+  c: number
+) {
+  const sel = ctx.luckysheet_select_save;
+  const last = sel?.[sel.length - 1];
+  if (!last?.row || last.row.length < 2 || !last.column || last.column.length < 2) {
+    ctx.luckysheet_select_save = [
+      {
+        row: [r, r],
+        column: [c, c],
+        row_focus: r,
+        column_focus: c,
+      },
+    ];
+    normalizeSelection(ctx, ctx.luckysheet_select_save);
+    return;
+  }
+  const rLo = Math.min(last.row[0], last.row[1]);
+  const rHi = Math.max(last.row[0], last.row[1]);
+  const cLo = Math.min(last.column[0], last.column[1]);
+  const cHi = Math.max(last.column[0], last.column[1]);
+  const multi = rLo !== rHi || cLo !== cHi;
+  const inside = r >= rLo && r <= rHi && c >= cLo && c <= cHi;
+  if (multi && inside) {
+    last.row_focus = r;
+    last.column_focus = c;
+    normalizeSelection(ctx, sel);
+  } else {
+    ctx.luckysheet_select_save = [
+      {
+        row: [r, r],
+        column: [c, c],
+        row_focus: r,
+        column_focus: c,
+      },
+    ];
+    normalizeSelection(ctx, ctx.luckysheet_select_save);
+  }
+}
+
 export function normalizeSelection(
   ctx: Context,
   selection: SheetType["luckysheet_select_save"]
@@ -958,6 +1005,12 @@ export function moveHighlightCell(
       return;
     }
 
+    const extentR0 = last.row[0];
+    const extentR1 = last.row[1];
+    const extentC0 = last.column[0];
+    const extentC1 = last.column[1];
+    const extentWasMulti = extentR0 !== extentR1 || extentC0 !== extentC1;
+
     let curR;
     if (_.isNil(last.row_focus)) {
       [curR] = last.row;
@@ -1065,11 +1118,17 @@ export function moveHighlightCell(
       return;
     }
 
-    last.row = [row_index, row_index_ed];
-    last.column = [col_index, col_index_ed];
-    last.row_focus = row_index;
-    last.column_focus = col_index;
-    last.moveXY = { x: moveX, y: moveY };
+    if (extentWasMulti && index === 0) {
+      last.row_focus = row_index;
+      last.column_focus = col_index;
+      last.moveXY = { x: moveX, y: moveY };
+    } else {
+      last.row = [row_index, row_index_ed];
+      last.column = [col_index, col_index_ed];
+      last.row_focus = row_index;
+      last.column_focus = col_index;
+      last.moveXY = { x: moveX, y: moveY };
+    }
 
     normalizeSelection(ctx, ctx.luckysheet_select_save);
     // TODO pivotTable.pivotclick(row_index, col_index);
@@ -1200,6 +1259,8 @@ export function moveHighlightCell(
       column_focus: col_index,
       moveXY: { x: moveX, y: moveY },
     };
+
+    scrollToHighlightCell(ctx, row_index, col_index);
 
     // $("#fortune-formula-functionrange-select")
     //   .css({
@@ -1638,6 +1699,10 @@ export function moveHighlightRange(
       row_focus: rf,
       column_focus: cf,
     };
+
+    if (!_.isNil(rf) && !_.isNil(cf)) {
+      scrollToHighlightCell(ctx, rf, cf);
+    }
   }
 }
 

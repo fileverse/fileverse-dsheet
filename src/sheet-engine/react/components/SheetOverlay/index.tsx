@@ -334,19 +334,19 @@ const SheetOverlay: React.FC = () => {
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
-                  type: 'column',
-                  index: selection!.column[0],
-                  count: 1,
-                  direction: 'lefttop',
-                  id: context.currentSheetId,
-                }
+                type: 'column',
+                index: selection!.column[0],
+                count: 1,
+                direction: 'lefttop',
+                id: context.currentSheetId,
+              }
               : {
-                  type: 'row',
-                  index: selection!.row[1],
-                  count: 1,
-                  direction: 'rightbottom',
-                  id: context.currentSheetId,
-                };
+                type: 'row',
+                index: selection!.row[1],
+                count: 1,
+                direction: 'rightbottom',
+                id: context.currentSheetId,
+              };
 
           setContext((draftCtx) => {
             insertRowCol(draftCtx, insertRowColOp, false);
@@ -612,9 +612,12 @@ const SheetOverlay: React.FC = () => {
           {context.formulaRangeSelect && (
             <div
               className="fortune-selection-copy fortune-formula-functionrange-select"
-              style={context.formulaRangeSelect}
+              style={_.omit(context.formulaRangeSelect, 'rangeIndex')}
             >
-              <div className="fortune-selection-copy-hc" />
+              <div
+                className="fortune-selection-copy-hc"
+                style={formulaRangeHighlightHcStyle('#12a5ff')}
+              />
             </div>
           )}
           {context.formulaRangeHighlight.map((v) => {
@@ -760,10 +763,10 @@ const SheetOverlay: React.FC = () => {
                         left: selection.left_move,
                         top: selection.top_move,
                         width: selection.width_move
-                          ? selection.width_move - 1.8
+                          ? selection.width_move - (isMultiCell ? 0.6 : 1.8)
                           : selection.width_move,
                         height: selection.height_move
-                          ? selection.height_move - 1.8
+                          ? selection.height_move - (isMultiCell ? 0.6 : 1.8)
                           : selection.height_move,
                         borderWidth: isMultiCell ? 1 : 2,
                         display: hideSelectionWhileEditing ? 'none' : 'block',

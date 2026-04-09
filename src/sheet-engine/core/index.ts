@@ -97,6 +97,7 @@ export {
   getFormulaRangeIndexForKeyboardSync,
   createFormulaRangeSelect,
   isFormulaReferenceInputMode,
+  seedFormulaFuncSelectedRangeFromLastSelection,
   // freeze
   initFreeze,
   // inline-string
@@ -121,6 +122,7 @@ export {
   syncPrimaryCellActiveFromSelection,
   setPrimaryCellActive,
   advancePrimaryCellInLastMultiSelection,
+  snapSheetSelectionFocusToCellPreserveMultiRange,
   moveHighlightCell,
   deleteSelectedCellText,
   selectAll,

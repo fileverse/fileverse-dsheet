@@ -22,8 +22,10 @@ import {
   isAllowEdit,
   suppressFormulaRangeSelectionForInitialEdit,
   normalizeSelection,
+  snapSheetSelectionFocusToCellPreserveMultiRange,
   advancePrimaryCellInLastMultiSelection,
   isLegacyFormulaRangeMode,
+  isFormulaReferenceInputMode,
 } from '@sheet-engine/core';
 import React, {
   useContext,
@@ -414,18 +416,12 @@ const FxEditor: React.FC = () => {
           setTimeout(() => {
             setContext((draftCtx) => {
               draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
-              draftCtx.luckysheet_select_save = [
-                {
-                  row: [anchorRow, anchorRow],
-                  column: [anchorCol, anchorCol],
-                  row_focus: anchorRow,
-                  column_focus: anchorCol,
-                },
-              ];
-              normalizeSelection(
+              snapSheetSelectionFocusToCellPreserveMultiRange(
                 draftCtx,
-                draftCtx.luckysheet_select_save,
+                anchorRow,
+                anchorCol,
               );
+              draftCtx.formulaCache.formulaKeyboardRefSync = false;
               // Recompute selection box immediately so UI snaps back to anchor cell.
               moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
@@ -508,18 +504,12 @@ const FxEditor: React.FC = () => {
         setTimeout(() => {
           setContext((draftCtx) => {
             draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
-            draftCtx.luckysheet_select_save = [
-              {
-                row: [anchorRow, anchorRow],
-                column: [anchorCol, anchorCol],
-                row_focus: anchorRow,
-                column_focus: anchorCol,
-              },
-            ];
-            normalizeSelection(
+            snapSheetSelectionFocusToCellPreserveMultiRange(
               draftCtx,
-              draftCtx.luckysheet_select_save,
+              anchorRow,
+              anchorCol,
             );
+            draftCtx.formulaCache.formulaKeyboardRefSync = false;
             draftCtx.formulaRangeSelect = undefined;
             draftCtx.formulaCache.selectingRangeIndex = -1;
             draftCtx.formulaCache.func_selectedrange = undefined;
@@ -552,9 +542,20 @@ const FxEditor: React.FC = () => {
         !currentInputText.startsWith('=');
       const sheetArrowShortcut =
         isArrowKey && (e.metaKey || e.ctrlKey || e.shiftKey);
+      const formulaRefSheetArrow =
+        context.luckysheetCellUpdate.length > 0 &&
+        currentInputText.startsWith('=') &&
+        isFormulaReferenceInputMode(context);
+      // Let `handleGlobalKeyDown` run `handleArrowKey` / `handleShiftWithArrowKey` /
+      // Ctrl+Arrow — same as in-cell; stopPropagation would leave Shift+Arrow to
+      // native contenteditable selection and skip the blue formula range path.
+      if (formulaRefSheetArrow && sheetArrowShortcut) {
+        e.preventDefault();
+      }
       if (
         (key === 'ArrowLeft' || key === 'ArrowRight') &&
-        !(isDirectPlainTypeEdit && sheetArrowShortcut)
+        !(isDirectPlainTypeEdit && sheetArrowShortcut) &&
+        !formulaRefSheetArrow
       ) {
         e.stopPropagation();
       }

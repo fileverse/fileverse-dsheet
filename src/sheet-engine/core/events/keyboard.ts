@@ -5,6 +5,8 @@ import { updateCell, cancelNormalSelected } from "../modules/cell";
 import {
   handleFormulaInput,
   isLegacyFormulaRangeMode,
+  isFormulaReferenceInputMode,
+  seedFormulaFuncSelectedRangeFromLastSelection,
   israngeseleciton,
   maybeRecoverDirtyRangeSelection,
   markRangeSelectionDirty,
@@ -37,7 +39,7 @@ import {
   handleLink,
 } from "../modules/toolbar";
 import { hasPartMC } from "../modules/validation";
-import { CellMatrix, GlobalCache } from "../types";
+import { CellMatrix, GlobalCache, Selection } from "../types";
 import { getNowDateTime, getSheetIndex, isAllowEdit } from "../utils";
 import { handleCopy } from "./copy";
 import { jfrefreshgrid } from "../modules/refresh";
@@ -45,6 +47,42 @@ import { moveToEnd } from "../modules/cursor";
 
 function clearTypeOverPending(cache: GlobalCache) {
   delete cache.pendingTypeOverCell;
+}
+
+/** Immer tracks this; `FormulaCache` mutations alone do not re-render React. */
+function bumpFormulaKeyboardRangeSync(
+  ctx: Context,
+  navType: "rangeOfFormula" | "rangeOfSelect"
+) {
+  if (navType === "rangeOfFormula") {
+    ctx.formulaCache.formulaKeyboardRefSync = true;
+    ctx.formulaRangeNavRevision = (ctx.formulaRangeNavRevision ?? 0) + 1;
+  }
+}
+
+/**
+ * Formula reference keyboard path: seed `func_selectedrange`, use it for moves/jump-to-edge
+ * while keeping yellow `luckysheet_select_save` on the edited cell.
+ */
+function getFormulaKeyboardNavState(ctx: Context): {
+  navType: "rangeOfFormula" | "rangeOfSelect";
+  navSelection: Selection | undefined;
+} {
+  const useFormulaRangeOnly =
+    ctx.luckysheetCellUpdate.length > 0 &&
+    isFormulaReferenceInputMode(ctx);
+  if (useFormulaRangeOnly) {
+    seedFormulaFuncSelectedRangeFromLastSelection(ctx);
+  }
+  const navType =
+    useFormulaRangeOnly && ctx.formulaCache.func_selectedrange
+      ? "rangeOfFormula"
+      : "rangeOfSelect";
+  const navSelection =
+    navType === "rangeOfFormula" && ctx.formulaCache.func_selectedrange
+      ? ctx.formulaCache.func_selectedrange
+      : ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1];
+  return { navType, navSelection };
 }
 
 /** Content to place in the editor when opening via a keypress; `""` = clear. `undefined` = let IME / default handle. */
@@ -85,7 +123,6 @@ export function handleGlobalEnter(
     //   );
     // } else {
     const lastCellUpdate = _.clone(ctx.luckysheetCellUpdate);
-    const legacyFormulaRange = isLegacyFormulaRangeMode(ctx);
     const selSnapshot =
       ctx.luckysheet_select_save != null
         ? _.cloneDeep(ctx.luckysheet_select_save)
@@ -108,7 +145,10 @@ export function handleGlobalEnter(
     cache.enteredEditByTyping = false;
     clearTypeOverPending(cache);
 
-    if (wasMulti && !legacyFormulaRange && selSnapshot) {
+    // Do not gate on `isLegacyFormulaRangeMode`: after keyboard formula range picks,
+    // rangestart / rangeSelectionActive / israngeseleciton can still be true before
+    // commit; skipping the multi path collapsed the sheet selection to one cell.
+    if (wasMulti && selSnapshot) {
       ctx.luckysheet_select_save = _.cloneDeep(selSnapshot);
       const lastSel =
         ctx.luckysheet_select_save[ctx.luckysheet_select_save.length - 1];
@@ -314,11 +354,16 @@ function handleControlPlusArrowKey(
   if (isFormulaRefMode) {
     ctx.formulaCache.rangeSelectionActive = true;
   }
-  if (ctx.luckysheetCellUpdate.length > 0 && !isFormulaRefMode) {
+  if (
+    ctx.luckysheetCellUpdate.length > 0 &&
+    !isFormulaRefMode &&
+    !isFormulaReferenceInputMode(ctx)
+  ) {
     return;
   }
 
-  // if (ctx.luckysheetCellUpdate.length > 0) return;
+  const { navType, navSelection: last } = getFormulaKeyboardNavState(ctx);
+  if (!last) return;
 
   const idx = getSheetIndex(ctx, ctx.currentSheetId);
   if (_.isNil(idx)) return;
@@ -327,10 +372,6 @@ function handleControlPlusArrowKey(
   if (!file || _.isNil(file.row) || _.isNil(file.column)) return;
   const maxRow = file.row;
   const maxCol = file.column;
-  let last;
-  if (ctx.luckysheet_select_save && ctx.luckysheet_select_save.length > 0)
-    last = ctx.luckysheet_select_save[ctx.luckysheet_select_save.length - 1];
-  if (!last) return;
 
   const currR = last.row_focus;
   const currC = last.column_focus;
@@ -364,10 +405,10 @@ function handleControlPlusArrowKey(
         maxCol
       );
       if (shiftPressed) {
-        moveHighlightRange(ctx, "down", verticalOffset, "rangeOfSelect");
-        moveHighlightRange(ctx, "down", selectedLimit - currR, "rangeOfSelect");
+        moveHighlightRange(ctx, "down", verticalOffset, navType);
+        moveHighlightRange(ctx, "down", selectedLimit - currR, navType);
       } else {
-        moveHighlightCell(ctx, "down", selectedLimit - currR, "rangeOfSelect");
+        moveHighlightCell(ctx, "down", selectedLimit - currR, navType);
       }
       break;
     case "ArrowDown":
@@ -385,10 +426,10 @@ function handleControlPlusArrowKey(
         maxCol
       );
       if (shiftPressed) {
-        moveHighlightRange(ctx, "down", verticalOffset, "rangeOfSelect");
-        moveHighlightRange(ctx, "down", selectedLimit - currR, "rangeOfSelect");
+        moveHighlightRange(ctx, "down", verticalOffset, navType);
+        moveHighlightRange(ctx, "down", selectedLimit - currR, navType);
       } else {
-        moveHighlightCell(ctx, "down", selectedLimit - currR, "rangeOfSelect");
+        moveHighlightCell(ctx, "down", selectedLimit - currR, navType);
       }
       break;
     case "ArrowLeft":
@@ -406,15 +447,15 @@ function handleControlPlusArrowKey(
         maxCol
       );
       if (shiftPressed) {
-        moveHighlightRange(ctx, "right", horizontalOffset, "rangeOfSelect");
+        moveHighlightRange(ctx, "right", horizontalOffset, navType);
         moveHighlightRange(
           ctx,
           "right",
           selectedLimit - currC,
-          "rangeOfSelect"
+          navType
         );
       } else {
-        moveHighlightCell(ctx, "right", selectedLimit - currC, "rangeOfSelect");
+        moveHighlightCell(ctx, "right", selectedLimit - currC, navType);
       }
       break;
     case "ArrowRight":
@@ -432,20 +473,22 @@ function handleControlPlusArrowKey(
         maxCol
       );
       if (shiftPressed) {
-        moveHighlightRange(ctx, "right", horizontalOffset, "rangeOfSelect");
+        moveHighlightRange(ctx, "right", horizontalOffset, navType);
         moveHighlightRange(
           ctx,
           "right",
           selectedLimit - currC,
-          "rangeOfSelect"
+          navType
         );
       } else {
-        moveHighlightCell(ctx, "right", selectedLimit - currC, "rangeOfSelect");
+        moveHighlightCell(ctx, "right", selectedLimit - currC, navType);
       }
       break;
     default:
-      break;
+      return;
   }
+
+  bumpFormulaKeyboardRangeSync(ctx, navType);
 }
 
 export function handleWithCtrlOrMetaKey(
@@ -760,11 +803,14 @@ function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
 
   if (
     ctx.luckysheetCellUpdate.length > 0 &&
-    !isFormulaMode
+    !isFormulaMode &&
+    !isFormulaReferenceInputMode(ctx)
     // || $(event.target).hasClass("formulaInputFocus")
   ) {
     return;
   }
+
+  const { navType: shiftNavType } = getFormulaKeyboardNavState(ctx);
 
   ctx.luckysheet_shiftpositon = _.cloneDeep(
     ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1]
@@ -782,20 +828,22 @@ function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
   // shift + 方向键 调整选区
   switch (e.key) {
     case "ArrowUp":
-      moveHighlightRange(ctx, "down", -1, "rangeOfSelect");
+      moveHighlightRange(ctx, "down", -1, shiftNavType);
       break;
     case "ArrowDown":
-      moveHighlightRange(ctx, "down", 1, "rangeOfSelect");
+      moveHighlightRange(ctx, "down", 1, shiftNavType);
       break;
     case "ArrowLeft":
-      moveHighlightRange(ctx, "right", -1, "rangeOfSelect");
+      moveHighlightRange(ctx, "right", -1, shiftNavType);
       break;
     case "ArrowRight":
-      moveHighlightRange(ctx, "right", 1, "rangeOfSelect");
+      moveHighlightRange(ctx, "right", 1, shiftNavType);
       break;
     default:
       break;
   }
+
+  bumpFormulaKeyboardRangeSync(ctx, shiftNavType);
 
   e.preventDefault();
 }
@@ -819,7 +867,11 @@ export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
   if (isFormulaRefMode) ctx.formulaCache.rangeSelectionActive = true;
   // If editor is active but caret is not in formula-reference mode, keep
   // native caret behavior and do not move selected grid cell/range.
-  if (ctx.luckysheetCellUpdate.length > 0 && !isFormulaRefMode) {
+  if (
+    ctx.luckysheetCellUpdate.length > 0 &&
+    !isFormulaRefMode &&
+    !isFormulaReferenceInputMode(ctx)
+  ) {
     return;
   }
 
@@ -835,23 +887,27 @@ export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
     // `isLegacyFormulaRangeMode` / `israngeseleciton`.
   }
 
+  const { navType } = getFormulaKeyboardNavState(ctx);
+
   const moveCount = hideCRCount(ctx, e.key);
   switch (e.key) {
     case "ArrowUp":
-      moveHighlightCell(ctx, "down", -moveCount, "rangeOfSelect");
+      moveHighlightCell(ctx, "down", -moveCount, navType);
       break;
     case "ArrowDown":
-      moveHighlightCell(ctx, "down", moveCount, "rangeOfSelect");
+      moveHighlightCell(ctx, "down", moveCount, navType);
       break;
     case "ArrowLeft":
-      moveHighlightCell(ctx, "right", -moveCount, "rangeOfSelect");
+      moveHighlightCell(ctx, "right", -moveCount, navType);
       break;
     case "ArrowRight":
-      moveHighlightCell(ctx, "right", moveCount, "rangeOfSelect");
+      moveHighlightCell(ctx, "right", moveCount, navType);
       break;
     default:
       break;
   }
+
+  bumpFormulaKeyboardRangeSync(ctx, navType);
 
   // Keep the formula caret anchored while arrow keys drive sheet selection.
   e.preventDefault();
@@ -928,9 +984,19 @@ export async function handleGlobalKeyDown(
   // @ts-ignore // eslint-disable-next-line no-restricted-globals
   const isFxInput = e?.target?.classList?.contains("fortune-fx-input");
 
+  // Fx bar normally ignores only Left/Right so local handlers can run; Up/Down hit
+  // this early `return` and never reach `handleArrowKey` / `handleShiftWithArrowKey`.
+  // In formula reference mode, sheet arrows must reach those handlers (same as in-cell).
+  const fxPassArrowsToSheet =
+    isFxInput &&
+    ctx.luckysheetCellUpdate.length > 0 &&
+    isFormulaReferenceInputMode(ctx);
+
   const ignoredKeys = new Set(
     isFxInput
-      ? ["Enter", "Tab", "ArrowLeft", "ArrowRight"]
+      ? fxPassArrowsToSheet
+        ? ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+        : ["Enter", "Tab", "ArrowLeft", "ArrowRight"]
       : ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
   );
   const restCod = !ignoredKeys.has(kstr);
