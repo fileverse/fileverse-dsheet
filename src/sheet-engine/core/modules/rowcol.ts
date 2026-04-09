@@ -264,23 +264,21 @@ export function insertRowCol(
     templateSourceColumns.length === count &&
     d[0] != null &&
     templateSourceColumns.every((c) => c >= 0 && c < d[0].length);
+  const firstTemplateRow = usePerRowTemplates ? templateSourceRows![0] : null;
+  const firstTemplateCol = usePerColTemplates ? templateSourceColumns![0] : null;
 
   if (changeSelection) {
     if (type === "row") {
       if (usePerRowTemplates) {
-        for (let ri = 0; ri < templateSourceRows!.length; ri += 1) {
-          if (cfg.rowReadOnly?.[templateSourceRows![ri]]) {
-            throw new Error("readOnly");
-          }
+        if (cfg.rowReadOnly?.[firstTemplateRow!]) {
+          throw new Error("readOnly");
         }
       } else if (cfg.rowReadOnly?.[index]) {
         throw new Error("readOnly");
       }
     } else if (usePerColTemplates) {
-      for (let ci = 0; ci < templateSourceColumns!.length; ci += 1) {
-        if (cfg.colReadOnly?.[templateSourceColumns![ci]]) {
-          throw new Error("readOnly");
-        }
+      if (cfg.colReadOnly?.[firstTemplateCol!]) {
+        throw new Error("readOnly");
       }
     } else if (cfg.colReadOnly?.[index]) {
       throw new Error("readOnly");
@@ -297,7 +295,7 @@ export function insertRowCol(
 
   const snapRowDv =
     usePerRowTemplates && file.dataVerification != null
-      ? templateSourceRows!.map((sr) => {
+      ? [firstTemplateRow!].map((sr) => {
           const m: Record<number, any> = {};
           _.forEach(file.dataVerification, (v, key) => {
             const r = Number(key.split("_")[0]);
@@ -309,7 +307,7 @@ export function insertRowCol(
       : null;
   const snapRowHl =
     usePerRowTemplates && file.hyperlink != null
-      ? templateSourceRows!.map((sr) => {
+      ? [firstTemplateRow!].map((sr) => {
           const m: Record<number, any> = {};
           _.forEach(file.hyperlink, (v, key) => {
             const r = Number(key.split("_")[0]);
@@ -321,7 +319,7 @@ export function insertRowCol(
       : null;
   const snapColDv =
     usePerColTemplates && file.dataVerification != null
-      ? templateSourceColumns!.map((sc) => {
+      ? [firstTemplateCol!].map((sc) => {
           const m: Record<number, any> = {};
           _.forEach(file.dataVerification, (v, key) => {
             const r = Number(key.split("_")[0]);
@@ -333,7 +331,7 @@ export function insertRowCol(
       : null;
   const snapColHl =
     usePerColTemplates && file.hyperlink != null
-      ? templateSourceColumns!.map((sc) => {
+      ? [firstTemplateCol!].map((sc) => {
           const m: Record<number, any> = {};
           _.forEach(file.hyperlink, (v, key) => {
             const r = Number(key.split("_")[0]);
@@ -878,13 +876,10 @@ export function insertRowCol(
     const rowBorderSnapshot = _.cloneDeep(cfg.borderInfo || []);
 
     const refRowHeightsForInsert = usePerRowTemplates
-      ? templateSourceRows!.map(
-          (r) =>
-            cfg.rowlen?.[r] ?? file.defaultRowHeight ?? ctx.defaultrowlen,
-        )
+      ? [cfg.rowlen?.[firstTemplateRow!] ?? file.defaultRowHeight ?? ctx.defaultrowlen]
       : null;
     const refRowCustomsForInsert = usePerRowTemplates
-      ? templateSourceRows!.map((r) => cfg.customHeight?.[r])
+      ? [cfg.customHeight?.[firstTemplateRow!]]
       : null;
     const refRowHeightBeforeInsert =
       cfg.rowlen?.[index] ?? file.defaultRowHeight ?? ctx.defaultrowlen;
@@ -952,13 +947,13 @@ export function insertRowCol(
     const newRowStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       cfg.rowlen![newRowStart + i] = refRowHeightsForInsert
-        ? refRowHeightsForInsert[i]
+        ? refRowHeightsForInsert[0]
         : refRowHeightBeforeInsert;
     }
     if (refRowHeightsForInsert) {
       cfg.customHeight ||= {};
       for (let i = 0; i < count; i += 1) {
-        if (refRowCustomsForInsert![i] === 1) {
+        if (refRowCustomsForInsert![0] === 1) {
           cfg.customHeight[newRowStart + i] = 1;
         }
       }
@@ -1074,7 +1069,7 @@ export function insertRowCol(
 
     const arr = [];
     for (let r = 0; r < count; r += 1) {
-      const srcRowIdx = usePerRowTemplates ? templateSourceRows![r] : index;
+      const srcRowIdx = usePerRowTemplates ? firstTemplateRow! : index;
       const row = buildTemplateRowFromData(d, srcRowIdx, count, direction);
       arr.push(JSON.stringify(row));
       let bordersToDup: any[] = [];
@@ -1118,13 +1113,10 @@ export function insertRowCol(
     const colBorderSnapshot = _.cloneDeep(cfg.borderInfo || []);
 
     const refColWidthsForInsert = usePerColTemplates
-      ? templateSourceColumns!.map(
-          (c) =>
-            cfg.columnlen?.[c] ?? file.defaultColWidth ?? ctx.defaultcollen,
-        )
+      ? [cfg.columnlen?.[firstTemplateCol!] ?? file.defaultColWidth ?? ctx.defaultcollen]
       : null;
     const refColCustomsForInsert = usePerColTemplates
-      ? templateSourceColumns!.map((c) => cfg.customWidth?.[c])
+      ? [cfg.customWidth?.[firstTemplateCol!]]
       : null;
     const refColWidthBeforeInsert =
       cfg.columnlen?.[index] ?? file.defaultColWidth ?? ctx.defaultcollen;
@@ -1193,13 +1185,13 @@ export function insertRowCol(
     const newColStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       cfg.columnlen![newColStart + i] = refColWidthsForInsert
-        ? refColWidthsForInsert[i]
+        ? refColWidthsForInsert[0]
         : refColWidthBeforeInsert;
     }
     if (refColWidthsForInsert) {
       cfg.customWidth ||= {};
       for (let i = 0; i < count; i += 1) {
-        if (refColCustomsForInsert![i] === 1) {
+        if (refColCustomsForInsert![0] === 1) {
           cfg.customWidth[newColStart + i] = 1;
         }
       }
@@ -1235,7 +1227,7 @@ export function insertRowCol(
 
     const colTemplates: any[][] = [];
     for (let ci = 0; ci < count; ci += 1) {
-      const srcColIdx = usePerColTemplates ? templateSourceColumns![ci] : index;
+      const srcColIdx = usePerColTemplates ? firstTemplateCol! : index;
       colTemplates.push(
         buildTemplateColumnFromData(d, srcColIdx, count, direction),
       );
@@ -1321,7 +1313,7 @@ export function insertRowCol(
     }
 
     for (let i = 0; i < count; i += 1) {
-      const srcColIdx = usePerColTemplates ? templateSourceColumns![i] : index;
+      const srcColIdx = usePerColTemplates ? firstTemplateCol! : index;
       let bordersToDupCol: any[] = [];
       if (usePerColTemplates) {
         bordersToDupCol = colBorderSnapshot
@@ -1347,17 +1339,11 @@ export function insertRowCol(
 
     for (let r = 0; r < d.length; r += 1) {
       const row = d[r];
-
-      for (let i = 0; i < count; i += 1) {
-        if (direction === "lefttop") {
-          if (index === 0) {
-            row.unshift(colTemplates[i][r]);
-          } else {
-            row.splice(index, 0, colTemplates[i][r]);
-          }
-        } else {
-          row.splice(index + 1, 0, colTemplates[i][r]);
-        }
+      const insertValues = colTemplates.map((tpl) => tpl[r]);
+      if (direction === "lefttop") {
+        row.splice(index, 0, ...insertValues);
+      } else {
+        row.splice(index + 1, 0, ...insertValues);
       }
     }
   }
@@ -1377,7 +1363,7 @@ export function insertRowCol(
     const newRowStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const destR = newRowStart + i;
-      _.forEach(snapRowDv[i], (item, cStr) => {
+      _.forEach(snapRowDv[0], (item, cStr) => {
         const c = Number(cStr);
         newDataVerification[`${destR}_${c}`] = _.cloneDeep(item);
       });
@@ -1387,7 +1373,7 @@ export function insertRowCol(
     const newRowStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const destR = newRowStart + i;
-      _.forEach(snapRowHl[i], (item, cStr) => {
+      _.forEach(snapRowHl[0], (item, cStr) => {
         const c = Number(cStr);
         newHyperlink[`${destR}_${c}`] = _.cloneDeep(item);
       });
@@ -1397,7 +1383,7 @@ export function insertRowCol(
     const newColStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const destC = newColStart + i;
-      _.forEach(snapColDv[i], (item, rStr) => {
+      _.forEach(snapColDv[0], (item, rStr) => {
         const r = Number(rStr);
         newDataVerification[`${r}_${destC}`] = _.cloneDeep(item);
       });
@@ -1407,10 +1393,53 @@ export function insertRowCol(
     const newColStart = direction === "lefttop" ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const destC = newColStart + i;
-      _.forEach(snapColHl[i], (item, rStr) => {
+      _.forEach(snapColHl[0], (item, rStr) => {
         const r = Number(rStr);
         newHyperlink[`${r}_${destC}`] = _.cloneDeep(item);
       });
+    }
+  }
+
+  if (usePerRowTemplates && CFarr != null && CFarr.length > 0) {
+    const newRowStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const srcRow = firstTemplateRow!;
+      const destRow = newRowStart + i;
+      for (let k = 0; k < CFarr.length; k += 1) {
+        const srcCf = CFarr[k];
+        const mappedRanges = (srcCf.cellrange || [])
+          .filter((rg: any) => srcRow >= rg.row[0] && srcRow <= rg.row[1])
+          .map((rg: any) => ({
+            row: [destRow, destRow],
+            column: [rg.column[0], rg.column[1]],
+          }));
+        if (mappedRanges.length > 0) {
+          const cfClone = _.cloneDeep(srcCf);
+          cfClone.cellrange = mappedRanges;
+          newCFarr.push(cfClone);
+        }
+      }
+    }
+  }
+  if (usePerColTemplates && CFarr != null && CFarr.length > 0) {
+    const newColStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const srcCol = firstTemplateCol!;
+      const destCol = newColStart + i;
+      for (let k = 0; k < CFarr.length; k += 1) {
+        const srcCf = CFarr[k];
+        const mappedRanges = (srcCf.cellrange || [])
+          .filter((rg: any) => srcCol >= rg.column[0] && srcCol <= rg.column[1])
+          .map((rg: any) => ({
+            row: [rg.row[0], rg.row[1]],
+            column: [destCol, destCol],
+          }));
+        if (mappedRanges.length > 0) {
+          const cfClone = _.cloneDeep(srcCf);
+          cfClone.cellrange = mappedRanges;
+          newCFarr.push(cfClone);
+        }
+      }
     }
   }
 
