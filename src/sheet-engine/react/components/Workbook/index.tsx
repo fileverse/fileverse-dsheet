@@ -992,6 +992,47 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         // @ts-expect-error later
         const { getSelection, getSheet, setSelection } = ref.current;
+        const currentSelection = getSelection()?.[0];
+
+        // Mac: Cmd + Option + =/+ inserts based on full row/column selection.
+        const isMacQuickInsert =
+          isMac &&
+          e.metaKey &&
+          e.altKey &&
+          (e.code === 'Equal' || e.code === 'NumpadAdd');
+        if (isMacQuickInsert && currentSelection) {
+          let insertRowColOp: SetContextOptions['insertRowColOp'] | undefined;
+          if (currentSelection.column_select) {
+            insertRowColOp = {
+              type: 'column',
+              index: currentSelection.column[0],
+              count: 1,
+              direction: 'lefttop',
+              id: context.currentSheetId,
+            };
+          } else if (currentSelection.row_select) {
+            insertRowColOp = {
+              type: 'row',
+              index: currentSelection.row[1],
+              count: 1,
+              direction: 'rightbottom',
+              id: context.currentSheetId,
+            };
+          }
+
+          if (insertRowColOp) {
+            const range = context.luckysheet_select_save;
+            setContextWithProduce(
+              (draftCtx) => {
+                insertRowCol(draftCtx, insertRowColOp!);
+                draftCtx.luckysheet_select_save = range;
+              },
+              { insertRowColOp },
+            );
+            e.preventDefault();
+            return;
+          }
+        }
 
         // -------Insert-row-col--------
         // Step 1: Detect the initial shortcut combo (Alt + I on Win, Ctrl + Option + I on Mac)
@@ -1053,7 +1094,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
         const isDashKey = e.key === '-' || e.code === 'Minus';
         const isSecondShortcut = isMac
-          ? e.metaKey && e.altKey && isDashKey // Cmd + Option + -
+          ? e.ctrlKey && e.altKey && isDashKey // Ctrl + Option + -
           : e.ctrlKey && e.altKey && isDashKey; // Ctrl + Alt + -
 
         if (isSecondShortcut) {

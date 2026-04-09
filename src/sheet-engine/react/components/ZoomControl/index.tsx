@@ -90,11 +90,18 @@ const ZoomControl: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Keep zoom shortcuts on Cmd/Ctrl only.
+      if (e.altKey) {
+        return;
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.code === 'Equal') {
         zoomTo(context.zoomRatio + 0.1);
+        e.preventDefault();
         e.stopPropagation();
-      } else if ((e.metaKey || e.ctrlKey) && e.code === 'Minus') {
+      } else if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === 'Minus') {
         zoomTo(context.zoomRatio - 0.1);
+        e.preventDefault();
         e.stopPropagation();
       }
     };
@@ -102,7 +109,10 @@ const ZoomControl: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [context.zoomRatio]);
+  }, [
+    context.zoomRatio,
+    zoomTo,
+  ]);
 
   return (
     <div className="fortune-zoom-container">

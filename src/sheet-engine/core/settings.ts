@@ -271,12 +271,12 @@ export const defaultSettings: Required<Settings> = {
     'cut',
     'copy', // 复制
     'paste', // 粘贴
-    'clear', // 清除内容
     '|',
     'insert-row', // 插入行
     'insert-column', // 插入列
     'cell-delete-row', // 删除选中行
     'cell-delete-column', // 删除选中列
+    'clear', // 清除内容
     'delete-cell', // 删除单元格
     'hide-row', // 隐藏选中行和显示选中行
     'hide-column', // 隐藏选中列和显示选中列
@@ -310,6 +310,7 @@ export const defaultSettings: Required<Settings> = {
     'insert-column', // 插入列
     'delete-row', // 删除选中行
     'delete-column', // 删除选中列
+    'clear', // 清除内容
     'delete-cell', // 删除单元格
     'hide-row', // 隐藏选中行和显示选中行
     'hide-column', // 隐藏选中列和显示选中列
@@ -317,7 +318,6 @@ export const defaultSettings: Required<Settings> = {
     'set-column-width', // 设置列宽
     '|',
     'split-text',
-    'clear', // 清除内容
     'sort', // 排序选区
     'orderAZ', // 升序
     'orderZA', // 降序
