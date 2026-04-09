@@ -4,7 +4,6 @@ import { Workbook as ExcelJSWorkbook } from 'exceljs';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
-import { getExportFilenameBase } from './export-filename';
 import { applyBordersToWorksheet } from './xlsx-border-utils';
 import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
 import { exportConditionalFormatting } from './xlsx-cf-export-utils';
@@ -383,14 +382,7 @@ export const handleExportToXLSX = async (
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
-    const activeSheetName = workbookRef.current.getSheet()?.name;
-    const title = getExportFilenameBase({
-      getDocumentTitle: () => getDocumentTitle?.() ?? '',
-      documentTitleFallback:
-        typeof document !== 'undefined' ? document.title : '',
-      sheetNameFallback: activeSheetName,
-      defaultBase: 'Sheet',
-    });
+    const title = getDocumentTitle?.() ?? 'Untitled';
 
     // Pass 1: write to buffer with xlsx-js-style (preserves all cell styling)
     const xlsxBuffer: ArrayBuffer = XLSXWrite(workbook, {
