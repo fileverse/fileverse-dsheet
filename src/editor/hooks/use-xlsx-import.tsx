@@ -14,6 +14,7 @@ import {
   convertRawImagesToFortuneSheet,
   RawSheetImage,
 } from '../utils/xlsx-image-utils';
+import { removeFileExtension } from '../utils/export-filename';
 
 /** Predefined option colors for data validation dropdowns (when XLSX has no color). */
 const DATA_VERIFICATION_OPTION_COLORS = [
@@ -889,7 +890,8 @@ export const useXLSXImport = ({
                 setForceSheetRender((prev: number) => prev + 1);
               }
               // @ts-expect-error later
-              updateDocumentTitle?.(exportJson.info?.name);
+              const fileName = removeFileExtension(exportJson?.info?.name);
+              updateDocumentTitle?.(fileName);
               resolve();
             },
           );
