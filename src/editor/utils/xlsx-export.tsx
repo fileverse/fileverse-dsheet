@@ -293,7 +293,8 @@ export const handleExportToXLSX = async (
           // Skip cells already styled via celldata
           const cellRef = XLSXUtil.encode_cell({ r, c });
           if (celldataStyled.has(cellRef)) return;
-          // Only process if there is at least one formatting property
+
+          const hasFormula = !!v.f;
           const hasFormatting =
             v.bg ||
             v.bl ||
@@ -307,11 +308,13 @@ export const handleExportToXLSX = async (
             v.vt !== undefined ||
             v.tb !== undefined ||
             v.tr !== undefined;
-          if (!hasFormatting) return;
+          if (!hasFormula && !hasFormatting) return;
 
-          let cell: any = worksheet[cellRef] || {};
-          cell = { ...cell };
+          const cell: any = { ...(worksheet[cellRef] || {}) };
           cell.s = cell.s || {};
+
+          // Strip leading = from formula (XLSX <f> must not include it)
+          if (hasFormula) cell.f = v.f.replace(/^=/, '');
 
           // FILL
           if (v.bg) {
