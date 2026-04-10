@@ -19,6 +19,7 @@ export const handleCSVUpload = (
   fileArg?: File,
   importType?: string,
   handleContentPortal?: any,
+  separatorType?: string,
 ): Promise<void> => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -38,10 +39,15 @@ export const handleCSVUpload = (
       const csvContent = e.target.result;
 
       if (typeof csvContent === 'string') {
+        const delimiter =
+          separatorType === 'tab' ? '\t' :
+          separatorType === 'comma' ? ',' :
+          '';
         Papa.parse(csvContent, {
           header: true,
           dynamicTyping: true,
           skipEmptyLines: true,
+          delimiter,
           complete: (results) => {
             if (results.errors.length > 0 && results.data.length === 0) {
               console.error('CSV Parsing errors:', results.errors);
@@ -162,16 +168,15 @@ export const handleCSVUpload = (
             const getActiveSheetMap = (): Y.Map<any> | undefined => {
               const currentSheetId =
                 sheetEditorRef.current?.getWorkbookContext()?.currentSheetId;
-              return sheetArray.toArray().find(
-                (s) => s instanceof Y.Map && s.get('id') === currentSheetId,
-              ) as Y.Map<any> | undefined;
+              return sheetArray
+                .toArray()
+                .find(
+                  (s) => s instanceof Y.Map && s.get('id') === currentSheetId,
+                ) as Y.Map<any> | undefined;
             };
 
             // Helper: clear all entries from a Y.Map field on a sheet map
-            const clearYMap = (
-              sheetMap: Y.Map<any>,
-              field: string,
-            ) => {
+            const clearYMap = (sheetMap: Y.Map<any>, field: string) => {
               const ymap = sheetMap.get(field);
               if (ymap instanceof Y.Map) {
                 Array.from(ymap.keys()).forEach((k) => ymap.delete(k));
@@ -195,7 +200,13 @@ export const handleCSVUpload = (
                 }
 
                 // Clear side-maps
-                for (const field of ['hyperlink', 'filter', 'filter_select', 'dataVerification', 'conditionRules']) {
+                for (const field of [
+                  'hyperlink',
+                  'filter',
+                  'filter_select',
+                  'dataVerification',
+                  'conditionRules',
+                ]) {
                   clearYMap(activeSheetMap, field);
                 }
 
@@ -218,13 +229,19 @@ export const handleCSVUpload = (
                     hMap = new Y.Map();
                     activeSheetMap.set('hyperlink', hMap);
                   }
-                  Object.entries(hyperlinkMap).forEach(([k, v]) => hMap.set(k, v));
+                  Object.entries(hyperlinkMap).forEach(([k, v]) =>
+                    hMap.set(k, v),
+                  );
                 }
               });
 
-              const activeIndex = sheetArray.toArray().findIndex(
-                (s) => s instanceof Y.Map && s.get('id') === activeSheetMap.get('id'),
-              );
+              const activeIndex = sheetArray
+                .toArray()
+                .findIndex(
+                  (s) =>
+                    s instanceof Y.Map &&
+                    s.get('id') === activeSheetMap.get('id'),
+                );
               finishImport(activeIndex);
               return;
             }
@@ -248,16 +265,25 @@ export const handleCSVUpload = (
               const startRow = maxExistingRow + 1; // 0 when sheet is empty
 
               // Offset all rows by startRow
-              const appendCells = cellData.map((cell) => ({ ...cell, r: cell.r + startRow }));
+              const appendCells = cellData.map((cell) => ({
+                ...cell,
+                r: cell.r + startRow,
+              }));
 
               // Offset hyperlink keys
-              const offsetHyperlinkMap: Record<string, { linkType: string; linkAddress: string }> = {};
+              const offsetHyperlinkMap: Record<
+                string,
+                { linkType: string; linkAddress: string }
+              > = {};
               Object.entries(hyperlinkMap).forEach(([key, val]) => {
                 const [r, c] = key.split('_').map(Number);
                 offsetHyperlinkMap[`${r + startRow}_${c}`] = val;
               });
 
-              const newMaxRow = appendCells.reduce((m, c) => Math.max(m, c.r), 0);
+              const newMaxRow = appendCells.reduce(
+                (m, c) => Math.max(m, c.r),
+                0,
+              );
 
               ydoc.transact(() => {
                 let cellMap = activeSheetMap.get('celldata');
@@ -283,13 +309,19 @@ export const handleCSVUpload = (
                     hMap = new Y.Map();
                     activeSheetMap.set('hyperlink', hMap);
                   }
-                  Object.entries(offsetHyperlinkMap).forEach(([k, v]) => hMap.set(k, v));
+                  Object.entries(offsetHyperlinkMap).forEach(([k, v]) =>
+                    hMap.set(k, v),
+                  );
                 }
               });
 
-              const activeIndex = sheetArray.toArray().findIndex(
-                (s) => s instanceof Y.Map && s.get('id') === activeSheetMap.get('id'),
-              );
+              const activeIndex = sheetArray
+                .toArray()
+                .findIndex(
+                  (s) =>
+                    s instanceof Y.Map &&
+                    s.get('id') === activeSheetMap.get('id'),
+                );
               finishImport(activeIndex);
               return;
             }
@@ -305,8 +337,10 @@ export const handleCSVUpload = (
               const context = sheetEditorRef.current?.getWorkbookContext();
               const selections = (context as any)?.luckysheet_select_save ?? [];
               const lastSel = selections[selections.length - 1];
-              const anchorRow: number = lastSel?.row_focus ?? lastSel?.row?.[0] ?? 0;
-              const anchorCol: number = lastSel?.column_focus ?? lastSel?.column?.[0] ?? 0;
+              const anchorRow: number =
+                lastSel?.row_focus ?? lastSel?.row?.[0] ?? 0;
+              const anchorCol: number =
+                lastSel?.column_focus ?? lastSel?.column?.[0] ?? 0;
 
               // Offset all cells by anchor
               const offsetCells = cellData.map((cell) => ({
@@ -316,14 +350,23 @@ export const handleCSVUpload = (
               }));
 
               // Offset hyperlink keys
-              const offsetHyperlinkMap: Record<string, { linkType: string; linkAddress: string }> = {};
+              const offsetHyperlinkMap: Record<
+                string,
+                { linkType: string; linkAddress: string }
+              > = {};
               Object.entries(hyperlinkMap).forEach(([key, val]) => {
                 const [r, c] = key.split('_').map(Number);
                 offsetHyperlinkMap[`${r + anchorRow}_${c + anchorCol}`] = val;
               });
 
-              const newMaxRow = offsetCells.reduce((m, c) => Math.max(m, c.r), 0);
-              const newMaxCol = offsetCells.reduce((m, c) => Math.max(m, c.c), 0);
+              const newMaxRow = offsetCells.reduce(
+                (m, c) => Math.max(m, c.r),
+                0,
+              );
+              const newMaxCol = offsetCells.reduce(
+                (m, c) => Math.max(m, c.c),
+                0,
+              );
 
               ydoc.transact(() => {
                 let cellMap = activeSheetMap.get('celldata');
@@ -353,13 +396,19 @@ export const handleCSVUpload = (
                     hMap = new Y.Map();
                     activeSheetMap.set('hyperlink', hMap);
                   }
-                  Object.entries(offsetHyperlinkMap).forEach(([k, v]) => hMap.set(k, v));
+                  Object.entries(offsetHyperlinkMap).forEach(([k, v]) =>
+                    hMap.set(k, v),
+                  );
                 }
               });
 
-              const activeIndex = sheetArray.toArray().findIndex(
-                (s) => s instanceof Y.Map && s.get('id') === activeSheetMap.get('id'),
-              );
+              const activeIndex = sheetArray
+                .toArray()
+                .findIndex(
+                  (s) =>
+                    s instanceof Y.Map &&
+                    s.get('id') === activeSheetMap.get('id'),
+                );
               finishImport(activeIndex);
               return;
             }
