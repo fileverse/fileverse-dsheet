@@ -59,6 +59,7 @@ export {
   functionStrChange,
   setFormulaEditorOwner,
   getAllFunctionGroup,
+  execFunctionGroup,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
 

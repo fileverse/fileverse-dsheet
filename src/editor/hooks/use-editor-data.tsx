@@ -4,8 +4,6 @@ import { WorkbookInstance } from '@sheet-engine/react';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
-// @ts-ignore
-import { updateSheetData } from '../utils/sheet-operations';
 import { useLiveQuery } from './live-query/use-live-query';
 import { DataBlockApiKeyHandlerType } from '../types';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
@@ -136,10 +134,10 @@ export const useEditorData = (
                   if (cell) {
                     const comment =
                       (commentData as any)?.[
-                        `${sheetKey}_${rowIndex}_${colIndex}`
+                      `${sheetKey}_${rowIndex}_${colIndex}`
                       ] ??
                       (commentData as any)?.[
-                        `${fileIndex}_${rowIndex}_${colIndex}`
+                      `${fileIndex}_${rowIndex}_${colIndex}`
                       ];
                     if (comment) {
                       cell.ps = allowComments
@@ -247,7 +245,25 @@ export const useEditorData = (
       }
 
       debounceTimerRef.current = window.setTimeout(() => {
-        if (setForceSheetRender) {
+        // Keep `currentDataRef` aligned with Yjs before forcing a Workbook remount.
+        // Otherwise `EditorWorkbook` re-inits from a stale plain snapshot (e.g. formula
+        // cells cleared on import) and wipes values that were just written by recalc + ydoc.
+        const isEditingCell =
+          (sheetEditorRef.current?.getWorkbookContext?.()?.luckysheetCellUpdate
+            ?.length ?? 0) > 0;
+        try {
+          const plain = ySheetArrayToPlain(sheetArray as any);
+          currentDataRef.current = plain;
+        } catch (e) {
+          console.error(
+            '[DSheet] ySheetArrayToPlain after ydoc observe failed',
+            e,
+          );
+        }
+        // Avoid forcing a full Workbook remount while in-cell editing is active.
+        // Remounting mid-edit can temporarily re-apply stale cell styles (e.g. alignment)
+        // and cause a visible flicker.
+        if (!isEditingCell && setForceSheetRender) {
           setForceSheetRender((prev) => prev + 1);
         }
         debounceTimerRef.current = null;

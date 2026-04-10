@@ -1,3 +1,7 @@
+export const removeFileExtension = (filename: string): string => {
+  return filename.replace(/\.[^.]+$/, '');
+};
+
 const INVALID_FILENAME_CHARS_REGEX = /[<>:"/\\|?*\u0000-\u001F]/g;
 const TRAILING_DOTS_SPACES_REGEX = /[.\s]+$/g;
 

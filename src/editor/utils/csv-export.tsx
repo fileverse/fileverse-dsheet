@@ -2,6 +2,15 @@ import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
 import { getExportFilenameBase } from './export-filename';
+import { Cell } from '../../sheet-engine/core/types';
+
+const getCellValue = (v: Cell | null | undefined): string => {
+  if (!v) return '';
+  const isDate = v.ct?.t === 'd';
+  if (isDate && v.m != null) return String(v.m);
+  if (v.v !== undefined && v.v !== null) return String(v.v);
+  return '';
+};
 
 export const handleExportToCSV = (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
@@ -38,13 +47,35 @@ export const handleExportToCSV = (
     }
 
     activeSheet.celldata.forEach((cell) => {
-      const value =
-        cell.v && cell.v.v !== undefined && cell.v.v !== null ? cell.v.v : '';
-      rows[cell.r][cell.c] = String(value);
+      rows[cell.r][cell.c] = getCellValue(cell.v);
     });
 
+    // Trim trailing empty rows
+    while (
+      rows.length > 0 &&
+      rows[rows.length - 1].every((cell) => cell === '')
+    ) {
+      rows.pop();
+    }
+    if (rows.length === 0) {
+      console.error('No data to export');
+      return;
+    }
+
+    // Trim trailing empty columns
+    let maxContentCol = 0;
+    rows.forEach((row) => {
+      for (let c = row.length - 1; c >= 0; c--) {
+        if (row[c] !== '') {
+          maxContentCol = Math.max(maxContentCol, c);
+          break;
+        }
+      }
+    });
+    const trimmedRows = rows.map((row) => row.slice(0, maxContentCol + 1));
+
     // Convert rows to CSV format
-    const csvContent = rows
+    const csvContent = trimmedRows
       .map((row) => {
         return row
           .map((cell) => {
@@ -66,20 +97,14 @@ export const handleExportToCSV = (
           })
           .join(',');
       })
-      .join('\n');
+      .join('\r\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const title = getExportFilenameBase({
-      getDocumentTitle,
-      documentTitleFallback:
-        typeof document !== 'undefined' ? document.title : '',
-      sheetNameFallback: activeSheet.name,
-      defaultBase: 'Sheet',
-    });
-    link.setAttribute('download', `${activeSheet.name + ' - ' + title}.csv`);
+    const title = getDocumentTitle?.() ?? 'Untitled';
+    link.setAttribute('download', `${title + ' - ' + activeSheet.name}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

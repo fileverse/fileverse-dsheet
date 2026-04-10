@@ -4,7 +4,6 @@ import { Workbook as ExcelJSWorkbook } from 'exceljs';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
-import { getExportFilenameBase } from './export-filename';
 import { applyBordersToWorksheet } from './xlsx-border-utils';
 import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
 import { exportConditionalFormatting } from './xlsx-cf-export-utils';
@@ -294,7 +293,8 @@ export const handleExportToXLSX = async (
           // Skip cells already styled via celldata
           const cellRef = XLSXUtil.encode_cell({ r, c });
           if (celldataStyled.has(cellRef)) return;
-          // Only process if there is at least one formatting property
+
+          const hasFormula = !!v.f;
           const hasFormatting =
             v.bg ||
             v.bl ||
@@ -308,11 +308,13 @@ export const handleExportToXLSX = async (
             v.vt !== undefined ||
             v.tb !== undefined ||
             v.tr !== undefined;
-          if (!hasFormatting) return;
+          if (!hasFormula && !hasFormatting) return;
 
-          let cell: any = worksheet[cellRef] || {};
-          cell = { ...cell };
+          const cell: any = { ...(worksheet[cellRef] || {}) };
           cell.s = cell.s || {};
+
+          // Strip leading = from formula (XLSX <f> must not include it)
+          if (hasFormula) cell.f = v.f.replace(/^=/, '');
 
           // FILL
           if (v.bg) {
@@ -383,14 +385,7 @@ export const handleExportToXLSX = async (
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
-    const activeSheetName = workbookRef.current.getSheet()?.name;
-    const title = getExportFilenameBase({
-      getDocumentTitle: () => getDocumentTitle?.() ?? '',
-      documentTitleFallback:
-        typeof document !== 'undefined' ? document.title : '',
-      sheetNameFallback: activeSheetName,
-      defaultBase: 'Sheet',
-    });
+    const title = getDocumentTitle?.() ?? 'Untitled';
 
     // Pass 1: write to buffer with xlsx-js-style (preserves all cell styling)
     const xlsxBuffer: ArrayBuffer = XLSXWrite(workbook, {

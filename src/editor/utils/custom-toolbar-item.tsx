@@ -44,6 +44,7 @@ export const getCustomToolbarItems = ({
     file?: File,
     importType?: string,
     handleContentPortal?: any,
+    separatorType?: string,
   ) => void | Promise<void>;
   handleXLSXUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
@@ -103,7 +104,7 @@ export const getCustomToolbarItems = ({
       icon: (
         <CustomButton
           setExportDropdownOpen={setExportDropdownOpen}
-          handleCSVUpload={(event, file, importType) =>
+          handleCSVUpload={(event, file, importType, separatorType) =>
             handleCSVUpload(
               event,
               ydocRef.current,
@@ -115,6 +116,7 @@ export const getCustomToolbarItems = ({
               file,
               importType,
               handleContentPortal,
+              separatorType,
             )
           }
           handleXLSXUpload={handleXLSXUpload}

@@ -78,6 +78,7 @@ export {
   // formula
   FormulaCache,
   groupValuesRefresh,
+  execFunctionGroup,
   setCaretPosition,
   getrangeseleciton,
   getFormulaEditorOwner,
