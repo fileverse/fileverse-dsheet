@@ -27,6 +27,81 @@ const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
     }
   });
 };
+/** Shallow clone for inserted row/column cells: keep style; do not copy v, m, f (or ps / hl). */
+const cloneCellTemplateStripContent = (cell: any) => {
+  const t = { ...cell };
+  delete t.v;
+  delete t.m;
+  delete t.f;
+  delete t.ps;
+  delete t.hl;
+  return t;
+};
+
+function buildTemplateRowFromData(
+  d: any[][],
+  srcRowIndex: number,
+  insertRowCount: number,
+  direction: "lefttop" | "rightbottom",
+) {
+  const row: any[] = [];
+  const srcRow = d[srcRowIndex];
+  if (!srcRow || !d[0]) return row;
+  for (let c = 0; c < d[0].length; c += 1) {
+    const cell = srcRow[c];
+    if (cell == null) {
+      row.push(null);
+      continue;
+    }
+    if (cell?.mc && (direction === "rightbottom" || srcRowIndex !== cell.mc.r)) {
+      const templateCell = cloneCellTemplateStripContent(_.cloneDeep(cell));
+      if (templateCell.mc?.rs) {
+        templateCell.mc.rs += insertRowCount;
+      }
+      if (!d?.[srcRowIndex + 1]?.[c]?.mc) {
+        templateCell.mc = undefined;
+      }
+      row.push(templateCell);
+    } else {
+      const templateCell = cloneCellTemplateStripContent(_.cloneDeep(cell));
+      delete templateCell.mc;
+      row.push(templateCell);
+    }
+  }
+  return row;
+}
+
+function buildTemplateColumnFromData(
+  d: any[][],
+  srcColIndex: number,
+  insertColCount: number,
+  direction: "lefttop" | "rightbottom",
+) {
+  const col: any[] = [];
+  for (let r = 0; r < d.length; r += 1) {
+    const cell = d[r][srcColIndex];
+    if (cell == null) {
+      col.push(null);
+      continue;
+    }
+    if (cell?.mc && (direction === "rightbottom" || srcColIndex !== cell.mc.c)) {
+      const templateCell = cloneCellTemplateStripContent(_.cloneDeep(cell));
+      if (templateCell.mc?.cs) {
+        templateCell.mc.cs += insertColCount;
+      }
+      if (!d?.[r]?.[srcColIndex + 1]?.mc) {
+        templateCell.mc = undefined;
+      }
+      col.push(templateCell);
+    } else {
+      const templateCell = cloneCellTemplateStripContent(_.cloneDeep(cell));
+      delete templateCell.mc;
+      col.push(templateCell);
+    }
+  }
+  return col;
+}
+
 const getMergeBounds = (mergeMap: Record<string, any> | null | undefined) => {
   if (!mergeMap) return null;
   let minR = Infinity;
@@ -141,11 +216,16 @@ export function insertRowCol(
     count: number;
     direction: "lefttop" | "rightbottom";
     id: string;
+    /** Pre-insert row index for each inserted row (length must equal count). */
+    templateSourceRows?: number[];
+    /** Pre-insert column index for each inserted column (length must equal count). */
+    templateSourceColumns?: number[];
   },
   changeSelection: boolean = true
 ) {
   let { count, id } = op;
-  const { type, index, direction } = op;
+  const { type, index, direction, templateSourceRows, templateSourceColumns } =
+    op;
   id = id || ctx.currentSheetId;
 
   // if (
@@ -171,15 +251,37 @@ export function insertRowCol(
 
   const cfg = file.config || {};
 
+  count = Math.floor(count);
+
+  const usePerRowTemplates =
+    type === "row" &&
+    templateSourceRows != null &&
+    templateSourceRows.length === count &&
+    templateSourceRows.every((r) => r >= 0 && r < d.length);
+  const usePerColTemplates =
+    type === "column" &&
+    templateSourceColumns != null &&
+    templateSourceColumns.length === count &&
+    d[0] != null &&
+    templateSourceColumns.every((c) => c >= 0 && c < d[0].length);
+  const firstTemplateRow = usePerRowTemplates ? templateSourceRows![0] : null;
+  const firstTemplateCol = usePerColTemplates ? templateSourceColumns![0] : null;
+
   if (changeSelection) {
     if (type === "row") {
-      if (cfg.rowReadOnly?.[index]) {
+      if (usePerRowTemplates) {
+        if (cfg.rowReadOnly?.[firstTemplateRow!]) {
+          throw new Error("readOnly");
+        }
+      } else if (cfg.rowReadOnly?.[index]) {
         throw new Error("readOnly");
       }
-    } else {
-      if (cfg.colReadOnly?.[index]) {
+    } else if (usePerColTemplates) {
+      if (cfg.colReadOnly?.[firstTemplateCol!]) {
         throw new Error("readOnly");
       }
+    } else if (cfg.colReadOnly?.[index]) {
+      throw new Error("readOnly");
     }
   }
 
@@ -191,7 +293,30 @@ export function insertRowCol(
     throw new Error("maxExceeded");
   }
 
-  count = Math.floor(count);
+  const snapRowDv =
+    usePerRowTemplates && file.dataVerification != null
+      ? [firstTemplateRow!].map((sr) => {
+          const m: Record<number, any> = {};
+          _.forEach(file.dataVerification, (v, key) => {
+            const r = Number(key.split("_")[0]);
+            const c = Number(key.split("_")[1]);
+            if (r === sr) m[c] = _.cloneDeep(v);
+          });
+          return m;
+        })
+      : null;
+  const snapColDv =
+    usePerColTemplates && file.dataVerification != null
+      ? [firstTemplateCol!].map((sc) => {
+          const m: Record<number, any> = {};
+          _.forEach(file.dataVerification, (v, key) => {
+            const r = Number(key.split("_")[0]);
+            const c = Number(key.split("_")[1]);
+            if (c === sc) m[r] = _.cloneDeep(v);
+          });
+          return m;
+        })
+      : null;
 
   // 合并单元格配置变动
   if (cfg.merge == null) {
@@ -508,9 +633,9 @@ export function insertRowCol(
             }
           } else if (CFr1 === index) {
             if (direction === "lefttop") {
-              CFr1 += count;
+              // Expand range downward so new rows at `index` stay inside the rule (do not shift the whole rule).
               CFr2 += count;
-            } else if (direction === "rightbottom" && CFr2 > index) {
+            } else if (direction === "rightbottom" && CFr2 >= index) {
               CFr2 += count;
             }
           } else {
@@ -526,9 +651,8 @@ export function insertRowCol(
             }
           } else if (CFc1 === index) {
             if (direction === "lefttop") {
-              CFc1 += count;
               CFc2 += count;
-            } else if (direction === "rightbottom" && CFc2 > index) {
+            } else if (direction === "rightbottom" && CFc2 >= index) {
               CFc2 += count;
             }
           } else {
@@ -568,9 +692,8 @@ export function insertRowCol(
           }
         } else if (AFr1 === index) {
           if (direction === "lefttop") {
-            AFr1 += count;
             AFr2 += count;
-          } else if (direction === "rightbottom" && AFr2 > index) {
+          } else if (direction === "rightbottom" && AFr2 >= index) {
             AFr2 += count;
           }
         } else {
@@ -586,9 +709,8 @@ export function insertRowCol(
           }
         } else if (AFc1 === index) {
           if (direction === "lefttop") {
-            AFc1 += count;
             AFc2 += count;
-          } else if (direction === "rightbottom" && AFc2 > index) {
+          } else if (direction === "rightbottom" && AFc2 >= index) {
             AFc2 += count;
           }
         } else {
@@ -636,43 +758,51 @@ export function insertRowCol(
 
       if (type === "row") {
         if (index < r) {
-          newDataVerification[`${r + count}_${c}`] = item;
+          newDataVerification[`${r + count}_${c}`] = _.cloneDeep(item);
         } else if (index === r) {
           if (direction === "lefttop") {
-            newDataVerification[`${r + count}_${c}`] = item;
+            newDataVerification[`${r + count}_${c}`] = _.cloneDeep(item);
 
-            for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r + i}_${c}`] = item;
+            if (!snapRowDv) {
+              for (let i = 0; i < count; i += 1) {
+                newDataVerification[`${r + i}_${c}`] = _.cloneDeep(item);
+              }
             }
           } else {
-            newDataVerification[`${r}_${c}`] = item;
+            newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
 
-            for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r + i + 1}_${c}`] = item;
+            if (!snapRowDv) {
+              for (let i = 0; i < count; i += 1) {
+                newDataVerification[`${r + i + 1}_${c}`] = _.cloneDeep(item);
+              }
             }
           }
         } else {
-          newDataVerification[`${r}_${c}`] = item;
+          newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
         }
       } else if (type === "column") {
         if (index < c) {
-          newDataVerification[`${r}_${c + count}`] = item;
+          newDataVerification[`${r}_${c + count}`] = _.cloneDeep(item);
         } else if (index === c) {
           if (direction === "lefttop") {
-            newDataVerification[`${r}_${c + count}`] = item;
+            newDataVerification[`${r}_${c + count}`] = _.cloneDeep(item);
 
-            for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r}_${c + i}`] = item;
+            if (!snapColDv) {
+              for (let i = 0; i < count; i += 1) {
+                newDataVerification[`${r}_${c + i}`] = _.cloneDeep(item);
+              }
             }
           } else {
-            newDataVerification[`${r}_${c}`] = item;
+            newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
 
-            for (let i = 0; i < count; i += 1) {
-              newDataVerification[`${r}_${c + i + 1}`] = item;
+            if (!snapColDv) {
+              for (let i = 0; i < count; i += 1) {
+                newDataVerification[`${r}_${c + i + 1}`] = _.cloneDeep(item);
+              }
             }
           }
         } else {
-          newDataVerification[`${r}_${c}`] = item;
+          newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
         }
       }
     });
@@ -718,6 +848,18 @@ export function insertRowCol(
   let type1;
   if (type === "row") {
     type1 = "r";
+
+    const rowBorderSnapshot = _.cloneDeep(cfg.borderInfo || []);
+
+    const refRowHeightsForInsert = usePerRowTemplates
+      ? [cfg.rowlen?.[firstTemplateRow!] ?? file.defaultRowHeight ?? ctx.defaultrowlen]
+      : null;
+    const refRowCustomsForInsert = usePerRowTemplates
+      ? [cfg.customHeight?.[firstTemplateRow!]]
+      : null;
+    const refRowHeightBeforeInsert =
+      cfg.rowlen?.[index] ?? file.defaultRowHeight ?? ctx.defaultrowlen;
+    const refRowCustomBefore = cfg.customHeight?.[index];
 
     // 行高配置变动
     if (cfg.rowlen != null) {
@@ -775,27 +917,27 @@ export function insertRowCol(
       cfg.customHeight = customHeight_new;
     }
 
-    // 自定义行高配置变动
-    if (cfg.customHeight != null) {
-      const customHeight_new: any = {};
-
-      _.forEach(cfg.customHeight, (v, rstr) => {
-        const r = parseFloat(rstr);
-
-        if (r < index) {
-          customHeight_new[r] = cfg.customHeight![r];
-        } else if (r === index) {
-          if (direction === "lefttop") {
-            customHeight_new[r + count] = cfg.customHeight![r];
-          } else if (direction === "rightbottom") {
-            customHeight_new[r] = cfg.customHeight![r];
-          }
-        } else {
-          customHeight_new[r + count] = cfg.customHeight![r];
+    if (cfg.rowlen == null) {
+      cfg.rowlen = {};
+    }
+    const newRowStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      cfg.rowlen![newRowStart + i] = refRowHeightsForInsert
+        ? refRowHeightsForInsert[0]
+        : refRowHeightBeforeInsert;
+    }
+    if (refRowHeightsForInsert) {
+      cfg.customHeight ||= {};
+      for (let i = 0; i < count; i += 1) {
+        if (refRowCustomsForInsert![0] === 1) {
+          cfg.customHeight[newRowStart + i] = 1;
         }
-      });
-
-      cfg.customHeight = customHeight_new;
+      }
+    } else if (refRowCustomBefore === 1) {
+      cfg.customHeight ||= {};
+      for (let i = 0; i < count; i += 1) {
+        cfg.customHeight[newRowStart + i] = 1;
+      }
     }
 
     // 隐藏行配置变动
@@ -821,28 +963,8 @@ export function insertRowCol(
       cfg.rowhidden = rowhidden_new;
     }
 
-    // 空行模板
-    const row = [];
-    const curRow = [...d][index];
-    for (let c = 0; c < d[0].length; c += 1) {
-      const cell = curRow[c];
-      let templateCell = null;
-      if (cell?.mc && (direction === "rightbottom" || index !== cell.mc.r)) {
-        if (cell.mc.rs) {
-          cell.mc.rs += count;
-        }
-        templateCell = { ...cell };
-        if (!d?.[index + 1]?.[c]?.mc) {
-          templateCell.mc = undefined;
-        }
-        delete templateCell.v;
-        delete templateCell.m;
-        delete templateCell.ps;
-        delete templateCell.f;
-      }
-      row.push(templateCell);
-    }
-    const cellBorderConfig = [];
+    // 空行模板（非合并单元格也要复制样式；不复制 v / m / f / ps / 超链接）
+    const cellBorderConfig: any[] = [];
     // 边框
     if (cfg.borderInfo && cfg.borderInfo.length > 0) {
       const borderInfo = [];
@@ -897,9 +1019,9 @@ export function insertRowCol(
         } else if (rangeType === "cell") {
           let { row_index } = cfg.borderInfo[i].value;
           // 位置相同标识边框相关 先缓存
-          if (row_index === index) {
+          if (!usePerRowTemplates && row_index === index) {
             cellBorderConfig.push(
-              JSON.parse(JSON.stringify(cfg.borderInfo[i]))
+              JSON.parse(JSON.stringify(cfg.borderInfo[i])),
             );
           }
 
@@ -923,20 +1045,29 @@ export function insertRowCol(
 
     const arr = [];
     for (let r = 0; r < count; r += 1) {
+      const srcRowIdx = usePerRowTemplates ? firstTemplateRow! : index;
+      const row = buildTemplateRowFromData(d, srcRowIdx, count, direction);
       arr.push(JSON.stringify(row));
-      // 同步拷贝 type 为 cell 类型的边框
-      if (cellBorderConfig.length) {
-        const cellBorderConfigCopy = _.cloneDeep(cellBorderConfig);
-        cellBorderConfigCopy.forEach((item) => {
+      let bordersToDup: any[] = [];
+      if (usePerRowTemplates) {
+        bordersToDup = rowBorderSnapshot
+          .filter(
+            (bi: any) =>
+              bi.rangeType === "cell" && bi.value.row_index === srcRowIdx,
+          )
+          .map((bi: any) => JSON.parse(JSON.stringify(bi)));
+      } else if (cellBorderConfig.length) {
+        bordersToDup = _.cloneDeep(cellBorderConfig);
+      }
+      if (bordersToDup.length) {
+        bordersToDup.forEach((item) => {
           if (direction === "rightbottom") {
-            // 向下插入时 基于模板行位置直接递增即可
             item.value.row_index += r + 1;
           } else if (direction === "lefttop") {
-            // 向上插入时 目标行移动到后面 新增n行到前面 对于新增的行来说 也是递增，不过是从0开始
             item.value.row_index += r;
           }
         });
-        cfg.borderInfo?.push(...cellBorderConfigCopy);
+        cfg.borderInfo?.push(...bordersToDup);
       }
     }
 
@@ -954,6 +1085,18 @@ export function insertRowCol(
   } else {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     type1 = "c";
+
+    const colBorderSnapshot = _.cloneDeep(cfg.borderInfo || []);
+
+    const refColWidthsForInsert = usePerColTemplates
+      ? [cfg.columnlen?.[firstTemplateCol!] ?? file.defaultColWidth ?? ctx.defaultcollen]
+      : null;
+    const refColCustomsForInsert = usePerColTemplates
+      ? [cfg.customWidth?.[firstTemplateCol!]]
+      : null;
+    const refColWidthBeforeInsert =
+      cfg.columnlen?.[index] ?? file.defaultColWidth ?? ctx.defaultcollen;
+    const refColCustomBefore = cfg.customWidth?.[index];
 
     // 列宽配置变动
     if (cfg.columnlen != null) {
@@ -1012,27 +1155,27 @@ export function insertRowCol(
       cfg.customWidth = customWidth_new;
     }
 
-    // 自定义列宽配置变动
-    if (cfg.customWidth != null) {
-      const customWidth_new: any = {};
-
-      _.forEach(cfg.customWidth, (v, cstr) => {
-        const c = parseFloat(cstr);
-
-        if (c < index) {
-          customWidth_new[c] = cfg.customWidth![c];
-        } else if (c === index) {
-          if (direction === "lefttop") {
-            customWidth_new[c + count] = cfg.customWidth![c];
-          } else if (direction === "rightbottom") {
-            customWidth_new[c] = cfg.customWidth![c];
-          }
-        } else {
-          customWidth_new[c + count] = cfg.customWidth![c];
+    if (cfg.columnlen == null) {
+      cfg.columnlen = {};
+    }
+    const newColStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      cfg.columnlen![newColStart + i] = refColWidthsForInsert
+        ? refColWidthsForInsert[0]
+        : refColWidthBeforeInsert;
+    }
+    if (refColWidthsForInsert) {
+      cfg.customWidth ||= {};
+      for (let i = 0; i < count; i += 1) {
+        if (refColCustomsForInsert![0] === 1) {
+          cfg.customWidth[newColStart + i] = 1;
         }
-      });
-
-      cfg.customWidth = customWidth_new;
+      }
+    } else if (refColCustomBefore === 1) {
+      cfg.customWidth ||= {};
+      for (let i = 0; i < count; i += 1) {
+        cfg.customWidth[newColStart + i] = 1;
+      }
     }
 
     // 隐藏列配置变动
@@ -1058,28 +1201,15 @@ export function insertRowCol(
       cfg.colhidden = colhidden_new;
     }
 
-    // 空列模板
-    const col = [];
-    const curd = [...d];
-    for (let r = 0; r < d.length; r += 1) {
-      const cell = curd[r][index];
-      let templateCell = null;
-      if (cell?.mc && (direction === "rightbottom" || index !== cell.mc.c)) {
-        if (cell.mc.cs) {
-          cell.mc.cs += count;
-        }
-        templateCell = { ...cell };
-        if (!curd?.[r]?.[index + 1]?.mc) {
-          templateCell.mc = undefined;
-        }
-        delete templateCell.v;
-        delete templateCell.m;
-        delete templateCell.ps;
-        delete templateCell.f;
-      }
-      col.push(templateCell);
+    const colTemplates: any[][] = [];
+    for (let ci = 0; ci < count; ci += 1) {
+      const srcColIdx = usePerColTemplates ? firstTemplateCol! : index;
+      colTemplates.push(
+        buildTemplateColumnFromData(d, srcColIdx, count, direction),
+      );
     }
-    const cellBorderConfig = [];
+
+    const cellBorderConfigCol: any[] = [];
     // 边框
     if (cfg.borderInfo && cfg.borderInfo.length > 0) {
       const borderInfo = [];
@@ -1134,9 +1264,9 @@ export function insertRowCol(
         } else if (rangeType === "cell") {
           let { col_index } = cfg.borderInfo[i].value;
           // 位置相同标识边框相关 先缓存
-          if (col_index === index) {
-            cellBorderConfig.push(
-              JSON.parse(JSON.stringify(cfg.borderInfo[i]))
+          if (!usePerColTemplates && col_index === index) {
+            cellBorderConfigCol.push(
+              JSON.parse(JSON.stringify(cfg.borderInfo[i])),
             );
           }
 
@@ -1158,36 +1288,38 @@ export function insertRowCol(
       cfg.borderInfo = borderInfo;
     }
 
-    // 处理相关的 type 为 cell 类型的边框
-    if (cellBorderConfig.length) {
-      for (let i = 0; i < count; i += 1) {
-        const cellBorderConfigCopy = _.cloneDeep(cellBorderConfig);
-        cellBorderConfigCopy.forEach((item) => {
+    for (let i = 0; i < count; i += 1) {
+      const srcColIdx = usePerColTemplates ? firstTemplateCol! : index;
+      let bordersToDupCol: any[] = [];
+      if (usePerColTemplates) {
+        bordersToDupCol = colBorderSnapshot
+          .filter(
+            (bi: any) =>
+              bi.rangeType === "cell" && bi.value.col_index === srcColIdx,
+          )
+          .map((bi: any) => JSON.parse(JSON.stringify(bi)));
+      } else if (cellBorderConfigCol.length) {
+        bordersToDupCol = _.cloneDeep(cellBorderConfigCol);
+      }
+      if (bordersToDupCol.length) {
+        bordersToDupCol.forEach((item) => {
           if (direction === "rightbottom") {
-            // 向右插入时 基于模板列位置直接递增即可
             item.value.col_index += i + 1;
           } else if (direction === "lefttop") {
-            // 向左插入时 目标列移动到后面 新增n列到前面 对于新增的列来说 也是递增，不过是从0开始
             item.value.col_index += i;
           }
         });
-        cfg.borderInfo?.push(...cellBorderConfigCopy);
+        cfg.borderInfo?.push(...bordersToDupCol);
       }
     }
 
     for (let r = 0; r < d.length; r += 1) {
       const row = d[r];
-
-      for (let i = 0; i < count; i += 1) {
-        if (direction === "lefttop") {
-          if (index === 0) {
-            row.unshift(col[r]);
-          } else {
-            row.splice(index, 0, col[r]);
-          }
-        } else {
-          row.splice(index + 1, 0, col[r]);
-        }
+      const insertValues = colTemplates.map((tpl) => tpl[r]);
+      if (direction === "lefttop") {
+        row.splice(index, 0, ...insertValues);
+      } else {
+        row.splice(index + 1, 0, ...insertValues);
       }
     }
   }
@@ -1202,6 +1334,71 @@ export function insertRowCol(
   }
   file.luckysheet_conditionformat_save = newCFarr;
   file.luckysheet_alternateformat_save = newAFarr;
+
+  if (snapRowDv) {
+    const newRowStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const destR = newRowStart + i;
+      _.forEach(snapRowDv[0], (item, cStr) => {
+        const c = Number(cStr);
+        newDataVerification[`${destR}_${c}`] = _.cloneDeep(item);
+      });
+    }
+  }
+  if (snapColDv) {
+    const newColStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const destC = newColStart + i;
+      _.forEach(snapColDv[0], (item, rStr) => {
+        const r = Number(rStr);
+        newDataVerification[`${r}_${destC}`] = _.cloneDeep(item);
+      });
+    }
+  }
+
+  if (usePerRowTemplates && CFarr != null && CFarr.length > 0) {
+    const newRowStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const srcRow = firstTemplateRow!;
+      const destRow = newRowStart + i;
+      for (let k = 0; k < CFarr.length; k += 1) {
+        const srcCf = CFarr[k];
+        const mappedRanges = (srcCf.cellrange || [])
+          .filter((rg: any) => srcRow >= rg.row[0] && srcRow <= rg.row[1])
+          .map((rg: any) => ({
+            row: [destRow, destRow],
+            column: [rg.column[0], rg.column[1]],
+          }));
+        if (mappedRanges.length > 0) {
+          const cfClone = _.cloneDeep(srcCf);
+          cfClone.cellrange = mappedRanges;
+          newCFarr.push(cfClone);
+        }
+      }
+    }
+  }
+  if (usePerColTemplates && CFarr != null && CFarr.length > 0) {
+    const newColStart = direction === "lefttop" ? index : index + 1;
+    for (let i = 0; i < count; i += 1) {
+      const srcCol = firstTemplateCol!;
+      const destCol = newColStart + i;
+      for (let k = 0; k < CFarr.length; k += 1) {
+        const srcCf = CFarr[k];
+        const mappedRanges = (srcCf.cellrange || [])
+          .filter((rg: any) => srcCol >= rg.column[0] && srcCol <= rg.column[1])
+          .map((rg: any) => ({
+            row: [rg.row[0], rg.row[1]],
+            column: [destCol, destCol],
+          }));
+        if (mappedRanges.length > 0) {
+          const cfClone = _.cloneDeep(srcCf);
+          cfClone.cellrange = mappedRanges;
+          newCFarr.push(cfClone);
+        }
+      }
+    }
+  }
+
   file.dataVerification = newDataVerification;
   file.hyperlink = newHyperlink;
   if (file.id === ctx.currentSheetId) {

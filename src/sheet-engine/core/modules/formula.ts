@@ -19,7 +19,7 @@ import {
   mergeMoveMain,
   setCellValue,
 } from "./cell";
-import { error, detectErrorFromValue } from "./validation";
+import { error, detectErrorFromValue, isNumericCellType } from "./validation";
 import { locale } from "../locale";
 import { colors } from "./color";
 import { colLocation, mousePosition, rowLocation } from "./location";
@@ -105,6 +105,9 @@ export class FormulaCache {
   // Keyboard-only gate: when opening an existing formula cell, block keyboard
   // range navigation until the formula text is manually edited.
   keyboardRangeSelectionLock?: boolean;
+
+  /** True after arrow/Shift+arrow moved `func_selectedrange` without updating yellow selection. */
+  formulaKeyboardRefSync?: boolean;
 
   // Persistent owner of the current formula edit session. Unlike
   // document.activeElement, this survives canvas clicks during range picking.
@@ -242,7 +245,7 @@ export class FormulaCache {
       return Number(splitedNumberString);
     }
     // FLV crypto denomination --END--
-    if (cell?.ct?.t === "n" && !String(cell?.m).includes("%")) {
+    if (isNumericCellType(cell) && !String(cell?.m).includes("%")) {
       const n = Number(cell?.v);
       return Number.isNaN(n) ? cell.v : n;
     }
@@ -2104,6 +2107,38 @@ function findrangeindex(ctx: Context, v: string, vp: string) {
   }
 
   return null;
+}
+
+/**
+ * Before the first `moveHighlightCell/Range(..., "rangeOfFormula")` while editing
+ * a formula, copy the current yellow selection into `func_selectedrange` so
+ * keyboard navigation updates only the blue formula overlay (like mouse drag),
+ * without resizing `luckysheet_select_save`.
+ */
+export function seedFormulaFuncSelectedRangeFromLastSelection(
+  ctx: Context
+): boolean {
+  if (ctx.formulaCache.func_selectedrange) return true;
+  const sel = ctx.luckysheet_select_save;
+  if (!sel?.length) return false;
+  const last = sel[sel.length - 1];
+  if (!last?.row?.length || !last?.column?.length) return false;
+  ctx.formulaCache.func_selectedrange = {
+    left: last.left,
+    width: last.width,
+    top: last.top,
+    height: last.height,
+    left_move: last.left_move,
+    width_move: last.width_move,
+    top_move: last.top_move,
+    height_move: last.height_move,
+    row: [...last.row],
+    column: [...last.column],
+    row_focus: last.row_focus,
+    column_focus: last.column_focus,
+    moveXY: last.moveXY,
+  };
+  return true;
 }
 
 export function createFormulaRangeSelect(
@@ -4305,23 +4340,9 @@ export function rangeDrag(
   func_selectedrange.top_move = top;
   func_selectedrange.height_move = height;
 
-  // Keep normal (yellow) selection in sync during formula mouse drag.
-  ctx.luckysheet_select_save = [
-    {
-      row: [rowseleted[0], rowseleted[1]],
-      column: [columnseleted[0], columnseleted[1]],
-      row_focus: row_index,
-      column_focus: col_index,
-      left,
-      top,
-      width,
-      height,
-      left_move: left,
-      top_move: top,
-      width_move: width,
-      height_move: height,
-    },
-  ];
+  // Do not update `luckysheet_select_save` here — that draws the yellow sheet
+  // selection. Formula picking should show only the blue overlay + spans; yellow
+  // stays on the pre-drag sheet selection (e.g. the cell being edited).
 
   // luckysheet_count_show(left, top, width, height, rowseleted, columnseleted);
 
@@ -4436,23 +4457,7 @@ export function rangeDragColumn(
   func_selectedrange.left_move = left;
   func_selectedrange.width_move = width;
 
-  // Keep normal (yellow) selection in sync during formula mouse drag.
-  ctx.luckysheet_select_save = [
-    {
-      row: [0, row_index],
-      column: [columnseleted[0], columnseleted[1]],
-      row_focus: 0,
-      column_focus: col_index,
-      left,
-      top: row_pre,
-      width,
-      height: row - row_pre - 1,
-      left_move: left,
-      top_move: row_pre,
-      width_move: width,
-      height_move: row - row_pre - 1,
-    },
-  ];
+  // See `rangeDrag`: do not resize yellow `luckysheet_select_save` during formula drag.
 
   // luckysheet_count_show(
   //   left,
@@ -4552,23 +4557,7 @@ export function rangeDragRow(
   func_selectedrange.top_move = top;
   func_selectedrange.height_move = height;
 
-  // Keep normal (yellow) selection in sync during formula mouse drag.
-  ctx.luckysheet_select_save = [
-    {
-      row: [rowseleted[0], rowseleted[1]],
-      column: [0, col_index],
-      row_focus: row_index,
-      column_focus: 0,
-      left: col_pre,
-      top,
-      width: col - col_pre - 1,
-      height,
-      left_move: col_pre,
-      top_move: top,
-      width_move: col - col_pre - 1,
-      height_move: height,
-    },
-  ];
+  // See `rangeDrag`: do not resize yellow `luckysheet_select_save` during formula drag.
 
   // luckysheet_count_show(col_pre, top, col - col_pre - 1, height, rowseleted, [
   //   0,

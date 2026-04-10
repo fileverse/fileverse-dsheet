@@ -2,6 +2,7 @@ import React, { useContext, useState, useCallback, useMemo } from 'react';
 import {
   cancelNormalSelected,
   getSheetIndex,
+  isNumericCellType,
   locale,
   update,
 } from '@sheet-engine/core';
@@ -63,15 +64,11 @@ export const FormatSearch: React.FC<{
       _.forEach(ctx.luckysheet_select_save, (selection) => {
         for (let r = selection.row[0]; r <= selection.row[1]; r += 1) {
           for (let c = selection.column[0]; c <= selection.column[1]; c += 1) {
-            if (
-              ctx.luckysheetfile[index].data?.[r][c] &&
-              ctx.luckysheetfile[index].data?.[r][c]?.ct?.t === 'n'
-            ) {
-              ctx.luckysheetfile[index].data![r][c]!.ct!.fa = formatString;
-              ctx.luckysheetfile[index].data![r][c]!.m = update(
-                formatString,
-                ctx.luckysheetfile[index].data![r][c]!.v,
-              );
+            const cellAt = ctx.luckysheetfile[index].data?.[r][c];
+            if (cellAt && isNumericCellType(cellAt)) {
+              const cell = ctx.luckysheetfile[index].data![r][c]!;
+              cell.ct = { ...cell.ct, fa: formatString, t: 'n' };
+              cell.m = update(formatString, cell.v);
             }
           }
         }

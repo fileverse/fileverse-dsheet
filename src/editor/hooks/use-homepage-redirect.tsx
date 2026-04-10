@@ -55,6 +55,7 @@ export const usehandleHomepageRedirect = ({
     const csvFileUrl = params.get('csv');
 
     if (csvFileUrl) {
+      const separatorType = params.get('separator') ?? 'auto';
       fetch(csvFileUrl)
         .then((res) => res.blob())
         .then((blob) => {
@@ -70,6 +71,9 @@ export const usehandleHomepageRedirect = ({
                 sheetEditorRef,
                 updateDocumentTitle,
                 file,
+                undefined,
+                undefined,
+                separatorType,
               ),
             ).finally(() => {
               setIsDataLoaded(true);
@@ -79,6 +83,7 @@ export const usehandleHomepageRedirect = ({
         .finally(() => {
           setIsDataLoaded(true);
           params.delete('csv');
+          params.delete('separator');
           window.history.replaceState(
             {},
             '',

@@ -11243,7 +11243,7 @@ export default {
     { text: '', value: 'split', example: '' },
     {
       text: 'लेखांकन',
-      value: `${currency}(0.00)`,
+      value: `_("${currency}"* #,##0.00_);_("${currency}"* \\(#,##0.00\\);_("${currency}"* "-"??_);_(@_)`,
       example: `${currency}(1200.09)`,
     },
 
@@ -11530,6 +11530,14 @@ export default {
     cannotInsertOnRowReadOnly: 'केवल-पढ़ने की पंक्ति पर सम्मिलित नहीं कर सकते',
     cannotInsertOnColumnReadOnly:
       'केवल-पढ़ने के स्तंभ पर सम्मिलित नहीं कर सकते',
+    insertRowAboveOne: 'Insert row above',
+    insertRowsAboveN: 'Insert {n} rows above',
+    insertRowBelowOne: 'Insert row below',
+    insertRowsBelowN: 'Insert {n} rows below',
+    insertColumnLeftOne: 'Insert column to the left',
+    insertColumnsLeftN: 'Insert {n} columns to the left',
+    insertColumnRightOne: 'Insert column to the right',
+    insertColumnsRightN: 'Insert {n} columns to the right',
     rowOverLimit: '10000 पंक्ति सीमा पार हो गई',
     columnOverLimit: '1000 स्तंभ सीमा पार हो गई',
   },

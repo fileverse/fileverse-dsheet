@@ -14,6 +14,8 @@ import {
   convertRawImagesToFortuneSheet,
   RawSheetImage,
 } from '../utils/xlsx-image-utils';
+import { removeFileExtension } from '../utils/export-filename';
+import { toast } from '@fileverse/ui';
 
 /** Predefined option colors for data validation dropdowns (when XLSX has no color). */
 const DATA_VERIFICATION_OPTION_COLORS = [
@@ -42,6 +44,57 @@ function isCheckboxPair(a: string, b: string): boolean {
   const la = a.toLowerCase();
   const lb = b.toLowerCase();
   return CHECKBOX_PAIRS.some(([x, y]) => la === x && lb === y);
+}
+
+const POST_IMPORT_RECALC_MAX_FRAMES = 200;
+
+/**
+ * XLSX stores cached formula results only; we normalize cells and then must run the in-app engine.
+ */
+function schedulePostImportFormulaRecalc(
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+): void {
+  let didRun = false;
+  let frames = 0;
+
+  const tryRecalc = (): boolean => {
+    if (didRun) return true;
+    const wb = sheetEditorRef.current;
+    if (!wb?.getWorkbookContext || !wb.recalculateAllFormulas) return false;
+    const ctx = wb.getWorkbookContext();
+    const files = ctx?.luckysheetfile;
+    if (!files?.length) return false;
+    const hasGrid = files.some(
+      (s) => Array.isArray(s.data) && s.data.length > 0,
+    );
+    if (!hasGrid) return false;
+    wb.recalculateAllFormulas();
+    didRun = true;
+    return true;
+  };
+
+  const tick = () => {
+    if (tryRecalc()) return;
+    frames += 1;
+    if (frames < POST_IMPORT_RECALC_MAX_FRAMES) {
+      requestAnimationFrame(tick);
+    } else {
+      // Final attempt even if readiness heuristic missed (e.g. unusual sheet dimensions)
+      sheetEditorRef.current?.recalculateAllFormulas?.();
+      didRun = true;
+    }
+  };
+
+  requestAnimationFrame(() => requestAnimationFrame(tick));
+
+  // `loadLocale` in Workbook init is async — rAF may finish before grids exist.
+  for (const ms of [120, 400, 1200]) {
+    window.setTimeout(() => {
+      if (!didRun) {
+        tryRecalc();
+      }
+    }, ms);
+  }
 }
 
 /** Build dataVerification color string from option count: use color list only when options ≤ 12; if more, use only grey (first) repeated. */
@@ -87,8 +140,8 @@ function excelDataValidationToSheetEntry(
   const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
-          .replace(/^["']|["']$/g, '')
-          .replace(/["']/g, '')
+        .replace(/^["']|["']$/g, '')
+        .replace(/["']/g, '')
       : '';
   const parts = rawFormula
     .split(',')
@@ -447,12 +500,12 @@ export const useXLSXImport = ({
             number,
             {
               type:
-                | 'row'
-                | 'column'
-                | 'both'
-                | 'rangeRow'
-                | 'rangeColumn'
-                | 'rangeBoth';
+              | 'row'
+              | 'column'
+              | 'both'
+              | 'rangeRow'
+              | 'rangeColumn'
+              | 'rangeBoth';
               range: { row_focus: number; column_focus: number };
             }
           > = {};
@@ -579,6 +632,17 @@ export const useXLSXImport = ({
             // Extract images — pixel positions are deferred to sheets.map
             const sheetImages = extractImagesFromWorksheet(ws, workbook);
             if (sheetImages.length > 0) imagesBySheet[idx] = sheetImages;
+
+            // Log table data if present (for inspection purposes)
+            const wsTables = (ws as any).tables;
+            if (wsTables && Object.keys(wsTables).length > 0) {
+              toast({
+                title: 'Tables are not fully supported',
+                description: 'Table styles will not be applied',
+                variant: 'warning',
+                showCloseButton: true,
+              });
+            }
 
             // Extract data validation for this sheet (row_column keys for dataVerification)
             const dvModel = (
@@ -742,12 +806,22 @@ export const useXLSXImport = ({
                 const hlKeys = hyperlinksBySheet[sheetIndex];
                 const styleKeys = cellStylesBySheet[sheetIndex];
                 const calcChain: { r: number; c: number; id: string }[] = [];
+                const pushCalcChainOnce = (r: number, c: number) => {
+                  const k = `${r}_${c}`;
+                  if ((pushCalcChainOnce as any)._seen == null) {
+                    (pushCalcChainOnce as any)._seen = new Set<string>();
+                  }
+                  const seen = (pushCalcChainOnce as any)._seen as Set<string>;
+                  if (seen.has(k)) return;
+                  seen.add(k);
+                  calcChain.push({ r, c, id: sheet.id as string });
+                };
                 // Built during the celldata loop below; only allocated when merges exist
                 const celldataMap = sheet.config?.merge
                   ? new Map<
-                      string,
-                      { r: number; c: number; v: Record<string, unknown> }
-                    >()
+                    string,
+                    { r: number; c: number; v: Record<string, unknown> }
+                  >()
                   : null;
                 if (sheet.celldata) {
                   for (const cell of sheet.celldata) {
@@ -761,14 +835,18 @@ export const useXLSXImport = ({
                       },
                     );
                     if (cell.v) {
-                      // Mark formula cells so FortuneSheet recalculates them on dependency change
+                      if (cell.v.f) {
+                        const fStr = String(cell.v.f);
+                        if (!fStr.startsWith('=')) {
+                          cell.v.f = `=${fStr}`;
+                        }
+                      }
+                      // Mark formula cells so FortuneSheet recalculates them on dependency change.
+                      // Keep cached m/v so the workbook shows something during the remount phase;
+                      // schedulePostImportFormulaRecalc will overwrite them once the engine runs.
                       if (cell.v.f && cell.v.ct?.t !== 'd') {
                         cell.v.ct = { ...(cell.v.ct ?? {}), t: 'str' };
-                        calcChain.push({
-                          r: cell.r,
-                          c: cell.c,
-                          id: sheet.id as string,
-                        });
+                        pushCalcChainOnce(cell.r, cell.c);
                       }
                       // Apply formatting extracted from exceljs
                       if (styleKeys?.[key]) {
@@ -784,7 +862,8 @@ export const useXLSXImport = ({
                       if (fa && !isDateCache.has(fa)) {
                         isDateCache.set(fa, SSF.is_date(fa));
                       }
-                      if (fa && isDateCache.get(fa)) {
+
+                      if (!cell.v.f && fa && isDateCache.get(fa)) {
                         const numV =
                           typeof cell.v.v === 'string'
                             ? parseFloat(cell.v.v)
@@ -800,12 +879,16 @@ export const useXLSXImport = ({
                         }
                         // luckyexcel stores numeric values as strings (e.g. "59.0"); parse to number and recompute m so integers don't display with a trailing ".0"
                       } else if (
+                        !cell.v.f &&
                         typeof cell.v.v === 'string' &&
                         cell.v.ct?.t !== 's'
                       ) {
                         const numV = parseFloat(cell.v.v as string);
                         if (isFinite(numV)) {
                           cell.v.v = numV;
+                          if (cell.v.ht == null) {
+                            cell.v.ht = 2;
+                          }
                           if (!fa || fa === 'General') {
                             cell.v.m = String(numV);
                           } else {
@@ -816,6 +899,38 @@ export const useXLSXImport = ({
                             }
                           }
                         }
+                      } else if (
+                        !cell.v.f &&
+                        typeof cell.v.v === 'number' &&
+                        isFinite(cell.v.v) &&
+                        cell.v.ct?.t !== 's' &&
+                        cell.v.ct?.t !== 'd'
+                      ) {
+                        if (cell.v.ht == null) {
+                          cell.v.ht = 2;
+                        }
+                      }
+                    }
+                  }
+                }
+
+                // Normalize formula cells in the data grid (luckyexcel may populate sheet.data
+                // in addition to sheet.celldata). Keep cached m/v for display during remount.
+                if (Array.isArray((sheet as any).data)) {
+                  const data = (sheet as any).data as any[][];
+                  for (let r = 0; r < data.length; r++) {
+                    const row = data[r];
+                    if (!Array.isArray(row)) continue;
+                    for (let c = 0; c < row.length; c++) {
+                      const v = row[c];
+                      if (!v || typeof v !== 'object') continue;
+                      if (!v.f) continue;
+
+                      const fStr = String(v.f);
+                      if (!fStr.startsWith('=')) v.f = `=${fStr}`;
+                      if (v.ct?.t !== 'd') {
+                        v.ct = { ...(v.ct ?? {}), t: 'str' };
+                        pushCalcChainOnce(r, c);
                       }
                     }
                   }
@@ -888,8 +1003,10 @@ export const useXLSXImport = ({
                 currentDataRef.current = plain;
                 setForceSheetRender((prev: number) => prev + 1);
               }
+              schedulePostImportFormulaRecalc(sheetEditorRef);
               // @ts-expect-error later
-              updateDocumentTitle?.(exportJson.info?.name);
+              const fileName = removeFileExtension(exportJson?.info?.name);
+              updateDocumentTitle?.(fileName);
               resolve();
             },
           );

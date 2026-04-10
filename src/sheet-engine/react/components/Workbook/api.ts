@@ -23,6 +23,8 @@ import {
   newComment,
   GlobalCache,
   LiveQueryData,
+  execFunctionGroup,
+  jfrefreshgrid,
 } from '@sheet-engine/core';
 import { applyPatches } from 'immer';
 import _ from 'lodash';
@@ -116,6 +118,31 @@ export function generateAPIs(
     },
 
     getCryptoPrice,
+
+    /** Runs the formula engine on every cell in calcChain (all sheets). Use after XLSX import so values are computed, not cached from the file. */
+    recalculateAllFormulas: () => {
+      setContext((draftCtx) => {
+        execFunctionGroup(
+          draftCtx,
+          // origin cell is unused when isForce=true; toolbar uses null with @ts-ignore
+          null as unknown as number,
+          null as unknown as number,
+          null,
+          undefined,
+          undefined,
+          true,
+        );
+        // Force a canvas/data refresh pass without re-running formulas.
+        // Without this, formula results can be written but not painted until a later refresh.
+        try {
+          jfrefreshgrid(draftCtx, null, undefined, false);
+        } catch (e) {
+          // Intentionally ignore; refresh best-effort.
+        }
+        draftCtx.formulaCache.execFunctionGlobalData = null;
+      });
+    },
+
     getCellValue: (
       row: number,
       column: number,
@@ -126,7 +153,7 @@ export function generateAPIs(
       const { functionlist } = locale(context);
       const last =
         context.luckysheet_select_save?.[
-          context.luckysheet_select_save.length - 1
+        context.luckysheet_select_save.length - 1
         ];
       let row_index = last?.row_focus;
       let col_index = last?.column_focus;
@@ -476,7 +503,7 @@ export function generateAPIs(
     ) => {
       const last =
         context.luckysheet_select_save?.[
-          context.luckysheet_select_save.length - 1
+        context.luckysheet_select_save.length - 1
         ];
       let row_index = last?.row_focus;
       let col_index = last?.column_focus;

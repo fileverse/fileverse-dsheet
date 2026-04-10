@@ -28,6 +28,7 @@ import {
   GlobalCache,
   onCellsMoveStart,
   insertRowCol,
+  deleteRowCol,
   getSheetIndex,
   fixRowStyleOverflowInFreeze,
   fixColumnStyleOverflowInFreeze,
@@ -317,6 +318,109 @@ const SheetOverlay: React.FC = () => {
 
   const onKeyDownForZoom = useCallback(
     (ev: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const isWinLike = !isMac;
+      const isInsertByPlusShortcut =
+        ((isMac && ev.metaKey && ev.altKey) ||
+          (isWinLike && ev.ctrlKey && ev.altKey)) &&
+        (ev.code === 'Equal' ||
+          ev.code === 'NumpadAdd' ||
+          ev.key === '+' ||
+          ev.key === '=');
+
+      if (isInsertByPlusShortcut) {
+        const selection = context.luckysheet_select_save?.[0];
+        if (selection?.column_select || selection?.row_select) {
+          const insertRowColOp: SetContextOptions['insertRowColOp'] =
+            selection.column_select
+              ? {
+                type: 'column',
+                index: selection!.column[0],
+                count: 1,
+                direction: 'lefttop',
+                id: context.currentSheetId,
+              }
+              : {
+                type: 'row',
+                index: selection!.row[1],
+                count: 1,
+                direction: 'rightbottom',
+                id: context.currentSheetId,
+              };
+
+          setContext((draftCtx) => {
+            insertRowCol(draftCtx, insertRowColOp, false);
+          }, { insertRowColOp });
+        }
+        ev.preventDefault();
+        return;
+      }
+
+      const isDeleteByMinusShortcut =
+        ((isMac && ev.metaKey && ev.altKey) ||
+          (isWinLike && ev.ctrlKey && ev.altKey)) &&
+        (ev.code === 'Minus' || ev.key === '-');
+      if (isDeleteByMinusShortcut) {
+        const selection = context.luckysheet_select_save?.[0];
+        if (selection?.column_select || selection?.row_select) {
+          setContext((draftCtx) => {
+            const sheetIndex = getSheetIndex(draftCtx, draftCtx.currentSheetId);
+            const sheet = sheetIndex != null ? draftCtx.luckysheetfile[sheetIndex] : null;
+            if (!sheet?.data?.length || !sheet.data[0]?.length) return;
+
+            if (selection.column_select) {
+              const deleteStart = selection.column[0];
+              const deleteEnd = selection.column[1];
+              deleteRowCol(draftCtx, {
+                type: 'column',
+                start: deleteStart,
+                end: deleteEnd,
+                id: context.currentSheetId,
+              });
+              const currentColCount = sheet.data[0]?.length ?? 0;
+              if (currentColCount > 0) {
+                const targetCol = Math.min(deleteStart, currentColCount - 1);
+                draftCtx.luckysheet_select_save = [
+                  {
+                    row: [0, sheet.data.length - 1],
+                    column: [targetCol, targetCol],
+                    row_focus: 0,
+                    column_focus: targetCol,
+                    row_select: false,
+                    column_select: true,
+                  },
+                ];
+              }
+            } else {
+              const deleteStart = selection.row[0];
+              const deleteEnd = selection.row[1];
+              deleteRowCol(draftCtx, {
+                type: 'row',
+                start: deleteStart,
+                end: deleteEnd,
+                id: context.currentSheetId,
+              });
+              const currentRowCount = sheet.data.length;
+              if (currentRowCount > 0) {
+                const targetRow = Math.min(deleteStart, currentRowCount - 1);
+                draftCtx.luckysheet_select_save = [
+                  {
+                    row: [targetRow, targetRow],
+                    column: [0, sheet.data[0].length - 1],
+                    row_focus: targetRow,
+                    column_focus: 0,
+                    row_select: true,
+                    column_select: false,
+                  },
+                ];
+              }
+            }
+          });
+        }
+        ev.preventDefault();
+        return;
+      }
+
       const newZoom = handleKeydownForZoom(ev, context.zoomRatio);
       if (newZoom !== context.zoomRatio) {
         setContext((ctx) => {
@@ -327,7 +431,12 @@ const SheetOverlay: React.FC = () => {
         });
       }
     },
-    [context.zoomRatio, setContext],
+    [
+      context.zoomRatio,
+      context.currentSheetId,
+      context.luckysheet_select_save,
+      setContext,
+    ],
   );
 
   const onTouchStart = useCallback(
@@ -503,9 +612,12 @@ const SheetOverlay: React.FC = () => {
           {context.formulaRangeSelect && (
             <div
               className="fortune-selection-copy fortune-formula-functionrange-select"
-              style={context.formulaRangeSelect}
+              style={_.omit(context.formulaRangeSelect, 'rangeIndex')}
             >
-              <div className="fortune-selection-copy-hc" />
+              <div
+                className="fortune-selection-copy-hc"
+                style={formulaRangeHighlightHcStyle('#12a5ff')}
+              />
             </div>
           )}
           {context.formulaRangeHighlight.map((v) => {
@@ -651,10 +763,10 @@ const SheetOverlay: React.FC = () => {
                         left: selection.left_move,
                         top: selection.top_move,
                         width: selection.width_move
-                          ? selection.width_move - 1.8
+                          ? selection.width_move - (isMultiCell ? 0.6 : 1.8)
                           : selection.width_move,
                         height: selection.height_move
-                          ? selection.height_move - 1.8
+                          ? selection.height_move - (isMultiCell ? 0.6 : 1.8)
                           : selection.height_move,
                         borderWidth: isMultiCell ? 1 : 2,
                         display: hideSelectionWhileEditing ? 'none' : 'block',

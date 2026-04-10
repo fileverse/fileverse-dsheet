@@ -1,9 +1,13 @@
 /**
  * Keys that end the current formula range-reference segment (same UX as typing "," between
  * function args): clear the blue range overlay and return sheet selection to the anchor cell.
+ * `=` is included so a second "=" (e.g. after a ref) also resets range navigation like other
+ * operators; the leading "=" that starts a formula does not match segment handling because
+ * `currentInputText.startsWith('=')` is false on that first keydown in an empty cell.
  */
 const FORMULA_SEGMENT_BOUNDARY_KEYS = new Set<string>([
   ',',
+  '=',
   '+',
   '-',
   '*',

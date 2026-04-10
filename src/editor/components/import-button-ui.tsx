@@ -1,5 +1,5 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
-import { ChangeEventHandler, useState } from 'react';
+import { ChangeEventHandler, useEffect, useState } from 'react';
 import {
   LucideIcon,
   IconButton,
@@ -15,6 +15,13 @@ import {
 import './import-button.scss';
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
+/** Import modes that only apply to CSV; invalid if XLSX is selected. */
+const CSV_ONLY_IMPORT_TYPES = new Set([
+  'replace-current-sheet',
+  'append-to-current-sheet',
+  'replace-data-at-selected-cell',
+]);
+
 export const CustomButton = ({
   setExportDropdownOpen,
   handleCSVUpload,
@@ -28,6 +35,7 @@ export const CustomButton = ({
     event: ChangeEventHandler<HTMLInputElement> | undefined,
     file: any,
     importType: string,
+    separatorType: string,
   ) => void | Promise<void>;
   handleXLSXUpload: (
     event: ChangeEventHandler<HTMLInputElement> | undefined,
@@ -44,6 +52,14 @@ export const CustomButton = ({
   const [file, setFile] = useState<any>(null);
   const [extension, setExtension] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [separatorType, setSeparatorType] = useState('auto');
+
+  useEffect(() => {
+    if (extension !== 'xlsx') return;
+    setImportType((prev) =>
+      CSV_ONLY_IMPORT_TYPES.has(prev) ? 'new-dsheet' : prev,
+    );
+  }, [extension]);
 
   const handleApplyData = async () => {
     if (extension === 'xlsx') {
@@ -69,13 +85,18 @@ export const CustomButton = ({
       if (file && importType === 'new-dsheet') {
         const url = URL.createObjectURL(file);
         setTimeout(() => {
-          window.open(`/sheet/create?csv=${encodeURIComponent(url)}`, '_blank');
+          window.open(
+            `/sheet/create?csv=${encodeURIComponent(url)}&separator=${separatorType}`,
+            '_blank',
+          );
         }, 0);
         setOpenImportTypeModal(false);
       } else {
         setIsImporting(true);
         try {
-          await Promise.resolve(handleCSVUpload(undefined, file, importType));
+          await Promise.resolve(
+            handleCSVUpload(undefined, file, importType, separatorType),
+          );
         } finally {
           setIsImporting(false);
           setOpenImportTypeModal(false);
@@ -132,7 +153,7 @@ export const CustomButton = ({
             className="dsheet-btn dsheet-btn--export-json hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
             data-testid="export-json-button"
           >
-            <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
+            <LucideIcon name="FileImport" className="w-[17px] h-[17px]" />
             <span className="dsheet-text dsheet-text--body text-body-sm">
               Export to .json
             </span>
@@ -144,7 +165,7 @@ export const CustomButton = ({
             className="dsheet-btn dsheet-btn--export-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
             data-testid="export-xlsx-button"
           >
-            <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
+            <LucideIcon name="FileImport" className="w-[17px] h-[17px]" />
             <span className="dsheet-text dsheet-text--body text-body-sm">
               Export to .xlsx
             </span>
@@ -156,7 +177,7 @@ export const CustomButton = ({
             className="dsheet-btn dsheet-btn--export-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
             data-testid="export-csv-button"
           >
-            <LucideIcon name="FileExport" className="w-[17px] h-[17px]" />
+            <LucideIcon name="FileImport" className="w-[17px] h-[17px]" />
             <span className="dsheet-text dsheet-text--body text-body-sm">
               Export to .csv
             </span>
@@ -165,7 +186,7 @@ export const CustomButton = ({
         <div
           className="p-2 color-text-default dsheet-import-section"
           data-testid="import-section"
-          // onClick={() => setIsOpen(false)}
+        // onClick={() => setIsOpen(false)}
         >
           <h2
             className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2"
@@ -179,7 +200,7 @@ export const CustomButton = ({
               className="dsheet-btn dsheet-btn--import-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
               data-testid="import-xlsx-button"
             >
-              <LucideIcon name="FileImport" />
+              <LucideIcon name="FileExport" />
               <label
                 htmlFor="xlsx-upload"
                 className="dsheet-label text-body-sm w-full cursor-pointer"
@@ -197,6 +218,7 @@ export const CustomButton = ({
               onChange={(e) => {
                 setExtension('xlsx');
                 setFile(e.target.files?.[0]);
+                setImportType('new-dsheet');
                 setOpenImportTypeModal(true);
                 setIsOpen(false);
                 e.target.value = '';
@@ -213,6 +235,7 @@ export const CustomButton = ({
               onChange={(e) => {
                 setExtension('csv');
                 setFile(e.target.files?.[0]);
+                setImportType('new-dsheet');
                 setOpenImportTypeModal(true);
                 setIsOpen(false);
                 e.target.value = '';
@@ -224,7 +247,7 @@ export const CustomButton = ({
               className="dsheet-btn dsheet-btn--import-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
               data-testid="import-csv-button"
             >
-              <LucideIcon width={18} height={18} name="FileImport" />
+              <LucideIcon width={18} height={18} name="FileExport" />
               <label
                 htmlFor="csv-upload"
                 className="dsheet-label text-body-sm w-full cursor-pointer"
@@ -244,7 +267,7 @@ export const CustomButton = ({
           if (isImporting && !open) return;
           setOpenImportTypeModal(open);
         }}
-        className="dsheet-modal dsheet-modal--import rounded-lg max-w-[420px]"
+        className="dsheet-modal dsheet-modal--import rounded-lg max-w-[540px]"
         contentClassName="!pt-4 px-6"
         title={
           <div
@@ -263,12 +286,12 @@ export const CustomButton = ({
               className="dsheet-modal-field"
               data-testid="import-modal-filename-field"
             >
-              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">
-                File name
+              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-2">
+                File
               </div>
-              <div className="dsheet-input-wrap h-[36px] p-2 border border-gray-200 rounded color-bg-disabled flex items-center">
+              <div className="dsheet-input-wrap h-[20px] rounded flex items-center">
                 <p
-                  className="dsheet-text dsheet-text--body text-body-sm color-text-disabled truncate-text"
+                  className="dsheet-text dsheet-text--body text-body-sm truncate-text"
                   data-testid="import-modal-filename"
                 >
                   {file?.name}
@@ -284,38 +307,105 @@ export const CustomButton = ({
               )}
             </div>
 
-            <div
-              className="dsheet-modal-field"
-              data-testid="import-modal-location-field"
-            >
-              <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">
-                Import location
+            <div className="flex flex-row gap-4">
+              <div
+                className="dsheet-modal-field flex-1 min-w-0"
+                data-testid="import-modal-location-field"
+              >
+                <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-2">
+                  Import location
+                </div>
+
+                <Select
+                  value={importType}
+                  onValueChange={(value) => {
+                    setImportType(value);
+                  }}
+                >
+                  <SelectTrigger data-testid="import-location-trigger">
+                    <SelectValue placeholder="Create new dSheet" />
+                  </SelectTrigger>
+                  <SelectContent id="publish-category">
+                    {[
+                      {
+                        id: 'new-dsheet',
+                        label: 'Create new dSheet',
+                        csvOnly: false,
+                      },
+                      {
+                        id: 'merge-current-dsheet',
+                        label: 'Insert new sheet(s)',
+                        csvOnly: false,
+                      },
+                      {
+                        id: 'new-current-dsheet',
+                        label: 'Replace dSheet',
+                        csvOnly: false,
+                      },
+                      {
+                        id: 'replace-current-sheet',
+                        label: 'Replace current sheet',
+                        csvOnly: true,
+                      },
+                      {
+                        id: 'append-to-current-sheet',
+                        label: 'Append to current sheet',
+                        csvOnly: true,
+                      },
+                      {
+                        id: 'replace-data-at-selected-cell',
+                        label: 'Replace data at selected cell',
+                        csvOnly: true,
+                      },
+                    ].map((cat) => {
+                      const isDisabled = cat.csvOnly && extension === 'xlsx';
+                      return (
+                        <SelectItem
+                          key={cat.id}
+                          value={cat.id}
+                          disabled={isDisabled}
+                          className={
+                            isDisabled ? 'opacity-40 cursor-not-allowed' : ''
+                          }
+                        >
+                          {cat.label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <Select
-                onValueChange={(value) => {
-                  setImportType(value);
-                }}
-              >
-                <SelectTrigger data-testid="import-location-trigger">
-                  <SelectValue placeholder="Create new dSheet" />
-                </SelectTrigger>
-                <SelectContent id="publish-category">
-                  {[
-                    { id: 'new-dsheet', label: 'Create new dSheet' },
-                    {
-                      id: 'merge-current-dsheet',
-                      label: 'Insert new sheet(s)',
-                    },
-                    { id: 'new-current-dsheet', label: 'Replace sheet(s)' },
-                  ].map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {extension === 'csv' && (
+                <div
+                  className="dsheet-modal-field flex-1 min-w-0"
+                  data-testid="import-modal-separator-field"
+                >
+                  <div className="dsheet-label dsheet-label--heading text-heading-xsm mb-[4px]">
+                    Separator type
+                  </div>
+                  <Select
+                    value={separatorType}
+                    onValueChange={setSeparatorType}
+                  >
+                    <SelectTrigger data-testid="import-separator-trigger">
+                      <SelectValue placeholder="Detect automatically" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Detect automatically</SelectItem>
+                      <SelectItem value="tab">Tab</SelectItem>
+                      <SelectItem value="comma">Comma</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
+
+            {importType === 'new-current-dsheet' && (
+              <p className="px-3 py-2 rounded text-sm bg-[#F5A623]/20 text-[#7A4F00]">
+                All data currently in this spreadsheet will be replaced.
+              </p>
+            )}
             <div
               className="dsheet-modal-actions flex justify-end items-center gap-2"
               data-testid="import-modal-actions"

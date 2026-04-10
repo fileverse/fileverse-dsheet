@@ -225,6 +225,8 @@ export function genarate(value: string | number | boolean) {
         df.seconds,
       );
       v = datenum_local(dateObj);
+      console.log("df", df, value);
+      console.log("v", v, dateObj);
       ct.t = 'd';
 
       const map: Record<string, string> = {
@@ -249,7 +251,9 @@ export function genarate(value: string | number | boolean) {
       };
 
       ct.fa = map[df.formatType] || 'dd/MM/yyyy';
+      console.log("ct.fa", ct.fa, v);
       m = SSF.format(ct.fa, v);
+      console.log("m", m);
     } else {
       m = String(value);
       ct.fa = 'General';

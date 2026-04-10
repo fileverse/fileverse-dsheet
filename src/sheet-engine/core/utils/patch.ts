@@ -18,6 +18,8 @@ export type PatchOptions = {
     count: number;
     direction: 'lefttop' | 'rightbottom';
     id: string;
+    templateSourceRows?: number[];
+    templateSourceColumns?: number[];
   };
   deleteRowColOp?: {
     type: 'row' | 'column';
@@ -88,6 +90,8 @@ function additionalCellOps(
     direction: string;
     count: number;
     type: string;
+    templateSourceRows?: number[];
+    templateSourceColumns?: number[];
   },
 ) {
   const { id, index, direction, count, type } = insertRowColOp;
@@ -99,28 +103,28 @@ function additionalCellOps(
   const cellOps: Op[] = [];
   if (type === 'row') {
     for (let i = 0; i < d[startIndex].length; i += 1) {
-      const cell = d[startIndex][i];
-      if (cell != null) {
-        for (let j = 0; j < count; j += 1) {
+      for (let j = 0; j < count; j += 1) {
+        const cell = d[startIndex + j]?.[i];
+        if (cell != null) {
           cellOps.push({
             op: 'replace',
             id,
             path: ['data', startIndex + j, i],
-            value: cell,
+            value: _.cloneDeep(cell),
           });
         }
       }
     }
   } else {
     for (let i = 0; i < d.length; i += 1) {
-      const cell = d[i][startIndex];
-      if (cell != null) {
-        for (let j = 0; j < count; j += 1) {
+      for (let j = 0; j < count; j += 1) {
+        const cell = d[i]?.[startIndex + j];
+        if (cell != null) {
           cellOps.push({
             op: 'replace',
             id,
             path: ['data', i, startIndex + j],
-            value: cell,
+            value: _.cloneDeep(cell),
           });
         }
       }

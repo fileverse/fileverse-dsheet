@@ -19,6 +19,7 @@ export const handleCSVUpload = (
   fileArg?: File,
   importType?: string,
   handleContentPortal?: any,
+  separatorType?: string,
 ): Promise<void> => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -38,10 +39,15 @@ export const handleCSVUpload = (
       const csvContent = e.target.result;
 
       if (typeof csvContent === 'string') {
+        const delimiter =
+          separatorType === 'tab' ? '\t' :
+          separatorType === 'comma' ? ',' :
+          '';
         Papa.parse(csvContent, {
           header: true,
           dynamicTyping: true,
           skipEmptyLines: true,
+          delimiter,
           complete: (results) => {
             if (results.errors.length > 0 && results.data.length === 0) {
               console.error('CSV Parsing errors:', results.errors);
@@ -143,6 +149,271 @@ export const handleCSVUpload = (
             }
 
             const sheetArray = ydoc.getArray(dsheetId);
+
+            // Helper: run the standard post-transaction sync and re-render
+            const finishImport = (sheetIndex: number) => {
+              const plain = ySheetArrayToPlain(ydoc.getArray(dsheetId));
+              currentDataRef.current = plain;
+              setTimeout(() => {
+                if (handleContentPortal) handleContentPortal();
+                setForceSheetRender((prev: number) => prev + 1);
+              }, 200);
+              setTimeout(() => {
+                sheetEditorRef.current?.activateSheet({ index: sheetIndex });
+              }, 500);
+              resolve();
+            };
+
+            // Helper: get the active sheet Y.Map
+            const getActiveSheetMap = (): Y.Map<any> | undefined => {
+              const currentSheetId =
+                sheetEditorRef.current?.getWorkbookContext()?.currentSheetId;
+              return sheetArray
+                .toArray()
+                .find(
+                  (s) => s instanceof Y.Map && s.get('id') === currentSheetId,
+                ) as Y.Map<any> | undefined;
+            };
+
+            // Helper: clear all entries from a Y.Map field on a sheet map
+            const clearYMap = (sheetMap: Y.Map<any>, field: string) => {
+              const ymap = sheetMap.get(field);
+              if (ymap instanceof Y.Map) {
+                Array.from(ymap.keys()).forEach((k) => ymap.delete(k));
+              }
+            };
+
+            if (importType === 'replace-current-sheet') {
+              const activeSheetMap = getActiveSheetMap();
+              if (!activeSheetMap) {
+                reject(new Error('No active sheet found'));
+                return;
+              }
+
+              ydoc.transact(() => {
+                // Clear cell data
+                clearYMap(activeSheetMap, 'celldata');
+                let cellMap = activeSheetMap.get('celldata');
+                if (!(cellMap instanceof Y.Map)) {
+                  cellMap = new Y.Map();
+                  activeSheetMap.set('celldata', cellMap);
+                }
+
+                // Clear side-maps
+                for (const field of [
+                  'hyperlink',
+                  'filter',
+                  'filter_select',
+                  'dataVerification',
+                  'conditionRules',
+                ]) {
+                  clearYMap(activeSheetMap, field);
+                }
+
+                // Reset merge config
+                activeSheetMap.set('config', { merge: {} });
+
+                // Write new cell data
+                cellData.forEach((cell) => {
+                  cellMap.set(`${cell.r}_${cell.c}`, cell);
+                });
+
+                // Update dimensions
+                activeSheetMap.set('row', rowCount);
+                activeSheetMap.set('column', colCount);
+
+                // Write hyperlinks
+                if (Object.keys(hyperlinkMap).length > 0) {
+                  let hMap = activeSheetMap.get('hyperlink');
+                  if (!(hMap instanceof Y.Map)) {
+                    hMap = new Y.Map();
+                    activeSheetMap.set('hyperlink', hMap);
+                  }
+                  Object.entries(hyperlinkMap).forEach(([k, v]) =>
+                    hMap.set(k, v),
+                  );
+                }
+              });
+
+              const activeIndex = sheetArray
+                .toArray()
+                .findIndex(
+                  (s) =>
+                    s instanceof Y.Map &&
+                    s.get('id') === activeSheetMap.get('id'),
+                );
+              finishImport(activeIndex);
+              return;
+            }
+
+            if (importType === 'append-to-current-sheet') {
+              const activeSheetMap = getActiveSheetMap();
+              if (!activeSheetMap) {
+                reject(new Error('No active sheet found'));
+                return;
+              }
+
+              // Find the last used row in the existing sheet
+              let maxExistingRow = -1;
+              const existingCellMap = activeSheetMap.get('celldata');
+              if (existingCellMap instanceof Y.Map) {
+                existingCellMap.forEach((_v, key) => {
+                  const r = parseInt(key.split('_')[0], 10);
+                  if (r > maxExistingRow) maxExistingRow = r;
+                });
+              }
+              const startRow = maxExistingRow + 1; // 0 when sheet is empty
+
+              // Offset all rows by startRow
+              const appendCells = cellData.map((cell) => ({
+                ...cell,
+                r: cell.r + startRow,
+              }));
+
+              // Offset hyperlink keys
+              const offsetHyperlinkMap: Record<
+                string,
+                { linkType: string; linkAddress: string }
+              > = {};
+              Object.entries(hyperlinkMap).forEach(([key, val]) => {
+                const [r, c] = key.split('_').map(Number);
+                offsetHyperlinkMap[`${r + startRow}_${c}`] = val;
+              });
+
+              const newMaxRow = appendCells.reduce(
+                (m, c) => Math.max(m, c.r),
+                0,
+              );
+
+              ydoc.transact(() => {
+                let cellMap = activeSheetMap.get('celldata');
+                if (!(cellMap instanceof Y.Map)) {
+                  cellMap = new Y.Map();
+                  activeSheetMap.set('celldata', cellMap);
+                }
+
+                appendCells.forEach((cell) => {
+                  cellMap.set(`${cell.r}_${cell.c}`, cell);
+                });
+
+                // Expand row count if needed
+                const currentRowCount = activeSheetMap.get('row') ?? 0;
+                if (newMaxRow + 1 > currentRowCount) {
+                  activeSheetMap.set('row', Math.max(newMaxRow + 1, 500));
+                }
+
+                // Merge hyperlinks
+                if (Object.keys(offsetHyperlinkMap).length > 0) {
+                  let hMap = activeSheetMap.get('hyperlink');
+                  if (!(hMap instanceof Y.Map)) {
+                    hMap = new Y.Map();
+                    activeSheetMap.set('hyperlink', hMap);
+                  }
+                  Object.entries(offsetHyperlinkMap).forEach(([k, v]) =>
+                    hMap.set(k, v),
+                  );
+                }
+              });
+
+              const activeIndex = sheetArray
+                .toArray()
+                .findIndex(
+                  (s) =>
+                    s instanceof Y.Map &&
+                    s.get('id') === activeSheetMap.get('id'),
+                );
+              finishImport(activeIndex);
+              return;
+            }
+
+            if (importType === 'replace-data-at-selected-cell') {
+              const activeSheetMap = getActiveSheetMap();
+              if (!activeSheetMap) {
+                reject(new Error('No active sheet found'));
+                return;
+              }
+
+              // Get anchor cell from current selection
+              const context = sheetEditorRef.current?.getWorkbookContext();
+              const selections = (context as any)?.luckysheet_select_save ?? [];
+              const lastSel = selections[selections.length - 1];
+              const anchorRow: number =
+                lastSel?.row_focus ?? lastSel?.row?.[0] ?? 0;
+              const anchorCol: number =
+                lastSel?.column_focus ?? lastSel?.column?.[0] ?? 0;
+
+              // Offset all cells by anchor
+              const offsetCells = cellData.map((cell) => ({
+                ...cell,
+                r: cell.r + anchorRow,
+                c: cell.c + anchorCol,
+              }));
+
+              // Offset hyperlink keys
+              const offsetHyperlinkMap: Record<
+                string,
+                { linkType: string; linkAddress: string }
+              > = {};
+              Object.entries(hyperlinkMap).forEach(([key, val]) => {
+                const [r, c] = key.split('_').map(Number);
+                offsetHyperlinkMap[`${r + anchorRow}_${c + anchorCol}`] = val;
+              });
+
+              const newMaxRow = offsetCells.reduce(
+                (m, c) => Math.max(m, c.r),
+                0,
+              );
+              const newMaxCol = offsetCells.reduce(
+                (m, c) => Math.max(m, c.c),
+                0,
+              );
+
+              ydoc.transact(() => {
+                let cellMap = activeSheetMap.get('celldata');
+                if (!(cellMap instanceof Y.Map)) {
+                  cellMap = new Y.Map();
+                  activeSheetMap.set('celldata', cellMap);
+                }
+
+                offsetCells.forEach((cell) => {
+                  cellMap.set(`${cell.r}_${cell.c}`, cell);
+                });
+
+                // Expand dimensions if write region exceeds current bounds
+                const currentRowCount = activeSheetMap.get('row') ?? 0;
+                const currentColCount = activeSheetMap.get('column') ?? 0;
+                if (newMaxRow + 1 > currentRowCount) {
+                  activeSheetMap.set('row', Math.max(newMaxRow + 1, 500));
+                }
+                if (newMaxCol + 1 > currentColCount) {
+                  activeSheetMap.set('column', Math.max(newMaxCol + 1, 36));
+                }
+
+                // Merge hyperlinks
+                if (Object.keys(offsetHyperlinkMap).length > 0) {
+                  let hMap = activeSheetMap.get('hyperlink');
+                  if (!(hMap instanceof Y.Map)) {
+                    hMap = new Y.Map();
+                    activeSheetMap.set('hyperlink', hMap);
+                  }
+                  Object.entries(offsetHyperlinkMap).forEach(([k, v]) =>
+                    hMap.set(k, v),
+                  );
+                }
+              });
+
+              const activeIndex = sheetArray
+                .toArray()
+                .findIndex(
+                  (s) =>
+                    s instanceof Y.Map &&
+                    s.get('id') === activeSheetMap.get('id'),
+                );
+              finishImport(activeIndex);
+              return;
+            }
+
+            // Existing modes: merge-current-dsheet / new-current-dsheet / new-dsheet
             const data = Array.from(sheetArray) as Sheet[];
 
             const sheetObject = {
@@ -182,20 +453,8 @@ export const handleCSVUpload = (
               });
             });
 
-            const plain = ySheetArrayToPlain(ydoc.getArray(dsheetId));
-            currentDataRef.current = plain;
-            setTimeout(() => {
-              if (handleContentPortal) {
-                handleContentPortal();
-              }
-              setForceSheetRender((prev: number) => prev + 1);
-            }, 200);
-            setTimeout(() => {
-              sheetEditorRef.current?.activateSheet({
-                index: finalData.length - 1,
-              });
-            }, 500);
-            resolve();
+            finishImport(finalData.length - 1);
+            return;
           },
         });
       } else {

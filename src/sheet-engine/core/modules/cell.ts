@@ -13,7 +13,7 @@ import {
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
 import { genarate, update } from "./format";
-import { clearCellError, getRowHeight } from "../api";
+import { clearCellError } from "../api";
 import {
   delFunctionGroup,
   execfunction,
@@ -38,6 +38,58 @@ import { spillSortResult } from "./sort";
 // let rangedrag_column_start = false;
 // let rangedrag_row_start = false;
 
+/** Extra px below measured text for auto row height (wrap + multiline edits). */
+const AUTO_ROW_HEIGHT_VERTICAL_PADDING = 8;
+
+/**
+ * Recompute auto row height for one row from wrap/inline cells; updates cfg.rowlen and ctx.config.
+ * Used from updateCell and deleteSelectedCellText (bulk clear).
+ */
+export function recalcAutoRowHeightForRow(
+  ctx: Context,
+  r: number,
+  d: CellMatrix,
+  canvas: CanvasRenderingContext2D | null | undefined,
+): void {
+  if (!canvas) return;
+
+  const sheetIdx = getSheetIndex(ctx, ctx.currentSheetId as string) as number;
+  const cfg = ctx.luckysheetfile[sheetIdx]?.config || {};
+  if (cfg.customHeight?.[r]) return;
+
+  const { defaultrowlen } = ctx;
+  let nextRowLen = defaultrowlen;
+  const rowData = d[r] || [];
+
+  for (let col = 0; col < rowData.length; col += 1) {
+    const rowCell = rowData[col];
+    if (!rowCell) continue;
+    if (!(rowCell?.tb === "2" || isInlineStringCell(rowCell))) continue;
+
+    const cellWidth = cfg.columnlen?.[col] || ctx.defaultcollen;
+    const textInfo = getCellTextInfo(rowCell as Cell, canvas, ctx, {
+      r,
+      c: col,
+      cellWidth,
+    });
+    if (textInfo) {
+      nextRowLen = Math.max(
+        nextRowLen,
+        textInfo.textHeightAll + AUTO_ROW_HEIGHT_VERTICAL_PADDING,
+      );
+    }
+  }
+
+  if (_.isNil(cfg.rowlen)) cfg.rowlen = {};
+  if (nextRowLen > defaultrowlen) {
+    cfg.rowlen[r] = nextRowLen;
+  } else if (!_.isNil(cfg.rowlen?.[r])) {
+    delete cfg.rowlen[r];
+  }
+
+  ctx.config = cfg;
+}
+
 export function normalizedCellAttr(
   cell: Cell,
   attr: keyof Cell,
@@ -58,7 +110,16 @@ export function normalizedCellAttr(
   } else if (attr.substring(0, 2) === "bs") {
     value ||= "none";
   } else if (attr === "ht" || attr === "vt") {
-    const defaultValue = attr === "ht" ? "1" : "0";
+    // Spreadsheet-style default alignment:
+    // - text: left
+    // - number/date-time-like numeric cells: right
+    const isNumericCell =
+      !!cell &&
+      ((cell as Cell).ct?.t === "n" ||
+        typeof (cell as Cell).v === "number" ||
+        isRealNum((cell as Cell).v) ||
+        isRealNum((cell as Cell).m));
+    const defaultValue = attr === "ht" ? (isNumericCell ? "2" : "1") : "0";
     value = !_.isNil(value) ? value.toString() : defaultValue;
     if (["0", "1", "2"].indexOf(value.toString()) === -1) {
       value = defaultValue;
@@ -320,7 +381,7 @@ export function setCellValue(
     ) {
       cell.v = parseFloat(vupdate);
       if (_.isNil(cell.ct)) {
-        cell.ct = { fa: "General", t: "n" };
+        cell.ct = { fa: "General", t: "g" };
       }
 
       // if output is number fetch fa from referenced cells
@@ -363,8 +424,6 @@ export function setCellValue(
 
           // cell.m = mask[0].toString();
         }
-        // Right-align numeric formula results (e.g. SUM in a currency-formatted cell)
-        cell.ht = 2;
       }
     } else if (!_.isNil(cell.ct) && cell.ct.fa === "@") {
       cell.m = vupdateStr;
@@ -395,8 +454,6 @@ export function setCellValue(
         if (cell?.ct) {
           cell.ct = { ...cell.ct, fa, t: "n" };
         }
-        // Right-align numeric/currency values so alignment is preserved after edit
-        cell.ht = 2;
       }
 
       let mask = update(fa, vupdate);
@@ -409,10 +466,6 @@ export function setCellValue(
           cell.m = m == null ? "" : String(m);
           cell.ct = ct as Cell["ct"];
           cell.v = v as Cell["v"];
-        }
-        // Keep numbers right-aligned when format was replaced (e.g. format didn't apply)
-        if (isRealNum(vupdate)) {
-          cell.ht = 2;
         }
       } else {
         if (v.m) {
@@ -440,13 +493,8 @@ export function setCellValue(
         }
         cell.v =
           vupdate; /* 备注：如果使用parseFloat，1.1111111111111111会转换为1.1111111111111112 ? */
-        const strValue = String(vupdate);
-        const format = getNumberFormat(strValue, commaPresent);
-
-        cell.m = v.m ? v.m : update(format, cell.v);
-        // Right-align numeric values so alignment is preserved after edit
-        cell.ht = 2;
-        cell.ct = { fa: format, t: "n" };
+        cell.m = v.m ? v.m : String(cell.v);
+        cell.ct = { fa: "General", t: "g" };
         if (cell.v === Infinity || cell.v === -Infinity) {
           cell.m = cell.v.toString();
         } else if (cell.v != null && !cell.m) {
@@ -464,15 +512,6 @@ export function setCellValue(
         if (mask) {
           cell.m = mask[0].toString();
           [, cell.ct, cell.v] = mask;
-          if (
-            v?.ct &&
-            v.ct.t === "n" &&
-            cell?.ct &&
-            cell.ct.t !== "n" &&
-            cell?.ht === 2
-          ) {
-            cell.ht = 1;
-          }
         }
       }
     }
@@ -1146,7 +1185,6 @@ export function updateCell(
               t: "n",
             };
           }
-          value.ht = 2;
         }
 
         // 打进单元格的sparklines的配置串， 报错需要单独处理。
@@ -1309,53 +1347,29 @@ export function updateCell(
     }
     */
 
-    if ((curv?.tb === "2" && curv.v) || isInlineStringCell(d[r][c])) {
-      // 自动换行
-      const { defaultrowlen } = ctx;
+    const cfg =
+      ctx.luckysheetfile[
+        getSheetIndex(ctx, ctx.currentSheetId as string) as number
+      ].config || {};
 
-      // const canvas = $("#luckysheetTableContent").get(0).getContext("2d");
-      // offlinecanvas.textBaseline = 'top'; //textBaseline以top计算
+    // oldValue = cell before this edit. When content is deleted, new cell may be empty;
+    // still recompute row height if the previous cell had wrap (tb "2") or inlineStr.
+    const prevHadWrapOrInline =
+      (oldValue?.tb === "2" &&
+        !_.isNil(oldValue?.v) &&
+        oldValue?.v !== "") ||
+      isInlineStringCell(oldValue);
 
-      // let fontset = luckysheetfontformat(d[r][c]);
-      // offlinecanvas.font = fontset;
+    const newCell = d[r][c];
+    const newHasWrapOrInline =
+      (newCell?.tb === "2" &&
+        !_.isNil(newCell?.v) &&
+        newCell?.v !== "") ||
+      isInlineStringCell(newCell);
 
-      const cfg =
-        ctx.luckysheetfile[
-          getSheetIndex(ctx, ctx.currentSheetId as string) as number
-        ].config || {};
-      if (!(cfg.columnlen?.[c] && cfg.rowlen?.[r])) {
-        // let currentRowLen = defaultrowlen;
-        // if(!_.isNil(cfg["rowlen"][r])){
-        //     currentRowLen = cfg["rowlen"][r];
-        // }
-
-        const cellWidth = cfg.columnlen?.[c] || ctx.defaultcollen;
-
-        const textInfo = canvas
-          ? getCellTextInfo(d[r][c] as Cell, canvas, ctx, {
-            r,
-            c,
-            cellWidth,
-          })
-          : null;
-
-        let currentRowLen = defaultrowlen;
-        // console.log("rowlen", textInfo);
-        if (textInfo) {
-          currentRowLen = textInfo.textHeightAll + 2;
-        }
-
-        const previousRowHeight = getRowHeight(ctx, [r])[r];
-
-        if (
-          currentRowLen > defaultrowlen &&
-          !cfg.customHeight?.[r] &&
-          previousRowHeight < currentRowLen
-        ) {
-          if (_.isNil(cfg.rowlen)) cfg.rowlen = {};
-          cfg.rowlen[r] = currentRowLen;
-        }
-      }
+    if ((prevHadWrapOrInline || newHasWrapOrInline) && !cfg.customHeight?.[r] && canvas) {
+      // 自动换行 — recompute row height (grow/shrink) from wrap + inline cells
+      recalcAutoRowHeightForRow(ctx, r, d, canvas);
     }
 
     // 动态数组

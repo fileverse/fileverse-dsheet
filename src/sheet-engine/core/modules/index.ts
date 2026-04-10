@@ -55,9 +55,11 @@ export {
   markRangeSelectionDirty,
   getFormulaRangeIndexForKeyboardSync,
   isFormulaReferenceInputMode,
+  seedFormulaFuncSelectedRangeFromLastSelection,
   functionStrChange,
   setFormulaEditorOwner,
   getAllFunctionGroup,
+  execFunctionGroup,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
 
@@ -95,6 +97,7 @@ export {
   syncPrimaryCellActiveFromSelection,
   setPrimaryCellActive,
   advancePrimaryCellInLastMultiSelection,
+  snapSheetSelectionFocusToCellPreserveMultiRange,
   moveHighlightCell,
   deleteSelectedCellText,
   selectAll,
@@ -287,6 +290,7 @@ export {
   isdatetime,
   isRealNull,
   isRealNum,
+  isNumericCellType,
 } from './validation';
 
 // formula (additional internal exports)

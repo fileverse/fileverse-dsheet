@@ -38,6 +38,7 @@ import Tippy from '@tippyjs/react';
 import { LucideIcon } from '@fileverse/ui';
 import { SplitColumn } from '../SplitColumn';
 import { ResetColumnWidth } from '../ResetColumnWidth';
+import { ResetRowHeight } from '../ResetRowHeight';
 // import DataVerification from "../DataVerification";
 import WorkbookContext, { SetContextOptions } from '../../context';
 import { useAlert } from '../../hooks/useAlert';
@@ -65,30 +66,62 @@ const ContextMenu: React.FC = () => {
     type: 'row' | 'column',
     direction: 'lefttop' | 'rightbottom',
   ) => {
-    const positionCol = context.luckysheet_select_save?.[0]?.column?.[0];
-    const positionRow = context.luckysheet_select_save?.[0]?.row?.[0];
-    const position = type === 'row' ? positionRow : positionCol;
-    if (position == null) return;
-    const count = 1;
-    if (count < 1) return;
-    // const direction = "rightbottom";
+    if (context.allowEdit === false) return;
+    if ((context.luckysheet_select_save?.length ?? 0) > 1) {
+      showAlert(rightclick.noMulti, 'ok');
+      setContext((draftCtx) => {
+        draftCtx.contextMenu = {};
+      });
+      return;
+    }
+    const selection = context.luckysheet_select_save?.[0];
+    if (!selection) return;
+
     const insertRowColOp: SetContextOptions['insertRowColOp'] = {
       type,
-      index: position,
-      count,
       direction,
       id: context.currentSheetId,
+      index: 0,
+      count: 0,
     };
+
+    if (type === 'row') {
+      const [rowStart, rowEnd] = selection.row;
+      insertRowColOp.count = rowEnd - rowStart + 1;
+      insertRowColOp.index =
+        direction === 'lefttop' ? rowStart : rowEnd;
+      insertRowColOp.templateSourceRows = _.range(rowStart, rowEnd + 1);
+    } else {
+      const [colStart, colEnd] = selection.column;
+      insertRowColOp.count = colEnd - colStart + 1;
+      insertRowColOp.index =
+        direction === 'lefttop' ? colStart : colEnd;
+      insertRowColOp.templateSourceColumns = _.range(colStart, colEnd + 1);
+    }
+
+    if (insertRowColOp.count < 1) return;
+
     setContext(
       (draftCtx) => {
         try {
           insertRowCol(draftCtx, insertRowColOp);
           draftCtx.contextMenu = {};
         } catch (err: any) {
-          if (err.message === 'maxExceeded')
-            showAlert(rightclick.columnOverLimit, 'ok');
-          else if (err.message === 'readOnly')
-            showAlert(rightclick.cannotInsertOnColumnReadOnly, 'ok');
+          if (err.message === 'maxExceeded') {
+            showAlert(
+              insertRowColOp.type === 'row'
+                ? rightclick.rowOverLimit
+                : rightclick.columnOverLimit,
+              'ok',
+            );
+          } else if (err.message === 'readOnly') {
+            showAlert(
+              insertRowColOp.type === 'row'
+                ? rightclick.cannotInsertOnRowReadOnly
+                : rightclick.cannotInsertOnColumnReadOnly,
+              'ok',
+            );
+          }
           draftCtx.contextMenu = {};
         }
       },
@@ -346,72 +379,96 @@ const ContextMenu: React.FC = () => {
         );
       }
       if (name === 'insert-column') {
-        return selection?.row_select
-          ? null
-          : ['left'].map((dir) => (
-              <Menu
-                key={`add-col-${dir}`}
-                onClick={() => {
-                  addRowColRightAvobe('column', 'lefttop');
-                }}
-              >
-                <div className="context-item">
-                  <LocalLucidIcon name="AddColLeft" />
-                  <div>Insert column to the left</div>
-                </div>
-              </Menu>
-            ));
+        if (selection?.row_select) return null;
+        const colSpan =
+          selection != null
+            ? selection.column[1] - selection.column[0] + 1
+            : 1;
+        const colLeftLabel = rightclick.insertColumnsLeftN.replace(
+          '{n}',
+          String(colSpan),
+        );
+        return ['left'].map((dir) => (
+          <Menu
+            key={`add-col-${dir}`}
+            onClick={() => {
+              addRowColRightAvobe('column', 'lefttop');
+            }}
+          >
+            <div className="context-item">
+              <LocalLucidIcon name="AddColLeft" />
+              <div>{colLeftLabel}</div>
+            </div>
+          </Menu>
+        ));
       }
       if (name === 'insert-column-right') {
-        return selection?.row_select
-          ? null
-          : ['left'].map((dir) => (
-              <Menu
-                key={`add-col-right-${dir}`}
-                onClick={() => {
-                  addRowColRightAvobe('column', 'rightbottom');
-                }}
-              >
-                <div className="context-item">
-                  <LocalLucidIcon name="AddColRight" />
-                  <div>Insert column to the right</div>
-                </div>
-              </Menu>
-            ));
+        if (selection?.row_select) return null;
+        const colSpan =
+          selection != null
+            ? selection.column[1] - selection.column[0] + 1
+            : 1;
+        const colRightLabel = rightclick.insertColumnsRightN.replace(
+          '{n}',
+          String(colSpan),
+        );
+        return ['left'].map((dir) => (
+          <Menu
+            key={`add-col-right-${dir}`}
+            onClick={() => {
+              addRowColRightAvobe('column', 'rightbottom');
+            }}
+          >
+            <div className="context-item">
+              <LocalLucidIcon name="AddColRight" />
+              <div>{colRightLabel}</div>
+            </div>
+          </Menu>
+        ));
       }
       if (name === 'insert-row-above') {
-        return selection?.column_select
-          ? null
-          : ['left'].map((dir) => (
-              <Menu
-                key={`add-row-above-${dir}`}
-                onClick={() => {
-                  addRowColRightAvobe('row', 'lefttop');
-                }}
-              >
-                <div className="context-item">
-                  <LocalLucidIcon name="AddRowAboveLocal" />
-                  <div>Insert row above</div>
-                </div>
-              </Menu>
-            ));
+        if (selection?.column_select) return null;
+        const rowSpan =
+          selection != null ? selection.row[1] - selection.row[0] + 1 : 1;
+        const rowAboveLabel = rightclick.insertRowsAboveN.replace(
+          '{n}',
+          String(rowSpan),
+        );
+        return ['left'].map((dir) => (
+          <Menu
+            key={`add-row-above-${dir}`}
+            onClick={() => {
+              addRowColRightAvobe('row', 'lefttop');
+            }}
+          >
+            <div className="context-item">
+              <LocalLucidIcon name="AddRowAboveLocal" />
+              <div>{rowAboveLabel}</div>
+            </div>
+          </Menu>
+        ));
       }
       if (name === 'insert-row') {
-        return selection?.column_select
-          ? null
-          : ['left'].map((dir) => (
-              <Menu
-                key={`add-row-below-${dir}`}
-                onClick={() => {
-                  addRowColRightAvobe('row', 'rightbottom');
-                }}
-              >
-                <div className="context-item">
-                  <LocalLucidIcon name="AddRowBelowLocal" />
-                  <div>Insert row below</div>
-                </div>
-              </Menu>
-            ));
+        if (selection?.column_select) return null;
+        const rowSpan =
+          selection != null ? selection.row[1] - selection.row[0] + 1 : 1;
+        const rowBelowLabel = rightclick.insertRowsBelowN.replace(
+          '{n}',
+          String(rowSpan),
+        );
+        return ['left'].map((dir) => (
+          <Menu
+            key={`add-row-below-${dir}`}
+            onClick={() => {
+              addRowColRightAvobe('row', 'rightbottom');
+            }}
+          >
+            <div className="context-item">
+              <LocalLucidIcon name="AddRowBelowLocal" />
+              <div>{rowBelowLabel}</div>
+            </div>
+          </Menu>
+        ));
       }
       if (name === 'delete-column') {
         return (
@@ -698,68 +755,21 @@ const ContextMenu: React.FC = () => {
         );
       }
       if (name === 'set-row-height') {
-        const rowHeight = selection?.height || context.defaultrowlen;
-        const shownRowHeight = context.luckysheet_select_save?.some(
-          (section) =>
-            section.height_move !==
-            (rowHeight + 1) * (section.row[1] - section.row[0] + 1) - 1,
-        )
-          ? ''
-          : rowHeight;
         return context.luckysheet_select_save?.some(
           (section) => section.row_select,
         ) ? (
           <Menu
             key="set-row-height"
-            onClick={(e, container) => {
-              const targetRowHeight = container.querySelector('input')?.value;
+            onClick={() => {
+              showDialog(<ResetRowHeight />, undefined, 'Resize row');
               setContext((draftCtx) => {
-                if (
-                  _.isUndefined(targetRowHeight) ||
-                  targetRowHeight === '' ||
-                  parseInt(targetRowHeight, 10) <= 0 ||
-                  parseInt(targetRowHeight, 10) > 545
-                ) {
-                  showAlert(info.tipRowHeightLimit, 'ok');
-                  draftCtx.contextMenu = {};
-                  return;
-                }
-                const numRowHeight = parseInt(targetRowHeight, 10);
-                const rowHeightList: Record<string, number> = {};
-                _.forEach(draftCtx.luckysheet_select_save, (section) => {
-                  for (
-                    let rowNum = section.row[0];
-                    rowNum <= section.row[1];
-                    rowNum += 1
-                  ) {
-                    rowHeightList[rowNum] = numRowHeight;
-                  }
-                });
-                api.setRowHeight(draftCtx, rowHeightList, {}, true);
                 draftCtx.contextMenu = {};
               });
             }}
           >
             <div className="context-item">
               <SVGIcon name="resize-flv" width={16} height={16} />
-              <div>
-                Resize row height
-                {/* {rightclick.row + ""}
-                  {rightclick.height} */}
-                <input
-                  onClick={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  tabIndex={0}
-                  type="number"
-                  min={1}
-                  max={545}
-                  className="luckysheet-mousedown-cancel"
-                  placeholder={rightclick.number}
-                  defaultValue={shownRowHeight}
-                  style={{ width: '40px' }}
-                />
-                px
-              </div>
+              <div>Resize row height</div>
             </div>
           </Menu>
         ) : null;
@@ -793,6 +803,22 @@ const ContextMenu: React.FC = () => {
         ) : null;
       }
       if (name === 'clear') {
+        const headerMenu = context.contextMenu.headerMenu as any;
+        const isRowHeaderMenu = headerMenu === 'row';
+        const isColumnHeaderMenu = headerMenu === true;
+        const isRowSelectionInCellMenu = selection?.row_select === true;
+        const isColumnSelectionInCellMenu = selection?.column_select === true;
+        const shouldShowRowClear = isRowHeaderMenu || isRowSelectionInCellMenu;
+        const shouldShowColumnClear =
+          isColumnHeaderMenu || isColumnSelectionInCellMenu;
+
+        if (!shouldShowRowClear && !shouldShowColumnClear) {
+          return null;
+        }
+
+        const clearLabel = shouldShowRowClear
+          ? `Clear ${rightclick.row.toLowerCase()}`
+          : `Clear ${rightclick.column.toLowerCase()}`;
         return (
           <Menu
             key={name}
@@ -820,7 +846,7 @@ const ContextMenu: React.FC = () => {
           >
             <div className="context-item">
               <LucideIcon name="Eraser" />
-              <p>{rightclick.clearContent}</p>
+              <p>{clearLabel}</p>
             </div>
           </Menu>
         );

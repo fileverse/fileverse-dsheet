@@ -11210,7 +11210,7 @@ export default {
     { text: '', value: 'split', example: '' },
     {
       text: 'Accounting',
-      value: `${currency}(#,##0.00)`,
+      value: `_("${currency}"* #,##0.00_);_("${currency}"* \\(#,##0.00\\);_("${currency}"* "-"??_);_(@_)`,
       example: `${currency}(1,200.09)`,
     },
     {
@@ -11499,6 +11499,14 @@ export default {
     cannotDeleteColumnReadOnly: 'Cannot delete column readonly',
     cannotInsertOnRowReadOnly: 'Cannot insert on read-only row',
     cannotInsertOnColumnReadOnly: 'Cannot insert into read-only column',
+    insertRowAboveOne: 'Insert row above',
+    insertRowsAboveN: 'Insert {n} rows above',
+    insertRowBelowOne: 'Insert row below',
+    insertRowsBelowN: 'Insert {n} rows below',
+    insertColumnLeftOne: 'Insert column to the left',
+    insertColumnsLeftN: 'Insert {n} columns to the left',
+    insertColumnRightOne: 'Insert column to the right',
+    insertColumnsRightN: 'Insert {n} columns to the right',
     rowOverLimit: '10000 row limit exceeded',
     columnOverLimit: '1000 column limit exceeded',
     conditionFormat: 'Conditional formatting',

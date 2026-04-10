@@ -78,6 +78,7 @@ export {
   // formula
   FormulaCache,
   groupValuesRefresh,
+  execFunctionGroup,
   setCaretPosition,
   getrangeseleciton,
   getFormulaEditorOwner,
@@ -97,6 +98,7 @@ export {
   getFormulaRangeIndexForKeyboardSync,
   createFormulaRangeSelect,
   isFormulaReferenceInputMode,
+  seedFormulaFuncSelectedRangeFromLastSelection,
   // freeze
   initFreeze,
   // inline-string
@@ -121,6 +123,7 @@ export {
   syncPrimaryCellActiveFromSelection,
   setPrimaryCellActive,
   advancePrimaryCellInLastMultiSelection,
+  snapSheetSelectionFocusToCellPreserveMultiRange,
   moveHighlightCell,
   deleteSelectedCellText,
   selectAll,
@@ -241,6 +244,7 @@ export {
   isdatetime,
   isRealNull,
   isRealNum,
+  isNumericCellType,
   // formula (internal)
   iscelldata,
   getcellrange,
