@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "2.0.0-createImportExport-1",
+  "version": "2.0.0-createImportExport-2",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
