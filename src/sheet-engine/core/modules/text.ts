@@ -5,6 +5,7 @@ import { locale } from '../locale';
 import { Cell } from '../types';
 import { normalizedCellAttr } from './cell';
 import { isInlineStringCell } from './inline-string';
+import { isRealNum } from './validation';
 
 function checkWordByteLength(value: string) {
   return Math.ceil(value.charCodeAt(0).toString(2).length / 8);
@@ -22,6 +23,60 @@ export function hasChinaword(s: string) {
 const textHeightCache: any = {};
 let measureTextCache: any = {};
 let measureTextCellInfoCache: any = {};
+
+function getAccountingCurrencySymbol(format?: string): string | null {
+  if (!format) {
+    return null;
+  }
+  const quotedToken = format.match(/_\("([^"]*)"\*/);
+  if (quotedToken?.[1]) {
+    return quotedToken[1];
+  }
+  const fallbackQuoted = format.match(/"([^"]*)"\*/);
+  return fallbackQuoted?.[1] || null;
+}
+
+function formatAccountingDisplayValue(
+  value: string,
+  format: string | undefined,
+  cellWidth: number | undefined,
+  renderCtx: CanvasRenderingContext2D,
+  horizontalPadding: number,
+): string {
+  if (!format || !format.includes('*') || !cellWidth || cellWidth <= 0) {
+    return value;
+  }
+
+  const symbol = getAccountingCurrencySymbol(format);
+  if (!symbol) {
+    return value;
+  }
+
+  const normalizedValue = value.trim();
+  const symbolIndex = normalizedValue.indexOf(symbol);
+  if (symbolIndex === -1) {
+    return value;
+  }
+
+  const prefix = normalizedValue.slice(0, symbolIndex).trim();
+  const numericPart = normalizedValue.slice(symbolIndex + symbol.length).trim();
+  if (!numericPart) {
+    return value;
+  }
+
+  const symbolWidth = renderCtx.measureText(symbol).width;
+  const numberWidth = renderCtx.measureText(numericPart).width;
+  const spaceWidth = Math.max(1, renderCtx.measureText(' ').width || 1);
+  const availableGap = cellWidth - horizontalPadding - symbolWidth - numberWidth;
+  const gapSpaces = Math.floor(availableGap / spaceWidth);
+
+  if (gapSpaces <= 1) {
+    return value;
+  }
+
+  const leftToken = `${prefix}${symbol}`;
+  return `${leftToken}${' '.repeat(gapSpaces)}${numericPart}`;
+}
 
 export function clearMeasureTextCache() {
   measureTextCache = {};
@@ -370,7 +425,7 @@ export function getCellTextInfo(
   }
 
   // 水平对齐
-  const horizonAlign = normalizedCellAttr(cell, 'ht');
+  let horizonAlign = normalizedCellAttr(cell, 'ht');
   // 垂直对齐
   const verticalAlign = normalizedCellAttr(cell, 'vt');
 
@@ -529,6 +584,28 @@ export function getCellTextInfo(
 
     if (_.isEmpty(value)) {
       return null;
+    }
+
+    const accountingFormat = cell?.ct?.fa;
+    if (_.isString(value) && _.isString(accountingFormat)) {
+      value = formatAccountingDisplayValue(
+        value,
+        accountingFormat,
+        cellWidth,
+        renderCtx,
+        space_width * 2,
+      );
+    }
+
+    // Google Sheets-like default: when no explicit horizontal alignment is set,
+    // numeric content should render right-aligned under General/Automatic.
+    if (!_.isNil(cell) && _.isNil((cell as Cell).ht)) {
+      const numericCandidate = !_.isNil((cell as Cell).v)
+        ? (cell as Cell).v
+        : value;
+      if (isRealNum(numericCandidate)) {
+        horizonAlign = '2';
+      }
     }
   }
 
@@ -870,7 +947,7 @@ export function getCellTextInfo(
             textWidth += sc.measureText.width;
             textHeight = Math.max(
               sc.measureText.actualBoundingBoxAscent +
-                sc.measureText.actualBoundingBoxDescent,
+              sc.measureText.actualBoundingBoxDescent,
             );
             // console.log(sc.v,sc.measureText.width,sc.measureText.actualBoundingBoxAscent,sc.measureText.actualBoundingBoxDescent);
           }
@@ -1763,13 +1840,22 @@ export function getCellTextInfo(
 
       const width = textWidthAll;
       const height = textHeightAll;
+      const originCellWidth = option.originCellWidth ?? cellWidth;
+      const hasExplicitHorizonAlign =
+        _.isObject(cell) && !_.isNil((cell as Cell).ht);
+      const effectiveHorizonAlign =
+        !hasExplicitHorizonAlign &&
+        horizonAlign === '2' &&
+        width > originCellWidth
+          ? '1'
+          : horizonAlign;
 
       let left = space_width + textHeight * Math.sin(rtPI) * isRotateUp; // 默认为1，左对齐
-      if (horizonAlign === '0') {
+      if (effectiveHorizonAlign === '0') {
         // 居中对齐
         left =
           cellWidth / 2 - width / 2 + textHeight * Math.sin(rtPI) * isRotateUp;
-      } else if (horizonAlign === '2') {
+      } else if (effectiveHorizonAlign === '2') {
         // 右对齐
         left =
           cellWidth -

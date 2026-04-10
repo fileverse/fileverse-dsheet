@@ -35,6 +35,7 @@ import {
   rangeHightlightselected,
   setFormulaEditorOwner,
   normalizeSelection,
+  snapSheetSelectionFocusToCellPreserveMultiRange,
 } from '@sheet-engine/core';
 import React, {
   useContext,
@@ -127,13 +128,12 @@ const InputBox: React.FC = () => {
       : null;
   const lockedFormulaSearchTop =
     formulaSearchActiveCellKey &&
-    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
       ? formulaSearchTopLockRef.current.top
       : null;
   const isComposingRef = useRef(false);
   const formulaAnchorCellRef = useRef<[number, number] | null>(null);
   const suppressAnchorSelectionSyncRef = useRef<[number, number] | null>(null);
-  const lastHandledMouseDragSignatureRef = useRef('');
   const {
     preTextRef,
     resetFormulaHistory,
@@ -359,7 +359,6 @@ const InputBox: React.FC = () => {
     if (_.isEmpty(context.luckysheetCellUpdate) || !refs.cellInput.current) {
       formulaAnchorCellRef.current = null;
       suppressAnchorSelectionSyncRef.current = null;
-      lastHandledMouseDragSignatureRef.current = '';
       return;
     }
 
@@ -367,7 +366,6 @@ const InputBox: React.FC = () => {
     if (!inputText.startsWith('=')) {
       formulaAnchorCellRef.current = null;
       suppressAnchorSelectionSyncRef.current = null;
-      lastHandledMouseDragSignatureRef.current = '';
     }
   }, [context.luckysheetCellUpdate, refs.cellInput]);
 
@@ -530,6 +528,25 @@ const InputBox: React.FC = () => {
     event.preventDefault();
   };
 
+  /** Re-run formula reference sync when only `func_selectedrange` moves (keyboard formula nav). */
+  const formulaFuncRangeSyncSig = useMemo(() => {
+    const r = context.formulaCache.func_selectedrange;
+    const kb = context.formulaCache.formulaKeyboardRefSync === true;
+    if (!r) return kb ? 'kb' : '';
+    return [
+      kb ? '1' : '0',
+      r.row?.[0],
+      r.row?.[1],
+      r.column?.[0],
+      r.column?.[1],
+      r.left_move,
+      r.top_move,
+    ].join(':');
+  }, [
+    context.formulaCache.func_selectedrange,
+    context.formulaCache.formulaKeyboardRefSync,
+  ]);
+
   useEffect(() => {
     const cellInputEl = refs.cellInput.current;
     if (!context.luckysheet_select_save?.[0] || !cellInputEl) return;
@@ -545,8 +562,8 @@ const InputBox: React.FC = () => {
         return;
       }
 
-      // luckysheet_select_save is synced from rangeDrag; mouse.ts already calls
-      // rangeSetValue. A second call here lacked spanToReplace / stale index.
+      // Formula mouse drag updates the formula via `rangeSetValue` in formula.ts;
+      // `luckysheet_select_save` is not resized during that drag (yellow stays put).
       // const isMouseFormulaRangeDrag =
       //   !!ctx.formulaCache.func_selectedrange &&
       //   (ctx.formulaCache.rangestart ||
@@ -562,20 +579,47 @@ const InputBox: React.FC = () => {
         getFormulaRangeIndexForKeyboardSync(cellInputEl);
 
       if (suppressAnchorSelectionSyncRef.current) {
-        const [anchorRow, anchorCol] = suppressAnchorSelectionSyncRef.current;
-        const isAnchorSelection =
-          currentSelection.row_focus === anchorRow &&
-          currentSelection.column_focus === anchorCol;
-        if (isAnchorSelection) {
-          return;
+        // Segment boundary (`,`, `+`, …) snaps yellow to the anchor and sets this
+        // ref to skip one stray sync. Keyboard formula nav intentionally keeps
+        // yellow on that same anchor while `func_selectedrange` moves — if we
+        // always bail when selection === anchor, we never run `rangeSetValue`
+        // after the first reference in a multi-arg formula.
+        if (ctx.formulaCache.formulaKeyboardRefSync === true) {
+          suppressAnchorSelectionSyncRef.current = null;
+        } else {
+          const [anchorRow, anchorCol] = suppressAnchorSelectionSyncRef.current;
+          const isAnchorSelection =
+            currentSelection.row_focus === anchorRow &&
+            currentSelection.column_focus === anchorCol;
+          if (isAnchorSelection) {
+            return;
+          }
+          suppressAnchorSelectionSyncRef.current = null;
         }
-        suppressAnchorSelectionSyncRef.current = null;
       }
 
       const isFormulaMode = isFormulaReferenceInputMode(ctx);
 
       // Selection changes should update references only in formula mode.
       if (!isFormulaMode) return;
+
+      const fsr = ctx.formulaCache.func_selectedrange;
+      const fsrOk =
+        fsr?.row?.length === 2 && fsr?.column?.length === 2;
+      // Do not drive `rangeSetValue` from `luckysheet_select_save` when the formula
+      // range lives in `func_selectedrange` (keyboard nav, or active mouse range drag).
+      const preferFuncRange =
+        fsrOk &&
+        (ctx.formulaCache.formulaKeyboardRefSync === true ||
+          !!ctx.formulaCache.rangestart ||
+          !!ctx.formulaCache.rangedrag_column_start ||
+          !!ctx.formulaCache.rangedrag_row_start);
+      const refRange = preferFuncRange
+        ? { row: fsr!.row, column: fsr!.column }
+        : {
+            row: currentSelection.row,
+            column: currentSelection.column,
+          };
 
       // Point rangechangeindex at the ref under/near the caret — not always the
       // last span (e.g. `=,A4` with caret between `=` and `,` must not replace A4).
@@ -596,8 +640,8 @@ const InputBox: React.FC = () => {
         ctx,
         cellInputEl,
         {
-          row: currentSelection.row,
-          column: currentSelection.column,
+          row: refRange.row,
+          column: refRange.column,
         },
         refs.fxInput.current!,
       );
@@ -617,10 +661,10 @@ const InputBox: React.FC = () => {
 
         const rectFromSelection = seletedHighlistByindex(
           ctx,
-          currentSelection.row[0],
-          currentSelection.row[1],
-          currentSelection.column[0],
-          currentSelection.column[1],
+          refRange.row[0],
+          refRange.row[1],
+          refRange.column[0],
+          refRange.column[1],
         );
 
         if (rectFromSelection) {
@@ -634,62 +678,15 @@ const InputBox: React.FC = () => {
         }
       }
     });
+    // Same deps as main (`luckysheet_select_save` + dialog) so typing `=` does not
+    // re-fire this effect (main did not depend on rangestart / cellUpdate). Keyboard
+    // formula moves still run via `formulaRangeNavRevision` + `formulaFuncRangeSyncSig`.
   }, [
     context.luckysheet_select_save,
     context.rangeDialog?.show,
+    context.formulaRangeNavRevision,
+    formulaFuncRangeSyncSig,
     // isInputBoxActive,
-  ]);
-  const formulaMouseDragSignature = (() => {
-    const r = context.formulaCache.func_selectedrange;
-    if (!r) return '';
-    return [
-      r.row?.[0],
-      r.row?.[1],
-      r.column?.[0],
-      r.column?.[1],
-      r.left_move,
-      r.top_move,
-      r.width_move,
-      r.height_move,
-    ].join(':');
-  })();
-
-  // If formula range is changed by mouse drag, keep normal selected-state
-  // aligned to the dragged cell/range.
-  useEffect(() => {
-    if (!formulaMouseDragSignature) return;
-    if (
-      lastHandledMouseDragSignatureRef.current === formulaMouseDragSignature
-    ) {
-      return;
-    }
-    if (!refs.cellInput.current) return;
-    const inputText = refs.cellInput.current.innerText?.trim() || '';
-    if (!inputText.startsWith('=')) return;
-    const dragRange = context.formulaCache.func_selectedrange;
-    if (!dragRange) return;
-
-    lastHandledMouseDragSignatureRef.current = formulaMouseDragSignature;
-    setContext((ctx) => {
-      ctx.luckysheet_select_save = [
-        {
-          row: [dragRange.row[0], dragRange.row[1]],
-          column: [dragRange.column[0], dragRange.column[1]],
-          row_focus: _.isNil(dragRange.row_focus)
-            ? dragRange.row[0]
-            : dragRange.row_focus,
-          column_focus: _.isNil(dragRange.column_focus)
-            ? dragRange.column[0]
-            : dragRange.column_focus,
-        },
-      ];
-      normalizeSelection(ctx, ctx.luckysheet_select_save);
-    });
-  }, [
-    formulaMouseDragSignature,
-    context.formulaCache.func_selectedrange,
-    refs.cellInput,
-    setContext,
   ]);
 
   const onKeyDown = useCallback(
@@ -763,20 +760,17 @@ const InputBox: React.FC = () => {
         setTimeout(() => {
           setContext((draftCtx) => {
             draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
-            draftCtx.luckysheet_select_save = [
-              {
-                row: [anchorRow, anchorRow],
-                column: [anchorCol, anchorCol],
-                row_focus: anchorRow,
-                column_focus: anchorCol,
-              },
-            ];
-            normalizeSelection(
+            snapSheetSelectionFocusToCellPreserveMultiRange(
               draftCtx,
-              draftCtx.luckysheet_select_save,
+              anchorRow,
+              anchorCol,
             );
             // Reference before delimiter is complete; clear the active range-select
             // overlay, but keep completed referenced-cell highlights visible.
+            // Clear keyboard-ref sync so the rangeSetValue effect does not take the
+            // "formulaKeyboardRefSync" suppress branch, skip the anchor early-return,
+            // and insert the anchor address (e.g. `=A2:A4,A1` after `,`).
+            draftCtx.formulaCache.formulaKeyboardRefSync = false;
             draftCtx.formulaRangeSelect = undefined;
             draftCtx.formulaCache.selectingRangeIndex = -1;
             draftCtx.formulaCache.func_selectedrange = undefined;
@@ -787,8 +781,8 @@ const InputBox: React.FC = () => {
             createRangeHightlight(
               draftCtx,
               refs.cellInput.current?.innerHTML ||
-                refs.fxInput.current?.innerHTML ||
-                '',
+              refs.fxInput.current?.innerHTML ||
+              '',
             );
             moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
           });
@@ -916,18 +910,14 @@ const InputBox: React.FC = () => {
           setTimeout(() => {
             setContext((draftCtx) => {
               draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
-              draftCtx.luckysheet_select_save = [
-                {
-                  row: [anchorRow, anchorRow],
-                  column: [anchorCol, anchorCol],
-                  row_focus: anchorRow,
-                  column_focus: anchorCol,
-                },
-              ];
-              normalizeSelection(
+              snapSheetSelectionFocusToCellPreserveMultiRange(
                 draftCtx,
-                draftCtx.luckysheet_select_save,
+                anchorRow,
+                anchorCol,
               );
+              // Same as segment boundary: avoid rangeSetValue effect inserting the
+              // anchor (e.g. `=A2` → delete `2` → `=A1`) when selection snaps to anchor.
+              draftCtx.formulaCache.formulaKeyboardRefSync = false;
               // Recompute selection box immediately so UI snaps back to anchor cell.
               moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
@@ -956,6 +946,11 @@ const InputBox: React.FC = () => {
         // Let global keyboard handlers move selected cells while formula range
         // updates are performed via `rangeSetValue` in the selection effect.
         allowListNavigation = false;
+        if (e.shiftKey) {
+          // Avoid native Shift+Arrow extending the contenteditable selection; the
+          // workbook handler moves the formula reference range instead.
+          e.preventDefault();
+        }
       }
       /* Arrow navigation for cell reference ends here */
 
@@ -1248,7 +1243,7 @@ const InputBox: React.FC = () => {
       const sel = window.getSelection();
       const text =
         sel && !sel.isCollapsed ? sel.toString() : e.currentTarget.innerText;
-      navigator.clipboard?.writeText(text).catch(() => {});
+      navigator.clipboard?.writeText(text).catch(() => { });
     },
     [context.luckysheetCellUpdate],
   );
@@ -1603,14 +1598,14 @@ const InputBox: React.FC = () => {
         style={
           inputBoxBaseSelection
             ? {
-                position: 'relative',
-                minWidth: inputBoxBaseSelection.width,
-                minHeight: inputBoxBaseSelection.height,
-                ...inputBoxStyle,
-                ...(cellEditorExtendRight
-                  ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }
-                  : {}),
-              }
+              position: 'relative',
+              minWidth: inputBoxBaseSelection.width,
+              minHeight: inputBoxBaseSelection.height,
+              ...inputBoxStyle,
+              ...(cellEditorExtendRight
+                ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }
+                : {}),
+            }
             : { position: 'relative' }
         }
       >

@@ -69,8 +69,8 @@ interface AfterUpdateCellParams {
     queryData: LiveQueryData,
   ) => void;
   setInputFetchURLDataBlock:
-    | React.Dispatch<React.SetStateAction<string>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<string>>
+  | undefined;
   storeApiKey?: (apiKeyName: string) => void;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
@@ -455,52 +455,6 @@ const handlePromiseValue = async (
 };
 
 /**
- * Calculates the number of line breaks in a string
- */
-const countLineBreaks = (text: string): number => {
-  return (text.match(/\r?\n/g) || []).length;
-};
-
-/**
- * Calculates the required row height based on content
- */
-const calculateRowHeight = (
-  fontSize: number,
-  lineBreakCount: number,
-): number => {
-  return fontSize * LINE_HEIGHT_MULTIPLIER * (lineBreakCount + 1);
-};
-
-/**
- * Adjusts row height based on cell content
- */
-const adjustRowHeight = ({
-  newValue,
-  sheetEditorRef,
-  row,
-}: AdjustRowHeightParams): void => {
-  // Early return if no cell text content
-  if (!newValue?.ct?.s?.[0]?.v || newValue?.ct?.s?.[0]?.v === '\r\n') {
-    return;
-  }
-
-  const valueStr = newValue.ct.s[0].v;
-  const fontSize = newValue?.fs || DEFAULT_FONT_SIZE;
-  const lineBreakCount = countLineBreaks(valueStr);
-  const newHeight = calculateRowHeight(fontSize, lineBreakCount);
-
-  const rowHeightObj = {
-    [String(row)]: newHeight,
-  };
-
-  const currentRowHeight = sheetEditorRef.current?.getRowHeight([row])?.[row];
-
-  if (currentRowHeight && currentRowHeight < newHeight) {
-    sheetEditorRef.current?.setRowHeight(rowHeightObj);
-  }
-};
-
-/**
  * Handles logic after a cell is updated, including processing formula results
  *
  * @param params - Object containing all required parameters
@@ -547,12 +501,6 @@ export const afterUpdateCell = async (
     });
   }
 
-  // Adjust row height based on content
-  adjustRowHeight({
-    newValue,
-    sheetEditorRef,
-    row: params.row,
-  });
 
   if (isHexValue(newValue.v as string)) {
     sheetEditorRef.current?.setCellValue(params.row, params.column, {

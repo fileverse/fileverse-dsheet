@@ -234,6 +234,11 @@ export type Context = {
   defaultCell: Cell;
 
   groupValuesRefreshData: any[];
+  /**
+   * Incremented when formula `func_selectedrange` moves via keyboard (`rangeOfFormula`)
+   * so React re-renders — `FormulaCache` is a class and Immer does not track it.
+   */
+  formulaRangeNavRevision: number;
   formulaCache: FormulaCache;
   hooks: Hooks;
   showSheetList?: boolean;
@@ -531,6 +536,7 @@ export function defaultContext(refs: RefValues): Context {
     },
 
     groupValuesRefreshData: [],
+    formulaRangeNavRevision: 0,
     formulaCache: new FormulaCache(), // class will not be frozen by immer, can be mutated at any time.
     hooks: {},
 

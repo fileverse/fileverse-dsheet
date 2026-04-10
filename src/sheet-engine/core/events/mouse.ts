@@ -365,6 +365,9 @@ export function handleCellAreaMouseDown(
 
   // 公式相关
   if (ctx.luckysheetCellUpdate.length > 0) {
+    // Any sheet mouse selection clears keyboard-only ref sync; formula paths below
+    // may set `func_selectedrange` again (mouse range pick / drag).
+    ctx.formulaCache.formulaKeyboardRefSync = false;
     // const parser = new DOMParser();
     // const doc = parser.parseFromString(
     //   `<div>${
@@ -1804,8 +1807,17 @@ export function mouseRender(
   if (ctx.rangeDialog?.singleSelect) {
     return;
   }
+  // While editing a formula and picking/extending a ref by mouse, sheet selection
+  // drag must not run first — otherwise `luckysheet_select_save` (yellow) grows
+  // and the `rangeDrag` branch below is skipped because it is `else if`.
+  const formulaRangePicking =
+    ctx.luckysheetCellUpdate.length > 0 &&
+    (ctx.formulaCache.rangestart ||
+      ctx.formulaCache.rangedrag_column_start ||
+      ctx.formulaCache.rangedrag_row_start ||
+      israngeseleciton(ctx));
   // 拖动选择
-  if (ctx.luckysheet_select_status) {
+  if (ctx.luckysheet_select_status && !formulaRangePicking) {
     const mouseX = e.pageX - rect.left - window.scrollX;
     const mouseY = e.pageY - rect.top - window.scrollY;
     const _x = mouseX - ctx.rowHeaderWidth + ctx.scrollLeft;

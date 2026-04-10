@@ -834,7 +834,11 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               const [m, ct, v] = genarate(originalValueStr) ?? [];
               cell.v = v ?? originalValueStr;
               cell.m = m != null ? String(m) : originalValueStr;
-              cell.ct = ct ?? { fa: "General", t: "g" };
+              if (ct?.t === "n") {
+                cell.ct = { fa: "General", t: "g" };
+              } else {
+                cell.ct = ct ?? { fa: "General", t: "g" };
+              }
             }
           }
 

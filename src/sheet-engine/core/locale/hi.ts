@@ -11243,7 +11243,7 @@ export default {
     { text: '', value: 'split', example: '' },
     {
       text: 'लेखांकन',
-      value: `${currency}(0.00)`,
+      value: `_("${currency}"* #,##0.00_);_("${currency}"* \\(#,##0.00\\);_("${currency}"* "-"??_);_(@_)`,
       example: `${currency}(1200.09)`,
     },
 

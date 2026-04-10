@@ -6,7 +6,7 @@ import { getCellValue, getRangeByTxt } from './cell';
 import { genarate } from './format';
 import { execfunction, functionCopy } from './formula';
 import { checkProtectionFormatCells } from './protection';
-import { isRealNull } from './validation';
+import { isRealNull, isNumericCellType } from './validation';
 
 // Helper function to check if a value contains alphabetic characters
 function hasAlphabeticChars(value: any): boolean {
@@ -448,8 +448,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
               const cell = d[r][c];
               if (
                 !_.isNil(cell) &&
-                !_.isNil(cell.ct) &&
-                cell.ct.t === 'n' &&
+                isNumericCellType(cell) &&
                 _.isNil(cell.v)
               ) {
                 if (_.isNil(max) || parseInt(`${cell.v}`, 10) > max) {
@@ -489,8 +488,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
                   if (
                     !_.isNil(cell) &&
-                    !_.isNil(cell.ct) &&
-                    cell.ct.t === 'n' &&
+                    isNumericCellType(cell) &&
                     !_.isNil(cell.v)
                   ) {
                     if (parseInt(`${cell.v}`, 10) < 0) {
@@ -573,8 +571,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
                   if (
                     !_.isNil(cell) &&
-                    !_.isNil(cell.ct) &&
-                    cell.ct.t === 'n' &&
+                    isNumericCellType(cell) &&
                     !_.isNil(cell.v)
                   ) {
                     let valueLen;
@@ -630,8 +627,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
               if (
                 !_.isNil(cell) &&
-                !_.isNil(cell.ct) &&
-                cell.ct.t === 'n' &&
+                isNumericCellType(cell) &&
                 !_.isNil(cell.v)
               ) {
                 count += 1;
@@ -672,8 +668,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
                   if (
                     !_.isNil(cell) &&
-                    !_.isNil(cell.ct) &&
-                    cell.ct.t === 'n' &&
+                    isNumericCellType(cell) &&
                     !_.isNil(cell.v)
                   ) {
                     if (parseInt(`${cell.v}`, 10) === min) {
@@ -768,8 +763,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
 
                   if (
                     !_.isNil(cell) &&
-                    !_.isNil(cell.ct) &&
-                    cell.ct.t === 'n' &&
+                    isNumericCellType(cell) &&
                     !_.isNil(cell.v)
                   ) {
                     if (parseInt(`${cell.v}`, 10) === min) {
@@ -1209,11 +1203,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
 
                 // 单元格值类型为数字类型
-                if (
-                  !_.isNil(d[r][c]) &&
-                  !_.isNil(d[r][c]!.ct) &&
-                  d[r][c]!.ct!.t === 'n'
-                ) {
+                if (!_.isNil(d[r][c]) && isNumericCellType(d[r][c]!)) {
                   dArr.push(getCellValue(r, c, d));
                 }
               }
