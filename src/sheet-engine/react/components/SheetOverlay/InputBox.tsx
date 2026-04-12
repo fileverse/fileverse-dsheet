@@ -648,8 +648,7 @@ const InputBox: React.FC = () => {
 
       rangeHightlightselected(ctx, cellInputEl);
 
-      // Mirror mouse behavior: show blue dotted formula-range selection
-      // for keyboard-driven reference selection as well.
+      // Ref highlights + live range frame (inner hc matches completed-ref highlights).
       if (!_.isNil(ctx.formulaCache.rangechangeindex)) {
         ctx.formulaCache.selectingRangeIndex =
           ctx.formulaCache.rangechangeindex;
