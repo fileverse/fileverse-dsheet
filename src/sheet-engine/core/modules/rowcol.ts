@@ -917,26 +917,29 @@ export function insertRowCol(
       cfg.customHeight = customHeight_new;
     }
 
-    if (cfg.rowlen == null) {
-      cfg.rowlen = {};
-    }
-    const newRowStart = direction === "lefttop" ? index : index + 1;
-    for (let i = 0; i < count; i += 1) {
-      cfg.rowlen![newRowStart + i] = refRowHeightsForInsert
-        ? refRowHeightsForInsert[0]
-        : refRowHeightBeforeInsert;
-    }
-    if (refRowHeightsForInsert) {
-      cfg.customHeight ||= {};
+    const applyInsertedRowSizing = count === 1;
+    if (applyInsertedRowSizing) {
+      if (cfg.rowlen == null) {
+        cfg.rowlen = {};
+      }
+      const newRowStart = direction === "lefttop" ? index : index + 1;
       for (let i = 0; i < count; i += 1) {
-        if (refRowCustomsForInsert![0] === 1) {
+        cfg.rowlen![newRowStart + i] = refRowHeightsForInsert
+          ? refRowHeightsForInsert[0]
+          : refRowHeightBeforeInsert;
+      }
+      if (refRowHeightsForInsert) {
+        cfg.customHeight ||= {};
+        for (let i = 0; i < count; i += 1) {
+          if (refRowCustomsForInsert![0] === 1) {
+            cfg.customHeight[newRowStart + i] = 1;
+          }
+        }
+      } else if (refRowCustomBefore === 1) {
+        cfg.customHeight ||= {};
+        for (let i = 0; i < count; i += 1) {
           cfg.customHeight[newRowStart + i] = 1;
         }
-      }
-    } else if (refRowCustomBefore === 1) {
-      cfg.customHeight ||= {};
-      for (let i = 0; i < count; i += 1) {
-        cfg.customHeight[newRowStart + i] = 1;
       }
     }
 
@@ -1155,26 +1158,29 @@ export function insertRowCol(
       cfg.customWidth = customWidth_new;
     }
 
-    if (cfg.columnlen == null) {
-      cfg.columnlen = {};
-    }
-    const newColStart = direction === "lefttop" ? index : index + 1;
-    for (let i = 0; i < count; i += 1) {
-      cfg.columnlen![newColStart + i] = refColWidthsForInsert
-        ? refColWidthsForInsert[0]
-        : refColWidthBeforeInsert;
-    }
-    if (refColWidthsForInsert) {
-      cfg.customWidth ||= {};
+    const applyInsertedColSizing = count === 1;
+    if (applyInsertedColSizing) {
+      if (cfg.columnlen == null) {
+        cfg.columnlen = {};
+      }
+      const newColStart = direction === "lefttop" ? index : index + 1;
       for (let i = 0; i < count; i += 1) {
-        if (refColCustomsForInsert![0] === 1) {
+        cfg.columnlen![newColStart + i] = refColWidthsForInsert
+          ? refColWidthsForInsert[0]
+          : refColWidthBeforeInsert;
+      }
+      if (refColWidthsForInsert) {
+        cfg.customWidth ||= {};
+        for (let i = 0; i < count; i += 1) {
+          if (refColCustomsForInsert![0] === 1) {
+            cfg.customWidth[newColStart + i] = 1;
+          }
+        }
+      } else if (refColCustomBefore === 1) {
+        cfg.customWidth ||= {};
+        for (let i = 0; i < count; i += 1) {
           cfg.customWidth[newColStart + i] = 1;
         }
-      }
-    } else if (refColCustomBefore === 1) {
-      cfg.customWidth ||= {};
-      for (let i = 0; i < count; i += 1) {
-        cfg.customWidth[newColStart + i] = 1;
       }
     }
 
