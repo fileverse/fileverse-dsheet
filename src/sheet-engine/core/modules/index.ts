@@ -204,11 +204,18 @@ export {
   getSearchIndexArr,
   getSearchIndexArrAsync,
   getFindRangeOnCurrentSheet,
+  getQuickSearchIndexArr,
+  getQuickSearchHiddenConfig,
+  expandCellRectForMerge,
+  shouldQuickSearchUseAsync,
+  runQuickSearchIndexArrAsync,
+  QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
 } from './searchReplace';
 export type {
   CheckModes,
   HyperlinkMap,
   FindSearchScope,
+  SearchHiddenConfig,
 } from './searchReplace';
 
 // hyperlink

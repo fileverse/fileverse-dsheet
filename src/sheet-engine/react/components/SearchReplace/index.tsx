@@ -36,7 +36,13 @@ import {
   TextField,
 } from '@fileverse/ui';
 import produce from 'immer';
-import React, { useContext, useState, useCallback, useRef } from 'react';
+import React, {
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import _ from 'lodash';
 import WorkbookContext from '../../context';
 import { useAlert } from '../../hooks/useAlert';
@@ -80,8 +86,24 @@ const SearchReplace: React.FC<{
     setContext((draftCtx) => {
       draftCtx.showSearch = false;
       draftCtx.showReplace = false;
+      draftCtx.findReplacePrefill = undefined;
     });
   }, [refs.globalCache, setContext]);
+
+  useEffect(() => {
+    if (!(context.showSearch || context.showReplace)) return;
+    const pre = context.findReplacePrefill;
+    if (pre == null || pre === '') return;
+    setSearchText(pre);
+    setContext((d) => {
+      d.findReplacePrefill = undefined;
+    });
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplacePrefill,
+    setContext,
+  ]);
 
   const setCheckMode = useCallback(
     (mode: string, value: boolean) =>

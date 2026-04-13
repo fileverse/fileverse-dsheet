@@ -11643,6 +11643,18 @@ export default {
     locationTiplessTwoRow: 'Please select at least two rows',
     locationTiplessTwoColumn: 'Please select at least two columns',
     locationTipNotFindCell: 'Cell not found',
+
+    quickSearchPlaceholder: 'Find in sheet',
+    quickSearchDialogAria: 'Find in sheet',
+    quickSearchMoreOptionsTitle: 'More options',
+    quickSearchOpenFindReplaceAria: 'Open Find and Replace',
+    quickSearchNextAria: 'Next match',
+    quickSearchPrevAria: 'Previous match',
+    quickSearchCloseAria: 'Close search',
+    quickSearchNoResults: 'No results',
+    quickSearchSearching: 'Searching…',
+    quickSearchCounterTemplate: '{current} of {total}',
+    quickSearchMatchCountAria: '{current} of {total} matches',
   },
   sheetconfig: {
     delete: 'Delete',

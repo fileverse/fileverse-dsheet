@@ -186,7 +186,7 @@ export const CustomButton = ({
         <div
           className="p-2 color-text-default dsheet-import-section"
           data-testid="import-section"
-        // onClick={() => setIsOpen(false)}
+          // onClick={() => setIsOpen(false)}
         >
           <h2
             className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2"

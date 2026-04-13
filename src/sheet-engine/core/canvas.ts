@@ -1334,7 +1334,7 @@ export class Canvas {
             if (mergeCell) {
               const mergeCellOffset =
                 borderOffset[
-                `${bdRow + mergeCell.rs - 1}_${bdCol + mergeCell.cs - 1}`
+                  `${bdRow + mergeCell.rs - 1}_${bdCol + mergeCell.cs - 1}`
                 ];
               mergeCellEndX = mergeCellOffset.endX;
               mergeCellEndY = mergeCellOffset.endY;
@@ -1499,8 +1499,8 @@ export class Canvas {
           const hasExplicitHorizonAlign = !_.isNil(cell?.ht);
           const effectiveHorizonAlign =
             !hasExplicitHorizonAlign &&
-              horizonAlign === '2' &&
-              endX - startX < textMetrics
+            horizonAlign === '2' &&
+            endX - startX < textMetrics
               ? '1'
               : horizonAlign;
 
@@ -2379,20 +2379,20 @@ export class Canvas {
 
       const textInfo = cell
         ? getCellTextInfo(
-          cell,
-          renderCtx,
-          this.sheetCtx,
-          {
-            cellWidth,
-            originCellWidth: cellWidth,
-            cellHeight,
-            space_width,
-            space_height,
-            r,
-            c,
-          },
-          this.sheetCtx,
-        )
+            cell,
+            renderCtx,
+            this.sheetCtx,
+            {
+              cellWidth,
+              originCellWidth: cellWidth,
+              cellHeight,
+              space_width,
+              space_height,
+              r,
+              c,
+            },
+            this.sheetCtx,
+          )
         : undefined;
 
       // 若单元格有条件格式图标集
@@ -2651,20 +2651,20 @@ export class Canvas {
 
     const textInfo = cell
       ? getCellTextInfo(
-        cell,
-        renderCtx,
-        this.sheetCtx,
-        {
-          cellWidth,
-          originCellWidth,
-          cellHeight,
-          space_width,
-          space_height,
-          r,
-          c,
-        },
-        this.sheetCtx,
-      )
+          cell,
+          renderCtx,
+          this.sheetCtx,
+          {
+            cellWidth,
+            originCellWidth,
+            cellHeight,
+            space_width,
+            space_height,
+            r,
+            c,
+          },
+          this.sheetCtx,
+        )
       : undefined;
 
     // 交替颜色

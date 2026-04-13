@@ -69,6 +69,12 @@ export interface CheckModes {
   linkCheck?: boolean;
 }
 
+/** Skip cells in hidden rows/columns (manual hide + filter). */
+export type SearchHiddenConfig = {
+  rowhidden?: Record<string, number> | null;
+  colhidden?: Record<string, number> | null;
+};
+
 export function getSearchIndexArr(
   searchText: string,
   range: {
@@ -84,6 +90,7 @@ export function getSearchIndexArr(
     linkCheck = false,
   }: CheckModes = {},
   hyperlinkMap?: HyperlinkMap,
+  hiddenConfig?: SearchHiddenConfig,
 ) {
   const arr: { r: number; c: number }[] = [];
   const seen: Record<string, boolean> = {};
@@ -95,7 +102,9 @@ export function getSearchIndexArr(
     const c2 = range[s].column[1];
 
     for (let r = r1; r <= r2; r += 1) {
+      if (hiddenConfig && hiddenConfig.rowhidden?.[r] != null) continue;
       for (let c = c1; c <= c2; c += 1) {
+        if (hiddenConfig && hiddenConfig.colhidden?.[c] != null) continue;
         const cell = flowdata[r][c] as any;
 
         if (cell == null) continue;
@@ -170,6 +179,72 @@ export function getSearchIndexArr(
   return arr;
 }
 
+/** Use chunked async scan when the active sheet has at least this many rows. */
+export const QUICK_SEARCH_ASYNC_ROW_THRESHOLD = 50000;
+
+const QUICK_SEARCH_MODES: CheckModes = {
+  caseCheck: false,
+  formulaCheck: false,
+  regCheck: false,
+  wordCheck: false,
+  linkCheck: false,
+};
+
+export function getQuickSearchHiddenConfig(ctx: Context): SearchHiddenConfig {
+  return {
+    rowhidden: ctx.config.rowhidden ?? null,
+    colhidden: ctx.config.colhidden ?? null,
+  };
+}
+
+/** Display-only, case-insensitive substring find; skips hidden rows/columns. */
+export function getQuickSearchIndexArr(
+  ctx: Context,
+  searchText: string,
+  flowdata: CellMatrix,
+): { r: number; c: number }[] {
+  if (searchText == null || String(searchText).trim() === '') return [];
+  const range = getFindRangeOnCurrentSheet(flowdata);
+  if (range == null) return [];
+  return getSearchIndexArr(
+    searchText,
+    range,
+    flowdata,
+    QUICK_SEARCH_MODES,
+    undefined,
+    getQuickSearchHiddenConfig(ctx),
+  );
+}
+
+/** Bounding grid rect for overlay (merged region or single cell). */
+export function expandCellRectForMerge(
+  ctx: Context,
+  r: number,
+  c: number,
+): { r1: number; r2: number; c1: number; c2: number } {
+  const flowdata = getFlowdata(ctx);
+  if (!flowdata?.[r]?.[c]) return { r1: r, r2: r, c1: c, c2: c };
+  const cell = flowdata[r][c] as { mc?: { r: number; c: number } } | null;
+  if (!cell || !('mc' in cell) || cell.mc == null || ctx.config.merge == null) {
+    return { r1: r, r2: r, c1: c, c2: c };
+  }
+  const mergeKey = `${cell.mc.r}_${cell.mc.c}`;
+  const mc = ctx.config.merge[mergeKey] as
+    | { r: number; c: number; rs: number; cs: number }
+    | undefined;
+  if (mc == null) return { r1: r, r2: r, c1: c, c2: c };
+  return {
+    r1: mc.r,
+    r2: mc.r + mc.rs - 1,
+    c1: mc.c,
+    c2: mc.c + mc.cs - 1,
+  };
+}
+
+export function shouldQuickSearchUseAsync(flowdata: CellMatrix): boolean {
+  return flowdata.length >= QUICK_SEARCH_ASYNC_ROW_THRESHOLD;
+}
+
 /** Active cell for “find next” stepping (may be empty / non-match). */
 function resolveFindNextCursor(
   ctx: Context,
@@ -182,11 +257,7 @@ function resolveFindNextCursor(
 
   const sel = ctx.luckysheet_select_save;
   const sLast = sel?.[sel.length - 1];
-  if (
-    sLast &&
-    !_.isNil(sLast.row_focus) &&
-    !_.isNil(sLast.column_focus)
-  ) {
+  if (sLast && !_.isNil(sLast.row_focus) && !_.isNil(sLast.column_focus)) {
     return { r: sLast.row_focus, c: sLast.column_focus };
   }
 
@@ -355,8 +426,9 @@ export function searchAll(
       sheetName:
         ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId) || 0]?.name,
       sheetId: ctx.currentSheetId,
-      cellPosition: `${chatatABC(searchIndexArr[i].c)}${searchIndexArr[i].r + 1
-        }`,
+      cellPosition: `${chatatABC(searchIndexArr[i].c)}${
+        searchIndexArr[i].r + 1
+      }`,
       value: value_ShowEs,
     });
   }
@@ -661,11 +733,20 @@ export function getSearchIndexArrAsync(
   flowdata: CellMatrix,
   modes: CheckModes,
   hyperlinkMap?: HyperlinkMap,
+  hiddenConfig?: SearchHiddenConfig,
   onProgress?: (partial: { r: number; c: number }[]) => void,
   onComplete?: (all: { r: number; c: number }[]) => void,
 ): AbortController {
   const controller = new AbortController();
   const { signal } = controller;
+
+  const completion = { done: false };
+  const finish = (val: { r: number; c: number }[]) => {
+    if (completion.done) return;
+    completion.done = true;
+    onComplete?.(val);
+  };
+  signal.addEventListener('abort', () => finish([]), { once: true });
 
   const arr: { r: number; c: number }[] = [];
   const seen: Record<string, boolean> = {};
@@ -683,7 +764,7 @@ export function getSearchIndexArrAsync(
     try {
       hoistedReg = new RegExp(searchText, modes.caseCheck ? 'g' : 'ig');
     } catch {
-      onComplete?.([]);
+      finish([]);
       return controller;
     }
   }
@@ -703,7 +784,7 @@ export function getSearchIndexArrAsync(
   function processChunk() {
     if (signal.aborted) return;
     if (segIdx >= segments.length) {
-      onComplete?.(arr);
+      finish(arr);
       return;
     }
 
@@ -718,8 +799,10 @@ export function getSearchIndexArrAsync(
         currentR += 1, rowsProcessed += 1
       ) {
         if (!flowdata[currentR]) continue;
+        if (hiddenConfig?.rowhidden?.[currentR] != null) continue;
 
         for (let c = seg.c1; c <= seg.c2; c += 1) {
+          if (hiddenConfig?.colhidden?.[c] != null) continue;
           const cell = flowdata[currentR][c] as any;
           if (cell == null) continue;
 
@@ -787,9 +870,37 @@ export function getSearchIndexArrAsync(
     }
 
     onProgress?.(arr.slice());
-    setTimeout(processChunk, 0);
+    if (!completion.done && !signal.aborted) {
+      setTimeout(processChunk, 0);
+    }
   }
 
   setTimeout(processChunk, 0);
   return controller;
+}
+
+/** Chunked quick search with hidden row/column skip (same semantics as `getQuickSearchIndexArr`). */
+export function runQuickSearchIndexArrAsync(
+  ctx: Context,
+  searchText: string,
+  flowdata: CellMatrix,
+  onProgress: (partial: { r: number; c: number }[]) => void,
+  onComplete: (all: { r: number; c: number }[]) => void,
+): AbortController {
+  const range = getFindRangeOnCurrentSheet(flowdata);
+  const noop = new AbortController();
+  if (searchText == null || String(searchText).trim() === '' || range == null) {
+    setTimeout(() => onComplete([]), 0);
+    return noop;
+  }
+  return getSearchIndexArrAsync(
+    searchText,
+    range,
+    flowdata,
+    QUICK_SEARCH_MODES,
+    undefined,
+    getQuickSearchHiddenConfig(ctx),
+    onProgress,
+    onComplete,
+  );
 }

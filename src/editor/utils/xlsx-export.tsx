@@ -422,7 +422,6 @@ export const handleExportToXLSX = async (
 
       if (!sheet.dataVerification) return;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const wsAny = ws as any;
       if (!wsAny.dataValidations) wsAny.dataValidations = { model: {} };
       if (!wsAny.dataValidations.model) wsAny.dataValidations.model = {};

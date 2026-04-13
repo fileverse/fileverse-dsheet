@@ -11632,6 +11632,18 @@ export default {
     locationTiplessTwoRow: 'Selecciona al menos dos filas',
     locationTiplessTwoColumn: 'Selecciona al menos dos columnas',
     locationTipNotFindCell: 'Celda no encontrada',
+
+    quickSearchPlaceholder: 'Buscar en la hoja',
+    quickSearchDialogAria: 'Buscar en la hoja',
+    quickSearchMoreOptionsTitle: 'Más opciones',
+    quickSearchOpenFindReplaceAria: 'Abrir Buscar y reemplazar',
+    quickSearchNextAria: 'Siguiente coincidencia',
+    quickSearchPrevAria: 'Coincidencia anterior',
+    quickSearchCloseAria: 'Cerrar búsqueda',
+    quickSearchNoResults: 'Sin resultados',
+    quickSearchSearching: 'Buscando…',
+    quickSearchCounterTemplate: '{current} de {total}',
+    quickSearchMatchCountAria: '{current} de {total} coincidencias',
   },
   sheetconfig: {
     delete: 'Eliminar',

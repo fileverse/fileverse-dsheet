@@ -30,9 +30,12 @@ import {
   insertRowCol,
   deleteRowCol,
   getSheetIndex,
+  getFlowdata,
   fixRowStyleOverflowInFreeze,
   fixColumnStyleOverflowInFreeze,
   handleKeydownForZoom,
+  expandCellRectForMerge,
+  seletedHighlistByindex,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext, { SetContextOptions } from '../../context';
@@ -66,16 +69,10 @@ function getPrimaryCellHighlightRc(
   const sel = ctx.luckysheet_select_save;
   if (!sel?.length) return null;
   const last = sel[sel.length - 1];
-  if (
-    last.row[0] === last.row[1] &&
-    last.column[0] === last.column[1]
-  ) {
+  if (last.row[0] === last.row[1] && last.column[0] === last.column[1]) {
     return null;
   }
-  if (
-    last.row_focus != null &&
-    last.column_focus != null
-  ) {
+  if (last.row_focus != null && last.column_focus != null) {
     return { r: last.row_focus, c: last.column_focus };
   }
   const rLo = Math.min(last.row[0], last.row[1]);
@@ -101,6 +98,57 @@ function formulaRangeHighlightHcStyle(hex: string) {
 const SheetOverlay: React.FC = () => {
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
   const { info, rightclick } = locale(context);
+
+  const flowdataForQuickSearchDeps = getFlowdata(context);
+
+  const quickSearchOverlayRects = useMemo(() => {
+    if (!context.showQuickSearch) return [];
+    const hl = context.quickSearchHighlight;
+    if (!hl || hl.matches.length === 0) return [];
+    const { matches, activeIndex } = hl;
+    const active = matches[activeIndex] ?? matches[0]!;
+    const activeB = expandCellRectForMerge(context, active.r, active.c);
+    const activeKey = `${activeB.r1}_${activeB.r2}_${activeB.c1}_${activeB.c2}`;
+    const uniq = new Map<
+      string,
+      { r1: number; r2: number; c1: number; c2: number; active: boolean }
+    >();
+    matches.forEach(({ r, c }) => {
+      const b = expandCellRectForMerge(context, r, c);
+      const key = `${b.r1}_${b.r2}_${b.c1}_${b.c2}`;
+      const isActive = key === activeKey;
+      const prev = uniq.get(key);
+      if (!prev) uniq.set(key, { ...b, active: isActive });
+      else if (isActive) prev.active = true;
+    });
+    return Array.from(uniq.entries())
+      .map(([key, box]) => {
+        const rect = seletedHighlistByindex(
+          context,
+          box.r1,
+          box.r2,
+          box.c1,
+          box.c2,
+        );
+        return rect ? { key, box, rect } : null;
+      })
+      .filter((v): v is NonNullable<typeof v> => v != null);
+    // Granular deps + flowdata ref refresh highlights without deep cell equality
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    context.showQuickSearch,
+    context.quickSearchHighlight,
+    context.visibledatarow,
+    context.visibledatacolumn,
+    context.config.merge,
+    context.config.rowhidden,
+    context.config.colhidden,
+    context.currentSheetId,
+    context.luckysheetCellUpdate.length,
+    refs.globalCache.undoList.length,
+    refs.globalCache.redoList.length,
+    flowdataForQuickSearchDeps,
+  ]);
   const { showDialog } = useDialog();
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomAddRowInputRef = useRef<HTMLInputElement>(null);
@@ -299,8 +347,8 @@ const SheetOverlay: React.FC = () => {
             refs.cellInput.current,
             refs.fxInput.current,
           );
-        } catch (e: any) {
-          showAlert(e.message);
+        } catch (e: unknown) {
+          showAlert(e instanceof Error ? e.message : String(e));
         }
       });
     },
@@ -334,23 +382,26 @@ const SheetOverlay: React.FC = () => {
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
-                type: 'column',
-                index: selection!.column[0],
-                count: 1,
-                direction: 'lefttop',
-                id: context.currentSheetId,
-              }
+                  type: 'column',
+                  index: selection!.column[0],
+                  count: 1,
+                  direction: 'lefttop',
+                  id: context.currentSheetId,
+                }
               : {
-                type: 'row',
-                index: selection!.row[1],
-                count: 1,
-                direction: 'rightbottom',
-                id: context.currentSheetId,
-              };
+                  type: 'row',
+                  index: selection!.row[1],
+                  count: 1,
+                  direction: 'rightbottom',
+                  id: context.currentSheetId,
+                };
 
-          setContext((draftCtx) => {
-            insertRowCol(draftCtx, insertRowColOp, false);
-          }, { insertRowColOp });
+          setContext(
+            (draftCtx) => {
+              insertRowCol(draftCtx, insertRowColOp, false);
+            },
+            { insertRowColOp },
+          );
         }
         ev.preventDefault();
         return;
@@ -365,7 +416,8 @@ const SheetOverlay: React.FC = () => {
         if (selection?.column_select || selection?.row_select) {
           setContext((draftCtx) => {
             const sheetIndex = getSheetIndex(draftCtx, draftCtx.currentSheetId);
-            const sheet = sheetIndex != null ? draftCtx.luckysheetfile[sheetIndex] : null;
+            const sheet =
+              sheetIndex != null ? draftCtx.luckysheetfile[sheetIndex] : null;
             if (!sheet?.data?.length || !sheet.data[0]?.length) return;
 
             if (selection.column_select) {
@@ -478,8 +530,9 @@ const SheetOverlay: React.FC = () => {
       (draftCtx) => {
         try {
           insertRowCol(draftCtx, insertRowColOp, false);
-        } catch (err: any) {
-          if (err.message === 'maxExceeded') showAlert(rightclick.rowOverLimit);
+        } catch (err: unknown) {
+          if (err instanceof Error && err.message === 'maxExceeded')
+            showAlert(rightclick.rowOverLimit);
         }
       },
       { insertRowColOp },
@@ -597,8 +650,9 @@ const SheetOverlay: React.FC = () => {
         <ScrollBar axis="y" />
         <div
           ref={refs.cellArea}
-          className={`fortune-cell-area ${context.luckysheetPaintModelOn ? 'cursor-paint' : ''
-            }`}
+          className={`fortune-cell-area ${
+            context.luckysheetPaintModelOn ? 'cursor-paint' : ''
+          }`}
           onMouseDown={cellAreaMouseDown}
           onDoubleClick={cellAreaDoubleClick}
           onContextMenu={cellAreaContextMenu}
@@ -636,6 +690,27 @@ const SheetOverlay: React.FC = () => {
               </div>
             );
           })}
+          {quickSearchOverlayRects.map(({ key, box, rect }) => (
+            <div
+              key={`fortune-quick-search-hl-${key}`}
+              className={`fortune-quick-search-highlight${
+                box.active ? ' fortune-quick-search-highlight--active' : ''
+              }${
+                context.luckysheetCellUpdate.length > 0
+                  ? ' fortune-quick-search-highlight--dim'
+                  : ''
+              }`}
+              style={{
+                position: 'absolute',
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+                pointerEvents: 'none',
+                zIndex: 13,
+              }}
+            />
+          ))}
           <div
             className="luckysheet-row-count-show luckysheet-count-show"
             id="luckysheet-row-count-show"
@@ -665,33 +740,33 @@ const SheetOverlay: React.FC = () => {
             style={
               (context.luckysheet_select_save?.length ?? 0) > 0
                 ? (() => {
-                  const selection = _.last(context.luckysheet_select_save)!;
-                  return _.assign(
-                    {
-                      left: selection.left,
-                      top: selection.top,
-                      width: selection.width
-                        ? selection.width - 1.8
-                        : selection.width,
-                      height: selection.height
-                        ? selection.height - 1.8
-                        : selection.height,
-                      display: 'block',
-                    },
-                    fixRowStyleOverflowInFreeze(
-                      context,
-                      selection.row_focus || 0,
-                      selection.row_focus || 0,
-                      refs.globalCache.freezen?.[context.currentSheetId],
-                    ),
-                    fixColumnStyleOverflowInFreeze(
-                      context,
-                      selection.column_focus || 0,
-                      selection.column_focus || 0,
-                      refs.globalCache.freezen?.[context.currentSheetId],
-                    ),
-                  );
-                })()
+                    const selection = _.last(context.luckysheet_select_save)!;
+                    return _.assign(
+                      {
+                        left: selection.left,
+                        top: selection.top,
+                        width: selection.width
+                          ? selection.width - 1.8
+                          : selection.width,
+                        height: selection.height
+                          ? selection.height - 1.8
+                          : selection.height,
+                        display: 'block',
+                      },
+                      fixRowStyleOverflowInFreeze(
+                        context,
+                        selection.row_focus || 0,
+                        selection.row_focus || 0,
+                        refs.globalCache.freezen?.[context.currentSheetId],
+                      ),
+                      fixColumnStyleOverflowInFreeze(
+                        context,
+                        selection.column_focus || 0,
+                        selection.column_focus || 0,
+                        refs.globalCache.freezen?.[context.currentSheetId],
+                      ),
+                    );
+                  })()
                 : {}
             }
             onMouseDown={(e) => e.preventDefault()}
@@ -756,8 +831,9 @@ const SheetOverlay: React.FC = () => {
                   <div
                     key={index}
                     id="luckysheet-cell-selected"
-                    className={`luckysheet-cell-selected${isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
-                      }`}
+                    className={`luckysheet-cell-selected${
+                      isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
+                    }`}
                     style={_.assign(
                       {
                         left: selection.left_move,
@@ -853,8 +929,7 @@ const SheetOverlay: React.FC = () => {
             const row = context.visibledatarow[r1];
             const col = context.visibledatacolumn[c1];
             if (row == null || col == null) return null;
-            const row_pre =
-              r1 - 1 === -1 ? 0 : context.visibledatarow[r1 - 1];
+            const row_pre = r1 - 1 === -1 ? 0 : context.visibledatarow[r1 - 1];
             const col_pre =
               c1 - 1 === -1 ? 0 : context.visibledatacolumn[c1 - 1];
             const rawW = col - col_pre - 1;

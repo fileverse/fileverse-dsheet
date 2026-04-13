@@ -11699,6 +11699,18 @@ export default {
     locationTiplessTwoRow: '请选择最少两行',
     locationTiplessTwoColumn: '请选择最少两列',
     locationTipNotFindCell: '未找到单元格',
+
+    quickSearchPlaceholder: '在工作表中查找',
+    quickSearchDialogAria: '在工作表中查找',
+    quickSearchMoreOptionsTitle: '更多选项',
+    quickSearchOpenFindReplaceAria: '打开查找和替换',
+    quickSearchNextAria: '下一处匹配',
+    quickSearchPrevAria: '上一处匹配',
+    quickSearchCloseAria: '关闭查找',
+    quickSearchNoResults: '无结果',
+    quickSearchSearching: '正在搜索…',
+    quickSearchCounterTemplate: '第 {current} 项，共 {total} 项',
+    quickSearchMatchCountAria: '第 {current} 项，共 {total} 项匹配',
   },
   sheetconfig: {
     delete: '删除',

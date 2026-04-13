@@ -11658,6 +11658,18 @@ export default {
     locationTiplessTwoRow: '請選擇最少兩行',
     locationTiplessTwoColumn: '請選擇最少兩列',
     locationTipNotFindCell: '未找到儲存格',
+
+    quickSearchPlaceholder: '在工作表中尋找',
+    quickSearchDialogAria: '在工作表中尋找',
+    quickSearchMoreOptionsTitle: '更多選項',
+    quickSearchOpenFindReplaceAria: '開啟尋找與取代',
+    quickSearchNextAria: '下一個相符項目',
+    quickSearchPrevAria: '上一個相符項目',
+    quickSearchCloseAria: '關閉尋找',
+    quickSearchNoResults: '找不到結果',
+    quickSearchSearching: '正在搜尋…',
+    quickSearchCounterTemplate: '第 {current} 項，共 {total} 項',
+    quickSearchMatchCountAria: '第 {current} 項，共 {total} 項相符',
   },
   sheetconfig: {
     delete: '删除',

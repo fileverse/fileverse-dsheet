@@ -109,10 +109,7 @@ const ZoomControl: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [
-    context.zoomRatio,
-    zoomTo,
-  ]);
+  }, [context.zoomRatio, zoomTo]);
 
   return (
     <div className="fortune-zoom-container">

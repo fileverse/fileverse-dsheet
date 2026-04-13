@@ -49,6 +49,7 @@ import Sheet from '../Sheet';
 import WorkbookContext, { RefValues, SetContextOptions } from '../../context';
 import Toolbar from '../Toolbar';
 import FxEditor from '../FxEditor';
+import QuickSearchBar from '../QuickSearch';
 import SheetTab from '../SheetTab';
 import ContextMenu from '../ContextMenu';
 import SVGDefines from '../SVGDefines';
@@ -233,8 +234,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const changeMap = new Map<string, any>();
 
         const upsert = (change: any) => {
-          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${change.key ?? ''
-            }`;
+          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${
+            change.key ?? ''
+          }`;
           changeMap.set(k, change);
         };
 
@@ -531,10 +533,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterUndo != null &&
-              newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
+            newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
               ? {
-                config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
-              }
+                  config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
+                }
               : {}),
           };
           if (isBorderUndo) {
@@ -572,10 +574,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterRedo != null &&
-              newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
+            newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
               ? {
-                config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
-              }
+                  config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
+                }
               : {}),
           };
           if (isBorderUndo) {
@@ -1377,9 +1379,25 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                   moreToolbarItems={moreToolbarItems}
                 />
               )}
-              {mergedSettings.showFormulaBar && <FxEditor />}
+              {mergedSettings.showFormulaBar && (
+                <div className="fortune-formula-bar-row">
+                  <FxEditor />
+                </div>
+              )}
             </div>
             <Sheet sheet={sheet} />
+            {mergedSettings.showFormulaBar && context.showQuickSearch && (
+              <div
+                className="fortune-quick-search-float"
+                style={{
+                  top:
+                    (mergedSettings.showToolbar ? context.toolbarHeight : 0) +
+                    2,
+                }}
+              >
+                <QuickSearchBar />
+              </div>
+            )}
             {mergedSettings.showSheetTabs && <SheetTab />}
             <ContextMenu />
             <FilterMenu />

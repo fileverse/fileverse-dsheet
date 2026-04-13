@@ -164,6 +164,21 @@
   /* display: none; */
 }
 
+.fortune-quick-search-highlight {
+  background-color: rgba(255, 242, 204, 0.3);
+  box-sizing: border-box;
+  border: 1px solid rgba(244, 166, 35, 0.35);
+}
+
+.fortune-quick-search-highlight--active {
+  background-color: rgba(244, 167, 35, 0.3);
+  border: 2px solid #d97706;
+}
+
+.fortune-quick-search-highlight--dim {
+  opacity: 0.45;
+}
+
 .fortune-cell-selected-extend {
   position: absolute;
   pointer-events: none;
@@ -591,7 +606,9 @@
   top: 0;
 }
 
-.luckysheet-postil-show-active .luckysheet-postil-dialog-move .luckysheet-postil-dialog-move-item {
+.luckysheet-postil-show-active
+  .luckysheet-postil-dialog-move
+  .luckysheet-postil-dialog-move-item {
   border-color: #0188fb;
 }
 

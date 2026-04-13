@@ -153,7 +153,7 @@ export function generateAPIs(
       const { functionlist } = locale(context);
       const last =
         context.luckysheet_select_save?.[
-        context.luckysheet_select_save.length - 1
+          context.luckysheet_select_save.length - 1
         ];
       let row_index = last?.row_focus;
       let col_index = last?.column_focus;
@@ -503,7 +503,7 @@ export function generateAPIs(
     ) => {
       const last =
         context.luckysheet_select_save?.[
-        context.luckysheet_select_save.length - 1
+          context.luckysheet_select_save.length - 1
         ];
       let row_index = last?.row_focus;
       let col_index = last?.column_focus;
