@@ -1,22 +1,22 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { getSheetIndex, isAllowEdit } from "../utils";
-import { cancelNormalSelected, mergeBorder } from "./cell";
-import { setSelectionByCharacterOffset } from "./cursor";
-import { getcellrange, iscelldata } from "./formula";
-import { applyLinkToSelection } from "./inline-string";
-import { colLocation, rowLocation } from "./location";
-import { normalizeSelection } from "./selection";
-import { changeSheet } from "./sheet";
-import { locale } from "../locale";
-import { GlobalCache } from "../types";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { getSheetIndex, isAllowEdit } from '../utils';
+import { cancelNormalSelected, mergeBorder } from './cell';
+import { setSelectionByCharacterOffset } from './cursor';
+import { getcellrange, iscelldata } from './formula';
+import { applyLinkToSelection } from './inline-string';
+import { colLocation, rowLocation } from './location';
+import { normalizeSelection } from './selection';
+import { changeSheet } from './sheet';
+import { locale } from '../locale';
+import { GlobalCache } from '../types';
 
 export function getCellRowColumn(
   ctx: Context,
   e: MouseEvent,
   container: HTMLDivElement,
   scrollX: HTMLDivElement,
-  scrollY: HTMLDivElement
+  scrollY: HTMLDivElement,
 ) {
   const flowdata = getFlowdata(ctx);
   if (flowdata == null) return undefined;
@@ -47,7 +47,7 @@ export function getCellHyperlink(ctx: Context, r: number, c: number) {
 
     // Fall back to the first inline segment link (ct.s[i].link)
     const cell = getFlowdata(ctx)?.[r]?.[c];
-    if (cell?.ct?.t === "inlineStr" && Array.isArray(cell.ct.s)) {
+    if (cell?.ct?.t === 'inlineStr' && Array.isArray(cell.ct.s)) {
       const seg = (cell.ct.s as any[]).find((s) => s.link?.linkAddress);
       if (seg) {
         return {
@@ -67,7 +67,7 @@ export function saveHyperlink(
   linkText: string,
   linkType: string,
   linkAddress: string,
-  options?: { applyToSelection?: boolean; cellInput?: HTMLDivElement | null }
+  options?: { applyToSelection?: boolean; cellInput?: HTMLDivElement | null },
 ) {
   const applyToSelection = options?.applyToSelection && options?.cellInput;
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
@@ -77,7 +77,7 @@ export function saveHyperlink(
     if (sheetIndex != null && flowdata != null && linkType && linkAddress) {
       let cell = flowdata[r][c];
       if (cell == null) cell = {};
-      _.set(ctx.luckysheetfile[sheetIndex], ["hyperlink", `${r}_${c}`], {
+      _.set(ctx.luckysheetfile[sheetIndex], ['hyperlink', `${r}_${c}`], {
         linkType,
         linkAddress,
       });
@@ -90,17 +90,17 @@ export function saveHyperlink(
         ctx.hooks.updateCellYdoc([
           {
             sheetId: ctx.currentSheetId,
-            path: ["hyperlink"],
+            path: ['hyperlink'],
             key: `${r}_${c}`,
             value: { linkType, linkAddress },
-            type: "update",
+            type: 'update',
           },
           {
             sheetId: ctx.currentSheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c, v: cell },
             key: `${r}_${c}`,
-            type: "update",
+            type: 'update',
           },
         ]);
       }
@@ -110,7 +110,7 @@ export function saveHyperlink(
       setSelectionByCharacterOffset(
         options.cellInput!,
         offsets.start,
-        offsets.end
+        offsets.end,
       );
     }
     applyLinkToSelection(options.cellInput!, linkType, linkAddress);
@@ -124,11 +124,11 @@ export function saveHyperlink(
   if (sheetIndex != null && flowdata != null && linkType && linkAddress) {
     let cell = flowdata[r][c];
     if (cell == null) cell = {};
-    _.set(ctx.luckysheetfile[sheetIndex], ["hyperlink", `${r}_${c}`], {
+    _.set(ctx.luckysheetfile[sheetIndex], ['hyperlink', `${r}_${c}`], {
       linkType,
       linkAddress,
     });
-    cell.fc = "rgb(0, 0, 255)";
+    cell.fc = 'rgb(0, 0, 255)';
     cell.un = 1;
     cell.v = linkText || linkAddress;
     cell.m = linkText || linkAddress;
@@ -139,14 +139,14 @@ export function saveHyperlink(
       ctx?.hooks?.updateCellYdoc([
         {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r,
             c,
             v: cell,
           },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         },
       ]);
     }
@@ -162,9 +162,9 @@ export function removeHyperlink(ctx: Context, r: number, c: number) {
   if (flowdata != null && sheetIndex != null) {
     const hyperlink = _.omit(
       ctx.luckysheetfile[sheetIndex].hyperlink,
-      `${r}_${c}`
+      `${r}_${c}`,
     );
-    _.set(ctx.luckysheetfile[sheetIndex], "hyperlink", hyperlink);
+    _.set(ctx.luckysheetfile[sheetIndex], 'hyperlink', hyperlink);
     const cell = flowdata[r][c];
     if (cell != null) {
       delete flowdata[r][c]?.hl;
@@ -179,19 +179,19 @@ export function removeHyperlink(ctx: Context, r: number, c: number) {
     const changes: any[] = [
       {
         sheetId: ctx.currentSheetId,
-        path: ["hyperlink"],
+        path: ['hyperlink'],
         key: `${r}_${c}`,
         value: null,
-        type: "delete",
+        type: 'delete',
       },
     ];
     if (updatedCell != null) {
       changes.push({
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: updatedCell },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       });
     }
     ctx.hooks.updateCellYdoc(changes);
@@ -208,7 +208,7 @@ export function showLinkCard(
     selectionOffsets?: { start: number; end: number };
   },
   isEditing = false,
-  isMouseDown = false
+  isMouseDown = false,
 ) {
   if (ctx.linkCard?.selectingCellRange) return;
   if (`${r}_${c}` === ctx.linkCard?.rc) return;
@@ -233,7 +233,7 @@ export function showLinkCard(
     const row = ctx.visibledatarow[r];
     const originText = (() => {
       if (options?.originText !== undefined) return options.originText;
-      if (cell?.v == null) return "";
+      if (cell?.v == null) return '';
       return `${cell.v}`;
     })();
     ctx.linkCard = {
@@ -242,8 +242,8 @@ export function showLinkCard(
       c,
       rc: `${r}_${c}`,
       originText,
-      originType: link?.linkType || "webpage",
-      originAddress: link?.linkAddress || "",
+      originType: link?.linkType || 'webpage',
+      originAddress: link?.linkAddress || '',
       position: {
         cellLeft: col_pre,
         cellBottom: row,
@@ -262,18 +262,18 @@ export function goToLink(
   linkType: string,
   linkAddress: string,
   scrollbarX: HTMLDivElement,
-  scrollbarY: HTMLDivElement
+  scrollbarY: HTMLDivElement,
 ) {
   const currSheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (currSheetIndex == null) return;
   const link = getCellHyperlink(ctx, r, c);
   if (link == null) return;
-  if (linkType === "webpage") {
+  if (linkType === 'webpage') {
     if (!/^http[s]?:\/\//.test(linkAddress)) {
       linkAddress = `https://${linkAddress}`;
     }
     window.open(linkAddress);
-  } else if (linkType === "sheet") {
+  } else if (linkType === 'sheet') {
     let sheetId;
     _.forEach(ctx.luckysheetfile, (f) => {
       if (linkAddress === f.name) {
@@ -301,9 +301,9 @@ export function goToLink(
 export function isLinkValid(
   ctx: Context,
   linkType: string,
-  linkAddress: string
+  linkAddress: string,
 ) {
-  if (!linkAddress) return { isValid: false, tooltip: "" };
+  if (!linkAddress) return { isValid: false, tooltip: '' };
   const { insertLink } = locale(ctx);
   // prepend https:// if missing
   if (!/^https?:\/\//i.test(linkAddress)) {
@@ -318,26 +318,26 @@ export function isLinkValid(
   if (!isValid) {
     return { isValid: false, tooltip: insertLink.tooltipInfo1 };
   }
-  if (linkType === "cellrange" && !iscelldata(linkAddress)) {
+  if (linkType === 'cellrange' && !iscelldata(linkAddress)) {
     return { isValid: false, tooltip: insertLink.invalidCellRangeTip };
   }
-  return { isValid: true, tooltip: "" };
+  return { isValid: true, tooltip: '' };
 }
 
 export function onRangeSelectionModalMoveStart(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   const box = document.querySelector(
-    "div.fortune-link-modify-modal.range-selection-modal"
+    'div.fortune-link-modify-modal.range-selection-modal',
   ) as HTMLDivElement;
   if (!box) return;
   const { width, height } = box.getBoundingClientRect();
   const left = box.offsetLeft;
   const top = box.offsetTop;
   const initialPosition = { left, top, width, height };
-  _.set(globalCache, "linkCard.rangeSelectionModal", {
+  _.set(globalCache, 'linkCard.rangeSelectionModal', {
     cursorMoveStartPosition: {
       x: e.pageX,
       y: e.pageY,
@@ -348,12 +348,12 @@ export function onRangeSelectionModalMoveStart(
 
 export function onRangeSelectionModalMove(
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   const moveProps = globalCache.linkCard?.rangeSelectionModal;
   if (moveProps == null) return;
   const modal = document.querySelector(
-    "div.fortune-link-modify-modal.range-selection-modal"
+    'div.fortune-link-modify-modal.range-selection-modal',
   );
   const { x: startX, y: startY } = moveProps.cursorMoveStartPosition!;
   let { top, left } = moveProps.initialPosition!;
@@ -365,5 +365,5 @@ export function onRangeSelectionModalMove(
 }
 
 export function onRangeSelectionModalMoveEnd(globalCache: GlobalCache) {
-  _.set(globalCache, "linkCard.rangeSelectionModal", undefined);
+  _.set(globalCache, 'linkCard.rangeSelectionModal', undefined);
 }

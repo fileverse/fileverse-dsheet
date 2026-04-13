@@ -315,14 +315,12 @@ const ContextMenu: React.FC = () => {
     if (type === 'row') {
       const [rowStart, rowEnd] = selection.row;
       insertRowColOp.count = rowEnd - rowStart + 1;
-      insertRowColOp.index =
-        direction === 'lefttop' ? rowStart : rowEnd;
+      insertRowColOp.index = direction === 'lefttop' ? rowStart : rowEnd;
       insertRowColOp.templateSourceRows = _.range(rowStart, rowEnd + 1);
     } else {
       const [colStart, colEnd] = selection.column;
       insertRowColOp.count = colEnd - colStart + 1;
-      insertRowColOp.index =
-        direction === 'lefttop' ? colStart : colEnd;
+      insertRowColOp.index = direction === 'lefttop' ? colStart : colEnd;
       insertRowColOp.templateSourceColumns = _.range(colStart, colEnd + 1);
     }
 
@@ -608,9 +606,7 @@ const ContextMenu: React.FC = () => {
       if (name === 'insert-column') {
         if (selection?.row_select) return null;
         const colSpan =
-          selection != null
-            ? selection.column[1] - selection.column[0] + 1
-            : 1;
+          selection != null ? selection.column[1] - selection.column[0] + 1 : 1;
         const colLeftLabel = rightclick.insertColumnsLeftN.replace(
           '{n}',
           String(colSpan),
@@ -633,9 +629,7 @@ const ContextMenu: React.FC = () => {
         if (!context.contextMenu.headerMenu) return null;
         if (selection?.row_select) return null;
         const colSpan =
-          selection != null
-            ? selection.column[1] - selection.column[0] + 1
-            : 1;
+          selection != null ? selection.column[1] - selection.column[0] + 1 : 1;
         const colRightLabel = rightclick.insertColumnsRightN.replace(
           '{n}',
           String(colSpan),

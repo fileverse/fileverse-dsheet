@@ -282,7 +282,10 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         </SelectTrigger>
         <SelectContent className="fortune-link-type-dropdown">
           {linkTypeList
-            .filter((type: { text: string; value: string }) => type.value !== 'cellrange')
+            .filter(
+              (type: { text: string; value: string }) =>
+                type.value !== 'cellrange',
+            )
             .map((type: { text: string; value: string }) => (
               <SelectItem key={type.value} value={type.value}>
                 {type.text}

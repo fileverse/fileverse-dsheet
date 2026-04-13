@@ -11672,6 +11672,18 @@ export default {
     locationTiplessTwoRow: 'कृपया कम से कम दो पंक्तियाँ चुनें',
     locationTiplessTwoColumn: 'कृपया कम से कम दो स्तंभ चुनें',
     locationTipNotFindCell: 'सेल नहीं मिला',
+
+    quickSearchPlaceholder: 'शीट में खोजें',
+    quickSearchDialogAria: 'शीट में खोजें',
+    quickSearchMoreOptionsTitle: 'अधिक विकल्प',
+    quickSearchOpenFindReplaceAria: 'खोजें और बदलें खोलें',
+    quickSearchNextAria: 'अगला मिलान',
+    quickSearchPrevAria: 'पिछला मिलान',
+    quickSearchCloseAria: 'खोज बंद करें',
+    quickSearchNoResults: 'कोई परिणाम नहीं',
+    quickSearchSearching: 'खोज रहा है…',
+    quickSearchCounterTemplate: '{total} में से {current}',
+    quickSearchMatchCountAria: '{total} में से {current} मिलान',
   },
   sheetconfig: {
     delete: 'हटाएं',

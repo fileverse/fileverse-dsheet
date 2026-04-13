@@ -40,9 +40,7 @@ export const handleCSVUpload = (
 
       if (typeof csvContent === 'string') {
         const delimiter =
-          separatorType === 'tab' ? '\t' :
-          separatorType === 'comma' ? ',' :
-          '';
+          separatorType === 'tab' ? '\t' : separatorType === 'comma' ? ',' : '';
         Papa.parse(csvContent, {
           header: true,
           dynamicTyping: true,

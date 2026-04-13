@@ -68,7 +68,7 @@ export function getSelectionOffsets(editableDiv: HTMLDivElement): {
  */
 export function isEditorUndoRedoKeyEvent(e: KeyboardEvent): boolean {
   if (!e.metaKey && !e.ctrlKey) return false;
-  if (e.code === "KeyZ" || e.code === "KeyY") return true;
+  if (e.code === 'KeyZ' || e.code === 'KeyY') return true;
   return e.keyCode === 90 || e.keyCode === 89;
 }
 
@@ -78,7 +78,7 @@ export function isEditorUndoRedoKeyEvent(e: KeyboardEvent): boolean {
  */
 export function shouldUseCustomEditorHistory(
   editorInnerTextTrimmed: string,
-  historyActive: boolean
+  historyActive: boolean,
 ): boolean {
   // Treat plain text + formatted content + formulas the same: once the
   // editor has content, route undo/redo through the custom stack.
@@ -87,7 +87,7 @@ export function shouldUseCustomEditorHistory(
 
 export function setCursorPosition(
   editableDiv: HTMLDivElement,
-  targetOffset: number
+  targetOffset: number,
 ) {
   editableDiv.focus();
 
@@ -121,7 +121,7 @@ export function setCursorPosition(
 export function setSelectionOffsets(
   editableDiv: HTMLDivElement,
   startOffset: number,
-  endOffset: number
+  endOffset: number,
 ) {
   editableDiv.focus();
 
@@ -164,9 +164,9 @@ export function setSelectionOffsets(
 
 export function buildFormulaSuggestionText(
   editableDiv: HTMLDivElement,
-  formulaName: string
+  formulaName: string,
 ) {
-  const fullText = editableDiv.innerText || "";
+  const fullText = editableDiv.innerText || '';
   const selection = window.getSelection();
   const selectionInEditor =
     !!selection?.rangeCount &&
@@ -184,14 +184,14 @@ export function buildFormulaSuggestionText(
   if (tokenMatch) {
     const token = tokenMatch[0];
     const tokenStart = safeCaretOffset - token.length;
-    const charBeforeToken = tokenStart > 0 ? beforeCaret[tokenStart - 1] : "";
+    const charBeforeToken = tokenStart > 0 ? beforeCaret[tokenStart - 1] : '';
     if (tokenStart === 0 || /[\s=(,+\-*/&^<>]$/.test(charBeforeToken)) {
       replaceStart = tokenStart;
     }
   }
 
-  const shouldAddOpeningParen = !afterCaret.startsWith("(");
-  const insertedText = `${formulaName}${shouldAddOpeningParen ? "(" : ""}`;
+  const shouldAddOpeningParen = !afterCaret.startsWith('(');
+  const insertedText = `${formulaName}${shouldAddOpeningParen ? '(' : ''}`;
   const nextText = fullText.slice(0, replaceStart) + insertedText + afterCaret;
 
   return {
@@ -207,23 +207,23 @@ export function isLetterNumberPattern(str: string): boolean {
 
 /** Same rule as InputBox/Fx onChange: show function list while typing a name after `=`. */
 export function shouldShowFormulaFunctionList(
-  editor: HTMLDivElement | null
+  editor: HTMLDivElement | null,
 ): boolean {
   if (!editor) return false;
-  if (!editor.innerText?.includes("=")) return false;
+  if (!editor.innerText?.includes('=')) return false;
   const parser = new DOMParser();
   const doc = parser.parseFromString(
     `<div>${editor.innerHTML}</div>`,
-    "text/html"
+    'text/html',
   );
-  const spans = doc.querySelectorAll("span");
+  const spans = doc.querySelectorAll('span');
   const lastSpan = spans[spans.length - 1];
-  const lastText = lastSpan?.innerText ?? "";
+  const lastText = lastSpan?.innerText ?? '';
   return /^=?[A-Za-z]*$/.test(lastText);
 }
 
-const FORMULA_FUNC_CLASS = "luckysheet-formula-text-func";
-const FORMULA_LPAR_CLASS = "luckysheet-formula-text-lpar";
+const FORMULA_FUNC_CLASS = 'luckysheet-formula-text-func';
+const FORMULA_LPAR_CLASS = 'luckysheet-formula-text-lpar';
 
 /**
  * When the caret sits on a function name span or its opening-paren span, return
@@ -237,7 +237,7 @@ const FORMULA_LPAR_CLASS = "luckysheet-formula-text-lpar";
  *   element sibling is `luckysheet-formula-text-func` → that function.
  */
 export function getFunctionNameFromFormulaCaretSpans(
-  editor: HTMLDivElement | null
+  editor: HTMLDivElement | null,
 ): string | null {
   if (!editor) return null;
 

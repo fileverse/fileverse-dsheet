@@ -67,7 +67,8 @@ function formatAccountingDisplayValue(
   const symbolWidth = renderCtx.measureText(symbol).width;
   const numberWidth = renderCtx.measureText(numericPart).width;
   const spaceWidth = Math.max(1, renderCtx.measureText(' ').width || 1);
-  const availableGap = cellWidth - horizontalPadding - symbolWidth - numberWidth;
+  const availableGap =
+    cellWidth - horizontalPadding - symbolWidth - numberWidth;
   const gapSpaces = Math.floor(availableGap / spaceWidth);
 
   if (gapSpaces <= 1) {
@@ -947,7 +948,7 @@ export function getCellTextInfo(
             textWidth += sc.measureText.width;
             textHeight = Math.max(
               sc.measureText.actualBoundingBoxAscent +
-              sc.measureText.actualBoundingBoxDescent,
+                sc.measureText.actualBoundingBoxDescent,
             );
             // console.log(sc.v,sc.measureText.width,sc.measureText.actualBoundingBoxAscent,sc.measureText.actualBoundingBoxDescent);
           }

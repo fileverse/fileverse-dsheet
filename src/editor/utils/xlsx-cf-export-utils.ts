@@ -123,7 +123,6 @@ function luckysheetConditionToExcelCf(
   rule: FortuneRule,
   ref: string,
   priority: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, unknown> | null {
   const { conditionName, conditionValue = [], format = {} } = rule;
   const style = fortuneFormatToExcelStyle(format);

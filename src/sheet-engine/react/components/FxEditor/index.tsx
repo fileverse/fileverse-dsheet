@@ -114,7 +114,9 @@ const FxEditor: React.FC = () => {
       formulaSearchTopLockRef.current = null;
       return;
     }
-    if (formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey) {
+    if (
+      formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey
+    ) {
       formulaSearchTopLockRef.current = null;
     }
   }, [formulaSearchActiveCellKey]);
@@ -122,7 +124,9 @@ const FxEditor: React.FC = () => {
   const handleFormulaSearchTopComputed = useCallback(
     (computedTop: number) => {
       if (!formulaSearchActiveCellKey) return;
-      if (formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey)
+      if (
+        formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      )
         return;
       formulaSearchTopLockRef.current = {
         cellKey: formulaSearchActiveCellKey,
@@ -686,8 +690,7 @@ const FxEditor: React.FC = () => {
                 draftCtx.luckysheet_select_save != null
                   ? _.cloneDeep(draftCtx.luckysheet_select_save)
                   : undefined;
-              const lastBefore =
-                selSnapshot?.[selSnapshot.length - 1];
+              const lastBefore = selSnapshot?.[selSnapshot.length - 1];
               const wasMulti =
                 !!lastBefore &&
                 (lastBefore.row[0] !== lastBefore.row[1] ||
@@ -708,10 +711,7 @@ const FxEditor: React.FC = () => {
                   ];
                 lastSel.row_focus = lastCellUpdate[0];
                 lastSel.column_focus = lastCellUpdate[1];
-                normalizeSelection(
-                  draftCtx,
-                  draftCtx.luckysheet_select_save,
-                );
+                normalizeSelection(draftCtx, draftCtx.luckysheet_select_save);
                 advancePrimaryCellInLastMultiSelection(draftCtx, !e.shiftKey);
                 // Stay out of edit mode after commit (same as in-cell Enter path).
               } else {
@@ -723,10 +723,7 @@ const FxEditor: React.FC = () => {
                     column_focus: lastCellUpdate[1],
                   },
                 ];
-                normalizeSelection(
-                  draftCtx,
-                  draftCtx.luckysheet_select_save,
-                );
+                normalizeSelection(draftCtx, draftCtx.luckysheet_select_save);
                 moveHighlightCell(draftCtx, 'down', 1, 'rangeOfSelect');
               }
               // $("#luckysheet-rich-text-editor").focus();

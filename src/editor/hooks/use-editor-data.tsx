@@ -134,10 +134,10 @@ export const useEditorData = (
                   if (cell) {
                     const comment =
                       (commentData as any)?.[
-                      `${sheetKey}_${rowIndex}_${colIndex}`
+                        `${sheetKey}_${rowIndex}_${colIndex}`
                       ] ??
                       (commentData as any)?.[
-                      `${fileIndex}_${rowIndex}_${colIndex}`
+                        `${fileIndex}_${rowIndex}_${colIndex}`
                       ];
                     if (comment) {
                       cell.ps = allowComments

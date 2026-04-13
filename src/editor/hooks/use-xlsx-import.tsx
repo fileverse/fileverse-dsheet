@@ -140,8 +140,8 @@ function excelDataValidationToSheetEntry(
   const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
-        .replace(/^["']|["']$/g, '')
-        .replace(/["']/g, '')
+          .replace(/^["']|["']$/g, '')
+          .replace(/["']/g, '')
       : '';
   const parts = rawFormula
     .split(',')
@@ -488,7 +488,7 @@ export const useXLSXImport = ({
         try {
           //@ts-expect-error, later
           await workbook.xlsx.load(arrayBuffer);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
           const workbookDefaultFontSize: number | undefined = (workbook as any)
             .model?.styles?.fonts?.[0]?.size;
           // Extract hyperlinks, freeze info, cell formatting, and data validation from all worksheets
@@ -500,12 +500,12 @@ export const useXLSXImport = ({
             number,
             {
               type:
-              | 'row'
-              | 'column'
-              | 'both'
-              | 'rangeRow'
-              | 'rangeColumn'
-              | 'rangeBoth';
+                | 'row'
+                | 'column'
+                | 'both'
+                | 'rangeRow'
+                | 'rangeColumn'
+                | 'rangeBoth';
               range: { row_focus: number; column_focus: number };
             }
           > = {};
@@ -819,9 +819,9 @@ export const useXLSXImport = ({
                 // Built during the celldata loop below; only allocated when merges exist
                 const celldataMap = sheet.config?.merge
                   ? new Map<
-                    string,
-                    { r: number; c: number; v: Record<string, unknown> }
-                  >()
+                      string,
+                      { r: number; c: number; v: Record<string, unknown> }
+                    >()
                   : null;
                 if (sheet.celldata) {
                   for (const cell of sheet.celldata) {

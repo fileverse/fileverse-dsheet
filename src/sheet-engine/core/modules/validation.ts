@@ -74,10 +74,15 @@ export function isRealNum(val: any) {
  * Explicit number format (`t === 'n'`) or General/Automatic with a numeric stored value (`t === 'g'`).
  * Use wherever logic previously required `ct.t === 'n'` so Automatic numeric cells behave the same.
  */
-export function isNumericCellType(cell: {
-  ct?: { t?: string; fa?: string };
-  v?: unknown;
-} | null | undefined): boolean {
+export function isNumericCellType(
+  cell:
+    | {
+        ct?: { t?: string; fa?: string };
+        v?: unknown;
+      }
+    | null
+    | undefined,
+): boolean {
   if (!cell?.ct?.t) return false;
   if (cell.ct.t === 'n') return true;
   if (cell.ct.t === 'g' && isRealNum(cell.v)) return true;
@@ -139,7 +144,7 @@ function isValidDateParts(year: number, month: number, day: number): boolean {
 }
 
 export function detectDateFormat(str: string): DateFormatInfo | null {
-  console.log("detectDateFormat", str);
+  console.log('detectDateFormat', str);
   if (!str || str.toString().length < 5) return null;
   const s = str.toString().trim();
   let m: RegExpExecArray | null;

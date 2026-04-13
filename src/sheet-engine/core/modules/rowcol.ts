@@ -1,9 +1,9 @@
-import _ from "lodash";
-import { Context } from "../context";
-import { Sheet } from "../types";
-import { getSheetIndex } from "../utils";
-import { getcellFormula } from "./cell";
-import { functionStrChange } from "./formula";
+import _ from 'lodash';
+import { Context } from '../context';
+import { Sheet } from '../types';
+import { getSheetIndex } from '../utils';
+import { getcellFormula } from './cell';
+import { functionStrChange } from './formula';
 
 const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
   Object.entries(merge_new).forEach(([, v]) => {
@@ -42,7 +42,7 @@ function buildTemplateRowFromData(
   d: any[][],
   srcRowIndex: number,
   insertRowCount: number,
-  direction: "lefttop" | "rightbottom",
+  direction: 'lefttop' | 'rightbottom',
 ) {
   const row: any[] = [];
   const srcRow = d[srcRowIndex];
@@ -53,7 +53,10 @@ function buildTemplateRowFromData(
       row.push(null);
       continue;
     }
-    if (cell?.mc && (direction === "rightbottom" || srcRowIndex !== cell.mc.r)) {
+    if (
+      cell?.mc &&
+      (direction === 'rightbottom' || srcRowIndex !== cell.mc.r)
+    ) {
       const templateCell = cloneCellTemplateStripContent(_.cloneDeep(cell));
       if (templateCell.mc?.rs) {
         templateCell.mc.rs += insertRowCount;
@@ -75,7 +78,7 @@ function buildTemplateColumnFromData(
   d: any[][],
   srcColIndex: number,
   insertColCount: number,
-  direction: "lefttop" | "rightbottom",
+  direction: 'lefttop' | 'rightbottom',
 ) {
   const col: any[] = [];
   for (let r = 0; r < d.length; r += 1) {
@@ -84,7 +87,10 @@ function buildTemplateColumnFromData(
       col.push(null);
       continue;
     }
-    if (cell?.mc && (direction === "rightbottom" || srcColIndex !== cell.mc.c)) {
+    if (
+      cell?.mc &&
+      (direction === 'rightbottom' || srcColIndex !== cell.mc.c)
+    ) {
       const templateCell = cloneCellTemplateStripContent(_.cloneDeep(cell));
       if (templateCell.mc?.cs) {
         templateCell.mc.cs += insertColCount;
@@ -134,7 +140,7 @@ const emitCellRangeToYdoc = (
   r1: number,
   r2: number,
   c1: number,
-  c2: number
+  c2: number,
 ) => {
   if (!ctx?.hooks?.updateCellYdoc) return;
   if (!d || !Array.isArray(d) || d.length === 0) return;
@@ -149,7 +155,7 @@ const emitCellRangeToYdoc = (
     path: string[];
     key?: string;
     value: any;
-    type?: "update" | "delete";
+    type?: 'update' | 'delete';
   }[] = [];
 
   for (let r = rowStart; r <= rowEnd; r += 1) {
@@ -157,10 +163,10 @@ const emitCellRangeToYdoc = (
     for (let c = colStart; c <= colEnd; c += 1) {
       changes.push({
         sheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: row?.[c] ?? null },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       });
     }
   }
@@ -171,11 +177,11 @@ const emitCellRangeToYdoc = (
 const rewriteFormulasByScanningSheet = (
   sheet: Sheet,
   calcChain: any[] | null | undefined,
-  mode: "add" | "del",
-  rc: "row" | "col",
-  orient: "lefttop" | "rightbottom" | null,
+  mode: 'add' | 'del',
+  rc: 'row' | 'col',
+  orient: 'lefttop' | 'rightbottom' | null,
   stindex: number,
-  step: number
+  step: number,
 ) => {
   const sheetData = sheet.data;
   if (!sheetData) return;
@@ -211,17 +217,17 @@ const rewriteFormulasByScanningSheet = (
 export function insertRowCol(
   ctx: Context,
   op: {
-    type: "row" | "column";
+    type: 'row' | 'column';
     index: number;
     count: number;
-    direction: "lefttop" | "rightbottom";
+    direction: 'lefttop' | 'rightbottom';
     id: string;
     /** Pre-insert row index for each inserted row (length must equal count). */
     templateSourceRows?: number[];
     /** Pre-insert column index for each inserted column (length must equal count). */
     templateSourceColumns?: number[];
   },
-  changeSelection: boolean = true
+  changeSelection: boolean = true,
 ) {
   let { count, id } = op;
   const { type, index, direction, templateSourceRows, templateSourceColumns } =
@@ -254,68 +260,70 @@ export function insertRowCol(
   count = Math.floor(count);
 
   const usePerRowTemplates =
-    type === "row" &&
+    type === 'row' &&
     templateSourceRows != null &&
     templateSourceRows.length === count &&
     templateSourceRows.every((r) => r >= 0 && r < d.length);
   const usePerColTemplates =
-    type === "column" &&
+    type === 'column' &&
     templateSourceColumns != null &&
     templateSourceColumns.length === count &&
     d[0] != null &&
     templateSourceColumns.every((c) => c >= 0 && c < d[0].length);
   const firstTemplateRow = usePerRowTemplates ? templateSourceRows![0] : null;
-  const firstTemplateCol = usePerColTemplates ? templateSourceColumns![0] : null;
+  const firstTemplateCol = usePerColTemplates
+    ? templateSourceColumns![0]
+    : null;
 
   if (changeSelection) {
-    if (type === "row") {
+    if (type === 'row') {
       if (usePerRowTemplates) {
         if (cfg.rowReadOnly?.[firstTemplateRow!]) {
-          throw new Error("readOnly");
+          throw new Error('readOnly');
         }
       } else if (cfg.rowReadOnly?.[index]) {
-        throw new Error("readOnly");
+        throw new Error('readOnly');
       }
     } else if (usePerColTemplates) {
       if (cfg.colReadOnly?.[firstTemplateCol!]) {
-        throw new Error("readOnly");
+        throw new Error('readOnly');
       }
     } else if (cfg.colReadOnly?.[index]) {
-      throw new Error("readOnly");
+      throw new Error('readOnly');
     }
   }
 
-  if (type === "row" && d.length + count >= 10000) {
-    throw new Error("maxExceeded");
+  if (type === 'row' && d.length + count >= 10000) {
+    throw new Error('maxExceeded');
   }
 
-  if (type === "column" && d[0] && d[0].length + count >= 1000) {
-    throw new Error("maxExceeded");
+  if (type === 'column' && d[0] && d[0].length + count >= 1000) {
+    throw new Error('maxExceeded');
   }
 
   const snapRowDv =
     usePerRowTemplates && file.dataVerification != null
       ? [firstTemplateRow!].map((sr) => {
-          const m: Record<number, any> = {};
-          _.forEach(file.dataVerification, (v, key) => {
-            const r = Number(key.split("_")[0]);
-            const c = Number(key.split("_")[1]);
-            if (r === sr) m[c] = _.cloneDeep(v);
-          });
-          return m;
-        })
+        const m: Record<number, any> = {};
+        _.forEach(file.dataVerification, (v, key) => {
+          const r = Number(key.split('_')[0]);
+          const c = Number(key.split('_')[1]);
+          if (r === sr) m[c] = _.cloneDeep(v);
+        });
+        return m;
+      })
       : null;
   const snapColDv =
     usePerColTemplates && file.dataVerification != null
       ? [firstTemplateCol!].map((sc) => {
-          const m: Record<number, any> = {};
-          _.forEach(file.dataVerification, (v, key) => {
-            const r = Number(key.split("_")[0]);
-            const c = Number(key.split("_")[1]);
-            if (c === sc) m[r] = _.cloneDeep(v);
-          });
-          return m;
-        })
+        const m: Record<number, any> = {};
+        _.forEach(file.dataVerification, (v, key) => {
+          const r = Number(key.split('_')[0]);
+          const c = Number(key.split('_')[1]);
+          if (c === sc) m[r] = _.cloneDeep(v);
+        });
+        return m;
+      })
       : null;
 
   // 合并单元格配置变动
@@ -327,11 +335,11 @@ export function insertRowCol(
   _.forEach(cfg.merge, (mc) => {
     const { r, c, rs, cs } = mc;
 
-    if (type === "row") {
+    if (type === 'row') {
       if (index < r) {
         merge_new[`${r + count}_${c}`] = { r: r + count, c, rs, cs };
       } else if (index === r) {
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           merge_new[`${r + count}_${c}`] = {
             r: r + count,
             c,
@@ -344,7 +352,7 @@ export function insertRowCol(
       } else if (index < r + rs - 1) {
         merge_new[`${r}_${c}`] = { r, c, rs: rs + count, cs };
       } else if (index === r + rs - 1) {
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           merge_new[`${r}_${c}`] = { r, c, rs: rs + count, cs };
         } else {
           merge_new[`${r}_${c}`] = { r, c, rs, cs };
@@ -352,7 +360,7 @@ export function insertRowCol(
       } else {
         merge_new[`${r}_${c}`] = { r, c, rs, cs };
       }
-    } else if (type === "column") {
+    } else if (type === 'column') {
       if (index < c) {
         merge_new[`${r}_${c + count}`] = {
           r,
@@ -361,7 +369,7 @@ export function insertRowCol(
           cs,
         };
       } else if (index === c) {
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           merge_new[`${r}_${c + count}`] = {
             r,
             c: c + count,
@@ -374,7 +382,7 @@ export function insertRowCol(
       } else if (index < c + cs - 1) {
         merge_new[`${r}_${c}`] = { r, c, rs, cs: cs + count };
       } else if (index === c + cs - 1) {
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           merge_new[`${r}_${c}`] = { r, c, rs, cs: cs + count };
         } else {
           merge_new[`${r}_${c}`] = { r, c, rs, cs };
@@ -408,77 +416,77 @@ export function insertRowCol(
       const calc_i = calc.id;
       const calc_funcStr = getcellFormula(ctx, calc_r, calc_c, calc_i);
 
-      if (type === "row" && SheetIndex === curOrder) {
+      if (type === 'row' && SheetIndex === curOrder) {
         const functionStr = `=${functionStrChange(
           calc_funcStr,
-          "add",
-          "row",
+          'add',
+          'row',
           direction,
           index,
-          count
+          count,
         )}`;
 
         if (d[calc_r]?.[calc_c]?.f === calc_funcStr) {
           d[calc_r]![calc_c]!.f = functionStr;
         }
 
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           if (calc_r >= index) {
             calc.r += count;
           }
-        } else if (direction === "rightbottom") {
+        } else if (direction === 'rightbottom') {
           if (calc_r > index) {
             calc.r += count;
           }
         }
 
         newCalcChain.push(calc);
-      } else if (type === "row") {
+      } else if (type === 'row') {
         const functionStr = `=${functionStrChange(
           calc_funcStr,
-          "add",
-          "row",
+          'add',
+          'row',
           direction,
           index,
-          count
+          count,
         )}`;
 
         if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
           data![calc_r]![calc_c]!.f = functionStr;
         }
-      } else if (type === "column" && SheetIndex === curOrder) {
+      } else if (type === 'column' && SheetIndex === curOrder) {
         const functionStr = `=${functionStrChange(
           calc_funcStr,
-          "add",
-          "col",
+          'add',
+          'col',
           direction,
           index,
-          count
+          count,
         )}`;
 
         if (d[calc_r]?.[calc_c]?.f === calc_funcStr) {
           d[calc_r]![calc_c]!.f = functionStr;
         }
 
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           if (calc_c >= index) {
             calc.c += count;
           }
-        } else if (direction === "rightbottom") {
+        } else if (direction === 'rightbottom') {
           if (calc_c > index) {
             calc.c += count;
           }
         }
 
         newCalcChain.push(calc);
-      } else if (type === "column") {
+      } else if (type === 'column') {
         const functionStr = `=${functionStrChange(
           calc_funcStr,
-          "add",
-          "col",
+          'add',
+          'col',
           direction,
           index,
-          count
+          count,
         )}`;
 
         if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
@@ -489,11 +497,11 @@ export function insertRowCol(
     rewriteFormulasByScanningSheet(
       ctx.luckysheetfile[SheetIndex],
       calcChain,
-      "add",
-      type === "row" ? "row" : "col",
+      'add',
+      type === 'row' ? 'row' : 'col',
       direction,
       index,
-      count
+      count,
     );
   }
 
@@ -509,18 +517,18 @@ export function insertRowCol(
     let f_c1 = filter_select.column[0];
     let f_c2 = filter_select.column[1];
 
-    if (type === "row") {
+    if (type === 'row') {
       if (f_r1 < index) {
-        if (f_r2 === index && direction === "lefttop") {
+        if (f_r2 === index && direction === 'lefttop') {
           f_r2 += count;
         } else if (f_r2 > index) {
           f_r2 += count;
         }
       } else if (f_r1 === index) {
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           f_r1 += count;
           f_r2 += count;
-        } else if (direction === "rightbottom" && f_r2 > index) {
+        } else if (direction === 'rightbottom' && f_r2 > index) {
           f_r2 += count;
         }
       } else {
@@ -540,9 +548,9 @@ export function insertRowCol(
             if (n < index) {
               f_rowhidden_new[n] = 0;
             } else if (n === index) {
-              if (direction === "lefttop") {
+              if (direction === 'lefttop') {
                 f_rowhidden_new[n + count] = 0;
-              } else if (direction === "rightbottom") {
+              } else if (direction === 'rightbottom') {
                 f_rowhidden_new[n] = 0;
               }
             } else {
@@ -555,18 +563,18 @@ export function insertRowCol(
           newFilterObj.filter[k].edr = f_r2;
         });
       }
-    } else if (type === "column") {
+    } else if (type === 'column') {
       if (f_c1 < index) {
-        if (f_c2 === index && direction === "lefttop") {
+        if (f_c2 === index && direction === 'lefttop') {
           f_c2 += count;
         } else if (f_c2 > index) {
           f_c2 += count;
         }
       } else if (f_c1 === index) {
-        if (direction === "lefttop") {
+        if (direction === 'lefttop') {
           f_c1 += count;
           f_c2 += count;
-        } else if (direction === "rightbottom" && f_c2 > index) {
+        } else if (direction === 'rightbottom' && f_c2 > index) {
           f_c2 += count;
         }
       } else {
@@ -580,7 +588,7 @@ export function insertRowCol(
         _.forEach(filter, (v, k) => {
           let f_cindex = filter[k].cindex;
 
-          if (f_cindex === index && direction === "lefttop") {
+          if (f_cindex === index && direction === 'lefttop') {
             f_cindex += count;
           } else if (f_cindex > index) {
             f_cindex += count;
@@ -624,35 +632,35 @@ export function insertRowCol(
         let CFc1 = cf_range[j].column[0];
         let CFc2 = cf_range[j].column[1];
 
-        if (type === "row") {
+        if (type === 'row') {
           if (CFr1 < index) {
-            if (CFr2 === index && direction === "lefttop") {
+            if (CFr2 === index && direction === 'lefttop') {
               CFr2 += count;
             } else if (CFr2 > index) {
               CFr2 += count;
             }
           } else if (CFr1 === index) {
-            if (direction === "lefttop") {
+            if (direction === 'lefttop') {
               // Expand range downward so new rows at `index` stay inside the rule (do not shift the whole rule).
               CFr2 += count;
-            } else if (direction === "rightbottom" && CFr2 >= index) {
+            } else if (direction === 'rightbottom' && CFr2 >= index) {
               CFr2 += count;
             }
           } else {
             CFr1 += count;
             CFr2 += count;
           }
-        } else if (type === "column") {
+        } else if (type === 'column') {
           if (CFc1 < index) {
-            if (CFc2 === index && direction === "lefttop") {
+            if (CFc2 === index && direction === 'lefttop') {
               CFc2 += count;
             } else if (CFc2 > index) {
               CFc2 += count;
             }
           } else if (CFc1 === index) {
-            if (direction === "lefttop") {
+            if (direction === 'lefttop') {
               CFc2 += count;
-            } else if (direction === "rightbottom" && CFc2 >= index) {
+            } else if (direction === 'rightbottom' && CFc2 >= index) {
               CFc2 += count;
             }
           } else {
@@ -683,34 +691,34 @@ export function insertRowCol(
 
       const af = _.clone(AFarr[i]);
 
-      if (type === "row") {
+      if (type === 'row') {
         if (AFr1 < index) {
-          if (AFr2 === index && direction === "lefttop") {
+          if (AFr2 === index && direction === 'lefttop') {
             AFr2 += count;
           } else if (AFr2 > index) {
             AFr2 += count;
           }
         } else if (AFr1 === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             AFr2 += count;
-          } else if (direction === "rightbottom" && AFr2 >= index) {
+          } else if (direction === 'rightbottom' && AFr2 >= index) {
             AFr2 += count;
           }
         } else {
           AFr1 += count;
           AFr2 += count;
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         if (AFc1 < index) {
-          if (AFc2 === index && direction === "lefttop") {
+          if (AFc2 === index && direction === 'lefttop') {
             AFc2 += count;
           } else if (AFc2 > index) {
             AFc2 += count;
           }
         } else if (AFc1 === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             AFc2 += count;
-          } else if (direction === "rightbottom" && AFc2 >= index) {
+          } else if (direction === 'rightbottom' && AFc2 >= index) {
             AFc2 += count;
           }
         } else {
@@ -728,18 +736,18 @@ export function insertRowCol(
   // 冻结配置变动
   const { frozen } = file;
   if (frozen) {
-    const normalizedIndex = direction === "lefttop" ? index - 1 : index;
+    const normalizedIndex = direction === 'lefttop' ? index - 1 : index;
     if (
-      type === "row" &&
-      (frozen.type === "rangeRow" || frozen.type === "rangeBoth")
+      type === 'row' &&
+      (frozen.type === 'rangeRow' || frozen.type === 'rangeBoth')
     ) {
       if ((frozen.range?.row_focus ?? -1) > normalizedIndex) {
         frozen.range!.row_focus += count;
       }
     }
     if (
-      type === "column" &&
-      (frozen.type === "rangeColumn" || frozen.type === "rangeBoth")
+      type === 'column' &&
+      (frozen.type === 'rangeColumn' || frozen.type === 'rangeBoth')
     ) {
       if ((frozen.range?.column_focus ?? -1) > normalizedIndex) {
         frozen.range!.column_focus += count;
@@ -752,15 +760,15 @@ export function insertRowCol(
   const newDataVerification: any = {};
   if (dataVerification != null) {
     _.forEach(dataVerification, (v, key) => {
-      const r = Number(key.split("_")[0]);
-      const c = Number(key.split("_")[1]);
+      const r = Number(key.split('_')[0]);
+      const c = Number(key.split('_')[1]);
       const item = dataVerification[key];
 
-      if (type === "row") {
+      if (type === 'row') {
         if (index < r) {
           newDataVerification[`${r + count}_${c}`] = _.cloneDeep(item);
         } else if (index === r) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             newDataVerification[`${r + count}_${c}`] = _.cloneDeep(item);
 
             if (!snapRowDv) {
@@ -780,11 +788,11 @@ export function insertRowCol(
         } else {
           newDataVerification[`${r}_${c}`] = _.cloneDeep(item);
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         if (index < c) {
           newDataVerification[`${r}_${c + count}`] = _.cloneDeep(item);
         } else if (index === c) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             newDataVerification[`${r}_${c + count}`] = _.cloneDeep(item);
 
             if (!snapColDv) {
@@ -813,15 +821,15 @@ export function insertRowCol(
   const newHyperlink: any = {};
   if (hyperlink != null) {
     _.forEach(hyperlink, (v, key) => {
-      const r = Number(key.split("_")[0]);
-      const c = Number(key.split("_")[1]);
+      const r = Number(key.split('_')[0]);
+      const c = Number(key.split('_')[1]);
       const item = hyperlink[key];
 
-      if (type === "row") {
+      if (type === 'row') {
         if (index < r) {
           newHyperlink[`${r + count}_${c}`] = item;
         } else if (index === r) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             newHyperlink[`${r + count}_${c}`] = item;
           } else {
             newHyperlink[`${r}_${c}`] = item;
@@ -829,11 +837,11 @@ export function insertRowCol(
         } else {
           newHyperlink[`${r}_${c}`] = item;
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         if (index < c) {
           newHyperlink[`${r}_${c + count}`] = item;
         } else if (index === c) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             newHyperlink[`${r}_${c + count}`] = item;
           } else {
             newHyperlink[`${r}_${c}`] = item;
@@ -846,13 +854,17 @@ export function insertRowCol(
   }
 
   let type1;
-  if (type === "row") {
-    type1 = "r";
+  if (type === 'row') {
+    type1 = 'r';
 
     const rowBorderSnapshot = _.cloneDeep(cfg.borderInfo || []);
 
     const refRowHeightsForInsert = usePerRowTemplates
-      ? [cfg.rowlen?.[firstTemplateRow!] ?? file.defaultRowHeight ?? ctx.defaultrowlen]
+      ? [
+        cfg.rowlen?.[firstTemplateRow!] ??
+        file.defaultRowHeight ??
+        ctx.defaultrowlen,
+      ]
       : null;
     const refRowCustomsForInsert = usePerRowTemplates
       ? [cfg.customHeight?.[firstTemplateRow!]]
@@ -872,9 +884,9 @@ export function insertRowCol(
         if (r < index) {
           rowlen_new[r] = cfg.rowlen![r];
         } else if (r === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             rowlen_new[r + count] = cfg.rowlen![r];
-          } else if (direction === "rightbottom") {
+          } else if (direction === 'rightbottom') {
             rowlen_new[r] = cfg.rowlen![r];
           }
         } else {
@@ -904,9 +916,9 @@ export function insertRowCol(
         if (r < index) {
           customHeight_new[r] = cfg.customHeight![r];
         } else if (r === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             customHeight_new[r + count] = cfg.customHeight![r];
-          } else if (direction === "rightbottom") {
+          } else if (direction === 'rightbottom') {
             customHeight_new[r] = cfg.customHeight![r];
           }
         } else {
@@ -922,7 +934,7 @@ export function insertRowCol(
       if (cfg.rowlen == null) {
         cfg.rowlen = {};
       }
-      const newRowStart = direction === "lefttop" ? index : index + 1;
+      const newRowStart = direction === 'lefttop' ? index : index + 1;
       for (let i = 0; i < count; i += 1) {
         cfg.rowlen![newRowStart + i] = refRowHeightsForInsert
           ? refRowHeightsForInsert[0]
@@ -953,9 +965,9 @@ export function insertRowCol(
         if (r < index) {
           rowhidden_new[r] = cfg.rowhidden![r];
         } else if (r === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             rowhidden_new[r + count] = cfg.rowhidden![r];
-          } else if (direction === "rightbottom") {
+          } else if (direction === 'rightbottom') {
             rowhidden_new[r] = cfg.rowhidden![r];
           }
         } else {
@@ -975,7 +987,7 @@ export function insertRowCol(
       for (let i = 0; i < cfg.borderInfo.length; i += 1) {
         const { rangeType } = cfg.borderInfo[i];
 
-        if (rangeType === "range") {
+        if (rangeType === 'range') {
           const borderRange = cfg.borderInfo[i].range;
 
           const emptyRange = [];
@@ -984,7 +996,7 @@ export function insertRowCol(
             let bd_r1 = borderRange[j].row[0];
             let bd_r2 = borderRange[j].row[1];
 
-            if (direction === "lefttop") {
+            if (direction === 'lefttop') {
               if (index <= bd_r1) {
                 bd_r1 += count;
                 bd_r2 += count;
@@ -1010,7 +1022,7 @@ export function insertRowCol(
 
           if (emptyRange.length > 0) {
             const bd_obj = {
-              rangeType: "range",
+              rangeType: 'range',
               borderType: cfg.borderInfo[i].borderType,
               style: cfg.borderInfo[i].style,
               color: cfg.borderInfo[i].color,
@@ -1019,7 +1031,7 @@ export function insertRowCol(
 
             borderInfo.push(bd_obj);
           }
-        } else if (rangeType === "cell") {
+        } else if (rangeType === 'cell') {
           let { row_index } = cfg.borderInfo[i].value;
           // 位置相同标识边框相关 先缓存
           if (!usePerRowTemplates && row_index === index) {
@@ -1028,7 +1040,7 @@ export function insertRowCol(
             );
           }
 
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             if (index <= row_index) {
               row_index += count;
             }
@@ -1056,7 +1068,7 @@ export function insertRowCol(
         bordersToDup = rowBorderSnapshot
           .filter(
             (bi: any) =>
-              bi.rangeType === "cell" && bi.value.row_index === srcRowIdx,
+              bi.rangeType === 'cell' && bi.value.row_index === srcRowIdx,
           )
           .map((bi: any) => JSON.parse(JSON.stringify(bi)));
       } else if (cellBorderConfig.length) {
@@ -1064,9 +1076,9 @@ export function insertRowCol(
       }
       if (bordersToDup.length) {
         bordersToDup.forEach((item) => {
-          if (direction === "rightbottom") {
+          if (direction === 'rightbottom') {
             item.value.row_index += r + 1;
-          } else if (direction === "lefttop") {
+          } else if (direction === 'lefttop') {
             item.value.row_index += r;
           }
         });
@@ -1074,25 +1086,29 @@ export function insertRowCol(
       }
     }
 
-    if (direction === "lefttop") {
+    if (direction === 'lefttop') {
       if (index === 0) {
-        new Function("d", `return d.unshift(${arr.join(",")})`)(d);
+        new Function('d', `return d.unshift(${arr.join(',')})`)(d);
       } else {
-        new Function("d", `return d.splice(${index}, 0, ${arr.join(",")})`)(d);
+        new Function('d', `return d.splice(${index}, 0, ${arr.join(',')})`)(d);
       }
     } else {
-      new Function("d", `return d.splice(${index + 1}, 0, ${arr.join(",")})`)(
-        d
+      new Function('d', `return d.splice(${index + 1}, 0, ${arr.join(',')})`)(
+        d,
       );
     }
   } else {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type1 = "c";
+    type1 = 'c';
 
     const colBorderSnapshot = _.cloneDeep(cfg.borderInfo || []);
 
     const refColWidthsForInsert = usePerColTemplates
-      ? [cfg.columnlen?.[firstTemplateCol!] ?? file.defaultColWidth ?? ctx.defaultcollen]
+      ? [
+        cfg.columnlen?.[firstTemplateCol!] ??
+        file.defaultColWidth ??
+        ctx.defaultcollen,
+      ]
       : null;
     const refColCustomsForInsert = usePerColTemplates
       ? [cfg.customWidth?.[firstTemplateCol!]]
@@ -1112,9 +1128,9 @@ export function insertRowCol(
         if (c < index) {
           columnlen_new[c] = cfg.columnlen![c];
         } else if (c === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             columnlen_new[c + count] = cfg.columnlen![c];
-          } else if (direction === "rightbottom") {
+          } else if (direction === 'rightbottom') {
             columnlen_new[c] = cfg.columnlen![c];
           }
         } else {
@@ -1145,9 +1161,9 @@ export function insertRowCol(
         if (c < index) {
           customWidth_new[c] = cfg.customWidth![c];
         } else if (c === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             customWidth_new[c + count] = cfg.customWidth![c];
-          } else if (direction === "rightbottom") {
+          } else if (direction === 'rightbottom') {
             customWidth_new[c] = cfg.customWidth![c];
           }
         } else {
@@ -1163,7 +1179,7 @@ export function insertRowCol(
       if (cfg.columnlen == null) {
         cfg.columnlen = {};
       }
-      const newColStart = direction === "lefttop" ? index : index + 1;
+      const newColStart = direction === 'lefttop' ? index : index + 1;
       for (let i = 0; i < count; i += 1) {
         cfg.columnlen![newColStart + i] = refColWidthsForInsert
           ? refColWidthsForInsert[0]
@@ -1194,9 +1210,9 @@ export function insertRowCol(
         if (c < index) {
           colhidden_new[c] = cfg.colhidden![c];
         } else if (c === index) {
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             colhidden_new[c + count] = cfg.colhidden![c];
-          } else if (direction === "rightbottom") {
+          } else if (direction === 'rightbottom') {
             colhidden_new[c] = cfg.colhidden![c];
           }
         } else {
@@ -1223,7 +1239,7 @@ export function insertRowCol(
       for (let i = 0; i < cfg.borderInfo.length; i += 1) {
         const { rangeType } = cfg.borderInfo[i];
 
-        if (rangeType === "range") {
+        if (rangeType === 'range') {
           const borderRange = cfg.borderInfo[i].range;
 
           const emptyRange = [];
@@ -1232,7 +1248,7 @@ export function insertRowCol(
             let bd_c1 = borderRange[j].column[0];
             let bd_c2 = borderRange[j].column[1];
 
-            if (direction === "lefttop") {
+            if (direction === 'lefttop') {
               if (index <= bd_c1) {
                 bd_c1 += count;
                 bd_c2 += count;
@@ -1258,7 +1274,7 @@ export function insertRowCol(
 
           if (emptyRange.length > 0) {
             const bd_obj = {
-              rangeType: "range",
+              rangeType: 'range',
               borderType: cfg.borderInfo[i].borderType,
               style: cfg.borderInfo[i].style,
               color: cfg.borderInfo[i].color,
@@ -1267,7 +1283,7 @@ export function insertRowCol(
 
             borderInfo.push(bd_obj);
           }
-        } else if (rangeType === "cell") {
+        } else if (rangeType === 'cell') {
           let { col_index } = cfg.borderInfo[i].value;
           // 位置相同标识边框相关 先缓存
           if (!usePerColTemplates && col_index === index) {
@@ -1276,7 +1292,7 @@ export function insertRowCol(
             );
           }
 
-          if (direction === "lefttop") {
+          if (direction === 'lefttop') {
             if (index <= col_index) {
               col_index += count;
             }
@@ -1301,7 +1317,7 @@ export function insertRowCol(
         bordersToDupCol = colBorderSnapshot
           .filter(
             (bi: any) =>
-              bi.rangeType === "cell" && bi.value.col_index === srcColIdx,
+              bi.rangeType === 'cell' && bi.value.col_index === srcColIdx,
           )
           .map((bi: any) => JSON.parse(JSON.stringify(bi)));
       } else if (cellBorderConfigCol.length) {
@@ -1309,9 +1325,9 @@ export function insertRowCol(
       }
       if (bordersToDupCol.length) {
         bordersToDupCol.forEach((item) => {
-          if (direction === "rightbottom") {
+          if (direction === 'rightbottom') {
             item.value.col_index += i + 1;
-          } else if (direction === "lefttop") {
+          } else if (direction === 'lefttop') {
             item.value.col_index += i;
           }
         });
@@ -1322,7 +1338,7 @@ export function insertRowCol(
     for (let r = 0; r < d.length; r += 1) {
       const row = d[r];
       const insertValues = colTemplates.map((tpl) => tpl[r]);
-      if (direction === "lefttop") {
+      if (direction === 'lefttop') {
         row.splice(index, 0, ...insertValues);
       } else {
         row.splice(index + 1, 0, ...insertValues);
@@ -1342,7 +1358,7 @@ export function insertRowCol(
   file.luckysheet_alternateformat_save = newAFarr;
 
   if (snapRowDv) {
-    const newRowStart = direction === "lefttop" ? index : index + 1;
+    const newRowStart = direction === 'lefttop' ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const destR = newRowStart + i;
       _.forEach(snapRowDv[0], (item, cStr) => {
@@ -1352,7 +1368,7 @@ export function insertRowCol(
     }
   }
   if (snapColDv) {
-    const newColStart = direction === "lefttop" ? index : index + 1;
+    const newColStart = direction === 'lefttop' ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const destC = newColStart + i;
       _.forEach(snapColDv[0], (item, rStr) => {
@@ -1363,7 +1379,7 @@ export function insertRowCol(
   }
 
   if (usePerRowTemplates && CFarr != null && CFarr.length > 0) {
-    const newRowStart = direction === "lefttop" ? index : index + 1;
+    const newRowStart = direction === 'lefttop' ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const srcRow = firstTemplateRow!;
       const destRow = newRowStart + i;
@@ -1384,7 +1400,7 @@ export function insertRowCol(
     }
   }
   if (usePerColTemplates && CFarr != null && CFarr.length > 0) {
-    const newColStart = direction === "lefttop" ? index : index + 1;
+    const newColStart = direction === 'lefttop' ? index : index + 1;
     for (let i = 0; i < count; i += 1) {
       const srcCol = firstTemplateCol!;
       const destCol = newColStart + i;
@@ -1431,8 +1447,8 @@ export function insertRowCol(
   }
 
   let range = null;
-  if (type === "row") {
-    if (direction === "lefttop") {
+  if (type === 'row') {
+    if (direction === 'lefttop') {
       range = [
         { row: [index, index + count - 1], column: [0, d[0].length - 1] },
       ];
@@ -1443,7 +1459,7 @@ export function insertRowCol(
     }
     file.row = file.data.length;
   } else {
-    if (direction === "lefttop") {
+    if (direction === 'lefttop') {
       range = [{ row: [0, d.length - 1], column: [index, index + count - 1] }];
     } else {
       range = [{ row: [0, d.length - 1], column: [index + 1, index + count] }];
@@ -1463,8 +1479,8 @@ export function insertRowCol(
 
   // Yjs: row/col insertion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);
-  if (type === "row") {
-    const baseStart = direction === "lefttop" ? index : index + 1;
+  if (type === 'row') {
+    const baseStart = direction === 'lefttop' ? index : index + 1;
     const startR = mergeBounds
       ? Math.min(baseStart, mergeBounds.minR)
       : baseStart;
@@ -1475,10 +1491,10 @@ export function insertRowCol(
       startR,
       d.length - 1,
       0,
-      (d[0]?.length ?? 1) - 1
+      (d[0]?.length ?? 1) - 1,
     );
   } else {
-    const baseStart = direction === "lefttop" ? index : index + 1;
+    const baseStart = direction === 'lefttop' ? index : index + 1;
     const startC = mergeBounds
       ? Math.min(baseStart, mergeBounds.minC)
       : baseStart;
@@ -1489,7 +1505,7 @@ export function insertRowCol(
       0,
       d.length - 1,
       startC,
-      (d[0]?.length ?? 1) - 1
+      (d[0]?.length ?? 1) - 1,
     );
   }
 
@@ -1518,11 +1534,11 @@ export function insertRowCol(
 export function deleteRowCol(
   ctx: Context,
   op: {
-    type: "row" | "column";
+    type: 'row' | 'column';
     start: number;
     end: number;
     id?: string;
-  }
+  },
 ) {
   const { type } = op;
   let { start, end, id } = op;
@@ -1547,16 +1563,16 @@ export function deleteRowCol(
   const file = ctx.luckysheetfile[curOrder];
   if (!file) return;
   const cfg = file.config || {};
-  if (type === "row") {
+  if (type === 'row') {
     for (let r = start; r <= end; r += 1) {
       if (cfg.rowReadOnly?.[r]) {
-        throw new Error("readOnly");
+        throw new Error('readOnly');
       }
     }
   } else {
     for (let c = start; c <= end; c += 1) {
       if (cfg.colReadOnly?.[c]) {
-        throw new Error("readOnly");
+        throw new Error('readOnly');
       }
     }
   }
@@ -1572,7 +1588,7 @@ export function deleteRowCol(
     end = 0;
   }
 
-  if (type === "row") {
+  if (type === 'row') {
     if (start > d.length - 1) {
       start = d.length - 1;
     }
@@ -1608,7 +1624,7 @@ export function deleteRowCol(
     const { rs } = mc;
     const { cs } = mc;
 
-    if (type === "row") {
+    if (type === 'row') {
       if (r < start) {
         if (r + rs - 1 < start) {
           merge_new[`${r}_${c}`] = { r, c, rs, cs };
@@ -1629,7 +1645,7 @@ export function deleteRowCol(
       } else if (r > end) {
         merge_new[`${r - slen}_${c}`] = { r: r - slen, c, rs, cs };
       }
-    } else if (type === "column") {
+    } else if (type === 'column') {
       if (c < start) {
         if (c + cs - 1 < start) {
           merge_new[`${r}_${c}`] = { r, c, rs, cs };
@@ -1676,15 +1692,15 @@ export function deleteRowCol(
       const calc_i = calc.id;
       const calc_funcStr = getcellFormula(ctx, calc_r, calc_c, calc_i);
 
-      if (type === "row" && SheetIndex === curOrder) {
+      if (type === 'row' && SheetIndex === curOrder) {
         if (calc_r < start || calc_r > end) {
           const functionStr = `=${functionStrChange(
             calc_funcStr,
-            "del",
-            "row",
+            'del',
+            'row',
             null,
             start,
-            slen
+            slen,
           )}`;
 
           if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
@@ -1697,28 +1713,28 @@ export function deleteRowCol(
 
           newCalcChain.push(calc);
         }
-      } else if (type === "row") {
+      } else if (type === 'row') {
         const functionStr = `=${functionStrChange(
           calc_funcStr,
-          "del",
-          "row",
+          'del',
+          'row',
           null,
           start,
-          slen
+          slen,
         )}`;
 
         if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
           data![calc_r]![calc_c]!.f = functionStr;
         }
-      } else if (type === "column" && SheetIndex === curOrder) {
+      } else if (type === 'column' && SheetIndex === curOrder) {
         if (calc_c < start || calc_c > end) {
           const functionStr = `=${functionStrChange(
             calc_funcStr,
-            "del",
-            "col",
+            'del',
+            'col',
             null,
             start,
-            slen
+            slen,
           )}`;
 
           if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
@@ -1731,14 +1747,14 @@ export function deleteRowCol(
 
           newCalcChain.push(calc);
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         const functionStr = `=${functionStrChange(
           calc_funcStr,
-          "del",
-          "col",
+          'del',
+          'col',
           null,
           start,
-          slen
+          slen,
         )}`;
 
         if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
@@ -1749,11 +1765,11 @@ export function deleteRowCol(
     rewriteFormulasByScanningSheet(
       ctx.luckysheetfile[SheetIndex],
       calcChain,
-      "del",
-      type === "row" ? "row" : "col",
+      'del',
+      type === 'row' ? 'row' : 'col',
       null,
       start,
-      slen
+      slen,
     );
   }
 
@@ -1769,7 +1785,7 @@ export function deleteRowCol(
     let f_c1 = filter_select.column[0];
     let f_c2 = filter_select.column[1];
 
-    if (type === "row") {
+    if (type === 'row') {
       if (f_r1 > end) {
         f_r1 -= slen;
         f_r2 -= slen;
@@ -1818,7 +1834,7 @@ export function deleteRowCol(
           }
         });
       }
-    } else if (type === "column") {
+    } else if (type === 'column') {
       if (f_c1 > end) {
         f_c1 -= slen;
         f_c2 -= slen;
@@ -1906,7 +1922,7 @@ export function deleteRowCol(
         let CFc1 = cf_range[j].column[0];
         let CFc2 = cf_range[j].column[1];
 
-        if (type === "row") {
+        if (type === 'row') {
           if (!(CFr1 >= start && CFr2 <= end)) {
             if (CFr1 > end) {
               CFr1 -= slen;
@@ -1927,7 +1943,7 @@ export function deleteRowCol(
 
             cf_new_range.push({ row: [CFr1, CFr2], column: [CFc1, CFc2] });
           }
-        } else if (type === "column") {
+        } else if (type === 'column') {
           if (!(CFc1 >= start && CFc2 <= end)) {
             if (CFc1 > end) {
               CFc1 -= slen;
@@ -1970,7 +1986,7 @@ export function deleteRowCol(
       let AFc1 = AFarr[i].cellrange.column[0];
       let AFc2 = AFarr[i].cellrange.column[1];
 
-      if (type === "row") {
+      if (type === 'row') {
         if (!(AFr1 >= start && AFr2 <= end)) {
           const af = _.clone(AFarr[i]);
 
@@ -1995,7 +2011,7 @@ export function deleteRowCol(
 
           newAFarr.push(af);
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         if (!(AFc1 >= start && AFc2 <= end)) {
           const af = _.clone(AFarr[i]);
 
@@ -2028,8 +2044,8 @@ export function deleteRowCol(
   const { frozen } = file;
   if (frozen) {
     if (
-      type === "row" &&
-      (frozen.type === "rangeRow" || frozen.type === "rangeBoth")
+      type === 'row' &&
+      (frozen.type === 'rangeRow' || frozen.type === 'rangeBoth')
     ) {
       if ((frozen.range?.row_focus ?? -1) >= start) {
         frozen.range!.row_focus -=
@@ -2037,8 +2053,8 @@ export function deleteRowCol(
       }
     }
     if (
-      type === "column" &&
-      (frozen.type === "rangeColumn" || frozen.type === "rangeBoth")
+      type === 'column' &&
+      (frozen.type === 'rangeColumn' || frozen.type === 'rangeBoth')
     ) {
       if ((frozen.range?.column_focus ?? -1) >= start) {
         frozen.range!.column_focus -=
@@ -2052,17 +2068,17 @@ export function deleteRowCol(
   const newDataVerification: any = {};
   if (dataVerification != null) {
     _.forEach(dataVerification, (v, key) => {
-      const r = Number(key.split("_")[0]);
-      const c = Number(key.split("_")[1]);
+      const r = Number(key.split('_')[0]);
+      const c = Number(key.split('_')[1]);
       const item = dataVerification[key];
 
-      if (type === "row") {
+      if (type === 'row') {
         if (r < start) {
           newDataVerification[`${r}_${c}`] = item;
         } else if (r > end) {
           newDataVerification[`${r - slen}_${c}`] = item;
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         if (c < start) {
           newDataVerification[`${r}_${c}`] = item;
         } else if (c > end) {
@@ -2077,17 +2093,17 @@ export function deleteRowCol(
   const newHyperlink: any = {};
   if (hyperlink != null) {
     _.forEach(hyperlink, (v, key) => {
-      const r = Number(key.split("_")[0]);
-      const c = Number(key.split("_")[1]);
+      const r = Number(key.split('_')[0]);
+      const c = Number(key.split('_')[1]);
       const item = hyperlink[key];
 
-      if (type === "row") {
+      if (type === 'row') {
         if (r < start) {
           newHyperlink[`${r}_${c}`] = item;
         } else if (r > end) {
           newHyperlink[`${r - slen}_${c}`] = item;
         }
-      } else if (type === "column") {
+      } else if (type === 'column') {
         if (c < start) {
           newHyperlink[`${r}_${c}`] = item;
         } else if (c > end) {
@@ -2099,8 +2115,8 @@ export function deleteRowCol(
 
   // 主逻辑
   let type1;
-  if (type === "row") {
-    type1 = "r";
+  if (type === 'row') {
+    type1 = 'r';
 
     // 行高配置变动
     if (cfg.rowlen == null) {
@@ -2187,7 +2203,7 @@ export function deleteRowCol(
       for (let i = 0; i < cfg.borderInfo.length; i += 1) {
         const { rangeType } = cfg.borderInfo[i];
 
-        if (rangeType === "range") {
+        if (rangeType === 'range') {
           const borderRange = cfg.borderInfo[i].range;
 
           const emptyRange = [];
@@ -2215,7 +2231,7 @@ export function deleteRowCol(
 
           if (emptyRange.length > 0) {
             const bd_obj = {
-              rangeType: "range",
+              rangeType: 'range',
               borderType: cfg.borderInfo[i].borderType,
               style: cfg.borderInfo[i].style,
               color: cfg.borderInfo[i].color,
@@ -2224,7 +2240,7 @@ export function deleteRowCol(
 
             borderInfo.push(bd_obj);
           }
-        } else if (rangeType === "cell") {
+        } else if (rangeType === 'cell') {
           const { row_index } = cfg.borderInfo[i].value;
 
           if (row_index < start) {
@@ -2262,7 +2278,7 @@ export function deleteRowCol(
     file.row = d.length;
   } else {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    type1 = "c";
+    type1 = 'c';
 
     // 列宽配置变动
     if (cfg.columnlen == null) {
@@ -2333,7 +2349,7 @@ export function deleteRowCol(
       for (let i = 0; i < cfg.borderInfo.length; i += 1) {
         const { rangeType } = cfg.borderInfo[i];
 
-        if (rangeType === "range") {
+        if (rangeType === 'range') {
           const borderRange = cfg.borderInfo[i].range;
 
           const emptyRange = [];
@@ -2361,7 +2377,7 @@ export function deleteRowCol(
 
           if (emptyRange.length > 0) {
             const bd_obj = {
-              rangeType: "range",
+              rangeType: 'range',
               borderType: cfg.borderInfo[i].borderType,
               style: cfg.borderInfo[i].style,
               color: cfg.borderInfo[i].color,
@@ -2370,7 +2386,7 @@ export function deleteRowCol(
 
             borderInfo.push(bd_obj);
           }
-        } else if (rangeType === "cell") {
+        } else if (rangeType === 'cell') {
           const { col_index } = cfg.borderInfo[i].value;
 
           if (col_index < start) {
@@ -2414,7 +2430,7 @@ export function deleteRowCol(
 
   // Yjs: row/col deletion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);
-  if (type === "row") {
+  if (type === 'row') {
     const startR = mergeBounds ? Math.min(start, mergeBounds.minR) : start;
     emitCellRangeToYdoc(
       ctx,
@@ -2423,7 +2439,7 @@ export function deleteRowCol(
       startR,
       d.length - 1,
       0,
-      (d[0]?.length ?? 1) - 1
+      (d[0]?.length ?? 1) - 1,
     );
   } else {
     const startC = mergeBounds ? Math.min(start, mergeBounds.minC) : start;
@@ -2434,7 +2450,7 @@ export function deleteRowCol(
       0,
       d.length - 1,
       startC,
-      (d[0]?.length ?? 1) - 1
+      (d[0]?.length ?? 1) - 1,
     );
   }
 
@@ -2486,10 +2502,10 @@ export function computeRowlenArr(ctx: Context, rowHeight: number, cfg: any) {
 // 隐藏选中行列
 export function hideSelected(ctx: Context, type: string) {
   if (!ctx.luckysheet_select_save || ctx.luckysheet_select_save.length > 1)
-    return "noMulti";
+    return 'noMulti';
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   // 隐藏行
-  if (type === "row") {
+  if (type === 'row') {
     /* TODO: 工作表保护判断
     if (
       !checkProtectionAuthorityNormal(Store.currentSheetIndex, "formatRows")
@@ -2524,7 +2540,7 @@ export function hideSelected(ctx: Context, type: string) {
     const isEndRow =
       rowLen - 1 === rowhiddenNumber ||
       Object.keys(rowhidden).findIndex(
-        (o) => parseInt(o, 10) - 1 === rowhiddenNumber
+        (o) => parseInt(o, 10) - 1 === rowhiddenNumber,
       ) >= 0;
     if (isEndRow) {
       ctx.luckysheet_select_save[0].row[0] -= 1;
@@ -2533,7 +2549,7 @@ export function hideSelected(ctx: Context, type: string) {
       ctx.luckysheet_select_save[0].row[0] += 1;
       ctx.luckysheet_select_save[0].row[1] += 1;
     }
-  } else if (type === "column") {
+  } else if (type === 'column') {
     // 隐藏列
     const colhidden = ctx.config.colhidden ?? {};
     const c1 = ctx.luckysheet_select_save[0].column[0];
@@ -2548,7 +2564,7 @@ export function hideSelected(ctx: Context, type: string) {
     const isEndColumn =
       columnLen - 1 === colhiddenNumber ||
       Object.keys(colhidden).findIndex(
-        (o) => parseInt(o, 10) - 1 === colhiddenNumber
+        (o) => parseInt(o, 10) - 1 === colhiddenNumber,
       ) >= 0;
     if (isEndColumn) {
       ctx.luckysheet_select_save[0].column[0] -= 1;
@@ -2559,16 +2575,16 @@ export function hideSelected(ctx: Context, type: string) {
     }
   }
   ctx.luckysheetfile[index].config = ctx.config;
-  return "";
+  return '';
 }
 
 // 取消隐藏选中行列
 export function showSelected(ctx: Context, type: string) {
   if (!ctx.luckysheet_select_save || ctx.luckysheet_select_save.length > 1)
-    return "noMulti";
+    return 'noMulti';
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   // 取消隐藏行
-  if (type === "row") {
+  if (type === 'row') {
     const rowhidden = ctx.config.rowhidden ?? {};
     const r1 = ctx.luckysheet_select_save[0].row[0];
     const r2 = ctx.luckysheet_select_save[0].row[1];
@@ -2576,7 +2592,7 @@ export function showSelected(ctx: Context, type: string) {
       delete rowhidden[r];
     }
     ctx.config.rowhidden = rowhidden;
-  } else if (type === "column") {
+  } else if (type === 'column') {
     // 取消隐藏列
     const colhidden = ctx.config.colhidden ?? {};
     const c1 = ctx.luckysheet_select_save[0].column[0];
@@ -2587,7 +2603,7 @@ export function showSelected(ctx: Context, type: string) {
     ctx.config.colhidden = colhidden;
   }
   ctx.luckysheetfile[index].config = ctx.config;
-  return "";
+  return '';
 }
 
 // 判断当前选区是不是隐藏行列
@@ -2628,9 +2644,9 @@ export function hideCRCount(ctx: Context, type: string): number {
   const section = ctx.luckysheet_select_save[0];
   const rowhidden = ctx.config.rowhidden ?? {};
   const colhidden = ctx.config.colhidden ?? {};
-  if (type === "ArrowUp" || type === "ArrowDown") {
+  if (type === 'ArrowUp' || type === 'ArrowDown') {
     const rowArr = Object.keys(rowhidden);
-    if (type === "ArrowUp") {
+    if (type === 'ArrowUp') {
       let row = section.row[0] - 1;
       const rowIndex = rowArr.indexOf(row.toString());
       for (let i = rowIndex; i >= 0; i -= 1) {
@@ -2653,9 +2669,9 @@ export function hideCRCount(ctx: Context, type: string): number {
         }
       }
     }
-  } else if (type === "ArrowLeft" || type === "ArrowRight") {
+  } else if (type === 'ArrowLeft' || type === 'ArrowRight') {
     const columnArr = Object.keys(colhidden);
-    if (type === "ArrowLeft") {
+    if (type === 'ArrowLeft') {
       let column = section.column[0] - 1;
       const columnIndex = columnArr.indexOf(column.toString());
       for (let i = columnIndex; i >= 0; i -= 1) {

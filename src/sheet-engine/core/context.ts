@@ -61,6 +61,18 @@ export type Context = {
   presences?: Presence[];
   showSearch?: boolean;
   showReplace?: boolean;
+  /** In-sheet find bar (Ctrl/Cmd+F); separate from Find and Replace modal */
+  showQuickSearch?: boolean;
+  /** Bumped when Ctrl/Cmd+F is pressed while Quick Search is already open (refocus + select-all). */
+  quickSearchFocusNonce?: number;
+  /** One-shot prefill when opening Find and Replace from Quick Search; cleared after consume. */
+  findReplacePrefill?: string;
+  quickSearchLoading?: boolean;
+  /** Non-destructive match highlights for Quick Search; null when closed or no query. */
+  quickSearchHighlight?: {
+    matches: { r: number; c: number }[];
+    activeIndex: number;
+  } | null;
   linkCard?: LinkCardProps;
   rangeDialog?: RangeDialogProps; // 坐标选区鼠标选择
   // 提醒弹窗
@@ -539,6 +551,12 @@ export function defaultContext(refs: RefValues): Context {
     formulaRangeNavRevision: 0,
     formulaCache: new FormulaCache(), // class will not be frozen by immer, can be mutated at any time.
     hooks: {},
+
+    showQuickSearch: false,
+    quickSearchFocusNonce: 0,
+    findReplacePrefill: undefined,
+    quickSearchLoading: false,
+    quickSearchHighlight: null,
 
     getRefs: () => refs,
   };

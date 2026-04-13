@@ -1,25 +1,25 @@
 function getNodePlainText(node: Node): string {
   if (node.nodeType === 3) {
-    return node.textContent ?? "";
+    return node.textContent ?? '';
   }
 
   if (node.nodeType !== 1) {
-    return "";
+    return '';
   }
 
   const element = node as HTMLElement;
 
-  if (element.tagName === "BR") {
-    return "\n";
+  if (element.tagName === 'BR') {
+    return '\n';
   }
 
   return Array.from(element.childNodes)
     .map((child) => getNodePlainText(child))
-    .join("");
+    .join('');
 }
 
 function normalizeClipboardCellText(value: string): string {
-  return value.replace(/\r\n/g, "\n").replace(/<br\s*\/?>/gi, "\n");
+  return value.replace(/\r\n/g, '\n').replace(/<br\s*\/?>/gi, '\n');
 }
 
 function formatTableCellForPlainText(value: string): string {
@@ -46,16 +46,16 @@ function tableToPlainText(table: HTMLTableElement): string {
 
       const cellText = Array.from(cell.childNodes)
         .map((child) => getNodePlainText(child))
-        .join("");
-      const rowSpan = Math.max(Number(cell.getAttribute("rowspan")) || 1, 1);
-      const colSpan = Math.max(Number(cell.getAttribute("colspan")) || 1, 1);
+        .join('');
+      const rowSpan = Math.max(Number(cell.getAttribute('rowspan')) || 1, 1);
+      const colSpan = Math.max(Number(cell.getAttribute('colspan')) || 1, 1);
 
       for (let r = 0; r < rowSpan; r += 1) {
         const targetRow = rowIndex + r;
         grid[targetRow] ??= [];
 
         for (let c = 0; c < colSpan; c += 1) {
-          grid[targetRow][colIndex + c] = r === 0 && c === 0 ? cellText : "";
+          grid[targetRow][colIndex + c] = r === 0 && c === 0 ? cellText : '';
         }
       }
 
@@ -67,28 +67,28 @@ function tableToPlainText(table: HTMLTableElement): string {
 
   return grid
     .map((row) =>
-      Array.from({ length: columnCount }, (_, index) => row[index] ?? "")
+      Array.from({ length: columnCount }, (_, index) => row[index] ?? '')
         .map((cell) => formatTableCellForPlainText(cell))
-        .join("\t")
+        .join('\t'),
     )
-    .join("\n");
+    .join('\n');
 }
 
 function legacyHtmlToPlainText(html: string): string {
-  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]*>/g, "");
+  return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
 }
 
 function htmlToPlainText(html: string): string {
   const legacyPlainText = legacyHtmlToPlainText(html);
 
-  if (typeof document === "undefined" || !/<table[\s>]/i.test(html)) {
+  if (typeof document === 'undefined' || !/<table[\s>]/i.test(html)) {
     return legacyPlainText;
   }
 
-  const container = document.createElement("div");
+  const container = document.createElement('div');
   container.innerHTML = html;
 
-  const table = container.querySelector("table");
+  const table = container.querySelector('table');
   if (!table || table.rows.length === 0) {
     return legacyPlainText;
   }
@@ -98,12 +98,12 @@ function htmlToPlainText(html: string): string {
 
 function formatPlainTextForClipboard(
   plainText: string,
-  isTableContent = false
+  isTableContent = false,
 ): string {
   if (
     !isTableContent &&
-    plainText.includes("\n") &&
-    !plainText.includes("\t")
+    plainText.includes('\n') &&
+    !plainText.includes('\t')
   ) {
     return `"${plainText.replace(/"/g, '""')}"`;
   }
@@ -116,20 +116,20 @@ export default class clipboard {
     // Use the modern Clipboard API to write the HTML as a raw Blob.
     // The legacy execCommand("copy") approach serializes computed DOM styles
     // (Tailwind --tw-* vars, box-sizing, scrollbar-*, etc.) onto every element.
-    if (typeof navigator?.clipboard?.write === "function") {
+    if (typeof navigator?.clipboard?.write === 'function') {
       const htmlStr = str;
-      const htmlBlob = new Blob([htmlStr], { type: "text/html" });
+      const htmlBlob = new Blob([htmlStr], { type: 'text/html' });
       const isTableContent = /<table[\s>]/i.test(str);
       const plainText = formatPlainTextForClipboard(
         htmlToPlainText(str),
-        isTableContent
+        isTableContent,
       );
-      const textBlob = new Blob([plainText], { type: "text/plain" });
+      const textBlob = new Blob([plainText], { type: 'text/plain' });
       navigator.clipboard
         .write([
           new ClipboardItem({
-            "text/html": htmlBlob,
-            "text/plain": textBlob,
+            'text/html': htmlBlob,
+            'text/plain': textBlob,
           }),
         ])
         .catch((e) => console.error(e));
@@ -138,23 +138,23 @@ export default class clipboard {
 
     // Fallback for browsers without Clipboard API support
     try {
-      let ele = document.getElementById("fortune-copy-content");
+      let ele = document.getElementById('fortune-copy-content');
       if (!ele) {
-        ele = document.createElement("div");
-        ele.setAttribute("contentEditable", "true");
-        ele.id = "fortune-copy-content";
-        ele.style.position = "fixed";
-        ele.style.height = "0";
-        ele.style.width = "0";
-        ele.style.left = "-10000px";
-        document.querySelector(".fortune-container")?.append(ele);
+        ele = document.createElement('div');
+        ele.setAttribute('contentEditable', 'true');
+        ele.id = 'fortune-copy-content';
+        ele.style.position = 'fixed';
+        ele.style.height = '0';
+        ele.style.width = '0';
+        ele.style.left = '-10000px';
+        document.querySelector('.fortune-container')?.append(ele);
       }
       const previouslyFocusedElement = document.activeElement as HTMLElement;
-      ele.style.display = "block";
+      ele.style.display = 'block';
       ele.innerHTML = str;
       ele.focus({ preventScroll: true });
-      document.execCommand("selectAll");
-      document.execCommand("copy");
+      document.execCommand('selectAll');
+      document.execCommand('copy');
       setTimeout(() => {
         ele?.blur();
         previouslyFocusedElement?.focus?.();

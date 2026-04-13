@@ -128,7 +128,7 @@ const InputBox: React.FC = () => {
       : null;
   const lockedFormulaSearchTop =
     formulaSearchActiveCellKey &&
-      formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
       ? formulaSearchTopLockRef.current.top
       : null;
   const isComposingRef = useRef(false);
@@ -179,7 +179,9 @@ const InputBox: React.FC = () => {
       formulaSearchTopLockRef.current = null;
       return;
     }
-    if (formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey) {
+    if (
+      formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey
+    ) {
       formulaSearchTopLockRef.current = null;
     }
   }, [formulaSearchActiveCellKey]);
@@ -187,7 +189,9 @@ const InputBox: React.FC = () => {
   const handleFormulaSearchTopComputed = useCallback(
     (computedTop: number) => {
       if (!formulaSearchActiveCellKey) return;
-      if (formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey)
+      if (
+        formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      )
         return;
       formulaSearchTopLockRef.current = {
         cellKey: formulaSearchActiveCellKey,
@@ -604,8 +608,7 @@ const InputBox: React.FC = () => {
       if (!isFormulaMode) return;
 
       const fsr = ctx.formulaCache.func_selectedrange;
-      const fsrOk =
-        fsr?.row?.length === 2 && fsr?.column?.length === 2;
+      const fsrOk = fsr?.row?.length === 2 && fsr?.column?.length === 2;
       // Do not drive `rangeSetValue` from `luckysheet_select_save` when the formula
       // range lives in `func_selectedrange` (keyboard nav, or active mouse range drag).
       const preferFuncRange =
@@ -780,8 +783,8 @@ const InputBox: React.FC = () => {
             createRangeHightlight(
               draftCtx,
               refs.cellInput.current?.innerHTML ||
-              refs.fxInput.current?.innerHTML ||
-              '',
+                refs.fxInput.current?.innerHTML ||
+                '',
             );
             moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
           });
@@ -1249,7 +1252,7 @@ const InputBox: React.FC = () => {
       const sel = window.getSelection();
       const text =
         sel && !sel.isCollapsed ? sel.toString() : e.currentTarget.innerText;
-      navigator.clipboard?.writeText(text).catch(() => { });
+      navigator.clipboard?.writeText(text).catch(() => {});
     },
     [context.luckysheetCellUpdate],
   );
@@ -1604,14 +1607,14 @@ const InputBox: React.FC = () => {
         style={
           inputBoxBaseSelection
             ? {
-              position: 'relative',
-              minWidth: inputBoxBaseSelection.width,
-              minHeight: inputBoxBaseSelection.height,
-              ...inputBoxStyle,
-              ...(cellEditorExtendRight
-                ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }
-                : {}),
-            }
+                position: 'relative',
+                minWidth: inputBoxBaseSelection.width,
+                minHeight: inputBoxBaseSelection.height,
+                ...inputBoxStyle,
+                ...(cellEditorExtendRight
+                  ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }
+                  : {}),
+              }
             : { position: 'relative' }
         }
       >
