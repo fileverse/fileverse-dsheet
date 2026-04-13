@@ -11588,9 +11588,15 @@ export default {
     findTextbox: 'Encontrar Contenido',
     replaceTextbox: 'Reemplazar Contenido',
 
-    regexTextbox: 'Expresión Regular',
-    wholeTextbox: 'Palabra entera',
-    distinguishTextbox: 'Distingue mayúsculas y minúsculas',
+    regexTextbox: 'Buscar con expresión regular',
+    wholeTextbox: 'Coincidir con todo el contenido de la celda',
+    distinguishTextbox: 'Coincidir mayúsculas y minúsculas',
+    formulaTextbox: 'Buscar dentro de fórmulas',
+    linkTextbox: 'Buscar dentro de enlaces',
+    allSheetsTextbox: 'Todas las hojas',
+    searchScopeLabel: 'Buscar en',
+    searchScopeAllSheets: 'Todas las hojas',
+    searchScopeThisSheet: 'Esta hoja',
 
     allReplaceBtn: 'Reemplazar Todo',
     replaceBtn: 'Reemplazar',
