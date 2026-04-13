@@ -11614,9 +11614,15 @@ export default {
     findTextbox: '查找内容',
     replaceTextbox: '替換內容',
 
-    regexTextbox: '規則運算式匹配',
-    wholeTextbox: '整詞匹配',
-    distinguishTextbox: '區分大小寫匹配',
+    regexTextbox: '使用規則運算式搜尋',
+    wholeTextbox: '符合整個儲存格內容',
+    distinguishTextbox: '大小寫須相符',
+    formulaTextbox: '在公式中搜尋',
+    linkTextbox: '在連結中搜尋',
+    allSheetsTextbox: '所有工作表',
+    searchScopeLabel: '搜尋範圍',
+    searchScopeAllSheets: '整個活頁簿',
+    searchScopeThisSheet: '目前工作表',
 
     allReplaceBtn: '全部替換',
     replaceBtn: '替換',

@@ -7,6 +7,14 @@ import {
   replace,
   replaceAll,
   scrollToHighlightCell,
+  getSearchIndexArr,
+  getFlowdata,
+  changeSheet,
+  CheckModes,
+  getSheetIndex,
+  getFindRangeOnCurrentSheet,
+  type FindSearchScope,
+  type HyperlinkMap,
 } from '@sheet-engine/core';
 import {
   Button,
@@ -14,6 +22,11 @@ import {
   cn,
   Divider,
   IconButton,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -29,6 +42,13 @@ import WorkbookContext from '../../context';
 import { useAlert } from '../../hooks/useAlert';
 import './index.css';
 
+// Fix 5: Row height constant for the virtual results list
+const ROW_HEIGHT = 36;
+const VISIBLE_ROWS = 10;
+
+// Fix 15: Show confirmation when replacing at least this many cells
+const LARGE_REPLACE_THRESHOLD = 100;
+
 const SearchReplace: React.FC<{
   getContainer: () => HTMLDivElement;
 }> = () => {
@@ -42,11 +62,18 @@ const SearchReplace: React.FC<{
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
-  const [checkMode, checkModeReplace] = useState({
+
+  // Fix 5: track scroll position for virtual list
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const [checkMode, checkModeReplace] = useState<CheckModes>({
     regCheck: false,
     wordCheck: false,
     caseCheck: false,
+    formulaCheck: false,
+    linkCheck: false,
   });
+  const [searchScope, setSearchScope] = useState<FindSearchScope>('thisSheet');
 
   const closeDialog = useCallback(() => {
     _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
@@ -66,13 +93,20 @@ const SearchReplace: React.FC<{
     [],
   );
 
-  // const getInitialPosition = useCallback((container: HTMLDivElement) => {
-  //   const rect = container.getBoundingClientRect();
-  //   return {
-  //     left: (rect.width - 500) / 2,
-  //     top: (rect.height - 200) / 3,
-  //   };
-  // }, []);
+  // Fix 5: virtual list helpers
+  const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT));
+  const endIdx = Math.min(startIdx + VISIBLE_ROWS + 2, searchResult.length);
+  const visibleItems = searchResult.slice(startIdx, endIdx);
+  const totalHeight = searchResult.length * ROW_HEIGHT;
+
+  /** Execute a do-replace wrapped in a confirmation for large counts (Fix 15) */
+  const doReplaceAll = useCallback(() => {
+    setContext((draftCtx) => {
+      setSelectedCell(undefined);
+      const alertMsg = replaceAll(draftCtx, searchText, replaceText, checkMode);
+      if (alertMsg != null) showAlert(alertMsg);
+    });
+  }, [checkMode, replaceText, searchText, setContext, showAlert]);
 
   return (
     <div
@@ -89,11 +123,6 @@ const SearchReplace: React.FC<{
       onMouseLeave={() => {
         _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
       }}
-      // onMouseDown={(e) => {
-      //   const { nativeEvent } = e;
-      //   onSearchDialogMoveStart(refs.globalCache, nativeEvent, getContainer());
-      //   e.stopPropagation();
-      // }}
     >
       <div>
         <div className="flex items-center justify-between border-b color-border-default py-3 px-6">
@@ -131,10 +160,9 @@ const SearchReplace: React.FC<{
                   }}
                   value={searchText}
                   onChange={(e) => {
-                    if (e.target.value.length === 0) {
-                      setSearchResult([]);
-                    }
-                    setSearchText(e.target.value);
+                    const v = e.target.value;
+                    setSearchText(v);
+                    if (v.length === 0) setSearchResult([]);
                   }}
                 />
               </div>
@@ -162,20 +190,31 @@ const SearchReplace: React.FC<{
                   onChange={(e) => setReplaceText(e.target.value)}
                 />
               </div>
+              <div className="flex flex-row gap-2 items-center">
+                <span className="find-replace-label text-heading-xsm shrink-0">
+                  {findAndReplace.searchScopeLabel}：
+                </span>
+                <Select
+                  value={searchScope}
+                  onValueChange={(v) => setSearchScope(v as FindSearchScope)}
+                >
+                  <SelectTrigger className="flex-1 min-w-0">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="allSheets">
+                      {findAndReplace.searchScopeAllSheets}
+                    </SelectItem>
+                    <SelectItem value="thisSheet">
+                      {findAndReplace.searchScopeThisSheet}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex flex-row gap-2">
               <div className="find-replace-label" />
               <div className="flex flex-col gap-2 text-body-sm">
-                <div id="regCheck" className="flex flex-row gap-2 items-center">
-                  <Checkbox
-                    className="border-2"
-                    checked={checkMode.regCheck}
-                    onCheckedChange={(e) =>
-                      setCheckMode('regCheck', e.target.checked)
-                    }
-                  />
-                  <span>{findAndReplace.regexTextbox}</span>
-                </div>
                 <div
                   id="caseCheck"
                   className="flex flex-row gap-2 items-center"
@@ -202,6 +241,42 @@ const SearchReplace: React.FC<{
                   />
                   <span>{findAndReplace.wholeTextbox}</span>
                 </div>
+                <div id="regCheck" className="flex flex-row gap-2 items-center">
+                  <Checkbox
+                    className="border-2"
+                    checked={checkMode.regCheck}
+                    onCheckedChange={(e) =>
+                      setCheckMode('regCheck', e.target.checked)
+                    }
+                  />
+                  <span>{findAndReplace.regexTextbox}</span>
+                </div>
+                <div
+                  id="formulaCheck"
+                  className="flex flex-row gap-2 items-center"
+                >
+                  <Checkbox
+                    className="border-2"
+                    checked={checkMode.formulaCheck}
+                    onCheckedChange={(e) =>
+                      setCheckMode('formulaCheck', e.target.checked)
+                    }
+                  />
+                  <span>{findAndReplace.formulaTextbox}</span>
+                </div>
+                <div
+                  id="linkCheck"
+                  className="flex flex-row gap-2 items-center"
+                >
+                  <Checkbox
+                    className="border-2"
+                    checked={checkMode.linkCheck}
+                    onCheckedChange={(e) =>
+                      setCheckMode('linkCheck', e.target.checked)
+                    }
+                  />
+                  <span>{findAndReplace.linkTextbox}</span>
+                </div>
               </div>
             </div>
             <Divider className="w-full border-t-[1px]" />
@@ -211,16 +286,36 @@ const SearchReplace: React.FC<{
                 variant="secondary"
                 className="min-w-fit"
                 onClick={() => {
-                  setContext((draftCtx) => {
-                    setSelectedCell(undefined);
-                    const alertMsg = replaceAll(
-                      draftCtx,
-                      searchText,
-                      replaceText,
-                      checkMode,
+                  // Fix 15: Confirm before replacing a large number of cells
+                  const flowdata = getFlowdata(context);
+                  if (flowdata) {
+                    const range = getFindRangeOnCurrentSheet(flowdata);
+                    if (range == null) {
+                      return;
+                    }
+                    const sheetIdx = getSheetIndex(
+                      context,
+                      context.currentSheetId,
                     );
-                    showAlert(alertMsg);
-                  });
+                    const hyperlinkMap = (
+                      sheetIdx != null
+                        ? context.luckysheetfile[sheetIdx]?.hyperlink
+                        : undefined
+                    ) as HyperlinkMap | undefined;
+                    const matchCount = getSearchIndexArr(
+                      searchText,
+                      range,
+                      flowdata,
+                      checkMode,
+                      hyperlinkMap,
+                    ).length;
+                    if (matchCount >= LARGE_REPLACE_THRESHOLD) {
+                      const msg = `Replace ${matchCount} cells?`;
+                      showAlert(msg, 'yesno', doReplaceAll);
+                      return;
+                    }
+                  }
+                  doReplaceAll();
                 }}
                 tabIndex={0}
                 disabled={searchText.length === 0 || replaceText.length === 0}
@@ -231,7 +326,7 @@ const SearchReplace: React.FC<{
                 id="replaceBtn"
                 variant="secondary"
                 className="min-w-fit"
-                onClick={() =>
+                onClick={() => {
                   setContext((draftCtx) => {
                     setSelectedCell(undefined);
                     const alertMsg = replace(
@@ -243,8 +338,8 @@ const SearchReplace: React.FC<{
                     if (alertMsg != null) {
                       showAlert(alertMsg);
                     }
-                  })
-                }
+                  });
+                }}
                 tabIndex={0}
                 disabled={searchText.length === 0 || replaceText.length === 0}
               >
@@ -254,15 +349,20 @@ const SearchReplace: React.FC<{
                 id="searchAllBtn"
                 variant="secondary"
                 className="min-w-fit"
-                onClick={() =>
+                onClick={() => {
                   setContext((draftCtx) => {
                     setSelectedCell(undefined);
                     if (!searchText) return;
-                    const res = searchAll(draftCtx, searchText, checkMode);
+                    const res = searchAll(
+                      draftCtx,
+                      searchText,
+                      checkMode,
+                      searchScope,
+                    );
                     setSearchResult(res);
                     if (_.isEmpty(res)) showAlert(findAndReplace.noFindTip);
-                  })
-                }
+                  });
+                }}
                 tabIndex={0}
                 disabled={searchText.length === 0}
               >
@@ -272,7 +372,7 @@ const SearchReplace: React.FC<{
                 id="searchNextBtn"
                 variant="default"
                 className="min-w-fit"
-                onClick={() =>
+                onClick={() => {
                   setContext((draftCtx) => {
                     setSearchResult([]);
                     const alertMsg = searchNext(
@@ -281,8 +381,8 @@ const SearchReplace: React.FC<{
                       checkMode,
                     );
                     if (alertMsg != null) showAlert(alertMsg);
-                  })
-                }
+                  });
+                }}
                 tabIndex={0}
                 disabled={searchText.length === 0}
               >
@@ -294,9 +394,11 @@ const SearchReplace: React.FC<{
           {searchResult.length > 0 && (
             <>
               <Divider className="w-full border-t-[1px] mb-4" />
+              {/* Fix 5: Virtualized results table */}
               <div
                 ref={tableContainerRef}
-                className="mb-6 table-container max-h-[300px] overflow-y-auto"
+                className="mb-6 table-container overflow-y-auto"
+                style={{ maxHeight: VISIBLE_ROWS * ROW_HEIGHT }}
                 onMouseDown={(e) => {
                   if (
                     e.target === tableContainerRef.current ||
@@ -311,10 +413,12 @@ const SearchReplace: React.FC<{
                   e.preventDefault();
                   e.stopPropagation();
                   if (tableContainerRef.current) {
-                    const delta = e.deltaY;
-                    const currentScroll = tableContainerRef.current.scrollTop;
-                    tableContainerRef.current.scrollTop = currentScroll + delta;
+                    tableContainerRef.current.scrollTop += e.deltaY;
+                    setScrollTop(tableContainerRef.current.scrollTop);
                   }
+                }}
+                onScroll={(e) => {
+                  setScrollTop((e.target as HTMLDivElement).scrollTop);
                 }}
                 onTouchStart={(e) => {
                   e.preventDefault();
@@ -335,44 +439,74 @@ const SearchReplace: React.FC<{
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {searchResult.map((v) => {
-                      return (
-                        <TableRow
-                          className={cn(
-                            _.isEqual(selectedCell, { r: v.r, c: v.c })
-                              ? 'color-bg-default-selected'
-                              : '',
-                          )}
-                          key={v.cellPosition}
-                          onClick={() => {
-                            setContext((draftCtx) => {
-                              draftCtx.luckysheet_select_save =
-                                normalizeSelection(draftCtx, [
-                                  {
-                                    row: [v.r, v.r],
-                                    column: [v.c, v.c],
-                                  },
-                                ]);
-                              scrollToHighlightCell(draftCtx, v.r, v.c);
-                            });
-                            setSelectedCell({ r: v.r, c: v.c });
-                          }}
-                          tabIndex={0}
-                        >
-                          <TableCell className="find-replace-table-cell">
-                            {v.sheetName}
-                          </TableCell>
-                          <TableCell className="find-replace-table-cell">
-                            {v.cellPosition}
-                          </TableCell>
-                          <TableCell className="find-replace-table-cell">
-                            {v.value}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {/* Spacer above visible rows */}
+                    {startIdx > 0 && (
+                      <tr
+                        aria-hidden
+                        style={{ height: startIdx * ROW_HEIGHT }}
+                      />
+                    )}
+                    {visibleItems.map((v) => (
+                      <TableRow
+                        style={{ height: ROW_HEIGHT }}
+                        className={cn(
+                          _.isEqual(selectedCell, { r: v.r, c: v.c })
+                            ? 'color-bg-default-selected'
+                            : '',
+                        )}
+                        key={`${v.sheetId}-${v.cellPosition}`}
+                        onClick={() => {
+                          setContext((draftCtx) => {
+                            // Fix 8: Switch to the result's sheet if needed
+                            if (v.sheetId !== draftCtx.currentSheetId) {
+                              changeSheet(draftCtx, v.sheetId);
+                            }
+                            draftCtx.luckysheet_select_save =
+                              normalizeSelection(draftCtx, [
+                                {
+                                  row: [v.r, v.r],
+                                  column: [v.c, v.c],
+                                },
+                              ]);
+                            scrollToHighlightCell(draftCtx, v.r, v.c);
+                          });
+                          setSelectedCell({ r: v.r, c: v.c });
+                        }}
+                        tabIndex={0}
+                      >
+                        <TableCell className="find-replace-table-cell">
+                          {v.sheetName}
+                        </TableCell>
+                        <TableCell className="find-replace-table-cell">
+                          {v.cellPosition}
+                        </TableCell>
+                        <TableCell className="find-replace-table-cell">
+                          {v.value}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {/* Spacer below visible rows */}
+                    {endIdx < searchResult.length && (
+                      <tr
+                        aria-hidden
+                        style={{
+                          height: (searchResult.length - endIdx) * ROW_HEIGHT,
+                        }}
+                      />
+                    )}
                   </TableBody>
                 </Table>
+                {/* Invisible full-height div to give the scrollbar the right total height */}
+                <div
+                  aria-hidden
+                  style={{
+                    height: totalHeight,
+                    position: 'absolute',
+                    top: 0,
+                    width: 1,
+                    pointerEvents: 'none',
+                  }}
+                />
               </div>
             </>
           )}

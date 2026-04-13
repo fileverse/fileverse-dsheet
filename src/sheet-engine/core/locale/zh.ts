@@ -11655,9 +11655,15 @@ export default {
     findTextbox: '查找内容',
     replaceTextbox: '替换内容',
 
-    regexTextbox: '正则表达式匹配',
-    wholeTextbox: '整词匹配',
-    distinguishTextbox: '区分大小写匹配',
+    regexTextbox: '使用正则表达式搜索',
+    wholeTextbox: '匹配整个单元格内容',
+    distinguishTextbox: '区分大小写',
+    formulaTextbox: '在公式中搜索',
+    linkTextbox: '在链接中搜索',
+    allSheetsTextbox: '所有工作表',
+    searchScopeLabel: '搜索范围',
+    searchScopeAllSheets: '整个工作簿',
+    searchScopeThisSheet: '当前工作表',
 
     allReplaceBtn: '全部替换',
     replaceBtn: '替换',
