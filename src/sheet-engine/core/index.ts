@@ -187,6 +187,9 @@ export {
   searchNext,
   replace,
   replaceAll,
+  getSearchIndexArr,
+  getSearchIndexArrAsync,
+  getFindRangeOnCurrentSheet,
   // hyperlink
   getCellRowColumn,
   getCellHyperlink,
@@ -319,6 +322,12 @@ export type {
   LiveQueryData,
   Freezen,
 } from './types';
+
+export type {
+  CheckModes,
+  HyperlinkMap,
+  FindSearchScope,
+} from './modules/searchReplace';
 
 // animate
 export { cellFadeAnimator, markCellChanged } from './animate';

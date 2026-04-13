@@ -11599,9 +11599,15 @@ export default {
     findTextbox: 'Find',
     replaceTextbox: 'Replace with',
 
-    regexTextbox: 'Regular Expression',
-    wholeTextbox: 'Whole word',
-    distinguishTextbox: 'Case sensitive',
+    regexTextbox: 'Search using regular expression',
+    wholeTextbox: 'Match entire cell content',
+    distinguishTextbox: 'Match case',
+    formulaTextbox: 'Search within formulae',
+    linkTextbox: 'Search within links',
+    allSheetsTextbox: 'All sheets',
+    searchScopeLabel: 'Search',
+    searchScopeAllSheets: 'All sheet',
+    searchScopeThisSheet: 'This sheet',
 
     allReplaceBtn: 'Replace all',
     replaceBtn: 'Replace',

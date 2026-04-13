@@ -11628,9 +11628,15 @@ export default {
     findTextbox: 'खोज सामग्री',
     replaceTextbox: 'सामग्री बदलें',
 
-    regexTextbox: 'नियमित अभिव्यक्ति',
-    wholeTextbox: 'पूरा शब्द',
-    distinguishTextbox: 'केस संवेदनशील',
+    regexTextbox: 'नियमित अभिव्यक्ति से खोजें',
+    wholeTextbox: 'पूरी सेल सामग्री से मिलाएँ',
+    distinguishTextbox: 'केस मिलाएँ',
+    formulaTextbox: 'सूत्रों में खोजें',
+    linkTextbox: 'लिंक में खोजें',
+    allSheetsTextbox: 'सभी शीट',
+    searchScopeLabel: 'खोज सीमा',
+    searchScopeAllSheets: 'सभी शीट',
+    searchScopeThisSheet: 'यह शीट',
 
     allReplaceBtn: 'सभी बदलें',
     replaceBtn: 'बदलें',
