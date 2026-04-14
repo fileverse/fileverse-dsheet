@@ -9,16 +9,33 @@
   align-items: center;
   gap: 6px;
   min-height: 34px;
-  padding: 4px 8px;
+  padding: 8px 12px;
   margin: 0;
   flex-shrink: 0;
   box-sizing: border-box;
   background-color: rgb(255, 255, 255);
-  border: 1px solid #d0d0d0;
+  border: 0;
   border-radius: 6px;
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.9) inset,
     0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+/* Single bordered container that includes the input + counter */
+.fortune-quick-search-field {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+}
+
+.fortune-quick-search-field--error {
+  border-color: #d0d0d0;
 }
 
 /* Keep the text field within the bar (Fileverse TextField default height is often > 28px) */
@@ -40,21 +57,19 @@
 .fortune-quick-search-input-wrap :is(input, [data-slot='input']) {
   box-sizing: border-box !important;
   min-height: 24px !important;
-  height: 24px !important;
+  height: 36px !important;
   line-height: 22px !important;
   padding-top: 1px !important;
   padding-bottom: 1px !important;
   font-size: 13px !important;
+  border-radius: 4px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
 }
 
 .fortune-quick-search-input-wrap > * {
   min-height: 0;
-}
-
-.fortune-quick-search-input--error input,
-.fortune-quick-search-input--error [data-slot='input'] {
-  border-color: #f5a8b8 !important;
-  background-color: #fff5f7 !important;
 }
 
 .fortune-quick-search-counter {
