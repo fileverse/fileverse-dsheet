@@ -671,8 +671,13 @@ const SheetOverlay: React.FC = () => {
       {(context.showSearch ||
         context.showReplace ||
         context.findReplaceHiddenDuringRangePick) && (
+<<<<<<< HEAD
           <SearchReplace getContainer={() => containerRef.current!} />
         )}
+=======
+        <SearchReplace getContainer={() => containerRef.current!} />
+      )}
+>>>>>>> cb115c0 (fix: re select range)
       <div className="fortune-row-body">
         <RowHeader />
         <ScrollBar axis="x" />

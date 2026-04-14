@@ -11612,6 +11612,7 @@ export default {
     rangeInputPlaceholder: 'e.g. A1:D10',
     rangeInputInvalidError: 'Invalid range. Use format like A1:D10',
     rangeSelectOnSheetTitle: 'Select range on sheet',
+    selectDataRangeTitle: 'Select a data range',
     replaceAllWithSkippedTip:
       'Replaced ${n} matches. ${skipped} matches in formula cells were skipped.',
     replaceAllSuccessInfotext:

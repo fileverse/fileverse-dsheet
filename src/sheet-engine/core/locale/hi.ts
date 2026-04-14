@@ -11641,6 +11641,7 @@ export default {
     rangeInputPlaceholder: 'उदा. A1:D10',
     rangeInputInvalidError: 'अमान्य रेंज। A1:D10 जैसा प्रारूप उपयोग करें',
     rangeSelectOnSheetTitle: 'शीट पर रेंज चुनें',
+    selectDataRangeTitle: 'डेटा रेंज चुनें',
     replaceAllWithSkippedTip:
       '\${n} मिलान बदल दिए गए। \${skipped} मिलान सूत्र वाले सेल में होने के कारण छोड़ दिए गए।',
     replaceAllSuccessInfotext:

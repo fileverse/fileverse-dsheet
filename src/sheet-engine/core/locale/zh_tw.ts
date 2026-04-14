@@ -11627,6 +11627,7 @@ export default {
     rangeInputPlaceholder: '例如 A1:D10',
     rangeInputInvalidError: '無效範圍，請使用如 A1:D10 的格式',
     rangeSelectOnSheetTitle: '在試算表中選擇範圍',
+    selectDataRangeTitle: '選取資料範圍',
     replaceAllWithSkippedTip: '已取代 \${n} 筆。有 \${skipped} 筆因儲存格含公式而略過。',
     replaceAllSuccessInfotext: "已將 \${n} 處「\${find}」取代為「\${replace}」",
     replaceAllSuccessWithSkippedInfotext:

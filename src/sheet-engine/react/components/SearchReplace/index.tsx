@@ -1,4 +1,5 @@
 import {
+  api,
   locale,
   searchAll,
   searchNext,
@@ -132,6 +133,8 @@ const SearchReplace: React.FC<{
       draftCtx.showReplace = false;
       draftCtx.findReplacePrefill = undefined;
       draftCtx.searchRangeScopeHighlight = null;
+      draftCtx.findReplaceHiddenDuringRangePick = false;
+      draftCtx.findReplaceRestoreVisibility = undefined;
     });
   }, [refs.globalCache, setContext]);
 
@@ -178,15 +181,27 @@ const SearchReplace: React.FC<{
   );
 
   useEffect(() => {
-    const open = !!(context.showSearch || context.showReplace);
+    const open = !!(
+      context.showSearch ||
+      context.showReplace ||
+      context.findReplaceHiddenDuringRangePick
+    );
     if (open && !wasDialogOpenRef.current) {
       setDragTranslate({ x: 0, y: 0 });
     }
     wasDialogOpenRef.current = open;
-  }, [context.showSearch, context.showReplace]);
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
+  ]);
 
   useEffect(() => {
-    const open = !!(context.showSearch || context.showReplace);
+    const open = !!(
+      context.showSearch ||
+      context.showReplace ||
+      context.findReplaceHiddenDuringRangePick
+    );
     if (!open) return;
     const el = getContainer();
     const ro = new ResizeObserver(() => {
@@ -194,7 +209,13 @@ const SearchReplace: React.FC<{
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [context.showSearch, context.showReplace, getContainer, clampTranslate]);
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
+    getContainer,
+    clampTranslate,
+  ]);
 
   const endHeaderDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     const session = dragSessionRef.current;
@@ -311,7 +332,14 @@ const SearchReplace: React.FC<{
 
   // Sync scope highlight into context whenever rangeText changes (debounced).
   useEffect(() => {
-    if (!(context.showSearch || context.showReplace)) return;
+    if (
+      !(
+        context.showSearch ||
+        context.showReplace ||
+        context.findReplaceHiddenDuringRangePick
+      )
+    )
+      return;
     if (searchScope !== 'specificRange') return;
     const t = setTimeout(() => {
       const parsed = parseRangeText(rangeText, contextRef.current);
@@ -327,21 +355,36 @@ const SearchReplace: React.FC<{
     searchScope,
     context.showSearch,
     context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
     context.currentSheetId,
     setContext,
   ]);
 
-  // Read back the range text chosen via the RangeDialog picker.
+  // After the range dialog closes, restore Find & Replace visibility and apply range.
   useEffect(() => {
     const rd = context.rangeDialog;
     if (!rd || rd.show || rd.type !== 'searchRange') return;
+
+    const restoreVis = context.findReplaceRestoreVisibility;
+    if (context.findReplaceHiddenDuringRangePick && restoreVis) {
+      setContext((d) => {
+        d.showSearch = restoreVis.showSearch;
+        d.showReplace = restoreVis.showReplace;
+        d.findReplaceHiddenDuringRangePick = false;
+        d.findReplaceRestoreVisibility = undefined;
+      });
+    }
+
     if (rd.rangeTxt) {
-      // Strip sheet prefix if present (e.g. "Sheet1!E10:H14" → "E10:H14")
-      const txt = rd.rangeTxt.replace(/^[^!]+!/, '').toUpperCase();
-      setRangeText(txt);
+      setRangeText(rd.rangeTxt.trim());
       setRangeError(null);
     }
-  }, [context.rangeDialog]);
+  }, [
+    context.rangeDialog,
+    context.findReplaceHiddenDuringRangePick,
+    context.findReplaceRestoreVisibility,
+    setContext,
+  ]);
 
   /** Execute a do-replace wrapped in a confirmation for large counts (Fix 15) */
   const doReplaceAll = useCallback(() => {
@@ -416,6 +459,15 @@ const SearchReplace: React.FC<{
       validateRangeInput,
     ],
   );
+
+  const findReplaceUiSuspended =
+    !!context.findReplaceHiddenDuringRangePick &&
+    !context.showSearch &&
+    !context.showReplace;
+
+  if (findReplaceUiSuspended) {
+    return null;
+  }
 
   return (
     <div
@@ -563,9 +615,9 @@ const SearchReplace: React.FC<{
                 </Select>
                 {searchScope === 'specificRange' && (
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <div className="flex min-w-0 flex-row items-center gap-1">
+                    <div className="find-replace-range-field relative min-w-0 flex-1">
                       <TextField
-                        className="formulaInputFocus min-w-0 flex-1"
+                        className="formulaInputFocus min-w-0 w-full [&_input]:pr-10"
                         spellCheck="false"
                         placeholder={findAndReplace.rangeInputPlaceholder}
                         value={rangeText}
@@ -583,16 +635,39 @@ const SearchReplace: React.FC<{
                         onMouseDown={(e) => e.stopPropagation()}
                       />
                       <IconButton
-                        className="shrink-0"
-                        icon="Grid"
+                        type="button"
+                        className="absolute right-1 top-1/2 z-[1] -translate-y-1/2"
+                        icon="LayoutGrid"
                         variant="ghost"
                         title={findAndReplace.rangeSelectOnSheetTitle}
+                        aria-label={findAndReplace.rangeSelectOnSheetTitle}
                         tabIndex={0}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          _.set(
+                            refs.globalCache,
+                            'searchDialog.mouseEnter',
+                            false,
+                          );
                           setContext((draftCtx) => {
+                            draftCtx.findReplaceRestoreVisibility = {
+                              showSearch: !!draftCtx.showSearch,
+                              showReplace: !!draftCtx.showReplace,
+                            };
+                            draftCtx.findReplaceHiddenDuringRangePick = true;
+                            draftCtx.showSearch = false;
+                            draftCtx.showReplace = false;
+
+                            const trimmed = rangeText.trim();
+                            if (trimmed) {
+                              const parsed = parseRangeText(trimmed, draftCtx);
+                              if (parsed) {
+                                api.setSelection(draftCtx, [parsed], {});
+                              }
+                            }
                             draftCtx.rangeDialog = {
                               show: true,
-                              rangeTxt: rangeText,
+                              rangeTxt: trimmed,
                               type: 'searchRange',
                               singleSelect: false,
                             };
