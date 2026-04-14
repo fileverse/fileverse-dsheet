@@ -13,6 +13,7 @@ import {
 import { setCellValue } from './cell';
 import { valueShowEs } from './format';
 import { normalizeSelection, scrollToHighlightCell } from './selection';
+import { changeSheet } from './sheet';
 
 /** Where find/replace scans on the current sheet (workbook-wide only applies to find-all). */
 export type FindSearchScope = 'allSheets' | 'thisSheet';
@@ -288,16 +289,263 @@ function nextSearchHitIndex(
   return 0;
 }
 
+/** Prev hit index: move backward from current cell; wrap; if current is not a hit, use row-major order. */
+function prevSearchHitIndex(
+  hits: { r: number; c: number }[],
+  curR: number,
+  curC: number,
+): number {
+  if (hits.length === 0) return 0;
+  for (let i = 0; i < hits.length; i += 1) {
+    if (hits[i].r === curR && hits[i].c === curC) {
+      return (i - 1 + hits.length) % hits.length;
+    }
+  }
+  for (let i = hits.length - 1; i >= 0; i -= 1) {
+    const { r, c } = hits[i];
+    if (r < curR || (r === curR && c < curC)) {
+      return i;
+    }
+  }
+  return hits.length - 1;
+}
+
+function hitIndexOfCell(
+  hits: { r: number; c: number }[],
+  r: number,
+  c: number,
+): number {
+  for (let i = 0; i < hits.length; i += 1) {
+    if (hits[i].r === r && hits[i].c === c) return i;
+  }
+  return -1;
+}
+
+function nextSheetIndexWithHits(
+  hitsBySheetId: Map<string, { r: number; c: number }[]>,
+  sheetIds: string[],
+  startIdx: number,
+): number | null {
+  const n = sheetIds.length;
+  if (n <= 1) return null;
+  for (let step = 1; step < n; step += 1) {
+    const idx = (startIdx + step) % n;
+    const id = sheetIds[idx];
+    const hits = id ? hitsBySheetId.get(id) : undefined;
+    if (hits && hits.length > 0) return idx;
+  }
+  return null;
+}
+
+function prevSheetIndexWithHits(
+  hitsBySheetId: Map<string, { r: number; c: number }[]>,
+  sheetIds: string[],
+  startIdx: number,
+): number | null {
+  const n = sheetIds.length;
+  if (n <= 1) return null;
+  for (let step = 1; step < n; step += 1) {
+    const idx = (startIdx - step + n) % n;
+    const id = sheetIds[idx];
+    const hits = id ? hitsBySheetId.get(id) : undefined;
+    if (hits && hits.length > 0) return idx;
+  }
+  return null;
+}
+
 export function searchNext(
   ctx: Context,
   searchText: string,
   checkModes: CheckModes,
+  scope: FindSearchScope = 'thisSheet',
+  direction: 'next' | 'prev' = 'next',
 ) {
   const { findAndReplace } = locale(ctx);
   const flowdata = getFlowdata(ctx);
   if (searchText === '' || searchText == null || flowdata == null) {
     return findAndReplace.searchInputTip;
   }
+
+  if (scope === 'allSheets') {
+    const sheetIds = ctx.luckysheetfile.map((s) => s.id ?? '').filter(Boolean);
+    const currentSheetId = ctx.currentSheetId;
+    const currentSheetIndex = sheetIds.indexOf(currentSheetId);
+    const hitsBySheetId = new Map<string, { r: number; c: number }[]>();
+
+    for (const sheet of ctx.luckysheetfile) {
+      const sid = sheet.id ?? '';
+      if (!sid || !sheet.data) continue;
+      const sheetFlowdata = sheet.data as CellMatrix;
+      if (!sheetFlowdata.length || !sheetFlowdata[0]?.length) continue;
+
+      const fullRange = [
+        {
+          row: [0, sheetFlowdata.length - 1],
+          column: [0, sheetFlowdata[0].length - 1],
+        },
+      ];
+      const hits = getSearchIndexArr(
+        searchText,
+        fullRange,
+        sheetFlowdata,
+        checkModes,
+        sheet.hyperlink as HyperlinkMap | undefined,
+      );
+      if (hits.length > 0) hitsBySheetId.set(sid, hits);
+    }
+
+    if (hitsBySheetId.size === 0) {
+      return findAndReplace.noFindTip;
+    }
+
+    // If current sheet isn't found (should be rare), fall back to first sheet with hits.
+    const curSheetIdx =
+      currentSheetIndex >= 0
+        ? currentSheetIndex
+        : sheetIds.findIndex((id) => (hitsBySheetId.get(id)?.length ?? 0) > 0);
+    const curSheetId = sheetIds[curSheetIdx] ?? currentSheetId;
+
+    const curHits = hitsBySheetId.get(curSheetId) ?? [];
+
+    // Cursor: if we are on the current sheet, use selection cursor; otherwise treat as "before start".
+    const { r: curR, c: curC } =
+      ctx.currentSheetId === curSheetId
+        ? resolveFindNextCursor(ctx, [
+            {
+              row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
+              column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
+            },
+          ])
+        : { r: -1, c: -1 };
+
+    const idxInCur = hitIndexOfCell(curHits, curR, curC);
+
+    let targetSheetId: string | null = null;
+    let targetR: number | null = null;
+    let targetC: number | null = null;
+
+    if (direction === 'next') {
+      if (curHits.length > 0) {
+        if (idxInCur >= 0) {
+          if (idxInCur + 1 < curHits.length) {
+            targetSheetId = curSheetId;
+            targetR = curHits[idxInCur + 1]!.r;
+            targetC = curHits[idxInCur + 1]!.c;
+          }
+        } else {
+          // Find first hit after cursor within current sheet (no wrap).
+          for (let i = 0; i < curHits.length; i += 1) {
+            const { r, c } = curHits[i]!;
+            if (r > curR || (r === curR && c > curC)) {
+              targetSheetId = curSheetId;
+              targetR = r;
+              targetC = c;
+              break;
+            }
+          }
+        }
+      }
+
+      if (targetSheetId == null) {
+        const nextSheetIdx = nextSheetIndexWithHits(
+          hitsBySheetId,
+          sheetIds,
+          curSheetIdx,
+        );
+        const sid = nextSheetIdx != null ? sheetIds[nextSheetIdx] : null;
+        const hits = sid ? hitsBySheetId.get(sid) : undefined;
+        if (!sid || !hits || hits.length === 0) {
+          // Only current sheet has hits; fall back to wrap within it.
+          const fallback = curHits.length ? curHits[0]! : null;
+          if (!fallback) return findAndReplace.noFindTip;
+          targetSheetId = curSheetId;
+          targetR = fallback.r;
+          targetC = fallback.c;
+        } else {
+          targetSheetId = sid;
+          targetR = hits[0]!.r;
+          targetC = hits[0]!.c;
+        }
+      }
+    } else {
+      if (curHits.length > 0) {
+        if (idxInCur >= 0) {
+          if (idxInCur - 1 >= 0) {
+            targetSheetId = curSheetId;
+            targetR = curHits[idxInCur - 1]!.r;
+            targetC = curHits[idxInCur - 1]!.c;
+          }
+        } else {
+          // Find last hit before cursor within current sheet (no wrap).
+          for (let i = curHits.length - 1; i >= 0; i -= 1) {
+            const { r, c } = curHits[i]!;
+            if (r < curR || (r === curR && c < curC)) {
+              targetSheetId = curSheetId;
+              targetR = r;
+              targetC = c;
+              break;
+            }
+          }
+        }
+      }
+
+      if (targetSheetId == null) {
+        const prevSheetIdx = prevSheetIndexWithHits(
+          hitsBySheetId,
+          sheetIds,
+          curSheetIdx,
+        );
+        const sid = prevSheetIdx != null ? sheetIds[prevSheetIdx] : null;
+        const hits = sid ? hitsBySheetId.get(sid) : undefined;
+        if (!sid || !hits || hits.length === 0) {
+          const fallback = curHits.length ? curHits[curHits.length - 1]! : null;
+          if (!fallback) return findAndReplace.noFindTip;
+          targetSheetId = curSheetId;
+          targetR = fallback.r;
+          targetC = fallback.c;
+        } else {
+          const last = hits[hits.length - 1]!;
+          targetSheetId = sid;
+          targetR = last.r;
+          targetC = last.c;
+        }
+      }
+    }
+
+    if (
+      targetSheetId == null ||
+      targetR == null ||
+      targetC == null ||
+      targetSheetId === ''
+    ) {
+      return findAndReplace.noFindTip;
+    }
+
+    if (targetSheetId !== ctx.currentSheetId) {
+      // Persist the target selection on the destination sheet before switching.
+      // The sheet activation pipeline restores `luckysheet_select_save` from the sheet file,
+      // so writing it here prevents a post-switch restore from wiping our highlight.
+      const toIdx = getSheetIndex(ctx, targetSheetId);
+      if (toIdx != null) {
+        ctx.luckysheetfile[toIdx].luckysheet_select_save = [
+          {
+            row: [targetR, targetR],
+            column: [targetC, targetC],
+            row_focus: targetR,
+            column_focus: targetC,
+          },
+        ];
+      }
+      changeSheet(ctx, targetSheetId);
+    }
+
+    ctx.luckysheet_select_save = normalizeSelection(ctx, [
+      { row: [targetR, targetR], column: [targetC, targetC] },
+    ]);
+    scrollToHighlightCell(ctx, targetR, targetC);
+    return null;
+  }
+
   const range = getFindRangeOnCurrentSheet(flowdata);
   if (range == null) {
     return findAndReplace.noFindTip;
@@ -316,7 +564,10 @@ export function searchNext(
   }
 
   const { r: curR, c: curC } = resolveFindNextCursor(ctx, range);
-  const count = nextSearchHitIndex(searchIndexArr, curR, curC);
+  const count =
+    direction === 'prev'
+      ? prevSearchHitIndex(searchIndexArr, curR, curC)
+      : nextSearchHitIndex(searchIndexArr, curR, curC);
   const nextR = searchIndexArr[count].r;
   const nextC = searchIndexArr[count].c;
 
