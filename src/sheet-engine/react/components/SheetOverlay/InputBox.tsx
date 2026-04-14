@@ -900,6 +900,20 @@ const InputBox: React.FC = () => {
         e.key === 'ArrowLeft' ||
         e.key === 'ArrowRight';
       const isInPlaceEditMode = refs.globalCache?.enteredEditByTyping !== true;
+      const isFormulaSearchArrowNav =
+        showSearchHint && (e.key === 'ArrowUp' || e.key === 'ArrowDown');
+
+      // In regular in-cell editing, arrows should move the caret inside the editor.
+      // Keep key events local so sheet-level navigation does not close edit mode.
+      if (
+        isArrowKey &&
+        context.luckysheetCellUpdate.length > 0 &&
+        !isFormulaReferenceInputMode(context) &&
+        !isFormulaSearchArrowNav
+      ) {
+        e.stopPropagation();
+        return;
+      }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const anchor = formulaAnchorCellRef.current;
@@ -1066,6 +1080,7 @@ const InputBox: React.FC = () => {
       clearSearchItemActiveClass,
       context.luckysheetCellUpdate.length,
       handleFormulaHistoryUndoRedo,
+      showSearchHint,
       selectActiveFormula,
       setContext,
       firstSelection,
