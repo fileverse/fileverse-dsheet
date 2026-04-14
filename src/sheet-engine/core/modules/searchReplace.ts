@@ -3,20 +3,43 @@ import _ from 'lodash';
 import { Context, getFlowdata } from '../context';
 import { locale } from '../locale';
 import { CellMatrix, Selection, SearchResult, GlobalCache } from '../types';
-import {
-  chatatABC,
-  getRegExpStr,
-  getSheetIndex,
-  isAllowEdit,
-  replaceHtml,
-} from '../utils';
-import { setCellValue } from './cell';
+import { chatatABC, getRegExpStr, getSheetIndex, isAllowEdit } from '../utils';
+import { setCellValue, getRangeByTxt } from './cell';
 import { valueShowEs } from './format';
 import { normalizeSelection, scrollToHighlightCell } from './selection';
 import { changeSheet } from './sheet';
 
 /** Where find/replace scans on the current sheet (workbook-wide only applies to find-all). */
-export type FindSearchScope = 'allSheets' | 'thisSheet';
+export type FindSearchScope = 'allSheets' | 'thisSheet' | 'specificRange';
+
+/**
+ * Return value of {@link searchNext}.
+ *
+ * @remarks
+ * **Semver:** Older releases returned `string | null` from `searchNext` (a localized message, or `null` on success).
+ * The object form is a **breaking change** for callers that still expect `string | null`; update them to read
+ * {@link SearchNextResult.alertMsg} (and optionally {@link SearchNextResult.matchIndex} /
+ * {@link SearchNextResult.matchTotal} for on-sheet scoped search UI).
+ */
+export type SearchNextResult = {
+  /** Localized message for an alert dialog, or `null` when the next/previous hit was selected successfully. */
+  alertMsg: string | null;
+  /**
+   * 0-based index of the selected hit in the current sheet's ordered hit list when
+   * `scope` is `thisSheet` or `specificRange` and navigation succeeded; otherwise `0`.
+   */
+  matchIndex: number;
+  /**
+   * Size of that hit list for `thisSheet` / `specificRange`; `0` when not applicable (e.g. `allSheets`, errors,
+   * or empty search).
+   */
+  matchTotal: number;
+};
+
+/** Outcome of {@link replaceAll} for UI (inline status vs. error message). */
+export type ReplaceAllResult =
+  | { ok: false; message: string }
+  | { ok: true; replaced: number; skipped: number };
 
 /** Full used grid on the active sheet for find/replace on this sheet; `null` if the sheet has no cells. */
 export function getFindRangeOnCurrentSheet(
@@ -353,17 +376,29 @@ function prevSheetIndexWithHits(
   return null;
 }
 
+/**
+ * Finds the next or previous match, updates selection and scroll, and optionally switches sheet when
+ * `scope` is `allSheets`.
+ *
+ * @param specificRange - When `scope` is `specificRange`, restricts the scan to this rectangle on the active sheet.
+ * @returns Structured result; see {@link SearchNextResult} and semver note on {@link SearchNextResult} remarks.
+ */
 export function searchNext(
   ctx: Context,
   searchText: string,
   checkModes: CheckModes,
   scope: FindSearchScope = 'thisSheet',
   direction: 'next' | 'prev' = 'next',
-) {
+  specificRange?: Selection,
+): SearchNextResult {
   const { findAndReplace } = locale(ctx);
   const flowdata = getFlowdata(ctx);
   if (searchText === '' || searchText == null || flowdata == null) {
-    return findAndReplace.searchInputTip;
+    return {
+      alertMsg: findAndReplace.searchInputTip,
+      matchIndex: 0,
+      matchTotal: 0,
+    };
   }
 
   if (scope === 'allSheets') {
@@ -395,7 +430,11 @@ export function searchNext(
     }
 
     if (hitsBySheetId.size === 0) {
-      return findAndReplace.noFindTip;
+      return {
+        alertMsg: findAndReplace.noFindTip,
+        matchIndex: 0,
+        matchTotal: 0,
+      };
     }
 
     // If current sheet isn't found (should be rare), fall back to first sheet with hits.
@@ -457,7 +496,12 @@ export function searchNext(
         if (!sid || !hits || hits.length === 0) {
           // Only current sheet has hits; fall back to wrap within it.
           const fallback = curHits.length ? curHits[0]! : null;
-          if (!fallback) return findAndReplace.noFindTip;
+          if (!fallback)
+            return {
+              alertMsg: findAndReplace.noFindTip,
+              matchIndex: 0,
+              matchTotal: 0,
+            };
           targetSheetId = curSheetId;
           targetR = fallback.r;
           targetC = fallback.c;
@@ -499,7 +543,12 @@ export function searchNext(
         const hits = sid ? hitsBySheetId.get(sid) : undefined;
         if (!sid || !hits || hits.length === 0) {
           const fallback = curHits.length ? curHits[curHits.length - 1]! : null;
-          if (!fallback) return findAndReplace.noFindTip;
+          if (!fallback)
+            return {
+              alertMsg: findAndReplace.noFindTip,
+              matchIndex: 0,
+              matchTotal: 0,
+            };
           targetSheetId = curSheetId;
           targetR = fallback.r;
           targetC = fallback.c;
@@ -518,7 +567,11 @@ export function searchNext(
       targetC == null ||
       targetSheetId === ''
     ) {
-      return findAndReplace.noFindTip;
+      return {
+        alertMsg: findAndReplace.noFindTip,
+        matchIndex: 0,
+        matchTotal: 0,
+      };
     }
 
     if (targetSheetId !== ctx.currentSheetId) {
@@ -543,12 +596,17 @@ export function searchNext(
       { row: [targetR, targetR], column: [targetC, targetC] },
     ]);
     scrollToHighlightCell(ctx, targetR, targetC);
-    return null;
+    return { alertMsg: null, matchIndex: 0, matchTotal: 0 };
   }
 
-  const range = getFindRangeOnCurrentSheet(flowdata);
+  // Resolve the search range: specificRange scope uses the provided range, thisSheet uses full sheet.
+  const range =
+    scope === 'specificRange' && specificRange != null
+      ? [specificRange]
+      : getFindRangeOnCurrentSheet(flowdata);
+
   if (range == null) {
-    return findAndReplace.noFindTip;
+    return { alertMsg: findAndReplace.noFindTip, matchIndex: 0, matchTotal: 0 };
   }
 
   const searchIndexArr = getSearchIndexArr(
@@ -560,7 +618,7 @@ export function searchNext(
   );
 
   if (searchIndexArr.length === 0) {
-    return findAndReplace.noFindTip;
+    return { alertMsg: findAndReplace.noFindTip, matchIndex: 0, matchTotal: 0 };
   }
 
   const { r: curR, c: curC } = resolveFindNextCursor(ctx, range);
@@ -580,7 +638,11 @@ export function searchNext(
 
   scrollToHighlightCell(ctx, nextR, nextC);
 
-  return null;
+  return {
+    alertMsg: null,
+    matchIndex: count,
+    matchTotal: searchIndexArr.length,
+  };
 }
 
 export function searchAll(
@@ -588,6 +650,7 @@ export function searchAll(
   searchText: string,
   checkModes: CheckModes,
   scope: FindSearchScope = 'thisSheet',
+  specificRange?: Selection,
 ): SearchResult[] {
   const searchResult: SearchResult[] = [];
   if (searchText === '' || searchText == null) {
@@ -645,11 +708,14 @@ export function searchAll(
     return searchResult;
   }
 
-  // Single-sheet mode
+  // Single-sheet / specific-range mode
   const flowdata = getFlowdata(ctx);
   if (flowdata == null) return searchResult;
 
-  const range = getFindRangeOnCurrentSheet(flowdata);
+  const range =
+    scope === 'specificRange' && specificRange != null
+      ? [specificRange]
+      : getFindRangeOnCurrentSheet(flowdata);
   if (range == null) return searchResult;
 
   const searchIndexArr = getSearchIndexArr(
@@ -739,6 +805,7 @@ export function replace(
   searchText: string,
   replaceText: string,
   checkModes: CheckModes,
+  specificRange?: Selection,
 ) {
   const { findAndReplace } = locale(ctx);
   const allowEdit = isAllowEdit(ctx);
@@ -751,7 +818,10 @@ export function replace(
     return findAndReplace.searchInputTip;
   }
 
-  const range = getFindRangeOnCurrentSheet(flowdata);
+  const range =
+    specificRange != null
+      ? [specificRange]
+      : getFindRangeOnCurrentSheet(flowdata);
   if (range == null) {
     return findAndReplace.noReplceTip;
   }
@@ -858,33 +928,37 @@ export function replaceAll(
   searchText: string,
   replaceText: string,
   checkModes: CheckModes,
-) {
+  specificRange?: Selection,
+): ReplaceAllResult {
   const { findAndReplace } = locale(ctx);
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) {
-    return findAndReplace.modeTip;
+    return { ok: false, message: findAndReplace.modeTip };
   }
 
   const flowdata = getFlowdata(ctx);
   if (searchText === '' || searchText == null || flowdata == null) {
-    return findAndReplace.searchInputTip;
+    return { ok: false, message: findAndReplace.searchInputTip };
   }
 
-  const range = getFindRangeOnCurrentSheet(flowdata);
-  if (range == null) {
-    return findAndReplace.noReplceTip;
+  const searchRange =
+    specificRange != null
+      ? [specificRange]
+      : getFindRangeOnCurrentSheet(flowdata);
+  if (searchRange == null) {
+    return { ok: false, message: findAndReplace.noReplceTip };
   }
 
   const searchIndexArr = getSearchIndexArr(
     searchText,
-    range,
+    searchRange,
     flowdata,
     checkModes,
     hyperlinkMapForCtx(ctx),
   );
 
   if (searchIndexArr.length === 0) {
-    return findAndReplace.noReplceTip;
+    return { ok: false, message: findAndReplace.noReplceTip };
   }
 
   const d = flowdata;
@@ -896,12 +970,18 @@ export function replaceAll(
     type?: 'update' | 'delete';
   }[] = [];
   let replaceCount = 0;
+  let skippedCount = 0;
+  // Track replaced cells for post-replace selection
+  const replacedCells: { row: number[]; column: number[] }[] = [];
 
   if (checkModes.wordCheck) {
     for (let i = 0; i < searchIndexArr.length; i += 1) {
       const { r } = searchIndexArr[i];
       const { c } = searchIndexArr[i];
-      if (isFormulaCell(d, r, c)) continue;
+      if (isFormulaCell(d, r, c)) {
+        skippedCount += 1;
+        continue;
+      }
 
       const v = replaceText;
 
@@ -916,7 +996,7 @@ export function replaceAll(
         });
       }
 
-      range.push({ row: [r, r], column: [c, c] });
+      replacedCells.push({ row: [r, r], column: [c, c] });
       replaceCount += 1;
     }
   } else {
@@ -930,7 +1010,10 @@ export function replaceAll(
     for (let i = 0; i < searchIndexArr.length; i += 1) {
       const { r } = searchIndexArr[i];
       const { c } = searchIndexArr[i];
-      if (isFormulaCell(d, r, c)) continue;
+      if (isFormulaCell(d, r, c)) {
+        skippedCount += 1;
+        continue;
+      }
 
       const v = valueShowEs(r, c, d).toString().replace(reg, replaceText);
 
@@ -945,7 +1028,7 @@ export function replaceAll(
         });
       }
 
-      range.push({ row: [r, r], column: [c, c] });
+      replacedCells.push({ row: [r, r], column: [c, c] });
       replaceCount += 1;
     }
   }
@@ -954,13 +1037,11 @@ export function replaceAll(
     ctx.hooks.updateCellYdoc(cellChanges);
   }
 
-  ctx.luckysheet_select_save = normalizeSelection(ctx, range);
+  if (replacedCells.length > 0) {
+    ctx.luckysheet_select_save = normalizeSelection(ctx, replacedCells);
+  }
 
-  const succeedInfo = replaceHtml(findAndReplace.successTip, {
-    xlength: replaceCount,
-  });
-
-  return succeedInfo;
+  return { ok: true, replaced: replaceCount, skipped: skippedCount };
 }
 
 // ---------------------------------------------------------------------------
@@ -1154,4 +1235,49 @@ export function runQuickSearchIndexArrAsync(
     onProgress,
     onComplete,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Range-scoped find/replace utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Parses an A1-notation range string (e.g. "E10:H14" or "Sheet1!E10:H14")
+ * into a `Selection` suitable for scoping find/replace.
+ *
+ * Returns `null` if the text is empty or cannot be parsed.
+ * The sheet-name prefix is stripped before parsing — the active sheet is always used.
+ */
+export function parseRangeText(
+  rangeText: string,
+  ctx: Context,
+): Selection | null {
+  if (!rangeText || rangeText.trim() === '') return null;
+
+  // Strip optional sheet prefix (e.g. "Sheet1!" or "'My Sheet'!")
+  const stripped = rangeText.trim().replace(/^[^!]+!/, '');
+
+  // Normalise to uppercase for consistent parsing
+  const normalised = stripped.toUpperCase();
+
+  try {
+    const parsed = getRangeByTxt(ctx, normalised);
+    if (!parsed || parsed.length === 0) return null;
+    const first = parsed[0];
+    if (
+      !first ||
+      !Array.isArray(first.row) ||
+      first.row.length < 2 ||
+      !Array.isArray(first.column) ||
+      first.column.length < 2
+    ) {
+      return null;
+    }
+    return {
+      row: [first.row[0], first.row[1]],
+      column: [first.column[0], first.column[1]],
+    };
+  } catch {
+    return null;
+  }
 }

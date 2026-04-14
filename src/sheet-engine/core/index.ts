@@ -192,6 +192,7 @@ export {
   shouldQuickSearchUseAsync,
   runQuickSearchIndexArrAsync,
   QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
+  parseRangeText,
   // hyperlink
   getCellRowColumn,
   getCellHyperlink,
@@ -320,6 +321,8 @@ export type {
   HyperlinkMap,
   FindSearchScope,
   SearchHiddenConfig,
+  SearchNextResult,
+  ReplaceAllResult,
 } from './modules/searchReplace';
 
 // animate

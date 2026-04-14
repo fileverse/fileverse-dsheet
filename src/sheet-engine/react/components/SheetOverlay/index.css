@@ -179,6 +179,12 @@
   opacity: 0.45;
 }
 
+.fortune-search-range-highlight {
+  box-sizing: border-box;
+  border: 2px dashed #efc703;
+  background-color: #efc8030e;
+}
+
 .fortune-cell-selected-extend {
   position: absolute;
   pointer-events: none;

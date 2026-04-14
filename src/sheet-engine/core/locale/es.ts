@@ -11597,6 +11597,16 @@ export default {
     searchScopeLabel: 'Buscar en',
     searchScopeAllSheets: 'Todas las hojas',
     searchScopeThisSheet: 'Esta hoja',
+    searchScopeSpecificRange: 'Rango específico',
+    rangeInputPlaceholder: 'p. ej. A1:D10',
+    rangeInputInvalidError: 'Rango no válido. Use un formato como A1:D10',
+    rangeSelectOnSheetTitle: 'Seleccionar rango en la hoja',
+    replaceAllWithSkippedTip:
+      'Se reemplazaron \${n} coincidencias. Se omitieron \${skipped} en celdas con fórmulas.',
+    replaceAllSuccessInfotext:
+      "Se reemplazaron \${n} coincidencias de '\${find}' por '\${replace}'.",
+    replaceAllSuccessWithSkippedInfotext:
+      "Se reemplazaron \${n} coincidencias de '\${find}' por '\${replace}'. Se omitieron \${skipped} coincidencias en celdas con fórmulas.",
 
     allReplaceBtn: 'Reemplazar Todo',
     replaceBtn: 'Reemplazar',
