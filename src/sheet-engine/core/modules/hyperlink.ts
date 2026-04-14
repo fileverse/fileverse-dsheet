@@ -74,6 +74,30 @@ function linkEquals(a: HyperlinkEntry, b: HyperlinkEntry) {
   return a.linkType === b.linkType && a.linkAddress === b.linkAddress;
 }
 
+/**
+ * Returns hyperlink occurrences for inline rich text, preserving visual order and
+ * treating contiguous segments with the same link as one occurrence.
+ */
+function getInlineHyperlinkOccurrences(
+  cell: Cell | null | undefined
+): HyperlinkEntry[] {
+  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return [];
+  const out: HyperlinkEntry[] = [];
+  let prev: HyperlinkEntry | undefined;
+  for (const seg of cell.ct.s as { link?: HyperlinkEntry }[]) {
+    const link = seg?.link;
+    if (!link?.linkType || !link?.linkAddress) {
+      prev = undefined;
+      continue;
+    }
+    if (!prev || !linkEquals(prev, link)) {
+      out.push({ linkType: link.linkType, linkAddress: link.linkAddress });
+    }
+    prev = link;
+  }
+  return out;
+}
+
 export function getCellHyperlinks(ctx: Context, r: number, c: number): HyperlinkEntry[] {
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) return [];
@@ -390,11 +414,13 @@ export function syncLinkCardAfterHyperlinkChange(ctx: Context, r: number, c: num
     return;
   }
   const cell = getFlowdata(ctx)?.[r]?.[c];
-  ctx.linkCard.links = links;
+  const inlineOccurrences = getInlineHyperlinkOccurrences(cell ?? undefined);
+  ctx.linkCard.links = inlineOccurrences.length > 0 ? inlineOccurrences : links;
   ctx.linkCard.editingLinkIndex = undefined;
   ctx.linkCard.isEditing = false;
-  ctx.linkCard.originType = links[0].linkType;
-  ctx.linkCard.originAddress = links[0].linkAddress;
+  const first = (inlineOccurrences.length > 0 ? inlineOccurrences : links)[0];
+  ctx.linkCard.originType = first.linkType;
+  ctx.linkCard.originAddress = first.linkAddress;
   ctx.linkCard.originText =
     cell?.v != null && !Array.isArray(cell.v) ? `${cell.v}` : "";
 }
@@ -774,6 +800,8 @@ export function showLinkCard(
   const links = getCellHyperlinks(ctx, r, c);
   const link = links[0];
   const cell = getFlowdata(ctx)?.[r]?.[c];
+  const linkOccurrences = getInlineHyperlinkOccurrences(cell ?? undefined);
+  const linksForView = linkOccurrences.length > 0 ? linkOccurrences : links;
   const insertingOnSelection = !!options?.applyToSelection;
   if (
     !isEditing &&
@@ -815,8 +843,8 @@ export function showLinkCard(
       ? undefined
       : caretViewLink
         ? [caretViewLink]
-        : links.length > 0
-          ? links
+        : linksForView.length > 0
+          ? linksForView
           : undefined;
     ctx.linkCard = {
       sheetId: ctx.currentSheetId,

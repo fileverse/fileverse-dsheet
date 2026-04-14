@@ -884,21 +884,9 @@ export function updateCell(
     const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
     const { dataVerification } = ctx.luckysheetfile[index];
 
-    // --- hyperlink-on-edit-paste support ---
+    // --- hyperlink sync support ---
     const sheetFile = ctx.luckysheetfile[index] as any;
-
-    const getUrlFromText = (text?: string): string | null => {
-      const t = (text ?? "").trim();
-      // only treat a single token as a URL (no spaces/newlines)
-      if (!t || /[\s\r\n]/.test(t)) return null;
-      if (
-        !/^(?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/\S*)?$/i.test(t)
-      ) {
-        return null;
-      }
-      return t;
-    };
-    // --- end ---s
+    // --- end ---
 
     if (!_.isNil(dataVerification)) {
       const dvItem = dataVerification[`${r}_${c}`];
@@ -1314,27 +1302,7 @@ export function updateCell(
     // --- hyperlink support ---
     const hyperlinkKey = `${r}_${c}`;
     const prevHyperlink = sheetFile.hyperlink?.[hyperlinkKey];
-    const url = getUrlFromText($input?.innerText);
-    if (url && typeof value === "object" && value) {
-      (value as any).hl = 1;
-
-      if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
-      sheetFile.hyperlink[hyperlinkKey] = {
-        linkType: "webpage",
-        linkAddress: url,
-      };
-
-      if (typeof (value as any).v !== "string") {
-        (value as any).v = $input?.innerText ?? url;
-      }
-
-      if ((value as any).m == null) {
-        (value as any).m = (value as any).v;
-      }
-
-      if ((value as any).fc == null) (value as any).fc = "rgb(0, 0, 255)";
-      if ((value as any).un == null) (value as any).un = 1;
-    } else if (
+    if (
       typeof value === "object" &&
       value &&
       (value as Cell).ct?.t === "inlineStr"

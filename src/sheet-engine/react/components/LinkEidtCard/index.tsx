@@ -43,11 +43,12 @@ function normalizeInlineTextForEditor(text?: string): string {
 function getSelectionOffsetsForInlineLink(
   cell: any,
   target: { linkType: string; linkAddress: string },
+  occurrenceIndex = 0,
 ): { start: number; end: number } | undefined {
   if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return undefined;
   let cursor = 0;
-  let start: number | undefined;
-  let end: number | undefined;
+  const ranges: Array<{ start: number; end: number }> = [];
+  let openStart: number | undefined;
   for (const seg of cell.ct.s as Array<{ v?: string; link?: { linkType?: string; linkAddress?: string } }>) {
     const text = normalizeInlineTextForEditor(seg?.v);
     const len = text.length;
@@ -55,15 +56,23 @@ function getSelectionOffsetsForInlineLink(
       seg?.link?.linkType === target.linkType &&
       seg?.link?.linkAddress === target.linkAddress;
     if (isMatch) {
-      if (start == null) start = cursor;
-      end = cursor + len;
-    } else if (start != null) {
-      break;
+      if (openStart == null) openStart = cursor;
+    } else {
+      if (openStart != null) {
+        ranges.push({ start: openStart, end: cursor });
+        openStart = undefined;
+      }
     }
     cursor += len;
   }
-  if (start == null || end == null || start === end) return undefined;
-  return { start, end };
+  if (openStart != null) {
+    ranges.push({ start: openStart, end: cursor });
+  }
+  if (ranges.length === 0) return undefined;
+  const idx = Math.max(0, Math.min(occurrenceIndex, ranges.length - 1));
+  const picked = ranges[idx];
+  if (picked.end <= picked.start) return undefined;
+  return picked;
 }
 
 function getFallbackCellText(cell: any): string {
@@ -421,7 +430,11 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                           draftCtx.linkCard.editingLinkIndex = idx;
                           draftCtx.linkCard.originType = item.linkType;
                           draftCtx.linkCard.originAddress = item.linkAddress;
-                          const offsets = getSelectionOffsetsForInlineLink(cell, item);
+                          const offsets = getSelectionOffsetsForInlineLink(
+                            cell,
+                            item,
+                            idx,
+                          );
                           const fullText = getFallbackCellText(cell);
                           const selectedText = getTextByOffsets(fullText, offsets);
                           const linkedText = getHyperlinkDisplayTextInCell(
@@ -510,7 +523,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                     const offsets = getSelectionOffsetsForInlineLink(cell, {
                       linkType,
                       linkAddress,
-                    });
+                    }, 0);
                     const fullText = getFallbackCellText(cell);
                     const selectedText = getTextByOffsets(fullText, offsets);
                     draftCtx.linkCard.selectionOffsets = offsets;
