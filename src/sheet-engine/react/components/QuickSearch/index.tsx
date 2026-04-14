@@ -242,37 +242,41 @@ const QuickSearchBar: React.FC = () => {
       aria-label={findAndReplace.quickSearchDialogAria}
       className="fortune-quick-search"
     >
-      <div className="fortune-quick-search-input-wrap">
-        <TextField
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onInputKeyDown}
-          placeholder={findAndReplace.quickSearchPlaceholder}
-          className={cn(
-            'fortune-quick-search-input',
-            noResults && 'fortune-quick-search-input--error',
-          )}
-          spellCheck={false}
-          aria-invalid={noResults}
-        />
-      </div>
       <div
-        className="fortune-quick-search-counter"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        {context.quickSearchLoading ? (
-          <span className="fortune-quick-search-loading">
-            {findAndReplace.quickSearchSearching}
-          </span>
-        ) : !hasQuery ? null : noResults ? (
-          findAndReplace.quickSearchNoResults
-        ) : (
-          findAndReplace.quickSearchCounterTemplate
-            .replace('{current}', String(activeIdx + 1))
-            .replace('{total}', String(matchCount))
+        className={cn(
+          'fortune-quick-search-field',
+          noResults && 'fortune-quick-search-field--error',
         )}
+      >
+        <div className="fortune-quick-search-input-wrap">
+          <TextField
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onInputKeyDown}
+            placeholder={findAndReplace.quickSearchPlaceholder}
+            className="fortune-quick-search-input"
+            spellCheck={false}
+            aria-invalid={noResults}
+          />
+        </div>
+        <div
+          className="fortune-quick-search-counter"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {context.quickSearchLoading ? (
+            <span className="fortune-quick-search-loading">
+              {findAndReplace.quickSearchSearching}
+            </span>
+          ) : !hasQuery ? null : noResults ? (
+            findAndReplace.quickSearchNoResults
+          ) : (
+            findAndReplace.quickSearchCounterTemplate
+              .replace('{current}', String(activeIdx + 1))
+              .replace('{total}', String(matchCount))
+          )}
+        </div>
       </div>
       <span className="fortune-quick-search-sr-only">{liveMsg}</span>
       <IconButton

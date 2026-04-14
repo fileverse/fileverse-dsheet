@@ -64,6 +64,7 @@ const SearchReplace: React.FC<{
   const [replaceText, setReplaceText] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResult[]>([]);
   const [selectedCell, setSelectedCell] = useState<{ r: number; c: number }>();
+  const [inlineInfo, setInlineInfo] = useState<string | null>(null);
   const { showAlert } = useAlert();
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +109,7 @@ const SearchReplace: React.FC<{
     const pre = context.findReplacePrefill;
     if (pre == null || pre === '') return;
     setSearchText(pre);
+    setInlineInfo(null);
     setContext((d) => {
       d.findReplacePrefill = undefined;
     });
@@ -117,6 +119,11 @@ const SearchReplace: React.FC<{
     context.findReplacePrefill,
     setContext,
   ]);
+
+  useEffect(() => {
+    if (!(context.showSearch || context.showReplace)) return;
+    setInlineInfo(null);
+  }, [context.showSearch, context.showReplace]);
 
   const clampTranslate = useCallback(
     (tx: number, ty: number) => {
@@ -237,6 +244,7 @@ const SearchReplace: React.FC<{
   const doReplaceAll = useCallback(() => {
     setContext((draftCtx) => {
       setSelectedCell(undefined);
+      setInlineInfo(null);
       const alertMsg = replaceAll(draftCtx, searchText, replaceText, checkMode);
       if (alertMsg != null) showAlert(alertMsg);
     });
@@ -306,6 +314,7 @@ const SearchReplace: React.FC<{
                   onChange={(e) => {
                     const v = e.target.value;
                     setSearchText(v);
+                    setInlineInfo(null);
                     if (v.length === 0) setSearchResult([]);
                   }}
                 />
@@ -423,8 +432,94 @@ const SearchReplace: React.FC<{
                 </div>
               </div>
             </div>
-            <Divider className="w-full border-t-[1px]" />
+            <div
+              className={cn(
+                'find-replace-inline-info',
+                !inlineInfo && 'find-replace-inline-info--empty',
+              )}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {inlineInfo ?? findAndReplace.noFindTip}
+            </div>
             <div className="flex flex-row gap-2 justify-end items-center mb-4">
+              <Button
+                id="searchNextBtn"
+                variant="default"
+                className="min-w-fit"
+                onClick={() => {
+                  setContext((draftCtx) => {
+                    setSearchResult([]);
+                    const alertMsg = searchNext(
+                      draftCtx,
+                      searchText,
+                      checkMode,
+                    );
+                    if (alertMsg === findAndReplace.noFindTip) {
+                      setInlineInfo(alertMsg);
+                      return;
+                    }
+                    setInlineInfo(null);
+                    if (alertMsg != null) showAlert(alertMsg);
+                  });
+                }}
+                tabIndex={0}
+                disabled={searchText.length === 0}
+              >
+                {findAndReplace.findBtn}
+              </Button>
+              <Button
+                id="searchAllBtn"
+                variant="secondary"
+                className="min-w-fit"
+                onClick={() => {
+                  setContext((draftCtx) => {
+                    setSelectedCell(undefined);
+                    if (!searchText) return;
+                    const res = searchAll(
+                      draftCtx,
+                      searchText,
+                      checkMode,
+                      searchScope,
+                    );
+                    setSearchResult(res);
+                    if (_.isEmpty(res)) {
+                      setInlineInfo(findAndReplace.noFindTip);
+                    } else {
+                      setInlineInfo(null);
+                    }
+                  });
+                }}
+                tabIndex={0}
+                disabled={searchText.length === 0}
+              >
+                {findAndReplace.allFindBtn}
+              </Button>
+              <Button
+                id="replaceBtn"
+                variant="secondary"
+                className="min-w-fit"
+                onClick={() => {
+                  setContext((draftCtx) => {
+                    setSelectedCell(undefined);
+                    const alertMsg = replace(
+                      draftCtx,
+                      searchText,
+                      replaceText,
+                      checkMode,
+                    );
+                    setInlineInfo(null);
+                    if (alertMsg != null) {
+                      showAlert(alertMsg);
+                    }
+                  });
+                }}
+                tabIndex={0}
+                disabled={searchText.length === 0 || replaceText.length === 0}
+              >
+                {findAndReplace.replaceBtn}
+              </Button>
               <Button
                 id="replaceAllBtn"
                 variant="secondary"
@@ -465,72 +560,6 @@ const SearchReplace: React.FC<{
                 disabled={searchText.length === 0 || replaceText.length === 0}
               >
                 {findAndReplace.allReplaceBtn}
-              </Button>
-              <Button
-                id="replaceBtn"
-                variant="secondary"
-                className="min-w-fit"
-                onClick={() => {
-                  setContext((draftCtx) => {
-                    setSelectedCell(undefined);
-                    const alertMsg = replace(
-                      draftCtx,
-                      searchText,
-                      replaceText,
-                      checkMode,
-                    );
-                    if (alertMsg != null) {
-                      showAlert(alertMsg);
-                    }
-                  });
-                }}
-                tabIndex={0}
-                disabled={searchText.length === 0 || replaceText.length === 0}
-              >
-                {findAndReplace.replaceBtn}
-              </Button>
-              <Button
-                id="searchAllBtn"
-                variant="secondary"
-                className="min-w-fit"
-                onClick={() => {
-                  setContext((draftCtx) => {
-                    setSelectedCell(undefined);
-                    if (!searchText) return;
-                    const res = searchAll(
-                      draftCtx,
-                      searchText,
-                      checkMode,
-                      searchScope,
-                    );
-                    setSearchResult(res);
-                    if (_.isEmpty(res)) showAlert(findAndReplace.noFindTip);
-                  });
-                }}
-                tabIndex={0}
-                disabled={searchText.length === 0}
-              >
-                {findAndReplace.allFindBtn}
-              </Button>
-              <Button
-                id="searchNextBtn"
-                variant="default"
-                className="min-w-fit"
-                onClick={() => {
-                  setContext((draftCtx) => {
-                    setSearchResult([]);
-                    const alertMsg = searchNext(
-                      draftCtx,
-                      searchText,
-                      checkMode,
-                    );
-                    if (alertMsg != null) showAlert(alertMsg);
-                  });
-                }}
-                tabIndex={0}
-                disabled={searchText.length === 0}
-              >
-                {findAndReplace.findBtn}
               </Button>
             </div>
           </div>
