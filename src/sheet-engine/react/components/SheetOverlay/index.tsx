@@ -33,6 +33,8 @@ import {
   fixRowStyleOverflowInFreeze,
   fixColumnStyleOverflowInFreeze,
   handleKeydownForZoom,
+  isLegacyFormulaRangeMode,
+  isFormulaReferenceInputMode,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext, { SetContextOptions } from '../../context';
@@ -106,6 +108,21 @@ const SheetOverlay: React.FC = () => {
   const bottomAddRowInputRef = useRef<HTMLInputElement>(null);
   const dataVerificationHintBoxRef = useRef<HTMLDivElement>(null);
   const { showAlert } = useAlert();
+  // Hide `#fortune-selection-copy` while formula refs are active (avoids double outline
+  // with `formulaRangeHighlight` / `formulaRangeSelect`; lone `=A2` may have empty highlights).
+  const editingSheetCell = (context.luckysheetCellUpdate?.length ?? 0) > 0;
+  const cellInputText = refs.cellInput.current?.innerText?.trim() ?? '';
+  const fxInputText = refs.fxInput.current?.innerText?.trim() ?? '';
+  const editingAsFormula =
+    editingSheetCell &&
+    (cellInputText.startsWith('=') || fxInputText.startsWith('='));
+  const suppressFortuneSelectionCopyOverlay =
+    context.formulaRangeSelect != null ||
+    editingAsFormula ||
+    isLegacyFormulaRangeMode(context) ||
+    isFormulaReferenceInputMode(context) ||
+    ((context.formulaRangeHighlight?.length ?? 0) > 0 && editingSheetCell);
+
   // const isMobile = browser.mobilecheck();
   const cellAreaMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -620,22 +637,29 @@ const SheetOverlay: React.FC = () => {
               />
             </div>
           )}
-          {context.formulaRangeHighlight.map((v) => {
-            const { rangeIndex, backgroundColor } = v;
-            return (
-              <div
-                key={rangeIndex}
-                id="fortune-formula-functionrange-highlight"
-                className="fortune-selection-highlight fortune-formula-functionrange-highlight"
-                style={_.omit(v, 'backgroundColor')}
-              >
+          {context.formulaRangeHighlight
+            .filter((v) => {
+              // Keyboard only (`formulaKeyboardRefSync`): skip duplicate vs `formulaRangeSelect`.
+              if (!context.formulaRangeSelect) return true;
+              if (context.formulaCache.formulaKeyboardRefSync !== true) return true;
+              return v.rangeIndex !== context.formulaRangeSelect.rangeIndex;
+            })
+            .map((v) => {
+              const { rangeIndex, backgroundColor } = v;
+              return (
                 <div
-                  className="fortune-selection-copy-hc"
-                  style={formulaRangeHighlightHcStyle(backgroundColor)}
-                />
-              </div>
-            );
-          })}
+                  key={rangeIndex}
+                  id="fortune-formula-functionrange-highlight"
+                  className="fortune-selection-highlight fortune-formula-functionrange-highlight"
+                  style={_.omit(v, 'backgroundColor')}
+                >
+                  <div
+                    className="fortune-selection-copy-hc"
+                    style={formulaRangeHighlightHcStyle(backgroundColor)}
+                  />
+                </div>
+              );
+            })}
           <div
             className="luckysheet-row-count-show luckysheet-count-show"
             id="luckysheet-row-count-show"
@@ -696,7 +720,8 @@ const SheetOverlay: React.FC = () => {
             }
             onMouseDown={(e) => e.preventDefault()}
           />
-          {(context.luckysheet_selection_range?.length ?? 0) > 0 && (
+          {(context.luckysheet_selection_range?.length ?? 0) > 0 &&
+            !suppressFortuneSelectionCopyOverlay && (
             <div id="fortune-selection-copy">
               {context.luckysheet_selection_range!.map((range) => {
                 const r1 = range.row[0];
