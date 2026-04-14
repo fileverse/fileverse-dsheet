@@ -56,7 +56,7 @@ export interface DsheetProps {
   isNewSheet: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
-  getDocumentTitle?: () => string;
+  getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;

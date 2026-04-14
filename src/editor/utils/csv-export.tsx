@@ -1,7 +1,6 @@
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
-import { getExportFilenameBase } from './export-filename';
 import { Cell } from '../../sheet-engine/core/types';
 
 const getCellValue = (v: Cell | null | undefined): string => {
@@ -12,11 +11,11 @@ const getCellValue = (v: Cell | null | undefined): string => {
   return '';
 };
 
-export const handleExportToCSV = (
+export const handleExportToCSV = async (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
   _dsheetId?: string,
-  getDocumentTitle?: () => string,
+  getDocumentTitle?: (dsheetId: string) => Promise<string>,
 ) => {
   if (!workbookRef.current || !ydocRef.current) return;
 
@@ -103,7 +102,8 @@ export const handleExportToCSV = (
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    const title = getDocumentTitle?.() ?? 'Untitled';
+    const title = (await getDocumentTitle?.(_dsheetId as string)) || 'Untitled';
+
     link.setAttribute('download', `${title + ' - ' + activeSheet.name}.csv`);
     document.body.appendChild(link);
     link.click();

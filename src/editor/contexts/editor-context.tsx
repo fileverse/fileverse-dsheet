@@ -28,7 +28,7 @@ export interface EditorContextType {
   handleOnChangePortalUpdate: () => void;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
-  getDocumentTitle?: () => string;
+  getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   dataBlockCalcFunction: { [key: string]: { [key: string]: any } };
@@ -75,7 +75,7 @@ interface EditorProviderProps {
   allowComments?: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
-  getDocumentTitle?: () => string;
+  getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
   children: React.ReactNode;
