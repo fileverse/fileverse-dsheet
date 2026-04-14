@@ -93,7 +93,7 @@ const SearchReplace: React.FC<{
     formulaCheck: false,
     linkCheck: false,
   });
-  const [searchScope, setSearchScope] = useState<FindSearchScope>('thisSheet');
+  const [searchScope, setSearchScope] = useState<FindSearchScope>('allSheets');
 
   const closeDialog = useCallback(() => {
     _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
@@ -250,6 +250,35 @@ const SearchReplace: React.FC<{
     });
   }, [checkMode, replaceText, searchText, setContext, showAlert]);
 
+  const runFindNext = useCallback(
+    (direction: 'next' | 'prev') => {
+      setContext((draftCtx) => {
+        setSearchResult([]);
+        const alertMsg = searchNext(
+          draftCtx,
+          searchText,
+          checkMode,
+          searchScope,
+          direction,
+        );
+        if (alertMsg === findAndReplace.noFindTip) {
+          setInlineInfo(alertMsg);
+          return;
+        }
+        setInlineInfo(null);
+        if (alertMsg != null) showAlert(alertMsg);
+      });
+    },
+    [
+      checkMode,
+      findAndReplace.noFindTip,
+      searchScope,
+      searchText,
+      setContext,
+      showAlert,
+    ],
+  );
+
   return (
     <div
       id="fortune-search-replace"
@@ -301,7 +330,21 @@ const SearchReplace: React.FC<{
                   className="formulaInputFocus"
                   autoFocus
                   spellCheck="false"
-                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      runFindNext(e.shiftKey ? 'prev' : 'next');
+                      return;
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeDialog();
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
                   onMouseDown={(e) => {
                     if (
                       e.target === searchInputRef.current ||
@@ -330,7 +373,21 @@ const SearchReplace: React.FC<{
                   ref={replaceInputRef}
                   className="formulaInputFocus"
                   spellCheck="false"
-                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      runFindNext(e.shiftKey ? 'prev' : 'next');
+                      return;
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeDialog();
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
                   onMouseDown={(e) => {
                     if (
                       e.target === replaceInputRef.current ||
@@ -449,20 +506,7 @@ const SearchReplace: React.FC<{
                 variant="default"
                 className="min-w-fit"
                 onClick={() => {
-                  setContext((draftCtx) => {
-                    setSearchResult([]);
-                    const alertMsg = searchNext(
-                      draftCtx,
-                      searchText,
-                      checkMode,
-                    );
-                    if (alertMsg === findAndReplace.noFindTip) {
-                      setInlineInfo(alertMsg);
-                      return;
-                    }
-                    setInlineInfo(null);
-                    if (alertMsg != null) showAlert(alertMsg);
-                  });
+                  runFindNext('next');
                 }}
                 tabIndex={0}
                 disabled={searchText.length === 0}
