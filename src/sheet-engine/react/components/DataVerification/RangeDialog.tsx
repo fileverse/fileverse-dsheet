@@ -3,17 +3,16 @@ import { Button, cn, IconButton, TextField } from '@fileverse/ui';
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 // import DataVerification from ".";
 import WorkbookContext from '../../context';
-import { useDialog } from '../../hooks/useDialog';
 // import ConditionRules from "../ConditionFormat/ConditionRules";
 import './index.css';
 import { getDisplayedRangeTxt } from './getDisplayedRangeTxt';
 
 const RangeDialog: React.FC = () => {
   const { context, setContext } = useContext(WorkbookContext);
-  const { showDialog } = useDialog();
   const {
     dataVerification,
     button,
+    findAndReplace,
     // toolbar
   } = locale(context);
   const [rangeTxt2, setRangeTxt2] = useState<string>(
@@ -21,37 +20,29 @@ const RangeDialog: React.FC = () => {
   );
 
   const close = useCallback(() => {
+    const rangeDialogType = context.rangeDialog?.type ?? '';
     setContext((ctx) => {
-      ctx.rangeDialog!.show = false;
-      ctx.rangeDialog!.singleSelect = false;
+      if (ctx.rangeDialog) {
+        ctx.rangeDialog.show = false;
+        ctx.rangeDialog.singleSelect = false;
+      }
     });
+
+    // Find & replace opens this dialog with type `searchRange`; do not trigger
+    // data verification / conditional-format synthetic button clicks.
+    if (rangeDialogType === 'searchRange') {
+      return;
+    }
+
     document.getElementById('data-verification-button')?.click();
-    // console.log("close", context,context.rangeDialog.type);
-    if (!context.rangeDialog) return;
-    const rangeDialogType = context.rangeDialog.type;
     if (rangeDialogType.indexOf('between') >= 0) {
       document.getElementById('conditional-format-button')?.click();
-      // showDialog(
-      //   <ConditionRules type="between" />,
-      //   undefined,
-      //   (locale(context).conditionformat as any).conditionformat_between
-      // );
       return;
     }
     if (rangeDialogType.indexOf('conditionRules') >= 0) {
       document.getElementById('conditional-format-button')?.click();
-      // const rulesType = rangeDialogType.substring(
-      //   "conditionRules".length,
-      //   rangeDialogType.length
-      // );
-      // showDialog(
-      //   <ConditionRules type={rulesType} />,
-      //   undefined,
-      //   (locale(context).conditionformat as any)[`conditionformat_${rulesType}`]
-      // );
     }
-    // showDialog(<DataVerification />, undefined, toolbar.dataVerification);
-  }, [setContext, showDialog, context]);
+  }, [setContext, context.rangeDialog?.type]);
 
   useEffect(() => {
     setRangeTxt2(getDisplayedRangeTxt(context));
@@ -79,7 +70,9 @@ const RangeDialog: React.FC = () => {
           className="fortune-range-dialog__heading text-heading-sm"
           data-testid="range-dialog-heading"
         >
-          {dataVerification.selectCellRange}
+          {context.rangeDialog?.type === 'searchRange'
+            ? findAndReplace.selectDataRangeTitle
+            : dataVerification.selectCellRange}
         </div>
         <IconButton
           icon="X"
@@ -97,7 +90,11 @@ const RangeDialog: React.FC = () => {
         <TextField
           className="w-full"
           readOnly
-          placeholder={dataVerification.selectCellRange2}
+          placeholder={
+            context.rangeDialog?.type === 'searchRange'
+              ? findAndReplace.rangeInputPlaceholder
+              : dataVerification.selectCellRange2
+          }
           value={rangeTxt2}
         />
       </div>

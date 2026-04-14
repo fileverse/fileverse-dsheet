@@ -61,6 +61,14 @@ export type Context = {
   presences?: Presence[];
   showSearch?: boolean;
   showReplace?: boolean;
+  /**
+   * While picking a range for Find & Replace, the modal is closed (flags false) but
+   * this stays true so `SearchReplace` stays mounted and keeps form state. Restored
+   * when the range dialog closes.
+   */
+  findReplaceHiddenDuringRangePick?: boolean;
+  /** Snapshot of `showSearch` / `showReplace` before hiding for range pick. */
+  findReplaceRestoreVisibility?: { showSearch: boolean; showReplace: boolean };
   /** In-sheet find bar (Ctrl/Cmd+F); separate from Find and Replace modal */
   showQuickSearch?: boolean;
   /** Bumped when Ctrl/Cmd+F is pressed while Quick Search is already open (refocus + select-all). */

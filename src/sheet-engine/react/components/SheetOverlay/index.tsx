@@ -152,13 +152,11 @@ const SheetOverlay: React.FC = () => {
   // Rect for the "Specific range" scope border in Find & Replace
   const searchRangeScopeRect = useMemo(() => {
     const hl = context.searchRangeScopeHighlight;
-    if (
-      !(context.showSearch || context.showReplace) ||
-      !hl ||
-      !hl.row ||
-      !hl.column
-    )
-      return null;
+    const findReplaceActive =
+      context.showSearch ||
+      context.showReplace ||
+      context.findReplaceHiddenDuringRangePick;
+    if (!findReplaceActive || !hl || !hl.row || !hl.column) return null;
     const rect = seletedHighlistByindex(
       context,
       hl.row[0]!,
@@ -171,6 +169,7 @@ const SheetOverlay: React.FC = () => {
   }, [
     context.showSearch,
     context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
     context.searchRangeScopeHighlight,
     context.visibledatarow,
     context.visibledatacolumn,
@@ -669,7 +668,9 @@ const SheetOverlay: React.FC = () => {
         />
         <ColumnHeader />
       </div>
-      {(context.showSearch || context.showReplace) && (
+      {(context.showSearch ||
+        context.showReplace ||
+        context.findReplaceHiddenDuringRangePick) && (
         <SearchReplace getContainer={() => containerRef.current!} />
       )}
       <div className="fortune-row-body">

@@ -11668,6 +11668,7 @@ export default {
     rangeInputPlaceholder: '例如 A1:D10',
     rangeInputInvalidError: '无效区域，请使用如 A1:D10 的格式',
     rangeSelectOnSheetTitle: '在表格中选择区域',
+    selectDataRangeTitle: '选择数据范围',
     replaceAllWithSkippedTip: '已替换 \${n} 处。有 \${skipped} 处因单元格含公式而被跳过。',
     replaceAllSuccessInfotext: "已将 \${n} 处「\${find}」替换为「\${replace}」",
     replaceAllSuccessWithSkippedInfotext:

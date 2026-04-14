@@ -11601,6 +11601,7 @@ export default {
     rangeInputPlaceholder: 'p. ej. A1:D10',
     rangeInputInvalidError: 'Rango no válido. Use un formato como A1:D10',
     rangeSelectOnSheetTitle: 'Seleccionar rango en la hoja',
+    selectDataRangeTitle: 'Seleccionar un rango de datos',
     replaceAllWithSkippedTip:
       'Se reemplazaron \${n} coincidencias. Se omitieron \${skipped} en celdas con fórmulas.',
     replaceAllSuccessInfotext:
