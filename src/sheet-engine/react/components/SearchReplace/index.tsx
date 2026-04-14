@@ -13,8 +13,11 @@ import {
   CheckModes,
   getSheetIndex,
   getFindRangeOnCurrentSheet,
+  parseRangeText,
+  replaceHtml,
   type FindSearchScope,
   type HyperlinkMap,
+  type Selection,
 } from '@sheet-engine/core';
 import {
   Button,
@@ -82,6 +85,8 @@ const SearchReplace: React.FC<{
     startTy: number;
   } | null>(null);
   const wasDialogOpenRef = useRef(false);
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   // Fix 5: track scroll position for virtual list
   const [scrollTop, setScrollTop] = useState(0);
@@ -94,6 +99,31 @@ const SearchReplace: React.FC<{
     linkCheck: false,
   });
   const [searchScope, setSearchScope] = useState<FindSearchScope>('allSheets');
+  const [rangeText, setRangeText] = useState('');
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
+  /** Returns the parsed Selection when scope is specificRange, or undefined otherwise. */
+  const getScopedRange = useCallback((): Selection | undefined => {
+    if (searchScope !== 'specificRange') return undefined;
+    const parsed = parseRangeText(rangeText, contextRef.current);
+    return parsed ?? undefined;
+  }, [searchScope, rangeText]);
+
+  /** Validates the range input; returns true if valid (or scope is not specificRange). */
+  const validateRangeInput = useCallback((): boolean => {
+    if (searchScope !== 'specificRange') return true;
+    if (!rangeText.trim()) {
+      setRangeError(findAndReplace.rangeInputInvalidError);
+      return false;
+    }
+    const parsed = parseRangeText(rangeText, contextRef.current);
+    if (!parsed) {
+      setRangeError(findAndReplace.rangeInputInvalidError);
+      return false;
+    }
+    setRangeError(null);
+    return true;
+  }, [searchScope, rangeText, findAndReplace.rangeInputInvalidError]);
 
   const closeDialog = useCallback(() => {
     _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
@@ -101,6 +131,7 @@ const SearchReplace: React.FC<{
       draftCtx.showSearch = false;
       draftCtx.showReplace = false;
       draftCtx.findReplacePrefill = undefined;
+      draftCtx.searchRangeScopeHighlight = null;
     });
   }, [refs.globalCache, setContext]);
 
@@ -240,42 +271,149 @@ const SearchReplace: React.FC<{
   const visibleItems = searchResult.slice(startIdx, endIdx);
   const totalHeight = searchResult.length * ROW_HEIGHT;
 
+  // When scope switches to specificRange, pre-populate rangeText from current selection.
+  const prevScopeRef = useRef<FindSearchScope>(searchScope);
+  useEffect(() => {
+    if (
+      searchScope === 'specificRange' &&
+      prevScopeRef.current !== 'specificRange'
+    ) {
+      const sel = context.luckysheet_select_save;
+      if (sel && sel.length > 0) {
+        const last = sel[sel.length - 1]!;
+        const c1 = last.column[0]!;
+        const c2 = last.column[1]!;
+        const r1 = last.row[0]!;
+        const r2 = last.row[1]!;
+        // Convert to A1 notation: chatatABC is not available here, use simple letter fn
+        const colToLetter = (n: number): string => {
+          let s = '';
+          let col = n + 1;
+          while (col > 0) {
+            const rem = (col - 1) % 26;
+            s = String.fromCharCode(65 + rem) + s;
+            col = Math.floor((col - 1) / 26);
+          }
+          return s;
+        };
+        setRangeText(`${colToLetter(c1)}${r1 + 1}:${colToLetter(c2)}${r2 + 1}`);
+      }
+    }
+    if (searchScope !== 'specificRange') {
+      setRangeError(null);
+      setContext((draftCtx) => {
+        draftCtx.searchRangeScopeHighlight = null;
+      });
+    }
+    prevScopeRef.current = searchScope;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchScope]);
+
+  // Sync scope highlight into context whenever rangeText changes (debounced).
+  useEffect(() => {
+    if (!(context.showSearch || context.showReplace)) return;
+    if (searchScope !== 'specificRange') return;
+    const t = setTimeout(() => {
+      const parsed = parseRangeText(rangeText, contextRef.current);
+      setContext((draftCtx) => {
+        draftCtx.searchRangeScopeHighlight = parsed
+          ? { row: parsed.row, column: parsed.column }
+          : null;
+      });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [
+    rangeText,
+    searchScope,
+    context.showSearch,
+    context.showReplace,
+    context.currentSheetId,
+    setContext,
+  ]);
+
+  // Read back the range text chosen via the RangeDialog picker.
+  useEffect(() => {
+    const rd = context.rangeDialog;
+    if (!rd || rd.show || rd.type !== 'searchRange') return;
+    if (rd.rangeTxt) {
+      // Strip sheet prefix if present (e.g. "Sheet1!E10:H14" → "E10:H14")
+      const txt = rd.rangeTxt.replace(/^[^!]+!/, '').toUpperCase();
+      setRangeText(txt);
+      setRangeError(null);
+    }
+  }, [context.rangeDialog]);
+
   /** Execute a do-replace wrapped in a confirmation for large counts (Fix 15) */
   const doReplaceAll = useCallback(() => {
+    const scopedRange = getScopedRange();
     setContext((draftCtx) => {
       setSelectedCell(undefined);
-      setInlineInfo(null);
-      const alertMsg = replaceAll(draftCtx, searchText, replaceText, checkMode);
-      if (alertMsg != null) showAlert(alertMsg);
+      const result = replaceAll(
+        draftCtx,
+        searchText,
+        replaceText,
+        checkMode,
+        scopedRange,
+      );
+      if (!result.ok) {
+        setInlineInfo(result.message);
+        return;
+      }
+      const { findAndReplace: fr } = locale(draftCtx);
+      const find = searchText;
+      const replace = replaceText;
+      if (result.skipped > 0) {
+        setInlineInfo(
+          replaceHtml(fr.replaceAllSuccessWithSkippedInfotext, {
+            n: result.replaced,
+            skipped: result.skipped,
+            find,
+            replace,
+          }),
+        );
+      } else {
+        setInlineInfo(
+          replaceHtml(fr.replaceAllSuccessInfotext, {
+            n: result.replaced,
+            find,
+            replace,
+          }),
+        );
+      }
     });
-  }, [checkMode, replaceText, searchText, setContext, showAlert]);
+  }, [checkMode, getScopedRange, replaceText, searchText, setContext]);
 
   const runFindNext = useCallback(
     (direction: 'next' | 'prev') => {
+      if (!validateRangeInput()) return;
+      const scopedRange = getScopedRange();
       setContext((draftCtx) => {
         setSearchResult([]);
-        const alertMsg = searchNext(
+        const result = searchNext(
           draftCtx,
           searchText,
           checkMode,
           searchScope,
           direction,
+          scopedRange,
         );
-        if (alertMsg === findAndReplace.noFindTip) {
-          setInlineInfo(alertMsg);
+        if (result.alertMsg === findAndReplace.noFindTip) {
+          setInlineInfo(result.alertMsg);
           return;
         }
         setInlineInfo(null);
-        if (alertMsg != null) showAlert(alertMsg);
+        if (result.alertMsg != null) showAlert(result.alertMsg);
       });
     },
     [
       checkMode,
       findAndReplace.noFindTip,
+      getScopedRange,
       searchScope,
       searchText,
       setContext,
       showAlert,
+      validateRangeInput,
     ],
   );
 
@@ -400,7 +538,7 @@ const SearchReplace: React.FC<{
                   onChange={(e) => setReplaceText(e.target.value)}
                 />
               </div>
-              <div className="flex flex-row gap-2 items-center">
+              <div className="flex flex-row gap-2 items-center min-w-0">
                 <span className="find-replace-label text-heading-xsm shrink-0">
                   {findAndReplace.searchScopeLabel}：
                 </span>
@@ -408,7 +546,7 @@ const SearchReplace: React.FC<{
                   value={searchScope}
                   onValueChange={(v) => setSearchScope(v as FindSearchScope)}
                 >
-                  <SelectTrigger className="flex-1 min-w-0">
+                  <SelectTrigger className="w-44 shrink-0 min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -418,8 +556,57 @@ const SearchReplace: React.FC<{
                     <SelectItem value="thisSheet">
                       {findAndReplace.searchScopeThisSheet}
                     </SelectItem>
+                    <SelectItem value="specificRange">
+                      {findAndReplace.searchScopeSpecificRange}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                {searchScope === 'specificRange' && (
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex min-w-0 flex-row items-center gap-1">
+                      <TextField
+                        className="formulaInputFocus min-w-0 flex-1"
+                        spellCheck="false"
+                        placeholder={findAndReplace.rangeInputPlaceholder}
+                        value={rangeText}
+                        onChange={(e) => {
+                          setRangeText(e.target.value);
+                          setRangeError(null);
+                        }}
+                        onBlur={() => {
+                          if (rangeText.trim()) {
+                            setRangeText(rangeText.trim().toUpperCase());
+                          }
+                          validateRangeInput();
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      />
+                      <IconButton
+                        className="shrink-0"
+                        icon="Grid"
+                        variant="ghost"
+                        title={findAndReplace.rangeSelectOnSheetTitle}
+                        tabIndex={0}
+                        onClick={() => {
+                          setContext((draftCtx) => {
+                            draftCtx.rangeDialog = {
+                              show: true,
+                              rangeTxt: rangeText,
+                              type: 'searchRange',
+                              singleSelect: false,
+                            };
+                          });
+                        }}
+                      />
+                    </div>
+                    {rangeError && (
+                      <div className="find-replace-range-error text-body-sm">
+                        {rangeError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-row gap-2">
@@ -500,7 +687,7 @@ const SearchReplace: React.FC<{
             >
               {inlineInfo ?? findAndReplace.noFindTip}
             </div>
-            <div className="flex flex-row gap-2 justify-end items-center mb-4">
+            <div className="flex flex-row gap-2 justify-end items-center mb-4 flex-wrap">
               <Button
                 id="searchNextBtn"
                 variant="default"
@@ -518,6 +705,8 @@ const SearchReplace: React.FC<{
                 variant="secondary"
                 className="min-w-fit"
                 onClick={() => {
+                  if (!validateRangeInput()) return;
+                  const scopedRange = getScopedRange();
                   setContext((draftCtx) => {
                     setSelectedCell(undefined);
                     if (!searchText) return;
@@ -526,6 +715,7 @@ const SearchReplace: React.FC<{
                       searchText,
                       checkMode,
                       searchScope,
+                      scopedRange,
                     );
                     setSearchResult(res);
                     if (_.isEmpty(res)) {
@@ -545,6 +735,8 @@ const SearchReplace: React.FC<{
                 variant="secondary"
                 className="min-w-fit"
                 onClick={() => {
+                  if (!validateRangeInput()) return;
+                  const scopedRange = getScopedRange();
                   setContext((draftCtx) => {
                     setSelectedCell(undefined);
                     const alertMsg = replace(
@@ -552,6 +744,7 @@ const SearchReplace: React.FC<{
                       searchText,
                       replaceText,
                       checkMode,
+                      scopedRange,
                     );
                     setInlineInfo(null);
                     if (alertMsg != null) {
@@ -569,10 +762,14 @@ const SearchReplace: React.FC<{
                 variant="secondary"
                 className="min-w-fit"
                 onClick={() => {
+                  if (!validateRangeInput()) return;
                   // Fix 15: Confirm before replacing a large number of cells
                   const flowdata = getFlowdata(context);
                   if (flowdata) {
-                    const range = getFindRangeOnCurrentSheet(flowdata);
+                    const scopedRange = getScopedRange();
+                    const range = scopedRange
+                      ? [scopedRange]
+                      : getFindRangeOnCurrentSheet(flowdata);
                     if (range == null) {
                       return;
                     }

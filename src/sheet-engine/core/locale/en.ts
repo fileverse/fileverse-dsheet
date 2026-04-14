@@ -11608,6 +11608,16 @@ export default {
     searchScopeLabel: 'Search',
     searchScopeAllSheets: 'All sheet',
     searchScopeThisSheet: 'This sheet',
+    searchScopeSpecificRange: 'Specific range',
+    rangeInputPlaceholder: 'e.g. A1:D10',
+    rangeInputInvalidError: 'Invalid range. Use format like A1:D10',
+    rangeSelectOnSheetTitle: 'Select range on sheet',
+    replaceAllWithSkippedTip:
+      'Replaced ${n} matches. ${skipped} matches in formula cells were skipped.',
+    replaceAllSuccessInfotext:
+      "Replaced ${n} of '${find}' with '${replace}'",
+    replaceAllSuccessWithSkippedInfotext:
+      "Replaced ${n} of '${find}' with '${replace}'. ${skipped} matches in formula cells were skipped.",
 
     allReplaceBtn: 'Replace all',
     replaceBtn: 'Replace',

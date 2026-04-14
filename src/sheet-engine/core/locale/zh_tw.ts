@@ -11623,6 +11623,14 @@ export default {
     searchScopeLabel: '搜尋範圍',
     searchScopeAllSheets: '整個活頁簿',
     searchScopeThisSheet: '目前工作表',
+    searchScopeSpecificRange: '指定範圍',
+    rangeInputPlaceholder: '例如 A1:D10',
+    rangeInputInvalidError: '無效範圍，請使用如 A1:D10 的格式',
+    rangeSelectOnSheetTitle: '在試算表中選擇範圍',
+    replaceAllWithSkippedTip: '已取代 \${n} 筆。有 \${skipped} 筆因儲存格含公式而略過。',
+    replaceAllSuccessInfotext: "已將 \${n} 處「\${find}」取代為「\${replace}」",
+    replaceAllSuccessWithSkippedInfotext:
+      "已將 \${n} 處「\${find}」取代為「\${replace}」。另有 \${skipped} 處因儲存格含公式而略過。",
 
     allReplaceBtn: '全部替換',
     replaceBtn: '替換',

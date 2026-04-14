@@ -149,6 +149,34 @@ const SheetOverlay: React.FC = () => {
     refs.globalCache.redoList.length,
     flowdataForQuickSearchDeps,
   ]);
+  // Rect for the "Specific range" scope border in Find & Replace
+  const searchRangeScopeRect = useMemo(() => {
+    const hl = context.searchRangeScopeHighlight;
+    if (
+      !(context.showSearch || context.showReplace) ||
+      !hl ||
+      !hl.row ||
+      !hl.column
+    )
+      return null;
+    const rect = seletedHighlistByindex(
+      context,
+      hl.row[0]!,
+      hl.row[1]!,
+      hl.column[0]!,
+      hl.column[1]!,
+    );
+    return rect ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.searchRangeScopeHighlight,
+    context.visibledatarow,
+    context.visibledatacolumn,
+    context.currentSheetId,
+  ]);
+
   const { showDialog } = useDialog();
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomAddRowInputRef = useRef<HTMLInputElement>(null);
@@ -711,6 +739,20 @@ const SheetOverlay: React.FC = () => {
               }}
             />
           ))}
+          {searchRangeScopeRect && (
+            <div
+              className="fortune-search-range-highlight"
+              style={{
+                position: 'absolute',
+                left: searchRangeScopeRect.left,
+                top: searchRangeScopeRect.top,
+                width: searchRangeScopeRect.width,
+                height: searchRangeScopeRect.height,
+                pointerEvents: 'none',
+                zIndex: 12,
+              }}
+            />
+          )}
           <div
             className="luckysheet-row-count-show luckysheet-count-show"
             id="luckysheet-row-count-show"

@@ -73,6 +73,11 @@ export type Context = {
     matches: { r: number; c: number }[];
     activeIndex: number;
   } | null;
+  /** Highlighted region when Find & Replace scope is "Specific range"; null when not active. */
+  searchRangeScopeHighlight?: {
+    row: number[];
+    column: number[];
+  } | null;
   linkCard?: LinkCardProps;
   rangeDialog?: RangeDialogProps; // 坐标选区鼠标选择
   // 提醒弹窗

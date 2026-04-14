@@ -178,7 +178,6 @@
 
 .find-replace-inline-info {
   margin-top: -8px;
-  margin-bottom: 8px;
   color: #000000;
   font-size: 14px;
   font-weight: bold;
@@ -188,6 +187,12 @@
 
 .find-replace-inline-info--empty {
   visibility: hidden; /* keep height but hide text when empty */
+}
+
+.find-replace-range-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: -4px;
 }
 
 /* Add scrollbar styles */
