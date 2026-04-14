@@ -6,6 +6,16 @@
   z-index: 1002;
 }
 
+#fortune-search-replace .fortune-search-replace-header {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+#fortune-search-replace .fortune-search-replace-header--dragging {
+  cursor: grabbing;
+}
+
 #fortune-search-replace .icon-close {
   position: absolute;
   right: 3px;

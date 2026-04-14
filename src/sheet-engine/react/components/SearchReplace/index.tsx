@@ -57,7 +57,7 @@ const LARGE_REPLACE_THRESHOLD = 100;
 
 const SearchReplace: React.FC<{
   getContainer: () => HTMLDivElement;
-}> = () => {
+}> = ({ getContainer }) => {
   const { context, setContext, refs } = useContext(WorkbookContext);
   const { findAndReplace } = locale(context);
   const [searchText, setSearchText] = useState('');
@@ -68,6 +68,19 @@ const SearchReplace: React.FC<{
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dragTranslate, setDragTranslate] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragTranslateRef = useRef(dragTranslate);
+  dragTranslateRef.current = dragTranslate;
+  const dragSessionRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startTx: number;
+    startTy: number;
+  } | null>(null);
+  const wasDialogOpenRef = useRef(false);
 
   // Fix 5: track scroll position for virtual list
   const [scrollTop, setScrollTop] = useState(0);
@@ -105,6 +118,105 @@ const SearchReplace: React.FC<{
     setContext,
   ]);
 
+  const clampTranslate = useCallback(
+    (tx: number, ty: number) => {
+      const container = getContainer();
+      const dialog = dialogRef.current;
+      if (!container || !dialog) return { x: tx, y: ty };
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      const dw = dialog.offsetWidth;
+      const dh = dialog.offsetHeight;
+      const loX = Math.min((dw - cw) / 2, (cw - dw) / 2);
+      const hiX = Math.max((dw - cw) / 2, (cw - dw) / 2);
+      const loY = Math.min((dh - ch) / 2, (ch - dh) / 2);
+      const hiY = Math.max((dh - ch) / 2, (ch - dh) / 2);
+      return {
+        x: Math.min(hiX, Math.max(loX, tx)),
+        y: Math.min(hiY, Math.max(loY, ty)),
+      };
+    },
+    [getContainer],
+  );
+
+  useEffect(() => {
+    const open = !!(context.showSearch || context.showReplace);
+    if (open && !wasDialogOpenRef.current) {
+      setDragTranslate({ x: 0, y: 0 });
+    }
+    wasDialogOpenRef.current = open;
+  }, [context.showSearch, context.showReplace]);
+
+  useEffect(() => {
+    const open = !!(context.showSearch || context.showReplace);
+    if (!open) return;
+    const el = getContainer();
+    const ro = new ResizeObserver(() => {
+      setDragTranslate((t) => clampTranslate(t.x, t.y));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [context.showSearch, context.showReplace, getContainer, clampTranslate]);
+
+  const endHeaderDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const session = dragSessionRef.current;
+    if (!session || session.pointerId !== e.pointerId) return;
+    dragSessionRef.current = null;
+    setIsDragging(false);
+    document.body.style.userSelect = '';
+    (document.body.style as { webkitUserSelect?: string }).webkitUserSelect =
+      '';
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+  }, []);
+
+  const onHeaderPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if ((e.target as HTMLElement).closest('button')) return;
+      const t = dragTranslateRef.current;
+      dragSessionRef.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startTx: t.x,
+        startTy: t.y,
+      };
+      setIsDragging(true);
+      document.body.style.userSelect = 'none';
+      (document.body.style as { webkitUserSelect?: string }).webkitUserSelect =
+        'none';
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [],
+  );
+
+  const onHeaderPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const session = dragSessionRef.current;
+      if (!session || session.pointerId !== e.pointerId) return;
+      const dx = e.clientX - session.startX;
+      const dy = e.clientY - session.startY;
+      setDragTranslate(
+        clampTranslate(session.startTx + dx, session.startTy + dy),
+      );
+    },
+    [clampTranslate],
+  );
+
+  useEffect(
+    () => () => {
+      dragSessionRef.current = null;
+      document.body.style.userSelect = '';
+      (document.body.style as { webkitUserSelect?: string }).webkitUserSelect =
+        '';
+    },
+    [],
+  );
+
   const setCheckMode = useCallback(
     (mode: string, value: boolean) =>
       checkModeReplace(
@@ -133,11 +245,12 @@ const SearchReplace: React.FC<{
   return (
     <div
       id="fortune-search-replace"
+      ref={dialogRef}
       className="fortune-search-replace fortune-dialog"
       style={{
         top: '50%',
         left: '50%',
-        transform: 'translate(-50%, -50%)',
+        transform: `translate(calc(-50% + ${dragTranslate.x}px), calc(-50% + ${dragTranslate.y}px))`,
       }}
       onMouseEnter={() => {
         _.set(refs.globalCache, 'searchDialog.mouseEnter', true);
@@ -147,7 +260,16 @@ const SearchReplace: React.FC<{
       }}
     >
       <div>
-        <div className="flex items-center justify-between border-b color-border-default py-3 px-6">
+        <div
+          className={cn(
+            'fortune-search-replace-header flex items-center justify-between border-b color-border-default py-3 px-6',
+            isDragging && 'fortune-search-replace-header--dragging',
+          )}
+          onPointerDown={onHeaderPointerDown}
+          onPointerMove={onHeaderPointerMove}
+          onPointerUp={endHeaderDrag}
+          onPointerCancel={endHeaderDrag}
+        >
           <h3 className="text-heading-sm">Find and replace</h3>
           <IconButton
             icon="X"
