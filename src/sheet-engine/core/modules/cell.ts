@@ -25,6 +25,7 @@ import {
 } from "./formula";
 import {
   convertSpanToShareString,
+  getHyperlinksFromInlineSegments,
   isInlineStringCell,
   isInlineStringCT,
 } from "./inline-string";
@@ -890,8 +891,12 @@ export function updateCell(
       const t = (text ?? "").trim();
       // only treat a single token as a URL (no spaces/newlines)
       if (!t || /[\s\r\n]/.test(t)) return null;
-      if (!/^(https?:\/\/|www\.)\S+$/i.test(t)) return null;
-      return t.startsWith("http") ? t : `https://${t}`;
+      if (
+        !/^(?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/\S*)?$/i.test(t)
+      ) {
+        return null;
+      }
+      return t;
     };
     // --- end ---s
 
@@ -1306,14 +1311,15 @@ export function updateCell(
       console.log("[updateCell] spill failed; falling back", e);
     }
 
-    // --- hyperlink-on-edit-paste support ---
-    // If user pasted a URL while editing (double click), persist hyperlink using sheet.hyperlink + cell.hl
+    // --- hyperlink support ---
+    const hyperlinkKey = `${r}_${c}`;
+    const prevHyperlink = sheetFile.hyperlink?.[hyperlinkKey];
     const url = getUrlFromText($input?.innerText);
     if (url && typeof value === "object" && value) {
       (value as any).hl = 1;
 
       if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
-      sheetFile.hyperlink[`${r}_${c}`] = {
+      sheetFile.hyperlink[hyperlinkKey] = {
         linkType: "webpage",
         linkAddress: url,
       };
@@ -1326,9 +1332,31 @@ export function updateCell(
         (value as any).m = (value as any).v;
       }
 
-      // Persist hyperlink look (blue + underline)
       if ((value as any).fc == null) (value as any).fc = "rgb(0, 0, 255)";
       if ((value as any).un == null) (value as any).un = 1;
+    } else if (
+      typeof value === "object" &&
+      value &&
+      (value as Cell).ct?.t === "inlineStr"
+    ) {
+      const links = getHyperlinksFromInlineSegments(value as Cell);
+      if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
+      if (links.length === 0) {
+        delete sheetFile.hyperlink[hyperlinkKey];
+      } else {
+        sheetFile.hyperlink[hyperlinkKey] =
+          links.length === 1 ? links[0] : links;
+      }
+      if (typeof value === "object" && value && "hl" in (value as any)) {
+        delete (value as any).hl;
+      }
+    } else {
+      if (prevHyperlink && sheetFile.hyperlink) {
+        delete sheetFile.hyperlink[hyperlinkKey];
+      }
+      if (typeof value === "object" && value && "hl" in (value as any)) {
+        delete (value as any).hl;
+      }
     }
 
     // --- end ---
@@ -1924,7 +1952,6 @@ export function getInlineStringHTML(
               "&#39;"
             )}'`
             : "";
-
         if (options?.isRichTextCopy) {
           if (options?.useSemanticMarkup) {
             value += buildClipboardCompatibleInlineRuns(strObj.v, styleStr);

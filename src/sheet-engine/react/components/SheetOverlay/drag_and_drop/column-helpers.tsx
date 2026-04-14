@@ -9,6 +9,7 @@ import {
   api,
   indexToColumnChar,
   remapFormulaReferencesByMap,
+  type HyperlinkEntry,
 } from '@sheet-engine/core';
 import WorkbookContext from '../../../context';
 
@@ -322,32 +323,27 @@ export const useColumnDragAndDrop = (
 
           // update formula
           const d = getFlowdata(draft);
+          const colMap: Record<number, number> = (() => {
+            const totalCols = rows[0]?.length ?? 0;
+            const order = Array.from({ length: totalCols }, (_, i) => i);
+            const sourceStart = selectedSourceCol[0] ?? sourceIndex;
+            const count = selectedSourceCol.length;
+            if (count <= 0) return {};
+            const moved = order.splice(sourceStart, count);
+            let insertAt = targetIndex;
+            if (insertAt < 0) insertAt = 0;
+            if (insertAt > order.length) insertAt = order.length;
+            order.splice(insertAt, 0, ...moved);
+            const map: Record<number, number> = {};
+            order.forEach((oldIdx, newIdx) => {
+              map[oldIdx] = newIdx;
+            });
+            return map;
+          })();
+
           d?.forEach((row) => {
             row.forEach((cell) => {
               if (cell) {
-                const colMap: Record<number, number> = {};
-                if (sourceIndex < targetIndex) {
-                  const start =
-                    selectedSourceCol?.[selectedSourceCol.length - 1];
-                  const last =
-                    selectedTargetCol?.[selectedTargetCol.length - 1];
-                  for (let c = start + 1; c <= last; c += 1) {
-                    colMap[c] = c - selectedSourceCol.length;
-                  }
-                  selectedSourceCol.forEach((c: number, index: number) => {
-                    colMap[c] = selectedTargetCol[index];
-                  });
-                } else if (sourceIndex > targetIndex) {
-                  const start = selectedTargetCol?.[0];
-                  const last = selectedSourceCol?.[0];
-                  for (let c = start; c < last; c += 1) {
-                    colMap[c] = c + selectedSourceCol.length;
-                  }
-                  selectedSourceCol.forEach((c: number, index: number) => {
-                    colMap[c] = selectedTargetCol[index];
-                  });
-                }
-
                 if (cell.f) {
                   const sheetName = _sheet.name || '';
                   cell.f = remapFormulaReferencesByMap(
@@ -369,19 +365,8 @@ export const useColumnDragAndDrop = (
               const colRow = item.split('_');
               if (colRow.length !== 2) return;
               const presentcol = parseInt(colRow[1], 10);
-              let updatedCol = presentcol;
-              if (selectedSourceCol.includes(presentcol)) {
-                const index = selectedSourceCol.indexOf(presentcol);
-                const target = selectedTargetCol[index];
-                updatedCol = target;
-              } else if (presentcol > sourceIndex && presentcol < targetIndex) {
-                updatedCol -= selectedSourceCol.length;
-              } else if (
-                presentcol < sourceIndex &&
-                presentcol >= targetIndex
-              ) {
-                updatedCol += selectedSourceCol.length;
-              }
+              const updatedCol =
+                colMap[presentcol] != null ? colMap[presentcol] : presentcol;
               newDataVerification[`${colRow[0]}_${updatedCol}`] = itemData;
             });
             _sheet.dataVerification = newDataVerification;
@@ -390,7 +375,7 @@ export const useColumnDragAndDrop = (
           if (_sheet.hyperlink) {
             const newHyperlink: Record<
               string,
-              { linkType: string; linkAddress: string }
+              HyperlinkEntry | HyperlinkEntry[]
             > = {};
             Object.keys(_sheet.hyperlink).forEach((key) => {
               const itemData = _sheet.hyperlink?.[key];
@@ -399,18 +384,8 @@ export const useColumnDragAndDrop = (
               if (parts.length !== 2) return;
               const row = parts[0];
               const presentCol = parseInt(parts[1], 10);
-              let updatedCol = presentCol;
-              if (selectedSourceCol.includes(presentCol)) {
-                const index = selectedSourceCol.indexOf(presentCol);
-                updatedCol = selectedTargetCol[index];
-              } else if (presentCol > sourceIndex && presentCol < targetIndex) {
-                updatedCol -= selectedSourceCol.length;
-              } else if (
-                presentCol < sourceIndex &&
-                presentCol >= targetIndex
-              ) {
-                updatedCol += selectedSourceCol.length;
-              }
+              const updatedCol =
+                colMap[presentCol] != null ? colMap[presentCol] : presentCol;
               newHyperlink[`${row}_${updatedCol}`] = itemData;
             });
             _sheet.hyperlink = newHyperlink;
@@ -418,14 +393,7 @@ export const useColumnDragAndDrop = (
 
           // update calc chain
           _sheet.calcChain?.forEach((item) => {
-            if (selectedSourceCol.includes(item.c)) {
-              const index = selectedSourceCol.indexOf(item.c);
-              item.c = selectedTargetCol[index];
-            } else if (item.c > sourceIndex && item.c < targetIndex) {
-              item.c -= selectedSourceCol.length;
-            } else if (item.c < sourceIndex && item.c >= targetIndex) {
-              item.c += selectedSourceCol.length;
-            }
+            item.c = colMap[item.c] != null ? colMap[item.c] : item.c;
           });
 
           // update data block

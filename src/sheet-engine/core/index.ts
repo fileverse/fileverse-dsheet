@@ -78,7 +78,6 @@ export {
   // formula
   FormulaCache,
   groupValuesRefresh,
-  execFunctionGroup,
   setCaretPosition,
   getrangeseleciton,
   getFormulaEditorOwner,
@@ -104,6 +103,10 @@ export {
   // inline-string
   isInlineStringCell,
   getInlineStringNoStyle,
+  applyLinkToSelection,
+  getHyperlinksFromInlineSegments,
+  getUniformLinkFromWindowSelectionInEditor,
+  getHyperlinkAtCaretInContentEditable,
   // location
   rowLocation,
   rowLocationByIndex,
@@ -153,6 +156,7 @@ export {
   handleTextSize,
   handleSum,
   handleLink,
+  captureLinkEditorOpenSnapshot,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   handleScreenShot,
@@ -186,8 +190,16 @@ export {
   // hyperlink
   getCellRowColumn,
   getCellHyperlink,
+  getCellHyperlinks,
+  getHyperlinkDisplayTextInCell,
+  getInlineLinkPlainRange,
+  getUniformLinkCoveringPlainRange,
+  getUniformLinkAtPlainOffset,
   saveHyperlink,
   removeHyperlink,
+  removeHyperlinkForLink,
+  updateHyperlinkForLink,
+  syncLinkCardAfterHyperlinkChange,
   showLinkCard,
   goToLink,
   isLinkValid,
@@ -256,6 +268,7 @@ export {
   spillSortResult,
   // formula (internal)
   execfunction,
+  execFunctionGroup,
   insertUpdateFunctionGroup,
   remapFormulaReferencesByMap,
   // ConditionFormat (internal)
@@ -294,6 +307,7 @@ export type {
   Cell,
   CellWithRowAndCol,
   CellMatrix,
+  HyperlinkEntry,
   Selection,
   Presence,
   Sheet,

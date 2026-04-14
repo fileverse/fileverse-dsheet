@@ -12,10 +12,14 @@ import {
   saveHyperlink,
   LinkCardProps,
   removeHyperlink,
-  replaceHtml,
+  removeHyperlinkForLink,
+  updateHyperlinkForLink,
+  getHyperlinkDisplayTextInCell,
+  getFlowdata,
   goToLink,
   isLinkValid,
   jfrefreshgrid,
+  normalizeSelection,
 } from '@sheet-engine/core';
 import {
   Button,
@@ -32,6 +36,61 @@ import _ from 'lodash';
 import WorkbookContext from '../../context';
 import SVGIcon from '../SVGIcon';
 
+function normalizeInlineTextForEditor(text?: string): string {
+  return (text ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+function getSelectionOffsetsForInlineLink(
+  cell: any,
+  target: { linkType: string; linkAddress: string },
+): { start: number; end: number } | undefined {
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return undefined;
+  let cursor = 0;
+  let start: number | undefined;
+  let end: number | undefined;
+  for (const seg of cell.ct.s as Array<{ v?: string; link?: { linkType?: string; linkAddress?: string } }>) {
+    const text = normalizeInlineTextForEditor(seg?.v);
+    const len = text.length;
+    const isMatch =
+      seg?.link?.linkType === target.linkType &&
+      seg?.link?.linkAddress === target.linkAddress;
+    if (isMatch) {
+      if (start == null) start = cursor;
+      end = cursor + len;
+    } else if (start != null) {
+      break;
+    }
+    cursor += len;
+  }
+  if (start == null || end == null || start === end) return undefined;
+  return { start, end };
+}
+
+function getFallbackCellText(cell: any): string {
+  if (
+    cell?.ct?.t === 'inlineStr' &&
+    Array.isArray((cell as { ct?: { s?: Array<{ v?: string }> } }).ct?.s)
+  ) {
+    return ((cell as { ct?: { s?: Array<{ v?: string }> } }).ct?.s || [])
+      .map((s) => s?.v ?? '')
+      .join('')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+  }
+  if (cell?.v == null || Array.isArray(cell?.v)) return '';
+  return `${cell.v}`;
+}
+
+function getTextByOffsets(
+  text: string,
+  offsets?: { start: number; end: number },
+): string {
+  if (!offsets) return '';
+  const start = Math.max(0, Math.min(text.length, offsets.start));
+  const end = Math.max(start, Math.min(text.length, offsets.end));
+  return text.slice(start, end);
+}
+
 export const LinkEditCard: React.FC<LinkCardProps> = ({
   r,
   c,
@@ -39,6 +98,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   originText,
   originType,
   originAddress,
+  links,
+  editingLinkIndex,
   isEditing,
   position,
   applyToSelection,
@@ -54,8 +115,15 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   const { insertLink, linkTypeList } = locale(context);
   const isLinkAddressValid = isLinkValid(context, linkType, linkAddress);
 
+  const linksToShow = useMemo(() => {
+    if (links && links.length > 0) return links;
+    if (originAddress)
+      return [{ linkType: originType, linkAddress: originAddress }];
+    return [];
+  }, [links, originAddress, originType]);
+
   const isButtonDisabled = useMemo(() => {
-    if (!linkText.trim()) return true;
+    // if (!linkText.trim()) return true;
     if (linkType === 'webpage') {
       return !linkAddress.trim() || !isLinkAddressValid.isValid;
     }
@@ -76,11 +144,41 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     if (isButtonDisabled) return;
     _.set(refs.globalCache, 'linkCard.mouseEnter', false);
     setContext((draftCtx) => {
+      const list = draftCtx.linkCard?.links;
+      const idx = draftCtx.linkCard?.editingLinkIndex;
+      const cell = getFlowdata(draftCtx)?.[r]?.[c];
+      const isInline =
+        cell?.ct?.t === 'inlineStr' && Array.isArray((cell as { ct?: { s?: unknown[] } }).ct?.s);
+      if (list && list.length > 0 && isInline) {
+        const targetIdx =
+          typeof idx === 'number' && idx >= 0 && idx < list.length ? idx : 0;
+        const resolvedLinkText = linkText.trim() || linkAddress;
+        updateHyperlinkForLink(
+          draftCtx,
+          r,
+          c,
+          list[targetIdx],
+          resolvedLinkText,
+          linkType,
+          linkAddress,
+        );
+        draftCtx.luckysheetCellUpdate = [];
+        jfrefreshgrid(draftCtx, null, undefined);
+        return;
+      }
+      const wasInCellEdit =
+        draftCtx.luckysheetCellUpdate?.length === 2 &&
+        draftCtx.luckysheetCellUpdate[0] === r &&
+        draftCtx.luckysheetCellUpdate[1] === c;
       saveHyperlink(draftCtx, r, c, linkText, linkType, linkAddress, {
         applyToSelection: applyToSelection || undefined,
-        cellInput: refs.cellInput.current,
+        cellInput: wasInCellEdit ? refs.cellInput.current ?? undefined : undefined,
+        applySelectionFromModel: !!(applyToSelection && !wasInCellEdit),
       });
       if (!applyToSelection) {
+        draftCtx.luckysheetCellUpdate = [];
+        jfrefreshgrid(draftCtx, null, undefined);
+      } else if (!wasInCellEdit) {
         draftCtx.luckysheetCellUpdate = [];
         jfrefreshgrid(draftCtx, null, undefined);
       }
@@ -122,7 +220,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   );
 
   const renderToolbarButton = useCallback(
-    (iconId: string, onClick: () => void) => {
+    (iconId: string, onClick: () => void, testIdSuffix = '') => {
       const iconIdClass = iconId
         .replace(/[^a-zA-Z0-9-]/g, '-')
         .replace(/-+/g, '-');
@@ -130,9 +228,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         <div
           className={`fortune-link-card__icon fortune-link-card__action fortune-link-card__action--${iconIdClass} fortune-toolbar-button`}
           data-icon-id={iconId}
-          onClick={onClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
           tabIndex={0}
-          data-testid={`link-card-action-${iconId}`}
+          data-testid={`link-card-action-${iconId}${testIdSuffix}`}
         >
           <SVGIcon name={iconId} style={{ width: 16, height: 16 }} />
         </div>
@@ -145,7 +246,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     setLinkAddress(originAddress);
     setLinkText(originText);
     setLinkType(originType);
-  }, [rc, originAddress, originText, originType]);
+  }, [rc, originAddress, originText, originType, editingLinkIndex]);
 
   // Position card above or below drag handle depending on viewport
   useEffect(() => {
@@ -177,18 +278,76 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     }
     setCardTop(newTop);
   }, [position.cellBottom, isEditing]);
+  useLayoutEffect(() => {
+    if (!isEditing) return;
+    let cancelled = false;
+    // Double rAF: TextFields mount after layout; URL field should always take focus for insert.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (linkType === 'webpage') {
+          const urlEl = linkAddressRef.current;
+          if (urlEl) {
+            urlEl.focus({ preventScroll: true });
+            const len = urlEl.value?.length ?? 0;
+            urlEl.setSelectionRange(len, len);
+            return;
+          }
+        }
+        const sheetTrigger = cardRef.current?.querySelector(
+          '.fortune-sheet-select',
+        ) as HTMLElement | null;
+        if (sheetTrigger) {
+          sheetTrigger.focus({ preventScroll: true });
+          return;
+        }
+        linkTextRef.current?.focus({ preventScroll: true });
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, rc, linkType]);
+
   useEffect(() => {
-    // for some reasons input auto focus affects the the card position, so we use refs to handle auto focus
-    if (linkAddressRef.current && !linkAddress && isEditing) {
-      linkAddressRef.current?.focus({ preventScroll: true });
-    }
-    if (linkTextRef.current && !linkText && isEditing) {
-      linkTextRef.current?.focus({ preventScroll: true });
-    }
-  }, [linkAddressRef, isEditing, linkTextRef]);
+    if (!isEditing) return undefined;
+    const openedAt = Date.now();
+
+    const isInsideLinkDropdownPortal = (target: Node | null) => {
+      if (!(target instanceof Element)) return false;
+      return !!target.closest(
+        '.fortune-link-type-dropdown, .fortune-sheet-dropdown, [data-radix-popper-content-wrapper]',
+      );
+    };
+
+    const onPointerOutside = (e: MouseEvent | TouchEvent) => {
+      // Ignore the click that opened the modal (e.g. toolbar hyperlink button),
+      // otherwise it is treated as an outside click and closes immediately.
+      if (Date.now() - openedAt < 120) return;
+      const card = cardRef.current;
+      const target = e.target as Node | null;
+      if (!card || !target) return;
+      if (card.contains(target)) return;
+      if (isInsideLinkDropdownPortal(target)) return;
+      hideLinkCard();
+    };
+
+    // Use bubble-phase click/touchend so sheet/input lifecycle (focus/selection/update)
+    // finishes first; capture mousedown here could prematurely clear editor state.
+    document.addEventListener('click', onPointerOutside);
+    document.addEventListener('touchend', onPointerOutside);
+    return () => {
+      document.removeEventListener('click', onPointerOutside);
+      document.removeEventListener('touchend', onPointerOutside);
+    };
+  }, [hideLinkCard, isEditing]);
+
   if (!isEditing) {
+    const multi = linksToShow.length > 1;
+
     return (
       <div
+        ref={cardRef}
         {...containerEvent}
         onKeyDown={(e) => {
           e.stopPropagation();
@@ -197,58 +356,183 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         style={{ left: position.cellLeft + 20, top: position.cellBottom - 5 }}
         data-testid="link-card"
       >
-        <div
-          className="fortune-link-card__info link-content"
-          onClick={() => {
-            setContext((draftCtx) =>
-              goToLink(
-                draftCtx,
-                r,
-                c,
-                linkType,
-                linkAddress,
-                refs.scrollbarX.current!,
-                refs.scrollbarY.current!,
-              ),
-            );
-          }}
-          tabIndex={0}
-          data-testid="link-card-info-open"
-        >
-          {linkType === 'webpage'
-            ? insertLink.openLink
-            : replaceHtml(insertLink.goTo, { linkAddress })}
-        </div>
-        {(context.allowEdit === true ||
-          (context.isFlvReadOnly && linkType === 'webpage')) && (
-          <div className="divider" />
+        {multi ? (
+          <div className="fortune-link-card__multi-list">
+            {linksToShow.map((item, idx) => (
+              <div
+                key={`${item.linkType}-${item.linkAddress}-${idx}`}
+                className="fortune-link-card__multi-row"
+              >
+                <div
+                  className="fortune-link-card__info link-content fortune-link-card__multi-info fortune-link-card__link-truncate"
+                  onClick={() => {
+                    setContext((draftCtx) =>
+                      goToLink(
+                        draftCtx,
+                        r,
+                        c,
+                        item.linkType,
+                        item.linkAddress,
+                        refs.scrollbarX.current!,
+                        refs.scrollbarY.current!,
+                      ),
+                    );
+                  }}
+                  tabIndex={0}
+                  data-testid={`link-card-info-open-${idx}`}
+                >
+                  <span
+                    className="fortune-link-card__link-label"
+                    title={item.linkAddress}
+                  >
+                    {item.linkAddress.trim() || insertLink.openLink}
+                  </span>
+                </div>
+                <div className="fortune-link-card__row-actions">
+                  {(context.allowEdit === true ||
+                    (context.isFlvReadOnly && item.linkType === 'webpage')) &&
+                    item.linkType === 'webpage' &&
+                    renderToolbarButton(
+                      'copy',
+                      () => {
+                        navigator.clipboard.writeText(item.linkAddress);
+                        hideLinkCard();
+                      },
+                      `-${idx}`,
+                    )}
+                  {context.allowEdit === true &&
+                    !context.isFlvReadOnly &&
+                    renderToolbarButton(
+                      'pencil',
+                      () =>
+                        setContext((draftCtx) => {
+                          if (draftCtx.linkCard == null || !draftCtx.allowEdit) return;
+                          const cell = getFlowdata(draftCtx)?.[r]?.[c];
+                          draftCtx.luckysheet_select_save = normalizeSelection(draftCtx, [
+                            {
+                              row: [r, r],
+                              column: [c, c],
+                              row_focus: r,
+                              column_focus: c,
+                            },
+                          ]);
+                          draftCtx.luckysheetCellUpdate = [r, c];
+                          draftCtx.linkCard.isEditing = true;
+                          draftCtx.linkCard.editingLinkIndex = idx;
+                          draftCtx.linkCard.originType = item.linkType;
+                          draftCtx.linkCard.originAddress = item.linkAddress;
+                          const offsets = getSelectionOffsetsForInlineLink(cell, item);
+                          const fullText = getFallbackCellText(cell);
+                          const selectedText = getTextByOffsets(fullText, offsets);
+                          const linkedText = getHyperlinkDisplayTextInCell(
+                            cell ?? null,
+                            item,
+                          );
+                          draftCtx.linkCard.originText =
+                            selectedText || linkedText || '';
+                          draftCtx.linkCard.applyToSelection = true;
+                          draftCtx.linkCard.selectionOffsets = offsets;
+                          draftCtx.linkCard.linkInsertOffset = offsets?.end;
+                        }),
+                      `-${idx}`,
+                    )}
+                  {context.allowEdit === true &&
+                    !context.isFlvReadOnly &&
+                    renderToolbarButton(
+                      'unlink',
+                      () =>
+                        setContext((draftCtx) => {
+                          _.set(refs.globalCache, 'linkCard.mouseEnter', false);
+                          removeHyperlinkForLink(draftCtx, r, c, item);
+                          jfrefreshgrid(draftCtx, null, undefined);
+                        }),
+                      `-${idx}`,
+                    )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div
+              className="fortune-link-card__info link-content fortune-link-card__link-truncate"
+              onClick={() => {
+                setContext((draftCtx) =>
+                  goToLink(
+                    draftCtx,
+                    r,
+                    c,
+                    linkType,
+                    linkAddress,
+                    refs.scrollbarX.current!,
+                    refs.scrollbarY.current!,
+                  ),
+                );
+              }}
+              tabIndex={0}
+              data-testid="link-card-info-open"
+            >
+              <span
+                className="fortune-link-card__link-label"
+                title={originAddress || linkAddress}
+              >
+                {(originAddress || linkAddress).trim() || insertLink.openLink}
+              </span>
+            </div>
+            {(context.allowEdit === true ||
+              (context.isFlvReadOnly && linkType === 'webpage')) && (
+                <div className="divider" />
+              )}
+            {(context.allowEdit === true || context.isFlvReadOnly) &&
+              linkType === 'webpage' &&
+              renderToolbarButton('copy', () => {
+                navigator.clipboard.writeText(originAddress);
+                hideLinkCard();
+              })}
+            {context.allowEdit === true &&
+              !context.isFlvReadOnly &&
+              renderToolbarButton('pencil', () =>
+                setContext((draftCtx) => {
+                  if (draftCtx.linkCard != null && draftCtx.allowEdit) {
+                    const cell = getFlowdata(draftCtx)?.[r]?.[c];
+                    draftCtx.luckysheet_select_save = normalizeSelection(draftCtx, [
+                      {
+                        row: [r, r],
+                        column: [c, c],
+                        row_focus: r,
+                        column_focus: c,
+                      },
+                    ]);
+                    draftCtx.luckysheetCellUpdate = [r, c];
+                    draftCtx.linkCard.isEditing = true;
+                    draftCtx.linkCard.editingLinkIndex = undefined;
+                    draftCtx.linkCard.applyToSelection = true;
+                    const offsets = getSelectionOffsetsForInlineLink(cell, {
+                      linkType,
+                      linkAddress,
+                    });
+                    const fullText = getFallbackCellText(cell);
+                    const selectedText = getTextByOffsets(fullText, offsets);
+                    draftCtx.linkCard.selectionOffsets = offsets;
+                    draftCtx.linkCard.originText = selectedText || '';
+                    draftCtx.linkCard.linkInsertOffset = offsets?.end;
+                  }
+                }),
+              )}
+            {context.allowEdit === true && !context.isFlvReadOnly && (
+              <div className="divider" />
+            )}
+            {context.allowEdit === true &&
+              !context.isFlvReadOnly &&
+              renderToolbarButton('unlink', () =>
+                setContext((draftCtx) => {
+                  _.set(refs.globalCache, 'linkCard.mouseEnter', false);
+                  removeHyperlink(draftCtx, r, c);
+                  jfrefreshgrid(draftCtx, null, undefined);
+                }),
+              )}
+          </>
         )}
-        {(context.allowEdit === true || context.isFlvReadOnly) &&
-          linkType === 'webpage' &&
-          renderToolbarButton('copy', () => {
-            navigator.clipboard.writeText(originAddress);
-            hideLinkCard();
-          })}
-        {context.allowEdit === true &&
-          !context.isFlvReadOnly &&
-          renderToolbarButton('pencil', () =>
-            setContext((draftCtx) => {
-              if (draftCtx.linkCard != null && draftCtx.allowEdit) {
-                draftCtx.linkCard.isEditing = true;
-              }
-            }),
-          )}
-        {context.allowEdit === true && !context.isFlvReadOnly && (
-          <div className="divider" />
-        )}
-        {context.allowEdit === true &&
-          !context.isFlvReadOnly &&
-          renderToolbarButton('unlink', () =>
-            setContext((draftCtx) => {
-              _.set(refs.globalCache, 'linkCard.mouseEnter', false);
-              removeHyperlink(draftCtx, r, c);
-            }),
-          )}
       </div>
     );
   }
@@ -298,7 +582,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         <div className="fortune-link-card__icon input-icon">
           <LucideIcon name="ALargeSmall" />
         </div>
-        <TextField
+        {true && <TextField
           ref={linkTextRef}
           placeholder="Display text"
           value={linkText}
@@ -311,7 +595,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
             }
           }}
           className="fortune-link-input"
-        />
+        />}
       </div>
 
       {linkType === 'webpage' && (
@@ -331,9 +615,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
               }
             }}
             onChange={(e) => setLinkAddress(e.target.value)}
-            className={`fortune-link-input ${
-              !linkAddress || isLinkAddressValid.isValid ? '' : 'error-input'
-            }`}
+            className={`fortune-link-input ${!linkAddress || isLinkAddressValid.isValid ? '' : 'error-input'
+              }`}
           />
         </div>
       )}
@@ -370,7 +653,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         onClick={handleInsertLink}
         data-testid="link-card-cta-insert"
       >
-        Insert link
+        {links && links.length > 0 ? 'Save link' : 'Insert link'}
       </Button>
     </div>
   );

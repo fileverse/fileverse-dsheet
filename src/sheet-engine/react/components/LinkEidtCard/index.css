@@ -34,6 +34,39 @@
   min-width: 280px;
 }
 
+.fortune-link-card__multi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+}
+
+.fortune-link-card__multi-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.fortune-link-card__multi-row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.fortune-link-card__multi-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fortune-link-card__row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .fortune-link-type-select {
   width: 100% !important;
 }
@@ -103,6 +136,22 @@
 
 .fortune-link-modify-modal .link-content {
   margin-right: 6px;
+}
+
+.fortune-link-card__link-truncate {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.fortune-link-card__link-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.35;
+  color: inherit;
 }
 
 .fortune-link-modify-modal .link-content:hover {

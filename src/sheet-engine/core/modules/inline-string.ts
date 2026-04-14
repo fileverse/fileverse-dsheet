@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { Context } from "../context";
-import { Cell, CellMatrix, CellStyle } from "../types";
+import { Cell, CellMatrix, CellStyle, HyperlinkEntry } from "../types";
 import { getCellValue, getFontStyleByCell } from "./cell";
 import { selectTextContent, selectTextContentCross } from "./cursor";
 
@@ -135,6 +135,54 @@ export function convertCssToStyleList(cssText: string, originCell: Cell) {
 
 export type InlineSegmentLink = { linkType: string; linkAddress: string };
 
+export function getHyperlinksFromInlineSegments(
+  cell: Cell | null | undefined
+): InlineSegmentLink[] {
+  const out: InlineSegmentLink[] = [];
+  const seen = new Set<string>();
+  if (cell?.ct?.t === "inlineStr" && Array.isArray(cell.ct.s)) {
+    for (const seg of cell.ct.s as { link?: InlineSegmentLink; v?: string }[]) {
+      const link = seg?.link;
+      if (link?.linkType && link?.linkAddress) {
+        const key = `${link.linkType}\u0001${link.linkAddress}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          out.push({ linkType: link.linkType, linkAddress: link.linkAddress });
+        }
+      }
+    }
+  }
+  return out;
+}
+
+function normalizeCssColorForCompare(fc: string): string {
+  return fc.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+/** Matches `getLinkStyleCssText` / apply-hyperlink blue foreground in the editor. */
+export function isDefaultHyperlinkForeground(fc: string): boolean {
+  const n = normalizeCssColorForCompare(fc);
+  return (
+    n === "rgb(0,0,255)" ||
+    n === "#0000ff" ||
+    n === "#00f" ||
+    n === "blue"
+  );
+}
+
+/**
+ * Drop fc/un that hyperlink insertion adds to inline runs (link metadata is removed separately).
+ * Preserves user bold/italic/etc. on the same segment.
+ */
+export function stripInlineSegmentHyperlinkDecoration(seg: CellStyle) {
+  if (typeof seg.fc === "string" && isDefaultHyperlinkForeground(seg.fc)) {
+    delete seg.fc;
+  }
+  if (seg.un === 1) {
+    delete seg.un;
+  }
+}
+
 export function convertSpanToShareString(
   // eslint-disable-next-line no-undef
   $dom: NodeListOf<HTMLSpanElement>,
@@ -161,6 +209,15 @@ export function convertSpanToShareString(
 
     const curStyleListString = JSON.stringify(_.omit(styleList, "link"));
     let v = span.innerText;
+    if (span.dataset?.noLinkAnchor === "1") {
+      // Anchor span inserted after link insertion to break hyperlink continuation.
+      // If user types in this span it becomes "\u00A0text".
+      // Preserve one real separator space so linked + non-linked words don't merge.
+      if (v.startsWith("\u00A0")) {
+        v = v.length === 1 ? "" : ` ${v.slice(1)}`;
+      }
+      if (v.length === 0) continue;
+    }
     v = v.replace(/\n/g, "\r\n");
     if (i === $dom.length - 1) {
       if (v.endsWith("\r\n") && !v.endsWith("\r\n\r\n")) {
@@ -722,6 +779,70 @@ function getLinkStyleCssText(baseCssText: string): string {
   return css;
 }
 
+function placeCaretInPlainSpanAfterLinkedSpan(linkSpan: HTMLElement) {
+  const sel = window.getSelection();
+  if (!sel) return;
+
+  let target = linkSpan.nextElementSibling as HTMLElement | null;
+  const canReuse =
+    target &&
+    target.tagName === "SPAN" &&
+    !target.dataset?.linkType &&
+    !target.dataset?.linkAddress;
+
+  if (!canReuse) {
+    target = document.createElement("span");
+    target.className = "luckysheet-input-span";
+    target.setAttribute("data-no-link-anchor", "1");
+    target.textContent = "\u00A0";
+    linkSpan.insertAdjacentElement("afterend", target);
+  } else if (!target!.textContent) {
+    target!.setAttribute("data-no-link-anchor", "1");
+    target!.textContent = "\u00A0";
+  }
+
+  const textNode = target!.firstChild;
+  if (!textNode) return;
+  const r = document.createRange();
+  r.setStart(textNode, textNode.textContent?.length || 0);
+  r.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
+
+function ensureEditorEndsWithPlainAnchorIfLastIsLink(editor: HTMLDivElement) {
+  const spans = editor.querySelectorAll("span");
+  if (spans.length === 0) return;
+  const last = spans[spans.length - 1] as HTMLElement;
+  if (!last?.dataset?.linkType || !last?.dataset?.linkAddress) return;
+  const anchor = document.createElement("span");
+  anchor.className = "luckysheet-input-span";
+  anchor.setAttribute("data-no-link-anchor", "1");
+  anchor.textContent = "\u00A0";
+  last.insertAdjacentElement("afterend", anchor);
+}
+
+function getHtmlOffsetWithinSpan(
+  span: HTMLElement,
+  container: Node,
+  textOffset: number
+): number {
+  if (container.nodeType !== Node.TEXT_NODE || span.childNodes.length <= 1) {
+    return textOffset;
+  }
+  let htmlPre = 0;
+  for (let i = 0; i < span.childNodes.length; i += 1) {
+    const child = span.childNodes[i];
+    if (child === container) break;
+    if (child.nodeType === Node.TEXT_NODE) {
+      htmlPre += (child.textContent || "").length;
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      htmlPre += (child as HTMLElement).outerHTML.length;
+    }
+  }
+  return htmlPre + textOffset;
+}
+
 /** Applies link style (blue + underline) and data-link-* to the current selection in cellInput. Persisted on blur via convertSpanToShareString. */
 export function applyLinkToSelection(
   cellInput: HTMLDivElement,
@@ -741,8 +862,12 @@ export function applyLinkToSelection(
     const content = span?.innerHTML || "";
     const fullContent = $textEditor.innerHTML;
     const inherit = fullContent.substring(0, 5) !== "<span";
-    const s2 = startOffset;
-    const s3 = endOffset;
+    const s2 = span
+      ? getHtmlOffsetWithinSpan(span, startContainer, startOffset)
+      : startOffset;
+    const s3 = span
+      ? getHtmlOffsetWithinSpan(span, endContainer, endOffset)
+      : endOffset;
     const left = content.substring(0, s2);
     const mid = content.substring(s2, s3);
     const right = content.substring(s3, content.length);
@@ -795,8 +920,9 @@ export function applyLinkToSelection(
     const newSpans = $textEditor.querySelectorAll("span");
     const linkSpanIndex = left === "" ? 0 : 1;
     if (newSpans[linkSpanIndex]) {
-      selectTextContent(newSpans[linkSpanIndex]);
+      placeCaretInPlainSpanAfterLinkedSpan(newSpans[linkSpanIndex] as HTMLElement);
     }
+    ensureEditorEndsWithPlainAnchorIfLastIsLink($textEditor);
   } else if (
     startContainer.parentElement?.tagName === "SPAN" &&
     endContainer.parentElement?.tagName === "SPAN"
@@ -808,8 +934,12 @@ export function applyLinkToSelection(
     const endSpanIndex = _.indexOf(allSpans, endSpan);
     const startContent = startSpan?.innerHTML || "";
     const endContent = endSpan?.innerHTML || "";
-    const s2 = startOffset;
-    const s3 = endOffset;
+    const s2 = startSpan
+      ? getHtmlOffsetWithinSpan(startSpan, startContainer, startOffset)
+      : startOffset;
+    const s3 = endSpan
+      ? getHtmlOffsetWithinSpan(endSpan, endContainer, endOffset)
+      : endOffset;
     const sleft = startContent.substring(0, s2);
     const sright = startContent.substring(s2, startContent.length);
     const eleft = endContent.substring(0, s3);
@@ -870,6 +1000,69 @@ export function applyLinkToSelection(
     spans = $textEditor.querySelectorAll("span");
     const startSel = sleft === "" ? startSpanIndex : startSpanIndex + 1;
     const endSel = eright === "" ? endSpanIndex : endSpanIndex + 1;
-    selectTextContentCross(spans[startSel], spans[endSel]);
+    if (spans[endSel]) {
+      placeCaretInPlainSpanAfterLinkedSpan(spans[endSel] as HTMLElement);
+    } else {
+      selectTextContentCross(spans[startSel], spans[endSel]);
+    }
+    ensureEditorEndsWithPlainAnchorIfLastIsLink($textEditor);
   }
+}
+
+function closestLinkFromNode(
+  node: Node | null,
+  root: HTMLElement
+): HyperlinkEntry | null {
+  let n: Node | null = node;
+  while (n && n !== root) {
+    if (n instanceof HTMLElement) {
+      const lt = n.dataset?.linkType;
+      const la = n.dataset?.linkAddress;
+      if (lt && la) return { linkType: lt, linkAddress: la };
+    }
+    n = n.parentNode;
+  }
+  return null;
+}
+
+/**
+ * When the window selection is still inside the cell editor, read hyperlink from the
+ * linked span(s) at both range endpoints (same link required).
+ */
+export function getUniformLinkFromWindowSelectionInEditor(
+  root: HTMLElement
+): HyperlinkEntry | undefined {
+  const sel = window.getSelection();
+  if (!sel?.rangeCount || !sel.anchorNode || !root.contains(sel.anchorNode))
+    return undefined;
+  const range = sel.getRangeAt(0);
+  const startLink = closestLinkFromNode(range.startContainer, root);
+  const endLink = closestLinkFromNode(range.endContainer, root);
+  if (!startLink || !endLink) return undefined;
+  if (
+    startLink.linkType !== endLink.linkType ||
+    startLink.linkAddress !== endLink.linkAddress
+  ) {
+    return undefined;
+  }
+  return startLink;
+}
+
+/**
+ * Caret or range inside `root`: returns the hyperlink on the collapsed caret, or the
+ * uniform link when a non-collapsed selection stays within one link (same as
+ * {@link getUniformLinkFromWindowSelectionInEditor}).
+ */
+export function getHyperlinkAtCaretInContentEditable(
+  root: HTMLElement
+): HyperlinkEntry | undefined {
+  const sel = window.getSelection();
+  if (!sel?.rangeCount || !sel.anchorNode || !root.contains(sel.anchorNode))
+    return undefined;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) {
+    const at = closestLinkFromNode(range.startContainer, root);
+    return at ?? undefined;
+  }
+  return getUniformLinkFromWindowSelectionInEditor(root);
 }

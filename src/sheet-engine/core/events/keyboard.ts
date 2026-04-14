@@ -942,7 +942,7 @@ export async function handleGlobalKeyDown(
     handledFlvShortcut = true;
   }
   if ((e.metaKey || e.ctrlKey) && e.code === "KeyK") {
-    handleLink(ctx, cellInput);
+    handleLink(ctx, cellInput, cache);
   }
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === "Semicolon") {
     fillDate(ctx);
