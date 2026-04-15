@@ -368,6 +368,35 @@ const SheetOverlay: React.FC = () => {
           setContext((draftCtx) => {
             insertRowCol(draftCtx, insertRowColOp, false);
           }, { insertRowColOp });
+        } else if (selection) {
+          const workbookRect =
+            refs.workbookContainer.current?.getBoundingClientRect();
+          const baseX = selection.left_move ?? selection.left ?? 0;
+          const firstColIndex = selection.column[0];
+          const colSpan = selection.column[1] - selection.column[0] + 1;
+          const firstColLeft =
+            firstColIndex <= 0 ? 0 : context.visibledatacolumn[firstColIndex - 1];
+          const firstColRight = context.visibledatacolumn[firstColIndex];
+          const widthFromVisible = Math.max(0, (firstColRight ?? 0) - firstColLeft);
+          const widthFromSelection =
+            colSpan > 0
+              ? Math.floor((selection.width_move ?? selection.width ?? 0) / colSpan)
+              : 0;
+          const firstColWidth = widthFromVisible || widthFromSelection;
+          const menuX = Math.max(0, baseX - firstColWidth);
+          const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
+
+          setContext((draftCtx) => {
+            draftCtx.contextMenu = {
+              x: menuX,
+              y: menuY,
+              pageX: (workbookRect?.left ?? 0) + menuX,
+              pageY: (workbookRect?.top ?? 0) + menuY,
+              headerMenu: undefined,
+              // @ts-ignore custom menu variant for shortcut insert actions
+              menuType: 'insert-shortcut',
+            };
+          });
         }
         ev.preventDefault();
         return;
@@ -432,6 +461,35 @@ const SheetOverlay: React.FC = () => {
                 ];
               }
             }
+          });
+        } else if (selection) {
+          const workbookRect =
+            refs.workbookContainer.current?.getBoundingClientRect();
+          const baseX = selection.left_move ?? selection.left ?? 0;
+          const firstColIndex = selection.column[0];
+          const colSpan = selection.column[1] - selection.column[0] + 1;
+          const firstColLeft =
+            firstColIndex <= 0 ? 0 : context.visibledatacolumn[firstColIndex - 1];
+          const firstColRight = context.visibledatacolumn[firstColIndex];
+          const widthFromVisible = Math.max(0, (firstColRight ?? 0) - firstColLeft);
+          const widthFromSelection =
+            colSpan > 0
+              ? Math.floor((selection.width_move ?? selection.width ?? 0) / colSpan)
+              : 0;
+          const firstColWidth = widthFromVisible || widthFromSelection;
+          const menuX = Math.max(0, baseX - firstColWidth);
+          const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
+
+          setContext((draftCtx) => {
+            draftCtx.contextMenu = {
+              x: menuX,
+              y: menuY,
+              pageX: (workbookRect?.left ?? 0) + menuX,
+              pageY: (workbookRect?.top ?? 0) + menuY,
+              headerMenu: undefined,
+              // @ts-ignore custom menu variant for shortcut delete actions
+              menuType: 'delete-shortcut',
+            };
           });
         }
         ev.preventDefault();
