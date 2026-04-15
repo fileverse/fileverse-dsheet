@@ -318,7 +318,12 @@ const InputBox: React.FC = () => {
   const ZWSP = '\u200B';
   const inputBoxInnerRef = useRef<HTMLDivElement>(null);
   const lastAppliedLinkSelectionKeyRef = useRef<string | null>(null);
-  const autoLinkUrlsInEditorRef = useRef<() => void>(() => {});
+  const autoLinkUrlsInEditorRef = useRef<
+    (
+      mode?: 'space' | 'commit',
+      options?: { preserveCaret?: boolean; deferCaretRestore?: boolean },
+    ) => void
+  >(() => {});
   const [linkSelectionHighlightRects, setLinkSelectionHighlightRects] =
     useState<{ left: number; top: number; width: number; height: number }[]>(
       [],
@@ -528,6 +533,7 @@ const InputBox: React.FC = () => {
       if (inputRef.current) {
         inputRef.current.innerHTML = '';
       }
+      lastKeyDownEventRef.current = null;
       delete refs.globalCache.pendingTypeOverCell;
       delete refs.globalCache.linkEditorOpenSnapshot;
       setCellEditorIsFormula(false);
@@ -1042,6 +1048,36 @@ const InputBox: React.FC = () => {
         return true;
       };
 
+      const insertPlainLineBreakAtCaret = () => {
+        const editor = inputRef.current;
+        if (!editor) return false;
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return false;
+        const range = sel.getRangeAt(0);
+        if (!editor.contains(range.startContainer)) return false;
+
+        range.deleteContents();
+
+        const br = document.createElement('br');
+        const typingSpan = document.createElement('span');
+        typingSpan.className = 'luckysheet-input-span';
+        typingSpan.setAttribute('data-no-link-anchor', '1');
+        const textNode = document.createTextNode('');
+        typingSpan.appendChild(textNode);
+
+        const frag = document.createDocumentFragment();
+        frag.appendChild(br);
+        frag.appendChild(typingSpan);
+        range.insertNode(frag);
+
+        const out = document.createRange();
+        out.setStart(textNode, 0);
+        out.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(out);
+        return true;
+      };
+
       const isTextInsertKey =
         !e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1;
       if (isTextInsertKey) {
@@ -1325,17 +1361,33 @@ const InputBox: React.FC = () => {
         e.preventDefault();
       } else if (e.key === 'Enter' && context.luckysheetCellUpdate.length > 0) {
         if (e.altKey || e.metaKey) {
-          // originally `enterKeyControll`
-          document.execCommand('insertHTML', false, '\n '); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
-          document.execCommand('delete', false);
+          // Cmd/Alt+Enter inserts a newline in-place. Before inserting the break,
+          // auto-link the token before caret (same practical behavior as Space).
+          autoLinkUrlsInEditorRef.current('commit', {
+            preserveCaret: true,
+            deferCaretRestore: false,
+          });
+          // Ensure caret is in a plain span so the new line and subsequent typing
+          // do not inherit hyperlink style from the previous linked token.
+          moveCaretOutsideTrailingLinkSpan();
+          // Prevent native contenteditable Enter handling from adding an extra break
+          // inside the linked span and leaking link style to next-line typing.
+          e.preventDefault();
+          // Insert newline + plain typing span without execCommand (browser may emit
+          // deprecated <font color="..."> wrappers when inheriting link styles).
+          if (!insertPlainLineBreakAtCaret()) {
+            // Fallback for unexpected selection states.
+            document.execCommand('insertHTML', false, '\n ');
+            document.execCommand('delete', false);
+          }
           e.stopPropagation();
         } else {
+          // Match Space behavior: auto-link URL token before commit on Enter too.
+          autoLinkUrlsInEditorRef.current('commit');
           selectActiveFormula(e);
-          // Let Enter bubble to Workbook `handleGlobalEnter` (commit / multi-range
-          // advance). Block contenteditable newline if formula list did not consume it.
-          if (!e.defaultPrevented) {
-            e.preventDefault();
-          }
+          // Let Enter bubble to Workbook `handleGlobalEnter` (commit / move focus).
+          // Do not intercept here; preventing default can block close-edit cleanup and
+          // leave stale editor HTML active for the next cell.
         }
       } else if (e.key === 'Tab' && context.luckysheetCellUpdate.length > 0) {
         selectActiveFormula(e);
@@ -1529,13 +1581,19 @@ const InputBox: React.FC = () => {
     }
   };
 
-  const maybeAutoLinkUrlsInEditor = useCallback(() => {
-    const editor = inputRef.current;
-    if (!editor) return;
-    const plain = editor.innerText ?? '';
-    if (plain.trimStart().startsWith('=')) return;
-    const normalized = plain.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const found: Array<{ start: number; end: number; url: string }> = [];
+  const maybeAutoLinkUrlsInEditor = useCallback(
+    (
+      mode: 'space' | 'commit' = 'space',
+      options?: { preserveCaret?: boolean; deferCaretRestore?: boolean },
+    ) => {
+      const editor = inputRef.current;
+      if (!editor) return;
+      const plain = editor.innerText ?? '';
+      if (plain.trimStart().startsWith('=')) return;
+      const normalized = plain.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const shouldRestoreCaret = options?.preserveCaret !== false;
+      const shouldDeferRestore = options?.deferCaretRestore !== false;
+      const found: Array<{ start: number; end: number; url: string }> = [];
     // Primary path for typing+Space: only convert the just-finished token before caret.
     const sel = window.getSelection();
     if (sel?.rangeCount && sel.focusNode && editor.contains(sel.focusNode)) {
@@ -1551,11 +1609,15 @@ const InputBox: React.FC = () => {
         const lineStart = beforeCaret.lastIndexOf('\n') + 1;
         const lineBeforeCaret = beforeCaret.slice(lineStart);
         const m = lineBeforeCaret.match(
-          /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)\s$/i,
+          mode === 'space'
+            ? /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)\s$/i
+            : /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)$/i,
         );
         if (m) {
           const token = m[1];
-          let tokenStart = lineStart + (lineBeforeCaret.length - 1 - token.length);
+          const trailingAdjust = mode === 'space' ? 1 : 0;
+          let tokenStart =
+            lineStart + (lineBeforeCaret.length - trailingAdjust - token.length);
           let tokenEnd = tokenStart + token.length;
           while (
             tokenEnd > tokenStart &&
@@ -1577,31 +1639,77 @@ const InputBox: React.FC = () => {
     // Space auto-link should only touch the just-finished token around caret.
     if (found.length === 0) return;
 
-    const caretBefore = getCaretCharacterOffsetInEditor(editor);
-    for (const item of found) {
-      if (!setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)) continue;
-      const selectedNow = (window.getSelection()?.toString() ?? '')
-        .replace(/\r\n/g, '\n')
-        .replace(/\r/g, '\n');
-      if (selectedNow !== item.url) {
-        continue;
+      const caretBefore = getCaretCharacterOffsetInEditor(editor);
+      for (const item of found) {
+        if (!setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)) continue;
+        const selNow = window.getSelection();
+        if (!selNow || selNow.rangeCount === 0) continue;
+        const rangeNow = selNow.getRangeAt(0);
+        const selectedNow = (selNow.toString() ?? '')
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n');
+        const normalizedSelected = selectedNow
+          .replace(/\u00a0/g, ' ')
+          .replace(/\u200b/g, '')
+          .trim();
+        const normalizedUrl = item.url
+          .replace(/\u00a0/g, ' ')
+          .replace(/\u200b/g, '')
+          .trim();
+        // Guard against element-node ranges (e.g. editor DIV boundary ranges), which can
+        // make applyLinkToSelection slice HTML by node offsets and corrupt editor content.
+        // Special-case commit when the entire editor equals the URL token (e.g. `test.com` + Enter).
+        if (
+          rangeNow.startContainer === editor ||
+          rangeNow.endContainer === editor ||
+          !editor.contains(rangeNow.startContainer) ||
+          !editor.contains(rangeNow.endContainer)
+        ) {
+          if (mode === 'commit') {
+            const editorPlain = (editor.innerText ?? editor.textContent ?? '')
+              .replace(/\r\n/g, '\n')
+              .replace(/\r/g, '\n')
+              .replace(/\u00a0/g, ' ')
+              .replace(/\u200b/g, '')
+              .trim();
+            if (editorPlain === normalizedUrl && normalizedSelected === normalizedUrl) {
+              editor.innerHTML = buildSingleLinkEditorHtml(
+                editorPlain,
+                { linkType: 'webpage', linkAddress: item.url },
+              );
+              continue;
+            }
+          }
+          continue;
+        }
+        if (mode === 'space') {
+          if (normalizedSelected !== normalizedUrl) continue;
+        } else if (!normalizedSelected.includes(normalizedUrl)) {
+          // Commit path can see small selection shape differences at Enter time.
+          // Require token inclusion, not exact equality.
+          continue;
+        }
+        const existing = getUniformLinkFromWindowSelectionInEditor(editor);
+        if (
+          existing?.linkType === 'webpage' &&
+          (existing.linkAddress || '').trim() === item.url.trim()
+        ) {
+          continue;
+        }
+        applyLinkToSelection(editor, 'webpage', item.url);
       }
-      const existing = getUniformLinkFromWindowSelectionInEditor(editor);
-      if (
-        existing?.linkType === 'webpage' &&
-        (existing.linkAddress || '').trim() === item.url.trim()
-      ) {
-        continue;
+      ensureTrailingPlainSpanAfterLinkedTail(editor);
+      if (!shouldRestoreCaret) return;
+      const restoreOffset = caretBefore ?? normalized.length;
+      const restoreCaret = () =>
+        setSelectionByCharacterOffsetInEditor(editor, restoreOffset, restoreOffset);
+      restoreCaret();
+      if (shouldDeferRestore) {
+        requestAnimationFrame(restoreCaret);
       }
-      applyLinkToSelection(editor, 'webpage', item.url);
-    }
-    ensureTrailingPlainSpanAfterLinkedTail(editor);
-    const restoreOffset = caretBefore ?? normalized.length;
-    const restoreCaret = () =>
-      setSelectionByCharacterOffsetInEditor(editor, restoreOffset, restoreOffset);
-    restoreCaret();
-    requestAnimationFrame(restoreCaret);
-  }, []);
+    },
+    [],
+  );
   autoLinkUrlsInEditorRef.current = maybeAutoLinkUrlsInEditor;
 
   const onChange = useCallback(
@@ -1625,6 +1733,9 @@ const InputBox: React.FC = () => {
       // console.log("onChange", __);
       const e = lastKeyDownEventRef.current;
       if (!e) {
+        if (isBlur) {
+          autoLinkUrlsInEditorRef.current('commit');
+        }
         const cellEl = refs.cellInput.current;
         if (
           cellEl &&
@@ -1710,7 +1821,7 @@ const InputBox: React.FC = () => {
         });
       }
       if (kcode === 32) {
-        maybeAutoLinkUrlsInEditor();
+        maybeAutoLinkUrlsInEditor('space');
       }
       // Snapshot current editor HTML/caret after all DOM rewrites caused by
       // this keystroke (plain text, rich text formatting, and formula tokens).
