@@ -2,7 +2,11 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
+<<<<<<< HEAD
   "version": "2.0.4",
+=======
+  "version": "2.0.1-search-3",
+>>>>>>> 2b198dd (fix: viewer side)
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
