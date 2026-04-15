@@ -1535,30 +1535,57 @@ const InputBox: React.FC = () => {
     const plain = editor.innerText ?? '';
     if (plain.trimStart().startsWith('=')) return;
     const normalized = plain.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const re =
-      /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)/gi;
     const found: Array<{ start: number; end: number; url: string }> = [];
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(normalized)) != null) {
-      const token = m[1];
-      const tokenStart = m.index + m[0].length - token.length;
-      let tokenEnd = tokenStart + token.length;
-      // Trim trailing punctuation that is commonly typed after URLs.
-      while (tokenEnd > tokenStart && /[),.!?:;"']/.test(normalized[tokenEnd - 1])) {
-        tokenEnd -= 1;
+    // Primary path for typing+Space: only convert the just-finished token before caret.
+    const sel = window.getSelection();
+    if (sel?.rangeCount && sel.focusNode && editor.contains(sel.focusNode)) {
+      const current = sel.getRangeAt(0);
+      if (current.collapsed) {
+        const pre = document.createRange();
+        pre.selectNodeContents(editor);
+        pre.setEnd(current.startContainer, current.startOffset);
+        const beforeCaret = pre
+          .toString()
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n');
+        const lineStart = beforeCaret.lastIndexOf('\n') + 1;
+        const lineBeforeCaret = beforeCaret.slice(lineStart);
+        const m = lineBeforeCaret.match(
+          /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)\s$/i,
+        );
+        if (m) {
+          const token = m[1];
+          let tokenStart = lineStart + (lineBeforeCaret.length - 1 - token.length);
+          let tokenEnd = tokenStart + token.length;
+          while (
+            tokenEnd > tokenStart &&
+            /[),.!?:;"']/.test(beforeCaret[tokenEnd - 1])
+          ) {
+            tokenEnd -= 1;
+          }
+          if (tokenEnd > tokenStart) {
+            found.push({
+              start: tokenStart,
+              end: tokenEnd,
+              url: beforeCaret.slice(tokenStart, tokenEnd),
+            });
+          }
+        }
       }
-      if (tokenEnd <= tokenStart) continue;
-      found.push({
-        start: tokenStart,
-        end: tokenEnd,
-        url: normalized.slice(tokenStart, tokenEnd),
-      });
     }
+    // Important for multiline stability: do NOT run full-editor fallback scans here.
+    // Space auto-link should only touch the just-finished token around caret.
     if (found.length === 0) return;
 
     const caretBefore = getCaretCharacterOffsetInEditor(editor);
     for (const item of found) {
       if (!setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)) continue;
+      const selectedNow = (window.getSelection()?.toString() ?? '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n');
+      if (selectedNow !== item.url) {
+        continue;
+      }
       const existing = getUniformLinkFromWindowSelectionInEditor(editor);
       if (
         existing?.linkType === 'webpage' &&

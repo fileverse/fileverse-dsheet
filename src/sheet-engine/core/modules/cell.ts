@@ -182,6 +182,68 @@ function closeUnclosedParenthesesInFormula(formula: string): string {
   return `${formula}${")".repeat(depth)}`;
 }
 
+/**
+ * Contenteditable can produce text/div/br nodes after linked spans in multiline edits.
+ * convertSpanToShareString reads only spans, so normalize mixed children into spans
+ * before extracting inline runs to avoid dropping trailing lines on commit.
+ */
+function normalizeEditorChildrenToSpans(editor: HTMLDivElement) {
+  const hasNonSpanTopLevel = Array.from(editor.childNodes).some(
+    (n) => !(n.nodeType === Node.ELEMENT_NODE && (n as HTMLElement).tagName === "SPAN")
+  );
+  if (!hasNonSpanTopLevel) return;
+
+  const out = document.createElement("div");
+  const appendTextSpan = (text: string) => {
+    if (!text) return;
+    const sp = document.createElement("span");
+    sp.className = "luckysheet-input-span";
+    sp.textContent = text;
+    out.appendChild(sp);
+  };
+  const appendBreakSpan = () => {
+    const sp = document.createElement("span");
+    sp.className = "luckysheet-input-span";
+    sp.appendChild(document.createElement("br"));
+    out.appendChild(sp);
+  };
+
+  for (const node of Array.from(editor.childNodes)) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName === "SPAN") {
+        out.appendChild(el.cloneNode(true));
+        continue;
+      }
+      if (el.tagName === "BR") {
+        appendBreakSpan();
+        continue;
+      }
+      const text = (el.innerText ?? el.textContent ?? "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      const parts = text.split("\n");
+      parts.forEach((part, idx) => {
+        appendTextSpan(part);
+        if (idx < parts.length - 1) appendBreakSpan();
+      });
+      continue;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent ?? "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      const parts = text.split("\n");
+      parts.forEach((part, idx) => {
+        appendTextSpan(part);
+        if (idx < parts.length - 1) appendBreakSpan();
+      });
+    }
+  }
+
+  editor.innerHTML = out.innerHTML;
+}
+
 export function getCellValue(
   r: number,
   c: number,
@@ -949,6 +1011,7 @@ export function updateCell(
 
       curv.ct.t = "inlineStr";
 
+      normalizeEditorChildrenToSpans($input!);
       curv.ct.s = convertSpanToShareString(
         $input!.querySelectorAll("span"),
         curv
