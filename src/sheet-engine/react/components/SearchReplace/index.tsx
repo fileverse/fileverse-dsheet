@@ -460,6 +460,8 @@ const SearchReplace: React.FC<{
     ],
   );
 
+  const workbookReadOnly = context.allowEdit === false || context.isFlvReadOnly;
+
   const findReplaceUiSuspended =
     !!context.findReplaceHiddenDuringRangePick &&
     !context.showSearch &&
@@ -563,6 +565,7 @@ const SearchReplace: React.FC<{
                   ref={replaceInputRef}
                   className="formulaInputFocus"
                   spellCheck="false"
+                  disabled={workbookReadOnly}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -828,7 +831,11 @@ const SearchReplace: React.FC<{
                   });
                 }}
                 tabIndex={0}
-                disabled={searchText.length === 0 || replaceText.length === 0}
+                disabled={
+                  searchText.length === 0 ||
+                  replaceText.length === 0 ||
+                  workbookReadOnly
+                }
               >
                 {findAndReplace.replaceBtn}
               </Button>
@@ -873,7 +880,11 @@ const SearchReplace: React.FC<{
                   doReplaceAll();
                 }}
                 tabIndex={0}
-                disabled={searchText.length === 0 || replaceText.length === 0}
+                disabled={
+                  searchText.length === 0 ||
+                  replaceText.length === 0 ||
+                  workbookReadOnly
+                }
               >
                 {findAndReplace.allReplaceBtn}
               </Button>
