@@ -233,8 +233,8 @@ const QuickSearchBar: React.FC = () => {
       : matchCount === 0
         ? findAndReplace.quickSearchNoResults
         : findAndReplace.quickSearchMatchCountAria
-            .replace('{current}', String(activeIdx + 1))
-            .replace('{total}', String(matchCount));
+          .replace('{current}', String(activeIdx + 1))
+          .replace('{total}', String(matchCount));
 
   return (
     <div
@@ -270,7 +270,7 @@ const QuickSearchBar: React.FC = () => {
               {findAndReplace.quickSearchSearching}
             </span>
           ) : !hasQuery ? null : noResults ? (
-            findAndReplace.quickSearchNoResults
+            findAndReplace.quickSearchNoResults || 'No results'
           ) : (
             findAndReplace.quickSearchCounterTemplate
               .replace('{current}', String(activeIdx + 1))
@@ -281,7 +281,7 @@ const QuickSearchBar: React.FC = () => {
       <span className="fortune-quick-search-sr-only">{liveMsg}</span>
       <IconButton
         type="button"
-        icon="ArrowUp"
+        icon="ChevronUp"
         variant="ghost"
         className="fortune-quick-search-icon-btn"
         aria-label={findAndReplace.quickSearchPrevAria}
@@ -290,7 +290,7 @@ const QuickSearchBar: React.FC = () => {
       />
       <IconButton
         type="button"
-        icon="ArrowDown"
+        icon="ChevronDown"
         variant="ghost"
         className="fortune-quick-search-icon-btn"
         aria-label={findAndReplace.quickSearchNextAria}
