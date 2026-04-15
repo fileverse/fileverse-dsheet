@@ -3,10 +3,14 @@
   "private": false,
   "description": "DSheet",
 <<<<<<< HEAD
+<<<<<<< HEAD
   "version": "2.0.4",
 =======
   "version": "2.0.1-search-3",
 >>>>>>> 2b198dd (fix: viewer side)
+=======
+  "version": "2.0.1-search-4",
+>>>>>>> 3d46f19 (fix: UI)
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {

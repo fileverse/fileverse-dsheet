@@ -165,14 +165,12 @@
 }
 
 .fortune-quick-search-highlight {
-  background-color: rgba(255, 242, 204, 0.3);
+  background-color: rgba(255, 225, 0, 0.249);
   box-sizing: border-box;
-  border: 1px solid rgba(244, 166, 35, 0.35);
 }
 
 .fortune-quick-search-highlight--active {
-  background-color: rgba(244, 167, 35, 0.3);
-  border: 2px solid #d97706;
+  border: 2px solid #efc703;
 }
 
 .fortune-quick-search-highlight--dim {
@@ -181,8 +179,13 @@
 
 .fortune-search-range-highlight {
   box-sizing: border-box;
-  border: 2px dashed #efc703;
-  background-color: #efc8030e;
+  border: 2px solid #efc703;
+}
+
+.fortune-quick-search-icon-btn:disabled,
+.fortune-quick-search-icon-btn[disabled],
+.fortune-quick-search-icon-btn[aria-disabled='true'] {
+  background-color: transparent !important;
 }
 
 .fortune-cell-selected-extend {
