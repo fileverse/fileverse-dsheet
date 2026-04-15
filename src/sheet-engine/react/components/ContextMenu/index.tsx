@@ -500,7 +500,7 @@ const ContextMenu: React.FC = () => {
           >
             <div className="context-item">
               <LucideIcon name="ShieldCheck" />
-              <p>Data Validation</p>
+              <p>Dropdown</p>
             </div>
           </Menu>
         );
@@ -1447,28 +1447,126 @@ const ContextMenu: React.FC = () => {
   const selection = context.luckysheet_select_save?.[0];
   const rowSpan = selection ? selection.row[1] - selection.row[0] + 1 : 1;
   const colSpan = selection ? selection.column[1] - selection.column[0] + 1 : 1;
-  const deleteRowLabel =
-    selection == null
-      ? `Delete ${rowSpan} rows`
-      : rowSpan === 1
-        ? `Delete row ${selection.row[0] + 1}`
-        : `Delete row ${selection.row[0] + 1} - ${selection.row[1] + 1}`;
-  const deleteColumnLabel =
-    selection == null
-      ? `Delete ${colSpan} columns`
-      : colSpan === 1
-        ? `Delete column ${indexToColumnChar(selection.column[0])}`
-        : `Delete column ${indexToColumnChar(selection.column[0])} - ${indexToColumnChar(selection.column[1])}`;
   const insertRowLabel =
     rowSpan === 1 ? 'Insert row' : `Insert ${rowSpan} rows`;
   const insertColumnLabel =
     colSpan === 1 ? 'Insert column' : `Insert ${colSpan} columns`;
+  const deleteRowTargetLabel =
+    selection == null
+      ? `${rowSpan} rows`
+      : rowSpan === 1
+        ? `row ${selection.row[0] + 1}`
+        : `row ${selection.row[0] + 1} - ${selection.row[1] + 1}`;
+  const deleteColumnTargetLabel =
+    selection == null
+      ? `${colSpan} columns`
+      : colSpan === 1
+        ? `column ${indexToColumnChar(selection.column[0])}`
+        : `column ${indexToColumnChar(selection.column[0])} - ${indexToColumnChar(selection.column[1])}`;
   const isDeleteShortcutMenu =
     (context.contextMenu as any).menuType === 'delete-shortcut';
   const isInsertShortcutMenu =
     (context.contextMenu as any).menuType === 'insert-shortcut';
-  const shortcutMenuLeftOffset =
-    isDeleteShortcutMenu || isInsertShortcutMenu ? 100 : 0;
+  type ShortcutActionItem = {
+    key: string;
+    label: React.ReactNode;
+    onClick: () => void;
+  };
+  const shortcutPrimaryItems: ShortcutActionItem[] = isDeleteShortcutMenu
+    ? [
+      {
+        key: 'delete-cells-shift-left',
+        label: (
+          <>
+            Delete cells and shift <strong>left</strong>
+          </>
+        ),
+        onClick: () => applyDeleteCellsShift('left'),
+      },
+      {
+        key: 'delete-cells-shift-up',
+        label: (
+          <>
+            Delete cells and shift <strong>up</strong>
+          </>
+        ),
+        onClick: () => applyDeleteCellsShift('up'),
+      },
+    ]
+    : [
+      {
+        key: 'insert-cells-shift-right',
+        label: (
+          <>
+            Insert cells and shift <strong>right</strong>
+          </>
+        ),
+        onClick: () => applyInsertCellsShift('right'),
+      },
+      {
+        key: 'insert-cells-shift-down',
+        label: (
+          <>
+            Insert cells and shift <strong>down</strong>
+          </>
+        ),
+        onClick: () => applyInsertCellsShift('down'),
+      },
+    ];
+  const shortcutSecondaryItems: ShortcutActionItem[] = isDeleteShortcutMenu
+    ? [
+      {
+        key: 'delete-row-range',
+        label: (
+          <>
+            Delete <strong>{deleteRowTargetLabel}</strong>
+          </>
+        ),
+        onClick: deleteSelectedRowRange,
+      },
+      {
+        key: 'delete-column-range',
+        label: (
+          <>
+            Delete <strong>{deleteColumnTargetLabel}</strong>
+          </>
+        ),
+        onClick: deleteSelectedColumnRange,
+      },
+    ]
+    : [
+      {
+        key: 'insert-row-range',
+        label: insertRowLabel,
+        onClick: insertSelectedRowRange,
+      },
+      {
+        key: 'insert-column-range',
+        label: insertColumnLabel,
+        onClick: insertSelectedColumnRange,
+      },
+    ];
+  const renderShortcutMenuItems = () => (
+    <>
+      {shortcutPrimaryItems.map((item) => (
+        <Menu key={item.key} onClick={item.onClick}>
+          <div className="context-item">
+            <p>{item.label}</p>
+          </div>
+        </Menu>
+      ))}
+      <Divider
+        key={isDeleteShortcutMenu ? 'delete-shortcut-divider' : 'insert-shortcut-divider'}
+      />
+      {shortcutSecondaryItems.map((item) => (
+        <Menu key={item.key} onClick={item.onClick}>
+          <div className="context-item">
+            <p>{item.label}</p>
+          </div>
+        </Menu>
+      ))}
+    </>
+  );
 
   return (
     <div
@@ -1476,70 +1574,12 @@ const ContextMenu: React.FC = () => {
       ref={containerRef}
       onContextMenu={(e) => e.stopPropagation()}
       style={{
-        left: Math.max(0, (contextMenu.x ?? 0) - shortcutMenuLeftOffset),
+        left: Math.max(0, contextMenu.x ?? 0),
         top: contextMenu.y,
       }}
     >
-      {isDeleteShortcutMenu ? (
-        <>
-          <Menu
-            key="delete-cells-shift-left"
-            onClick={() => applyDeleteCellsShift('left')}
-          >
-            <div className="context-item">
-              <p>Delete cells and shift left</p>
-            </div>
-          </Menu>
-          <Menu
-            key="delete-cells-shift-up"
-            onClick={() => applyDeleteCellsShift('up')}
-          >
-            <div className="context-item">
-              <p>Delete cells and shift up</p>
-            </div>
-          </Menu>
-          <Divider key="delete-shortcut-divider" />
-          <Menu key="delete-row-range" onClick={deleteSelectedRowRange}>
-            <div className="context-item">
-              <p>{deleteRowLabel}</p>
-            </div>
-          </Menu>
-          <Menu key="delete-column-range" onClick={deleteSelectedColumnRange}>
-            <div className="context-item">
-              <p>{deleteColumnLabel}</p>
-            </div>
-          </Menu>
-        </>
-      ) : isInsertShortcutMenu ? (
-        <>
-          <Menu
-            key="insert-cells-shift-right"
-            onClick={() => applyInsertCellsShift('right')}
-          >
-            <div className="context-item">
-              <p>Insert cells and shift right</p>
-            </div>
-          </Menu>
-          <Menu
-            key="insert-cells-shift-down"
-            onClick={() => applyInsertCellsShift('down')}
-          >
-            <div className="context-item">
-              <p>Insert cells and shift down</p>
-            </div>
-          </Menu>
-          <Divider key="insert-shortcut-divider" />
-          <Menu key="insert-row-range" onClick={insertSelectedRowRange}>
-            <div className="context-item">
-              <p>{insertRowLabel}</p>
-            </div>
-          </Menu>
-          <Menu key="insert-column-range" onClick={insertSelectedColumnRange}>
-            <div className="context-item">
-              <p>{insertColumnLabel}</p>
-            </div>
-          </Menu>
-        </>
+      {isDeleteShortcutMenu || isInsertShortcutMenu ? (
+        renderShortcutMenuItems()
       ) : context.contextMenu.headerMenu === true ||
         /* @ts-ignore */
         context.contextMenu.headerMenu === 'row' ? (

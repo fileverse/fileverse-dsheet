@@ -372,18 +372,10 @@ const SheetOverlay: React.FC = () => {
           const workbookRect =
             refs.workbookContainer.current?.getBoundingClientRect();
           const baseX = selection.left_move ?? selection.left ?? 0;
-          const firstColIndex = selection.column[0];
-          const colSpan = selection.column[1] - selection.column[0] + 1;
-          const firstColLeft =
-            firstColIndex <= 0 ? 0 : context.visibledatacolumn[firstColIndex - 1];
-          const firstColRight = context.visibledatacolumn[firstColIndex];
-          const widthFromVisible = Math.max(0, (firstColRight ?? 0) - firstColLeft);
-          const widthFromSelection =
-            colSpan > 0
-              ? Math.floor((selection.width_move ?? selection.width ?? 0) / colSpan)
-              : 0;
-          const firstColWidth = widthFromVisible || widthFromSelection;
-          const menuX = Math.max(0, baseX - firstColWidth);
+          const selectionWidth = selection.width_move ?? selection.width ?? 0;
+          // Open shortcut menu after the selected range (multi-cell aware),
+          // instead of anchoring near the first selected cell.
+          const menuX = Math.max(0, baseX + selectionWidth + 55);
           const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
 
           setContext((draftCtx) => {
@@ -466,18 +458,10 @@ const SheetOverlay: React.FC = () => {
           const workbookRect =
             refs.workbookContainer.current?.getBoundingClientRect();
           const baseX = selection.left_move ?? selection.left ?? 0;
-          const firstColIndex = selection.column[0];
-          const colSpan = selection.column[1] - selection.column[0] + 1;
-          const firstColLeft =
-            firstColIndex <= 0 ? 0 : context.visibledatacolumn[firstColIndex - 1];
-          const firstColRight = context.visibledatacolumn[firstColIndex];
-          const widthFromVisible = Math.max(0, (firstColRight ?? 0) - firstColLeft);
-          const widthFromSelection =
-            colSpan > 0
-              ? Math.floor((selection.width_move ?? selection.width ?? 0) / colSpan)
-              : 0;
-          const firstColWidth = widthFromVisible || widthFromSelection;
-          const menuX = Math.max(0, baseX - firstColWidth);
+          const selectionWidth = selection.width_move ?? selection.width ?? 0;
+          // Open shortcut menu after the selected range (multi-cell aware),
+          // instead of anchoring near the first selected cell.
+          const menuX = Math.max(0, baseX + selectionWidth + 55);
           const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
 
           setContext((draftCtx) => {
