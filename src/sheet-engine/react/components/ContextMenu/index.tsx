@@ -630,6 +630,7 @@ const ContextMenu: React.FC = () => {
         ));
       }
       if (name === 'insert-column-right') {
+        if (!context.contextMenu.headerMenu) return null;
         if (selection?.row_select) return null;
         const colSpan =
           selection != null
@@ -676,6 +677,7 @@ const ContextMenu: React.FC = () => {
         ));
       }
       if (name === 'insert-row') {
+        if (!context.contextMenu.headerMenu) return null;
         if (selection?.column_select) return null;
         const rowSpan =
           selection != null ? selection.row[1] - selection.row[0] + 1 : 1;
@@ -696,6 +698,142 @@ const ContextMenu: React.FC = () => {
             </div>
           </Menu>
         ));
+      }
+      if (name === 'insert-cells') {
+        if (selection?.row_select || selection?.column_select) return null;
+        return (
+          <Tippy
+            key={name}
+            placement="right-start"
+            interactive
+            interactiveBorder={50}
+            offset={[0, 0]}
+            arrow={false}
+            zIndex={3000}
+            appendTo={document.body}
+            trigger="mouseenter focus"
+            hideOnClick={false}
+            onShow={() => {
+              setActiveMenu('insert-cells');
+            }}
+            onHide={() => {
+              if (activeMenu === 'insert-cells') setActiveMenu('');
+            }}
+            content={
+              <div
+                className="fortune-toolbar-select"
+                style={{ minWidth: '14rem' }}
+              >
+                <div className="flex flex-col color-text-default text-body-sm">
+                  <Menu
+                    onClick={() => {
+                      applyInsertCellsShift('right');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Insert cells and shift right</p>
+                    </div>
+                  </Menu>
+                  <Menu
+                    onClick={() => {
+                      applyInsertCellsShift('down');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Insert cells and shift down</p>
+                    </div>
+                  </Menu>
+                </div>
+              </div>
+            }
+          >
+            <div>
+              <Menu isActive={activeMenu === 'insert-cells'}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="context-item">
+                    <LucideIcon name="Plus" />
+                    <p>Insert cells</p>
+                  </div>
+                  <LucideIcon name="ChevronRight" width={16} height={16} />
+                </div>
+              </Menu>
+            </div>
+          </Tippy>
+        );
+      }
+      if (name === 'delete-cells') {
+        if (selection?.row_select || selection?.column_select) return null;
+        return (
+          <Tippy
+            key={name}
+            placement="right-start"
+            interactive
+            interactiveBorder={50}
+            offset={[0, 0]}
+            arrow={false}
+            zIndex={3000}
+            appendTo={document.body}
+            trigger="mouseenter focus"
+            hideOnClick={false}
+            onShow={() => {
+              setActiveMenu('delete-cells');
+            }}
+            onHide={() => {
+              if (activeMenu === 'delete-cells') setActiveMenu('');
+            }}
+            content={
+              <div
+                className="fortune-toolbar-select"
+                style={{ minWidth: '14rem' }}
+              >
+                <div className="flex flex-col color-text-default text-body-sm">
+                  <Menu
+                    onClick={() => {
+                      applyDeleteCellsShift('left');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Delete cells and shift left</p>
+                    </div>
+                  </Menu>
+                  <Menu
+                    onClick={() => {
+                      applyDeleteCellsShift('up');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Delete cells and shift up</p>
+                    </div>
+                  </Menu>
+                </div>
+              </div>
+            }
+          >
+            <div>
+              <Menu isActive={activeMenu === 'delete-cells'}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="context-item">
+                    <LucideIcon name="Trash2" />
+                    <p>Delete cells</p>
+                  </div>
+                  <LucideIcon name="ChevronRight" width={16} height={16} />
+                </div>
+              </Menu>
+            </div>
+          </Tippy>
+        );
       }
       if (name === 'delete-column') {
         return (
