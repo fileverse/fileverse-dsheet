@@ -348,19 +348,22 @@ const SheetOverlay: React.FC = () => {
       if (isInsertByPlusShortcut) {
         const selection = context.luckysheet_select_save?.[0];
         if (selection?.column_select || selection?.row_select) {
+          const selectedCount = selection.column_select
+            ? selection.column[1] - selection.column[0] + 1
+            : selection.row[1] - selection.row[0] + 1;
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
                 type: 'column',
                 index: selection!.column[0],
-                count: 1,
+                count: selectedCount,
                 direction: 'lefttop',
                 id: context.currentSheetId,
               }
               : {
                 type: 'row',
                 index: selection!.row[1],
-                count: 1,
+                count: selectedCount,
                 direction: 'rightbottom',
                 id: context.currentSheetId,
               };
