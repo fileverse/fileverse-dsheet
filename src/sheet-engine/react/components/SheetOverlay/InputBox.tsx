@@ -91,19 +91,38 @@ function measureCellEditorContentWidth(el: HTMLElement | null): number {
   }
 }
 
+function findLastLinkSpanInEditor(editor: HTMLElement): HTMLElement | null {
+  const spans = editor.querySelectorAll('span');
+  for (let i = spans.length - 1; i >= 0; i -= 1) {
+    const el = spans[i] as HTMLElement;
+    if (el?.dataset?.linkType && el?.dataset?.linkAddress) return el;
+  }
+  return null;
+}
+
+/** True if a non-linked typing span already sits immediately after this link (avoids duplicate NBSP anchors). */
+function hasPlainTypingSpanAfterLink(linkSpan: HTMLElement): boolean {
+  const next = linkSpan.nextElementSibling;
+  return (
+    next instanceof HTMLElement &&
+    next.tagName === 'SPAN' &&
+    !next.dataset?.linkType &&
+    !next.dataset?.linkAddress
+  );
+}
+
 function ensureTrailingPlainSpanAfterLinkedTail(
   editor: HTMLDivElement | null,
 ): boolean {
   if (!editor) return false;
-  const spans = editor.querySelectorAll('span');
-  if (spans.length === 0) return false;
-  const last = spans[spans.length - 1] as HTMLElement;
-  if (!last?.dataset?.linkType || !last?.dataset?.linkAddress) return false;
+  const lastLink = findLastLinkSpanInEditor(editor);
+  if (!lastLink) return false;
+  if (hasPlainTypingSpanAfterLink(lastLink)) return false;
   const anchor = document.createElement('span');
   anchor.className = 'luckysheet-input-span';
   anchor.setAttribute('data-no-link-anchor', '1');
   anchor.textContent = '\u00A0';
-  last.insertAdjacentElement('afterend', anchor);
+  lastLink.insertAdjacentElement('afterend', anchor);
   return true;
 }
 
@@ -1062,7 +1081,9 @@ const InputBox: React.FC = () => {
         const typingSpan = document.createElement('span');
         typingSpan.className = 'luckysheet-input-span';
         typingSpan.setAttribute('data-no-link-anchor', '1');
-        const textNode = document.createTextNode('');
+        // Keep a single NBSP placeholder so leading spaces on the new line are preserved
+        // without introducing hidden zero-width characters into editor serialization.
+        const textNode = document.createTextNode('\u00A0');
         typingSpan.appendChild(textNode);
 
         const frag = document.createDocumentFragment();
@@ -1071,7 +1092,7 @@ const InputBox: React.FC = () => {
         range.insertNode(frag);
 
         const out = document.createRange();
-        out.setStart(textNode, 0);
+        out.setStart(textNode, 1);
         out.collapse(true);
         sel.removeAllRanges();
         sel.addRange(out);
@@ -1361,33 +1382,28 @@ const InputBox: React.FC = () => {
         e.preventDefault();
       } else if (e.key === 'Enter' && context.luckysheetCellUpdate.length > 0) {
         if (e.altKey || e.metaKey) {
-          // Cmd/Alt+Enter inserts a newline in-place. Before inserting the break,
-          // auto-link the token before caret (same practical behavior as Space).
+          // Match Space behavior in multiline mode too: link the token before caret first.
           autoLinkUrlsInEditorRef.current('commit', {
             preserveCaret: true,
             deferCaretRestore: false,
           });
-          // Ensure caret is in a plain span so the new line and subsequent typing
-          // do not inherit hyperlink style from the previous linked token.
+          // If caret is at the end of a hyperlink span, move to a plain typing span first.
+          // Otherwise Cmd/Alt+Enter inserts <br> inside the linked span, and next-line text
+          // keeps inheriting link metadata/style.
           moveCaretOutsideTrailingLinkSpan();
-          // Prevent native contenteditable Enter handling from adding an extra break
-          // inside the linked span and leaking link style to next-line typing.
-          e.preventDefault();
-          // Insert newline + plain typing span without execCommand (browser may emit
-          // deprecated <font color="..."> wrappers when inheriting link styles).
-          if (!insertPlainLineBreakAtCaret()) {
-            // Fallback for unexpected selection states.
-            document.execCommand('insertHTML', false, '\n ');
-            document.execCommand('delete', false);
-          }
+          // originally `enterKeyControll`
+          document.execCommand('insertHTML', false, '\n '); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
+          document.execCommand('delete', false);
           e.stopPropagation();
         } else {
-          // Match Space behavior: auto-link URL token before commit on Enter too.
+          // Single-line Enter commit should also auto-link like Space.
           autoLinkUrlsInEditorRef.current('commit');
           selectActiveFormula(e);
-          // Let Enter bubble to Workbook `handleGlobalEnter` (commit / move focus).
-          // Do not intercept here; preventing default can block close-edit cleanup and
-          // leave stale editor HTML active for the next cell.
+          // Let Enter bubble to Workbook `handleGlobalEnter` (commit / multi-range
+          // advance). Block contenteditable newline if formula list did not consume it.
+          if (!e.defaultPrevented) {
+            e.preventDefault();
+          }
         }
       } else if (e.key === 'Tab' && context.luckysheetCellUpdate.length > 0) {
         selectActiveFormula(e);
@@ -1551,8 +1567,9 @@ const InputBox: React.FC = () => {
       };
 
       if (!tryMoveOutOfLinkedTail()) return;
-      e.preventDefault();
-      document.execCommand('insertText', false, ie.data);
+      // Only relocate caret out of the linked tail; let native beforeinput/input
+      // perform the text insertion once. Manual execCommand insertion here can
+      // double-apply text in some multiline selection states after Cmd/Alt+Enter.
     },
     [],
   );
@@ -1639,6 +1656,7 @@ const InputBox: React.FC = () => {
     // Space auto-link should only touch the just-finished token around caret.
     if (found.length === 0) return;
 
+      let appliedLinkViaApplyLink = false;
       const caretBefore = getCaretCharacterOffsetInEditor(editor);
       for (const item of found) {
         if (!setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)) continue;
@@ -1697,9 +1715,18 @@ const InputBox: React.FC = () => {
           continue;
         }
         applyLinkToSelection(editor, 'webpage', item.url);
+        appliedLinkViaApplyLink = true;
       }
       ensureTrailingPlainSpanAfterLinkedTail(editor);
       if (!shouldRestoreCaret) return;
+      // applyLinkToSelection already moves the caret into a plain span after the new link.
+      // Restoring caretBefore remaps badly after DOM changes (NBSP / split spans, multiline +
+      // <br>): caret can jump to the wrong line — e.g. Cmd+Enter inserts a break but selection
+      // stays on the previous line. Skip restore whenever we actually applied a link (Space or
+      // commit paths, including Cmd/Alt+Enter pre-newline auto-link).
+      if (appliedLinkViaApplyLink) {
+        return;
+      }
       const restoreOffset = caretBefore ?? normalized.length;
       const restoreCaret = () =>
         setSelectionByCharacterOffsetInEditor(editor, restoreOffset, restoreOffset);
@@ -2386,7 +2413,6 @@ const InputBox: React.FC = () => {
           }}
           aria-autocomplete="list"
           onChange={onChange}
-          onBeforeInput={onBeforeInput}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           onCopy={onCopy}

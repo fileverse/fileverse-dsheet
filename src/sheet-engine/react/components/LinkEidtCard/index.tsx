@@ -100,6 +100,107 @@ function getTextByOffsets(
   return text.slice(start, end);
 }
 
+function emailFromAddress(address: string): string {
+  return String(address ?? '').trim().replace(/^mailto:/i, '');
+}
+
+function isEmailLikeAddress(address: string): boolean {
+  const email = emailFromAddress(address);
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function getViewLabel(linkType: string, linkAddress: string, fallbackText: string): string {
+  if (linkType === 'webpage' && isEmailLikeAddress(linkAddress)) {
+    return `Send to: ${emailFromAddress(linkAddress)}`;
+  }
+  return linkAddress.trim() || fallbackText;
+}
+
+type LinkPreviewData = {
+  title: string;
+  urlText: string;
+  faviconUrl?: string;
+  imageUrl?: string;
+  description?: string;
+};
+
+function toPreviewableUrl(address: string): string | null {
+  const raw = String(address ?? '').trim();
+  if (!raw) return null;
+  if (/^mailto:/i.test(raw)) return null;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function fallbackPreview(address: string): LinkPreviewData {
+  const typedUrl = String(address ?? '').trim();
+  const previewable = toPreviewableUrl(address);
+  if (!previewable) {
+    const email = emailFromAddress(address);
+    return {
+      title: `Send to: ${email}`,
+      urlText: '',
+    };
+  }
+  try {
+    const u = new URL(previewable);
+    return {
+      title: typedUrl || u.hostname,
+      urlText: typedUrl || u.hostname + u.pathname.replace(/\/$/, ''),
+      faviconUrl: `https://www.google.com/s2/favicons?domain=${encodeURIComponent(
+        u.hostname,
+      )}&sz=64`,
+    };
+  } catch {
+    return {
+      title: typedUrl || getViewLabel('webpage', address, address),
+      urlText: typedUrl || address,
+    };
+  }
+}
+
+async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
+  const previewable = toPreviewableUrl(address);
+  if (!previewable) {
+    return fallbackPreview(address);
+  }
+  const fallback = fallbackPreview(address);
+  try {
+    const typedUrl = String(address ?? '').trim();
+    const resp = await fetch(
+      `https://api.microlink.io/?url=${encodeURIComponent(previewable)}&palette=false&screenshot=false`,
+    );
+    let body: { status?: string; data?: Record<string, unknown> };
+    try {
+      body = await resp.json();
+    } catch {
+      return fallback;
+    }
+    // Microlink often returns HTTP 200 with { status: "fail", code: "ERATE", ... } when rate-limited.
+    if (!resp.ok || body?.status !== 'success') {
+      return fallback;
+    }
+    const data = body?.data ?? {};
+    const logo = data.logo as { url?: string } | undefined;
+    const image = data.image as { url?: string } | undefined;
+    const pageTitle = String(data.title || '').trim();
+    const publisher = String(data.publisher || '').trim();
+    return {
+      // Microlink: title ≈ og:title, publisher ≈ og:site_name. GitHub image URLs are often long
+      // opengraph.githubassets.com/.../hash/owner/repo paths (normal for their OG previews).
+      title: pageTitle || publisher || typedUrl || fallback.title,
+      urlText: typedUrl || fallback.urlText,
+      faviconUrl: String(logo?.url || fallback.faviconUrl || ''),
+      imageUrl: String(image?.url || ''),
+      description: String(data.description || '').trim(),
+    };
+  } catch {
+    return fallback;
+  }
+}
+
 export const LinkEditCard: React.FC<LinkCardProps> = ({
   r,
   c,
@@ -121,6 +222,9 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   const [linkText, setLinkText] = useState<string>(originText);
   const [linkAddress, setLinkAddress] = useState<string>(originAddress);
   const [linkType, setLinkType] = useState<string>(originType);
+  const [previewByKey, setPreviewByKey] = useState<Record<string, LinkPreviewData>>(
+    {},
+  );
   const { insertLink, linkTypeList } = locale(context);
   const isLinkAddressValid = isLinkValid(context, linkType, linkAddress);
 
@@ -141,6 +245,34 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     }
     return false;
   }, [linkText, linkAddress, linkType, isLinkAddressValid.isValid]);
+
+  const getPreviewKey = useCallback(
+    (lt: string, la: string) => `${lt}::${String(la ?? '').trim().toLowerCase()}`,
+    [],
+  );
+
+  useEffect(() => {
+    if (isEditing) return;
+    let cancelled = false;
+    const targets = linksToShow.filter(
+      (l) => l.linkType === 'webpage' && !isEmailLikeAddress(l.linkAddress),
+    );
+    if (targets.length === 0) return;
+    targets.forEach((item) => {
+      const key = getPreviewKey(item.linkType, item.linkAddress);
+      if (previewByKey[key]) return;
+      fetchLinkPreview(item.linkAddress).then((meta) => {
+        if (cancelled) return;
+        setPreviewByKey((prev) => {
+          if (prev[key]) return prev;
+          return { ...prev, [key]: meta };
+        });
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing, linksToShow, getPreviewKey, previewByKey]);
 
   const hideLinkCard = useCallback(() => {
     _.set(refs.globalCache, 'linkCard.mouseEnter', false);
@@ -353,6 +485,16 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
 
   if (!isEditing) {
     const multi = linksToShow.length > 1;
+    const singleLink = multi
+      ? undefined
+      : {
+        linkType,
+        linkAddress: originAddress || linkAddress,
+      };
+    const singleMeta = singleLink
+      ? previewByKey[getPreviewKey(singleLink.linkType, singleLink.linkAddress)] ||
+      fallbackPreview(singleLink.linkAddress)
+      : undefined;
 
     return (
       <div
@@ -390,12 +532,45 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                   tabIndex={0}
                   data-testid={`link-card-info-open-${idx}`}
                 >
-                  <span
-                    className="fortune-link-card__link-label"
-                    title={item.linkAddress}
-                  >
-                    {item.linkAddress.trim() || insertLink.openLink}
-                  </span>
+                  {(() => {
+                    const meta =
+                      previewByKey[getPreviewKey(item.linkType, item.linkAddress)] ||
+                      fallbackPreview(item.linkAddress);
+                    return (
+                      <div className="fortune-link-card__preview-line">
+                        {isEmailLikeAddress(item.linkAddress) ? (
+                          <LucideIcon
+                            name="Mail"
+                            className="fortune-link-card__favicon-fallback"
+                          />
+                        ) : meta.faviconUrl ? (
+                          <img
+                            src={meta.faviconUrl}
+                            alt=""
+                            className="fortune-link-card__favicon"
+                          />
+                        ) : (
+                          <LucideIcon
+                            name="Globe"
+                            className="fortune-link-card__favicon-fallback"
+                          />
+                        )}
+                        <div className="fortune-link-card__preview-text">
+                          <span className="fortune-link-card__link-label" title={meta.title}>
+                            {meta.title}
+                          </span>
+                          {meta.urlText && (
+                            <span
+                              className="fortune-link-card__url-label"
+                              title={meta.urlText}
+                            >
+                              {meta.urlText}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="fortune-link-card__row-actions">
                   {(context.allowEdit === true ||
@@ -466,85 +641,131 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
             ))}
           </div>
         ) : (
-          <>
-            <div
-              className="fortune-link-card__info link-content fortune-link-card__link-truncate"
-              onClick={() => {
-                setContext((draftCtx) =>
-                  goToLink(
-                    draftCtx,
-                    r,
-                    c,
-                    linkType,
-                    linkAddress,
-                    refs.scrollbarX.current!,
-                    refs.scrollbarY.current!,
-                  ),
-                );
-              }}
-              tabIndex={0}
-              data-testid="link-card-info-open"
-            >
-              <span
-                className="fortune-link-card__link-label"
-                title={originAddress || linkAddress}
-              >
-                {(originAddress || linkAddress).trim() || insertLink.openLink}
-              </span>
-            </div>
-            {(context.allowEdit === true ||
-              (context.isFlvReadOnly && linkType === 'webpage')) && (
-                <div className="divider" />
-              )}
-            {(context.allowEdit === true || context.isFlvReadOnly) &&
-              linkType === 'webpage' &&
-              renderToolbarButton('copy', () => {
-                navigator.clipboard.writeText(originAddress);
-                hideLinkCard();
-              })}
-            {context.allowEdit === true &&
-              !context.isFlvReadOnly &&
-              renderToolbarButton('pencil', () =>
-                setContext((draftCtx) => {
-                  if (draftCtx.linkCard != null && draftCtx.allowEdit) {
-                    const cell = getFlowdata(draftCtx)?.[r]?.[c];
-                    draftCtx.luckysheet_select_save = normalizeSelection(draftCtx, [
-                      {
-                        row: [r, r],
-                        column: [c, c],
-                        row_focus: r,
-                        column_focus: c,
-                      },
-                    ]);
-                    draftCtx.luckysheetCellUpdate = [r, c];
-                    draftCtx.linkCard.isEditing = true;
-                    draftCtx.linkCard.editingLinkIndex = undefined;
-                    draftCtx.linkCard.applyToSelection = true;
-                    const offsets = getSelectionOffsetsForInlineLink(cell, {
+          <div className="fortune-link-card__single-layout">
+            <div className="fortune-link-card__single-top-row">
+              <div
+                className="fortune-link-card__info link-content fortune-link-card__link-truncate"
+                onClick={() => {
+                  setContext((draftCtx) =>
+                    goToLink(
+                      draftCtx,
+                      r,
+                      c,
                       linkType,
                       linkAddress,
-                    }, 0);
-                    const fullText = getFallbackCellText(cell);
-                    const selectedText = getTextByOffsets(fullText, offsets);
-                    draftCtx.linkCard.selectionOffsets = offsets;
-                    draftCtx.linkCard.originText = selectedText || '';
-                    draftCtx.linkCard.linkInsertOffset = offsets?.end;
-                  }
-                }),
-              )}
-            {context.allowEdit === true && !context.isFlvReadOnly && (
-              <div className="divider" />
-            )}
-            {context.allowEdit === true &&
-              !context.isFlvReadOnly &&
-              renderToolbarButton('unlink', () =>
-                setContext((draftCtx) => {
-                  _.set(refs.globalCache, 'linkCard.mouseEnter', false);
-                  removeHyperlink(draftCtx, r, c);
-                  jfrefreshgrid(draftCtx, null, undefined);
-                }),
-              )}
-          </>
+                      refs.scrollbarX.current!,
+                      refs.scrollbarY.current!,
+                    ),
+                  );
+                }}
+                tabIndex={0}
+                data-testid="link-card-info-open"
+              >
+                {(() => {
+                  const address = originAddress || linkAddress;
+                  const emailLike = isEmailLikeAddress(address);
+                  return (
+                    <div className="fortune-link-card__preview-line">
+                      {emailLike ? (
+                        <LucideIcon
+                          name="Mail"
+                          className="fortune-link-card__favicon-fallback"
+                        />
+                      ) : singleMeta?.faviconUrl ? (
+                        <img
+                          src={singleMeta.faviconUrl}
+                          alt=""
+                          className="fortune-link-card__favicon"
+                        />
+                      ) : (
+                        <LucideIcon
+                          name="Globe"
+                          className="fortune-link-card__favicon-fallback"
+                        />
+                      )}
+                      <div className="fortune-link-card__preview-text">
+                        <span
+                          className="fortune-link-card__link-label"
+                          title={singleMeta?.title || originAddress || linkAddress}
+                        >
+                          {singleMeta?.title ||
+                            getViewLabel(linkType, originAddress || linkAddress, insertLink.openLink)}
+                        </span>
+                        {(singleMeta?.urlText || (!emailLike && (originAddress || linkAddress))) && (
+                          <span
+                            className="fortune-link-card__url-label"
+                            title={singleMeta?.urlText || originAddress || linkAddress}
+                          >
+                            {singleMeta?.urlText || (originAddress || linkAddress)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div className="fortune-link-card__row-actions">
+                {(context.allowEdit === true || context.isFlvReadOnly) &&
+                  linkType === 'webpage' &&
+                  renderToolbarButton('copy', () => {
+                    navigator.clipboard.writeText(originAddress);
+                    hideLinkCard();
+                  })}
+                {context.allowEdit === true &&
+                  !context.isFlvReadOnly &&
+                  renderToolbarButton('pencil', () =>
+                    setContext((draftCtx) => {
+                      if (draftCtx.linkCard != null && draftCtx.allowEdit) {
+                        const cell = getFlowdata(draftCtx)?.[r]?.[c];
+                        draftCtx.luckysheet_select_save = normalizeSelection(draftCtx, [
+                          {
+                            row: [r, r],
+                            column: [c, c],
+                            row_focus: r,
+                            column_focus: c,
+                          },
+                        ]);
+                        draftCtx.luckysheetCellUpdate = [r, c];
+                        draftCtx.linkCard.isEditing = true;
+                        draftCtx.linkCard.editingLinkIndex = undefined;
+                        draftCtx.linkCard.applyToSelection = true;
+                        const offsets = getSelectionOffsetsForInlineLink(cell, {
+                          linkType,
+                          linkAddress,
+                        }, 0);
+                        const fullText = getFallbackCellText(cell);
+                        const selectedText = getTextByOffsets(fullText, offsets);
+                        draftCtx.linkCard.selectionOffsets = offsets;
+                        draftCtx.linkCard.originText = selectedText || '';
+                        draftCtx.linkCard.linkInsertOffset = offsets?.end;
+                      }
+                    }),
+                  )}
+                {context.allowEdit === true &&
+                  !context.isFlvReadOnly &&
+                  renderToolbarButton('unlink', () =>
+                    setContext((draftCtx) => {
+                      _.set(refs.globalCache, 'linkCard.mouseEnter', false);
+                      removeHyperlink(draftCtx, r, c);
+                      jfrefreshgrid(draftCtx, null, undefined);
+                    }),
+                  )}
+              </div>
+            </div>
+            {singleMeta?.imageUrl ? (
+              <div className="fortune-link-card__preview-image-wrap">
+                <img
+                  src={singleMeta.imageUrl}
+                  alt=""
+                  className="fortune-link-card__preview-image"
+                />
+              </div>
+            ) : singleMeta?.description ? (
+              <div className="fortune-link-card__preview-description">
+                {singleMeta.description}
+              </div>
+            ) : null}
+          </div>
         )}
       </div>
     );

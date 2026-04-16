@@ -810,16 +810,34 @@ function placeCaretInPlainSpanAfterLinkedSpan(linkSpan: HTMLElement) {
   sel.addRange(r);
 }
 
-function ensureEditorEndsWithPlainAnchorIfLastIsLink(editor: HTMLDivElement) {
+function findLastLinkSpanInEditor(editor: HTMLDivElement): HTMLElement | null {
   const spans = editor.querySelectorAll("span");
-  if (spans.length === 0) return;
-  const last = spans[spans.length - 1] as HTMLElement;
-  if (!last?.dataset?.linkType || !last?.dataset?.linkAddress) return;
+  for (let i = spans.length - 1; i >= 0; i -= 1) {
+    const el = spans[i] as HTMLElement;
+    if (el.dataset?.linkType && el.dataset?.linkAddress) return el;
+  }
+  return null;
+}
+
+function hasPlainTypingSpanAfterLink(linkSpan: HTMLElement): boolean {
+  const next = linkSpan.nextElementSibling;
+  return (
+    next instanceof HTMLElement &&
+    next.tagName === "SPAN" &&
+    !next.dataset?.linkType &&
+    !next.dataset?.linkAddress
+  );
+}
+
+function ensureEditorEndsWithPlainAnchorIfLastIsLink(editor: HTMLDivElement) {
+  const lastLink = findLastLinkSpanInEditor(editor);
+  if (!lastLink) return;
+  if (hasPlainTypingSpanAfterLink(lastLink)) return;
   const anchor = document.createElement("span");
   anchor.className = "luckysheet-input-span";
   anchor.setAttribute("data-no-link-anchor", "1");
   anchor.textContent = "\u00A0";
-  last.insertAdjacentElement("afterend", anchor);
+  lastLink.insertAdjacentElement("afterend", anchor);
 }
 
 function getHtmlOffsetWithinSpan(
@@ -856,6 +874,39 @@ export function applyLinkToSelection(
 
   const $textEditor = cellInput;
   const { endContainer, startContainer, endOffset, startOffset } = range;
+
+  // Multiline-safe fast path: when selection is within a single text node (typical
+  // Space auto-link token), wrap via DOM Range APIs instead of slicing parent innerHTML.
+  // String slicing with HTML offsets is fragile around <br> and can duplicate content.
+  const hasMultilineBreaksInEditor = $textEditor.querySelector("br") != null;
+  if (
+    hasMultilineBreaksInEditor &&
+    startContainer === endContainer &&
+    startContainer.nodeType === Node.TEXT_NODE &&
+    range.toString().length > 0
+  ) {
+    const parentEl =
+      startContainer.parentElement?.tagName === "SPAN"
+        ? (startContainer.parentElement as HTMLElement)
+        : null;
+    let cssText = parentEl?.style?.cssText || "";
+    const inherit = $textEditor.innerHTML.substring(0, 5) !== "<span";
+    if (inherit && parentEl) {
+      const box = parentEl.closest("#luckysheet-input-box") as HTMLElement | null;
+      if (box != null) cssText = extendCssText(box.style.cssText, cssText);
+    }
+    cssText = getLinkStyleCssText(cssText);
+    const linkSpan = document.createElement("span");
+    linkSpan.setAttribute("style", cssText);
+    linkSpan.setAttribute("data-link-type", linkType);
+    linkSpan.setAttribute("data-link-address", linkAddress);
+    const extracted = range.extractContents();
+    linkSpan.appendChild(extracted);
+    range.insertNode(linkSpan);
+    placeCaretInPlainSpanAfterLinkedSpan(linkSpan);
+    ensureEditorEndsWithPlainAnchorIfLastIsLink($textEditor);
+    return;
+  }
 
   if (startContainer === endContainer) {
     const span = startContainer.parentNode as HTMLElement | null;
@@ -917,10 +968,20 @@ export function applyLinkToSelection(
     } else {
       span!.innerHTML = cont;
     }
-    const newSpans = $textEditor.querySelectorAll("span");
-    const linkSpanIndex = left === "" ? 0 : 1;
-    if (newSpans[linkSpanIndex]) {
-      placeCaretInPlainSpanAfterLinkedSpan(newSpans[linkSpanIndex] as HTMLElement);
+    // Do not use querySelectorAll index 0/1: that targets the wrong span once the cell
+    // already has earlier links (e.g. second auto-linked URL still used span[0] = first link).
+    const wantAddr = linkAddress.trim();
+    let appliedLinkSpan: HTMLElement | null = null;
+    const linked = $textEditor.querySelectorAll("span[data-link-address]");
+    for (let i = linked.length - 1; i >= 0; i -= 1) {
+      const el = linked[i] as HTMLElement;
+      if ((el.dataset.linkAddress || "").trim() === wantAddr) {
+        appliedLinkSpan = el;
+        break;
+      }
+    }
+    if (appliedLinkSpan) {
+      placeCaretInPlainSpanAfterLinkedSpan(appliedLinkSpan);
     }
     ensureEditorEndsWithPlainAnchorIfLastIsLink($textEditor);
   } else if (

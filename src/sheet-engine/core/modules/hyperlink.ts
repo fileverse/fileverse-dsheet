@@ -17,6 +17,13 @@ import { changeSheet } from "./sheet";
 import { locale } from "../locale";
 import type { Cell, CellStyle, GlobalCache, HyperlinkEntry } from "../types";
 
+function isEmailAddressLike(value: string): boolean {
+  const v = String(value ?? "").trim();
+  if (!v) return false;
+  const noMailto = v.replace(/^mailto:/i, "");
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(noMailto);
+}
+
 function normalizeEditorPlainText(s: string): string {
   return s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 }
@@ -887,10 +894,18 @@ export function goToLink(
   if (currSheetIndex == null) return;
   if (getCellHyperlinks(ctx, r, c).length === 0) return;
   if (linkType === "webpage") {
-    if (!/^http[s]?:\/\//.test(linkAddress)) {
-      linkAddress = `https://${linkAddress}`;
+    const raw = String(linkAddress ?? "").trim();
+    if (!raw) return;
+    if (isEmailAddressLike(raw)) {
+      const email = raw.replace(/^mailto:/i, "");
+      window.open(`mailto:${email}`);
+    } else {
+      let toOpen = raw;
+      if (!/^http[s]?:\/\//i.test(toOpen)) {
+        toOpen = `https://${toOpen}`;
+      }
+      window.open(toOpen);
     }
-    window.open(linkAddress);
   } else if (linkType === "sheet") {
     let sheetId;
     _.forEach(ctx.luckysheetfile, (f) => {
@@ -923,6 +938,10 @@ export function isLinkValid(
 ) {
   if (!linkAddress) return { isValid: false, tooltip: "" };
   const { insertLink } = locale(ctx);
+  const raw = String(linkAddress ?? "").trim();
+  if (isEmailAddressLike(raw)) {
+    return { isValid: true, tooltip: "" };
+  }
   // prepend https:// if missing
   if (!/^https?:\/\//i.test(linkAddress)) {
     linkAddress = `https://${linkAddress}`;

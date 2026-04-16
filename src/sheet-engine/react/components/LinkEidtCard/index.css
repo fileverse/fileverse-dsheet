@@ -38,7 +38,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 420px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .fortune-link-card__multi-row {
@@ -46,6 +48,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #eee;
 }
@@ -65,6 +69,11 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
+}
+
+.fortune-link-card__multi-row .fortune-link-card__preview-text {
+  max-width: none;
 }
 
 .fortune-link-type-select {
@@ -130,12 +139,17 @@
 .fortune-link-modify-modal.link-toolbar {
   display: flex;
   flex-direction: row;
-  padding: 2px 8px 2px 16px;
-  align-items: center;
+  padding: 11px 13px;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(330px, calc(100vw - 52px));
+  max-width: min(330px, calc(100vw - 52px));
+  box-sizing: border-box;
 }
 
 .fortune-link-modify-modal .link-content {
   margin-right: 6px;
+  color: #2674fb;
 }
 
 .fortune-link-card__link-truncate {
@@ -154,8 +168,88 @@
   color: inherit;
 }
 
+.fortune-link-card__preview-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fortune-link-card__favicon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.fortune-link-card__favicon-fallback {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #1f1f1f;
+}
+
+.fortune-link-card__preview-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  max-width: 220px;
+}
+
+.fortune-link-card__url-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #202124;
+}
+
+.fortune-link-card__preview-image-wrap {
+  margin-top: 4px;
+  border: 1px solid #d8d8d8;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.fortune-link-card__preview-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+}
+
+.fortune-link-card__preview-description {
+  margin-top: 4px;
+  padding: 2px 0;
+  color: #3c4043;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fortune-link-card__single-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.fortune-link-card__single-top-row {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  gap: 12px;
+}
+
 .fortune-link-modify-modal .link-content:hover {
-  color: #2674fb;
   cursor: pointer;
 }
 
