@@ -126,6 +126,36 @@ function ensureTrailingPlainSpanAfterLinkedTail(
   return true;
 }
 
+function moveCaretToTrailingPlainSpan(editor: HTMLDivElement | null): boolean {
+  if (!editor) return false;
+  const lastLink = findLastLinkSpanInEditor(editor);
+  if (!lastLink) return false;
+  const next = lastLink.nextElementSibling;
+  if (
+    !(next instanceof HTMLElement) ||
+    next.tagName !== 'SPAN' ||
+    next.dataset?.linkType ||
+    next.dataset?.linkAddress
+  ) {
+    return false;
+  }
+  let textNode = next.firstChild as Text | null;
+  if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
+    textNode = document.createTextNode('\u00A0');
+    next.textContent = '';
+    next.appendChild(textNode);
+  }
+  const sel = window.getSelection();
+  if (!sel) return false;
+  const range = document.createRange();
+  range.setStart(textNode, textNode.textContent?.length || 0);
+  range.collapse(true);
+  editor.focus({ preventScroll: true });
+  sel.removeAllRanges();
+  sel.addRange(range);
+  return true;
+}
+
 function buildSingleLinkEditorHtml(
   text: string,
   link: { linkType: string; linkAddress: string },
@@ -137,6 +167,13 @@ function buildSingleLinkEditorHtml(
   const safeType = String(link.linkType).replace(/"/g, '&quot;');
   const safeAddress = String(link.linkAddress).replace(/"/g, '&quot;');
   return `<span class="luckysheet-input-span" style="color: rgb(0, 0, 255); border-bottom: 1px solid rgb(0, 0, 255);" data-link-type="${safeType}" data-link-address="${safeAddress}">${escaped}</span>`;
+}
+
+function getInlinePlainText(cell: any): string {
+  if (cell?.ct?.t === 'inlineStr' && Array.isArray(cell.ct.s)) {
+    return cell.ct.s.map((seg: any) => String(seg?.v ?? '')).join('');
+  }
+  return '';
 }
 
 function getCaretCharacterOffsetInEditor(element: HTMLDivElement): number | null {
@@ -411,6 +448,21 @@ const InputBox: React.FC = () => {
         firstSelectionActiveCell.row_focus!,
         firstSelectionActiveCell.column_focus!,
       );
+      // Hyperlink cells can carry blue/underline as cell-level style (especially after import).
+      // In edit mode that decorates the entire input box; keep decoration on link spans only.
+      const activeHyperlink = getCellHyperlink(
+        context,
+        firstSelectionActiveCell.row_focus!,
+        firstSelectionActiveCell.column_focus!,
+      );
+      if (activeHyperlink?.linkAddress) {
+        style = {
+          ...style,
+          color: undefined,
+          borderBottom: undefined,
+          textDecoration: undefined,
+        };
+      }
       if (cellEditorIsFormula) {
         style = { ...style, textAlign: 'left' };
       }
@@ -474,11 +526,24 @@ const InputBox: React.FC = () => {
       }
       const flowdata = getFlowdata(context);
       const cell = flowdata?.[row_index]?.[col_index];
+      const inlineCellHasLinkRuns =
+        cell?.ct?.t === 'inlineStr' &&
+        Array.isArray(cell.ct.s) &&
+        cell.ct.s.some(
+          (seg: any) =>
+            !!seg?.link?.linkType &&
+            !!seg?.link?.linkAddress,
+        );
+      const cellHyperlink = getCellHyperlink(context, row_index, col_index);
       const overwrite = refs.globalCache.overwriteCell;
       let value = '';
       if (cell && !overwrite) {
-        if (isInlineStringCell(cell)) {
+        if (isInlineStringCell(cell) && inlineCellHasLinkRuns) {
           value = getInlineStringHTML(row_index, col_index, flowdata);
+        } else if (isInlineStringCell(cell)) {
+          // Imported XLSX often keeps plain text as inlineStr runs even without link runs.
+          // Use full joined run text here; generic getCellValue can collapse to partial run.
+          value = getInlinePlainText(cell);
         } else if (cell.f) {
           value = getCellValue(row_index, col_index, flowdata, 'f');
           setContext((ctx) => {
@@ -495,17 +560,15 @@ const InputBox: React.FC = () => {
       let wroteEditorFromStoredCell = false;
       let wroteSingleHydratedLinkSpan = false;
       if (!refs.globalCache.ignoreWriteCell && inputRef.current && value) {
-        const hyperlink = getCellHyperlink(context, row_index, col_index);
         if (
-          hyperlink?.linkType &&
-          hyperlink?.linkAddress &&
-          !isInlineStringCell(cell as any) &&
-          String(value).trim().length > 0 &&
-          String(value).trim() === String(hyperlink.linkAddress).trim()
+          cellHyperlink?.linkType &&
+          cellHyperlink?.linkAddress &&
+          !inlineCellHasLinkRuns &&
+          String(value).trim().length > 0
         ) {
           inputRef.current!.innerHTML = buildSingleLinkEditorHtml(
             String(value),
-            hyperlink,
+            cellHyperlink,
           );
           wroteSingleHydratedLinkSpan = true;
         } else {
@@ -524,7 +587,7 @@ const InputBox: React.FC = () => {
         wroteEditorFromStoredCell = true;
       }
       refs.globalCache.ignoreWriteCell = false;
-      if (isInlineStringCell(cell as any) || wroteSingleHydratedLinkSpan) {
+      if ((isInlineStringCell(cell as any) && inlineCellHasLinkRuns) || wroteSingleHydratedLinkSpan) {
         ensureTrailingPlainSpanAfterLinkedTail(inputRef.current);
       }
       if (inputRef.current) {
@@ -534,6 +597,9 @@ const InputBox: React.FC = () => {
       }
       if (wroteEditorFromStoredCell && !refs.globalCache.doNotFocus) {
         setTimeout(() => {
+          if (wroteSingleHydratedLinkSpan && moveCaretToTrailingPlainSpan(inputRef.current)) {
+            return;
+          }
           moveToEnd(inputRef.current!);
         });
       }

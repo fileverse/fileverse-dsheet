@@ -65,6 +65,32 @@ const parseColorToHex = (color: string): string | null => {
   return null;
 };
 
+const getFirstHyperlinkEntry = (
+  raw: unknown,
+): { linkType: string; linkAddress: string } | undefined => {
+  if (Array.isArray(raw)) {
+    const first = raw[0];
+    if (
+      first &&
+      typeof first === 'object' &&
+      typeof (first as any).linkType === 'string' &&
+      typeof (first as any).linkAddress === 'string'
+    ) {
+      return first as { linkType: string; linkAddress: string };
+    }
+    return undefined;
+  }
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    typeof (raw as any).linkType === 'string' &&
+    typeof (raw as any).linkAddress === 'string'
+  ) {
+    return raw as { linkType: string; linkAddress: string };
+  }
+  return undefined;
+};
+
 export const handleExportToXLSX = async (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
@@ -413,6 +439,25 @@ export const handleExportToXLSX = async (
 
       // Apply rich text collected during Pass 1
       applyRichTextToWorksheet(ws, sheetRichTextMaps[index]);
+
+      // XLSX export supports one hyperlink per cell. Accept both legacy single-entry
+      // shape and the newer array shape, exporting only the first entry.
+      Object.entries(sheet.hyperlink || {}).forEach(([rowColKey, rawLink]) => {
+        const firstLink = getFirstHyperlinkEntry(rawLink);
+        if (!firstLink?.linkAddress) return;
+        const [row, col] = rowColKey.split('_').map(Number);
+        if (Number.isNaN(row) || Number.isNaN(col)) return;
+        const cellAddress = XLSXUtil.encode_cell({ r: row, c: col });
+        const cell = ws.getCell(cellAddress) as any;
+        const currentText =
+          typeof cell.text === 'string' && cell.text.length > 0
+            ? cell.text
+            : cell.value?.text || cell.value?.richText?.map((x: any) => x.text || '').join('') || '';
+        cell.value = {
+          text: currentText || firstLink.linkAddress,
+          hyperlink: firstLink.linkAddress,
+        };
+      });
 
       // Export real conditional formatting first so dropdown-color CF priorities don't conflict
       const { nextPriority, pendingDuplicateValues } =
