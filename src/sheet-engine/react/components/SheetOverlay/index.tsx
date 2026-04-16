@@ -348,19 +348,22 @@ const SheetOverlay: React.FC = () => {
       if (isInsertByPlusShortcut) {
         const selection = context.luckysheet_select_save?.[0];
         if (selection?.column_select || selection?.row_select) {
+          const selectedCount = selection.column_select
+            ? selection.column[1] - selection.column[0] + 1
+            : selection.row[1] - selection.row[0] + 1;
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
                 type: 'column',
                 index: selection!.column[0],
-                count: 1,
+                count: selectedCount,
                 direction: 'lefttop',
                 id: context.currentSheetId,
               }
               : {
                 type: 'row',
                 index: selection!.row[1],
-                count: 1,
+                count: selectedCount,
                 direction: 'rightbottom',
                 id: context.currentSheetId,
               };
@@ -368,6 +371,27 @@ const SheetOverlay: React.FC = () => {
           setContext((draftCtx) => {
             insertRowCol(draftCtx, insertRowColOp, false);
           }, { insertRowColOp });
+        } else if (selection) {
+          const workbookRect =
+            refs.workbookContainer.current?.getBoundingClientRect();
+          const baseX = selection.left_move ?? selection.left ?? 0;
+          const selectionWidth = selection.width_move ?? selection.width ?? 0;
+          // Open shortcut menu after the selected range (multi-cell aware),
+          // instead of anchoring near the first selected cell.
+          const menuX = Math.max(0, baseX + selectionWidth + 55);
+          const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
+
+          setContext((draftCtx) => {
+            draftCtx.contextMenu = {
+              x: menuX,
+              y: menuY,
+              pageX: (workbookRect?.left ?? 0) + menuX,
+              pageY: (workbookRect?.top ?? 0) + menuY,
+              headerMenu: undefined,
+              // @ts-ignore custom menu variant for shortcut insert actions
+              menuType: 'insert-shortcut',
+            };
+          });
         }
         ev.preventDefault();
         return;
@@ -432,6 +456,27 @@ const SheetOverlay: React.FC = () => {
                 ];
               }
             }
+          });
+        } else if (selection) {
+          const workbookRect =
+            refs.workbookContainer.current?.getBoundingClientRect();
+          const baseX = selection.left_move ?? selection.left ?? 0;
+          const selectionWidth = selection.width_move ?? selection.width ?? 0;
+          // Open shortcut menu after the selected range (multi-cell aware),
+          // instead of anchoring near the first selected cell.
+          const menuX = Math.max(0, baseX + selectionWidth + 55);
+          const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
+
+          setContext((draftCtx) => {
+            draftCtx.contextMenu = {
+              x: menuX,
+              y: menuY,
+              pageX: (workbookRect?.left ?? 0) + menuX,
+              pageY: (workbookRect?.top ?? 0) + menuY,
+              headerMenu: undefined,
+              // @ts-ignore custom menu variant for shortcut delete actions
+              menuType: 'delete-shortcut',
+            };
           });
         }
         ev.preventDefault();

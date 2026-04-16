@@ -1418,10 +1418,10 @@ const InputBox: React.FC = () => {
         allowListNavigation &&
         !(e.shiftKey && isInPlaceEditMode)
       ) {
-        if (document.getElementById('luckysheet-formula-search-c')) {
-          const formulaSearchContainer = document.getElementById(
-            'luckysheet-formula-search-c',
-          );
+        const formulaSearchContainer = document.getElementById(
+          'luckysheet-formula-search-c',
+        );
+        if (formulaSearchContainer) {
           const activeItem = formulaSearchContainer?.querySelector(
             '.luckysheet-formula-search-item-active',
           );
@@ -1445,8 +1445,12 @@ const InputBox: React.FC = () => {
           if (previousItem) {
             previousItem.classList.add('luckysheet-formula-search-item-active');
           }
+          e.preventDefault();
+        } else if (isInPlaceEditMode && !isFormulaReferenceInputMode(context)) {
+          // In double-click/F2 edit mode, keep native caret movement for Up/Down.
+          // Do not prevent default so contenteditable can move the caret vertically.
+          return;
         }
-        e.preventDefault();
       } else if (
         !(e.metaKey || e.ctrlKey) &&
         e.key === 'ArrowDown' &&
@@ -1454,10 +1458,10 @@ const InputBox: React.FC = () => {
         allowListNavigation &&
         !(e.shiftKey && isInPlaceEditMode)
       ) {
-        if (document.getElementById('luckysheet-formula-search-c')) {
-          const formulaSearchContainer = document.getElementById(
-            'luckysheet-formula-search-c',
-          );
+        const formulaSearchContainer = document.getElementById(
+          'luckysheet-formula-search-c',
+        );
+        if (formulaSearchContainer) {
           const activeItem = formulaSearchContainer?.querySelector(
             '.luckysheet-formula-search-item-active',
           );
@@ -1478,8 +1482,11 @@ const InputBox: React.FC = () => {
           if (nextItem) {
             nextItem.classList.add('luckysheet-formula-search-item-active');
           }
+          e.preventDefault();
+        } else if (isInPlaceEditMode && !isFormulaReferenceInputMode(context)) {
+          // In double-click/F2 edit mode, keep native caret movement for Up/Down.
+          return;
         }
-        e.preventDefault();
       }
       // else if (
       //   e.key === "ArrowLeft" &&

@@ -24,6 +24,7 @@ import {
   clearSelectedCellFormat,
   clearColumnsCellsFormat,
   clearRowsCellsFormat,
+  indexToColumnChar,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import React, {
@@ -61,6 +62,232 @@ const ContextMenu: React.FC = () => {
   const { rightclick, drag, generalDialog, info, splitText } = locale(context);
 
   const [activeMenu, setActiveMenu] = useState('');
+
+  const applyDeleteCellsShift = useCallback(
+    (direction: 'left' | 'up') => {
+      const selection = context.luckysheet_select_save?.[0];
+      if (!selection) return;
+      const [rowStart, rowEnd] = selection.row;
+      const [colStart, colEnd] = selection.column;
+      const rowCount = rowEnd - rowStart + 1;
+      const colCount = colEnd - colStart + 1;
+
+      setContext((draftCtx) => {
+        const sheetIndex = getSheetIndex(draftCtx, draftCtx.currentSheetId);
+        if (_.isNil(sheetIndex)) {
+          draftCtx.contextMenu = {};
+          return;
+        }
+        const sheet = draftCtx.luckysheetfile[sheetIndex];
+        const data = sheet?.data;
+        if (!data?.length || !data[0]?.length) {
+          draftCtx.contextMenu = {};
+          return;
+        }
+        const totalRows = sheet.row ?? data.length;
+        const totalCols = sheet.column ?? data[0].length;
+
+        if (direction === 'left') {
+          for (let r = rowStart; r <= rowEnd; r += 1) {
+            const row = data[r];
+            if (!row) continue;
+            row.splice(colStart, colCount);
+            while (row.length < totalCols) {
+              row.push(null);
+            }
+          }
+        } else {
+          for (let c = colStart; c <= colEnd; c += 1) {
+            for (let r = rowStart; r <= totalRows - rowCount - 1; r += 1) {
+              data[r][c] = data[r + rowCount]?.[c] ?? null;
+            }
+            for (let r = totalRows - rowCount; r < totalRows; r += 1) {
+              data[r][c] = null;
+            }
+          }
+        }
+
+        draftCtx.contextMenu = {};
+        jfrefreshgrid(draftCtx, null, undefined);
+      });
+    },
+    [context.luckysheet_select_save, setContext],
+  );
+
+  const applyInsertCellsShift = useCallback(
+    (direction: 'right' | 'down') => {
+      const selection = context.luckysheet_select_save?.[0];
+      if (!selection) return;
+      const [rowStart, rowEnd] = selection.row;
+      const [colStart, colEnd] = selection.column;
+      const rowCount = rowEnd - rowStart + 1;
+      const colCount = colEnd - colStart + 1;
+
+      setContext((draftCtx) => {
+        const sheetIndex = getSheetIndex(draftCtx, draftCtx.currentSheetId);
+        if (_.isNil(sheetIndex)) {
+          draftCtx.contextMenu = {};
+          return;
+        }
+        const sheet = draftCtx.luckysheetfile[sheetIndex];
+        const data = sheet?.data;
+        if (!data?.length || !data[0]?.length) {
+          draftCtx.contextMenu = {};
+          return;
+        }
+        const totalRows = sheet.row ?? data.length;
+        const totalCols = sheet.column ?? data[0].length;
+
+        if (direction === 'right') {
+          for (let r = rowStart; r <= rowEnd; r += 1) {
+            const row = data[r];
+            if (!row) continue;
+            row.splice(colStart, 0, ...new Array(colCount).fill(null));
+            row.length = totalCols;
+          }
+        } else {
+          for (let c = colStart; c <= colEnd; c += 1) {
+            for (let r = totalRows - 1; r >= rowStart + rowCount; r -= 1) {
+              data[r][c] = data[r - rowCount]?.[c] ?? null;
+            }
+            for (let r = rowStart; r < rowStart + rowCount; r += 1) {
+              data[r][c] = null;
+            }
+          }
+        }
+
+        draftCtx.contextMenu = {};
+        jfrefreshgrid(draftCtx, null, undefined);
+      });
+    },
+    [context.luckysheet_select_save, setContext],
+  );
+
+  const deleteSelectedRowRange = useCallback(() => {
+    const selection = context.luckysheet_select_save?.[0];
+    if (!selection) return;
+    const [stIndex, edIndex] = selection.row;
+
+    const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+      type: 'row',
+      start: stIndex,
+      end: edIndex,
+      id: context.currentSheetId,
+    };
+
+    setContext(
+      (draftCtx) => {
+        const index = getSheetIndex(draftCtx, draftCtx.currentSheetId) as number;
+        const slen = edIndex - stIndex + 1;
+        if (draftCtx.luckysheetfile[index].data?.length! <= slen) {
+          showAlert(rightclick.cannotDeleteAllRow, 'ok');
+          draftCtx.contextMenu = {};
+          return;
+        }
+        try {
+          deleteRowCol(draftCtx, deleteRowColOp);
+        } catch (e: any) {
+          if (e.message === 'readOnly') {
+            showAlert(rightclick.cannotDeleteRowReadOnly, 'ok');
+          }
+        }
+        draftCtx.contextMenu = {};
+      },
+      { deleteRowColOp },
+    );
+  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.cannotDeleteAllRow, rightclick.cannotDeleteRowReadOnly]);
+
+  const deleteSelectedColumnRange = useCallback(() => {
+    const selection = context.luckysheet_select_save?.[0];
+    if (!selection) return;
+    const [stIndex, edIndex] = selection.column;
+
+    const deleteRowColOp: SetContextOptions['deleteRowColOp'] = {
+      type: 'column',
+      start: stIndex,
+      end: edIndex,
+      id: context.currentSheetId,
+    };
+
+    setContext(
+      (draftCtx) => {
+        const index = getSheetIndex(draftCtx, draftCtx.currentSheetId) as number;
+        const slen = edIndex - stIndex + 1;
+        if (draftCtx.luckysheetfile[index].data?.[0]?.length! <= slen) {
+          showAlert(rightclick.cannotDeleteAllColumn, 'ok');
+          draftCtx.contextMenu = {};
+          return;
+        }
+        try {
+          deleteRowCol(draftCtx, deleteRowColOp);
+        } catch (e: any) {
+          if (e.message === 'readOnly') {
+            showAlert(rightclick.cannotDeleteColumnReadOnly, 'ok');
+          }
+        }
+        draftCtx.contextMenu = {};
+      },
+      { deleteRowColOp },
+    );
+  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.cannotDeleteAllColumn, rightclick.cannotDeleteColumnReadOnly]);
+
+  const insertSelectedRowRange = useCallback(() => {
+    const selection = context.luckysheet_select_save?.[0];
+    if (!selection) return;
+    const rowCount = selection.row[1] - selection.row[0] + 1;
+    const insertRowColOp: SetContextOptions['insertRowColOp'] = {
+      type: 'row',
+      index: selection.row[1],
+      count: rowCount,
+      direction: 'rightbottom',
+      id: context.currentSheetId,
+    };
+
+    setContext(
+      (draftCtx) => {
+        try {
+          insertRowCol(draftCtx, insertRowColOp);
+        } catch (err: any) {
+          if (err.message === 'maxExceeded') {
+            showAlert(rightclick.rowOverLimit, 'ok');
+          } else if (err.message === 'readOnly') {
+            showAlert(rightclick.cannotInsertOnRowReadOnly, 'ok');
+          }
+        }
+        draftCtx.contextMenu = {};
+      },
+      { insertRowColOp },
+    );
+  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.rowOverLimit, rightclick.cannotInsertOnRowReadOnly]);
+
+  const insertSelectedColumnRange = useCallback(() => {
+    const selection = context.luckysheet_select_save?.[0];
+    if (!selection) return;
+    const colCount = selection.column[1] - selection.column[0] + 1;
+    const insertRowColOp: SetContextOptions['insertRowColOp'] = {
+      type: 'column',
+      index: selection.column[0],
+      count: colCount,
+      direction: 'lefttop',
+      id: context.currentSheetId,
+    };
+
+    setContext(
+      (draftCtx) => {
+        try {
+          insertRowCol(draftCtx, insertRowColOp);
+        } catch (err: any) {
+          if (err.message === 'maxExceeded') {
+            showAlert(rightclick.columnOverLimit, 'ok');
+          } else if (err.message === 'readOnly') {
+            showAlert(rightclick.cannotInsertOnColumnReadOnly, 'ok');
+          }
+        }
+        draftCtx.contextMenu = {};
+      },
+      { insertRowColOp },
+    );
+  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.columnOverLimit, rightclick.cannotInsertOnColumnReadOnly]);
 
   const addRowColRightAvobe = (
     type: 'row' | 'column',
@@ -273,7 +500,7 @@ const ContextMenu: React.FC = () => {
           >
             <div className="context-item">
               <LucideIcon name="ShieldCheck" />
-              <p>Data Validation</p>
+              <p>Dropdown</p>
             </div>
           </Menu>
         );
@@ -403,6 +630,7 @@ const ContextMenu: React.FC = () => {
         ));
       }
       if (name === 'insert-column-right') {
+        if (!context.contextMenu.headerMenu) return null;
         if (selection?.row_select) return null;
         const colSpan =
           selection != null
@@ -449,6 +677,7 @@ const ContextMenu: React.FC = () => {
         ));
       }
       if (name === 'insert-row') {
+        if (!context.contextMenu.headerMenu) return null;
         if (selection?.column_select) return null;
         const rowSpan =
           selection != null ? selection.row[1] - selection.row[0] + 1 : 1;
@@ -469,6 +698,142 @@ const ContextMenu: React.FC = () => {
             </div>
           </Menu>
         ));
+      }
+      if (name === 'insert-cells') {
+        if (selection?.row_select || selection?.column_select) return null;
+        return (
+          <Tippy
+            key={name}
+            placement="right-start"
+            interactive
+            interactiveBorder={50}
+            offset={[0, 0]}
+            arrow={false}
+            zIndex={3000}
+            appendTo={document.body}
+            trigger="mouseenter focus"
+            hideOnClick={false}
+            onShow={() => {
+              setActiveMenu('insert-cells');
+            }}
+            onHide={() => {
+              if (activeMenu === 'insert-cells') setActiveMenu('');
+            }}
+            content={
+              <div
+                className="fortune-toolbar-select"
+                style={{ minWidth: '14rem' }}
+              >
+                <div className="flex flex-col color-text-default text-body-sm">
+                  <Menu
+                    onClick={() => {
+                      applyInsertCellsShift('right');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Insert cells and shift right</p>
+                    </div>
+                  </Menu>
+                  <Menu
+                    onClick={() => {
+                      applyInsertCellsShift('down');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Insert cells and shift down</p>
+                    </div>
+                  </Menu>
+                </div>
+              </div>
+            }
+          >
+            <div>
+              <Menu isActive={activeMenu === 'insert-cells'}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="context-item">
+                    <LucideIcon name="Plus" />
+                    <p>Insert cells</p>
+                  </div>
+                  <LucideIcon name="ChevronRight" width={16} height={16} />
+                </div>
+              </Menu>
+            </div>
+          </Tippy>
+        );
+      }
+      if (name === 'delete-cells') {
+        if (selection?.row_select || selection?.column_select) return null;
+        return (
+          <Tippy
+            key={name}
+            placement="right-start"
+            interactive
+            interactiveBorder={50}
+            offset={[0, 0]}
+            arrow={false}
+            zIndex={3000}
+            appendTo={document.body}
+            trigger="mouseenter focus"
+            hideOnClick={false}
+            onShow={() => {
+              setActiveMenu('delete-cells');
+            }}
+            onHide={() => {
+              if (activeMenu === 'delete-cells') setActiveMenu('');
+            }}
+            content={
+              <div
+                className="fortune-toolbar-select"
+                style={{ minWidth: '14rem' }}
+              >
+                <div className="flex flex-col color-text-default text-body-sm">
+                  <Menu
+                    onClick={() => {
+                      applyDeleteCellsShift('left');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Delete cells and shift left</p>
+                    </div>
+                  </Menu>
+                  <Menu
+                    onClick={() => {
+                      applyDeleteCellsShift('up');
+                    }}
+                  >
+                    <div
+                      className="context-item p-2 w-full"
+                      style={{ height: '36px' }}
+                    >
+                      <p>Delete cells and shift up</p>
+                    </div>
+                  </Menu>
+                </div>
+              </div>
+            }
+          >
+            <div>
+              <Menu isActive={activeMenu === 'delete-cells'}>
+                <div className="flex items-center justify-between w-full">
+                  <div className="context-item">
+                    <LucideIcon name="Trash2" />
+                    <p>Delete cells</p>
+                  </div>
+                  <LucideIcon name="ChevronRight" width={16} height={16} />
+                </div>
+              </Menu>
+            </div>
+          </Tippy>
+        );
       }
       if (name === 'delete-column') {
         return (
@@ -1221,20 +1586,151 @@ const ContextMenu: React.FC = () => {
 
   if (_.isEmpty(context.contextMenu)) return null;
 
+  const selection = context.luckysheet_select_save?.[0];
+  const rowSpan = selection ? selection.row[1] - selection.row[0] + 1 : 1;
+  const colSpan = selection ? selection.column[1] - selection.column[0] + 1 : 1;
+  const insertRowLabel =
+    rowSpan === 1 ? 'Insert row' : `Insert ${rowSpan} rows`;
+  const insertColumnLabel =
+    colSpan === 1 ? 'Insert column' : `Insert ${colSpan} columns`;
+  const deleteRowTargetLabel =
+    selection == null
+      ? `${rowSpan} rows`
+      : rowSpan === 1
+        ? `row ${selection.row[0] + 1}`
+        : `row ${selection.row[0] + 1} - ${selection.row[1] + 1}`;
+  const deleteColumnTargetLabel =
+    selection == null
+      ? `${colSpan} columns`
+      : colSpan === 1
+        ? `column ${indexToColumnChar(selection.column[0])}`
+        : `column ${indexToColumnChar(selection.column[0])} - ${indexToColumnChar(selection.column[1])}`;
+  const isDeleteShortcutMenu =
+    (context.contextMenu as any).menuType === 'delete-shortcut';
+  const isInsertShortcutMenu =
+    (context.contextMenu as any).menuType === 'insert-shortcut';
+  type ShortcutActionItem = {
+    key: string;
+    label: React.ReactNode;
+    onClick: () => void;
+  };
+  const shortcutPrimaryItems: ShortcutActionItem[] = isDeleteShortcutMenu
+    ? [
+      {
+        key: 'delete-cells-shift-left',
+        label: (
+          <>
+            Delete cells and shift <strong>left</strong>
+          </>
+        ),
+        onClick: () => applyDeleteCellsShift('left'),
+      },
+      {
+        key: 'delete-cells-shift-up',
+        label: (
+          <>
+            Delete cells and shift <strong>up</strong>
+          </>
+        ),
+        onClick: () => applyDeleteCellsShift('up'),
+      },
+    ]
+    : [
+      {
+        key: 'insert-cells-shift-right',
+        label: (
+          <>
+            Insert cells and shift <strong>right</strong>
+          </>
+        ),
+        onClick: () => applyInsertCellsShift('right'),
+      },
+      {
+        key: 'insert-cells-shift-down',
+        label: (
+          <>
+            Insert cells and shift <strong>down</strong>
+          </>
+        ),
+        onClick: () => applyInsertCellsShift('down'),
+      },
+    ];
+  const shortcutSecondaryItems: ShortcutActionItem[] = isDeleteShortcutMenu
+    ? [
+      {
+        key: 'delete-row-range',
+        label: (
+          <>
+            Delete <strong>{deleteRowTargetLabel}</strong>
+          </>
+        ),
+        onClick: deleteSelectedRowRange,
+      },
+      {
+        key: 'delete-column-range',
+        label: (
+          <>
+            Delete <strong>{deleteColumnTargetLabel}</strong>
+          </>
+        ),
+        onClick: deleteSelectedColumnRange,
+      },
+    ]
+    : [
+      {
+        key: 'insert-row-range',
+        label: insertRowLabel,
+        onClick: insertSelectedRowRange,
+      },
+      {
+        key: 'insert-column-range',
+        label: insertColumnLabel,
+        onClick: insertSelectedColumnRange,
+      },
+    ];
+  const renderShortcutMenuItems = () => (
+    <>
+      {shortcutPrimaryItems.map((item) => (
+        <Menu key={item.key} onClick={item.onClick}>
+          <div className="context-item">
+            <p>{item.label}</p>
+          </div>
+        </Menu>
+      ))}
+      <Divider
+        key={isDeleteShortcutMenu ? 'delete-shortcut-divider' : 'insert-shortcut-divider'}
+      />
+      {shortcutSecondaryItems.map((item) => (
+        <Menu key={item.key} onClick={item.onClick}>
+          <div className="context-item">
+            <p>{item.label}</p>
+          </div>
+        </Menu>
+      ))}
+    </>
+  );
+
   return (
     <div
       className="fortune-context-menu luckysheet-cols-menu"
       ref={containerRef}
       onContextMenu={(e) => e.stopPropagation()}
-      style={{ left: contextMenu.x, top: contextMenu.y }}
+      style={{
+        left: Math.max(0, contextMenu.x ?? 0),
+        top: contextMenu.y,
+      }}
     >
-      {context.contextMenu.headerMenu === true ||
-      /* @ts-ignore */
-      context.contextMenu.headerMenu === 'row'
-        ? settings.headerContextMenu.map((menu, i) => {
-            return getMenuElement(menu, i);
-          })
-        : settings.cellContextMenu.map((menu, i) => getMenuElement(menu, i))}
+      {isDeleteShortcutMenu || isInsertShortcutMenu ? (
+        renderShortcutMenuItems()
+      ) : context.contextMenu.headerMenu === true ||
+        /* @ts-ignore */
+        context.contextMenu.headerMenu === 'row' ? (
+        settings.headerContextMenu.map((menu, i) => {
+          return getMenuElement(menu, i);
+        })
+      ) : (
+        settings.cellContextMenu.map((menu, i) => getMenuElement(menu, i))
+      )}
     </div>
   );
 };
