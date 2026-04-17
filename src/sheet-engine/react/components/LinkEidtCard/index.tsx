@@ -169,33 +169,43 @@ async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
   const fallback = fallbackPreview(address);
   try {
     const typedUrl = String(address ?? '').trim();
-    const resp = await fetch(
-      `https://api.microlink.io/?url=${encodeURIComponent(previewable)}&palette=false&screenshot=false`,
-    );
-    let body: { status?: string; data?: Record<string, unknown> };
-    try {
-      body = await resp.json();
-    } catch {
-      return fallback;
+    const encoded = encodeURIComponent(previewable);
+    const runtimeOrigin = String(window?.location?.origin || '').trim();
+    const endpointCandidates = [
+      ...(runtimeOrigin ? [`${runtimeOrigin}/api/metadata/${encoded}`] : []),
+      `/api/metadata/${encoded}`,
+    ];
+
+    for (const endpoint of endpointCandidates) {
+      const resp = await fetch(endpoint);
+      if (!resp.ok) continue;
+      let body:
+        | { metadata?: Record<string, unknown>; type?: string }
+        | undefined;
+      try {
+        body = await resp.json();
+      } catch {
+        continue;
+      }
+      const metadata = body?.metadata ?? {};
+      const pageTitle = String(metadata.title || '').trim();
+      const description = String(metadata.description || '').trim();
+      const imageUrl = String(metadata.image || '').trim();
+      const logoUrl = String(metadata.logo || '').trim();
+      const faviconUrl = String(metadata.favicon || '').trim();
+      const link = String(metadata.link || '').trim();
+      if (!pageTitle && !description && !imageUrl && !logoUrl && !faviconUrl && !link) {
+        continue;
+      }
+      return {
+        title: pageTitle || typedUrl || fallback.title,
+        urlText: typedUrl || link || fallback.urlText,
+        faviconUrl: logoUrl || faviconUrl || fallback.faviconUrl || '',
+        imageUrl,
+        description,
+      };
     }
-    // Microlink often returns HTTP 200 with { status: "fail", code: "ERATE", ... } when rate-limited.
-    if (!resp.ok || body?.status !== 'success') {
-      return fallback;
-    }
-    const data = body?.data ?? {};
-    const logo = data.logo as { url?: string } | undefined;
-    const image = data.image as { url?: string } | undefined;
-    const pageTitle = String(data.title || '').trim();
-    const publisher = String(data.publisher || '').trim();
-    return {
-      // Microlink: title ≈ og:title, publisher ≈ og:site_name. GitHub image URLs are often long
-      // opengraph.githubassets.com/.../hash/owner/repo paths (normal for their OG previews).
-      title: pageTitle || publisher || typedUrl || fallback.title,
-      urlText: typedUrl || fallback.urlText,
-      faviconUrl: String(logo?.url || fallback.faviconUrl || ''),
-      imageUrl: String(image?.url || ''),
-      description: String(data.description || '').trim(),
-    };
+    return fallback;
   } catch {
     return fallback;
   }

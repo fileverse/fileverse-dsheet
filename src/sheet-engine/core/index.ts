@@ -62,6 +62,10 @@ export {
   getRangetxt,
   getRangeByTxt,
   getInlineStringHTML,
+  applyLinkToSelection,
+  getHyperlinksFromInlineSegments,
+  getUniformLinkFromWindowSelectionInEditor,
+  getHyperlinkAtCaretInContentEditable,
   getStyleByCell,
   clearSelectedCellFormat,
   clearRowsCellsFormat,
@@ -78,6 +82,7 @@ export {
   // formula
   FormulaCache,
   groupValuesRefresh,
+  execFunctionGroup,
   setCaretPosition,
   getrangeseleciton,
   getFormulaEditorOwner,
@@ -103,10 +108,6 @@ export {
   // inline-string
   isInlineStringCell,
   getInlineStringNoStyle,
-  applyLinkToSelection,
-  getHyperlinksFromInlineSegments,
-  getUniformLinkFromWindowSelectionInEditor,
-  getHyperlinkAtCaretInContentEditable,
   // location
   rowLocation,
   rowLocationByIndex,
@@ -187,19 +188,29 @@ export {
   searchNext,
   replace,
   replaceAll,
-  // hyperlink
-  getCellRowColumn,
-  getCellHyperlink,
+  getSearchIndexArr,
+  getSearchIndexArrAsync,
+  getFindRangeOnCurrentSheet,
+  getQuickSearchIndexArr,
+  getQuickSearchHiddenConfig,
   getCellHyperlinks,
   getHyperlinkDisplayTextInCell,
   getInlineLinkPlainRange,
   getUniformLinkCoveringPlainRange,
   getUniformLinkAtPlainOffset,
-  saveHyperlink,
-  removeHyperlink,
   removeHyperlinkForLink,
   updateHyperlinkForLink,
   syncLinkCardAfterHyperlinkChange,
+  expandCellRectForMerge,
+  shouldQuickSearchUseAsync,
+  runQuickSearchIndexArrAsync,
+  QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
+  parseRangeText,
+  // hyperlink
+  getCellRowColumn,
+  getCellHyperlink,
+  saveHyperlink,
+  removeHyperlink,
   showLinkCard,
   goToLink,
   isLinkValid,
@@ -268,7 +279,6 @@ export {
   spillSortResult,
   // formula (internal)
   execfunction,
-  execFunctionGroup,
   insertUpdateFunctionGroup,
   remapFormulaReferencesByMap,
   // ConditionFormat (internal)
@@ -319,6 +329,15 @@ export type {
   LiveQueryData,
   Freezen,
 } from './types';
+
+export type {
+  CheckModes,
+  HyperlinkMap,
+  FindSearchScope,
+  SearchHiddenConfig,
+  SearchNextResult,
+  ReplaceAllResult,
+} from './modules/searchReplace';
 
 // animate
 export { cellFadeAnimator, markCellChanged } from './animate';

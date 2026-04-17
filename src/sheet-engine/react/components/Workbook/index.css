@@ -5,9 +5,9 @@
   margin: 0;
   padding: 0;
   flex-direction: column;
-  font-family: "Helvetica Neue", Helvetica, Arial, "PingFang SC",
-    "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei",
-    sans-serif;
+  font-family:
+    'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Hiragino Sans GB',
+    'Heiti SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
   background-color: white;
   position: relative;
   outline: none;
@@ -45,5 +45,33 @@ html::-webkit-scrollbar-button {
 }
 
 .cursor-paint {
-  cursor: url("../../assets/paint-roller.png") 16 16, auto;
+  cursor:
+    url('../../assets/paint-roller.png') 16 16,
+    auto;
+}
+
+.fortune-formula-bar-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+  background-color: rgb(255, 255, 255);
+}
+
+/*
+ * Quick search: absolutely positioned on .fortune-container (after Sheet in DOM)
+ * so it stacks above the grid and does not consume space between fx bar and sheet.
+ */
+.fortune-quick-search-float {
+  position: absolute;
+  right: 10px;
+  z-index: 1200;
+  pointer-events: auto;
+}
+
+.fortune-formula-bar-row > div:first-child {
+  flex: 1;
+  min-width: 0;
 }

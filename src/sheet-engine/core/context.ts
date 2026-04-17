@@ -61,6 +61,26 @@ export type Context = {
   presences?: Presence[];
   showSearch?: boolean;
   showReplace?: boolean;
+  findReplaceHiddenDuringRangePick?: boolean;
+  findReplaceRestoreVisibility?: { showSearch: boolean; showReplace: boolean };
+  showQuickSearch?: boolean;
+  quickSearchFocusNonce?: number;
+  findReplacePrefill?: string;
+  quickSearchLoading?: boolean;
+  quickSearchHighlight?: {
+    matches: { r: number; c: number }[];
+    activeIndex: number;
+  } | null;
+  searchRangeScopeHighlight?: {
+    row: number[];
+    column: number[];
+  } | null;
+  /**
+   * When true, render the specific-range scope border in an emphasized style
+   * (e.g. after pressing Find). When false, keep a lighter border after
+   * confirming the range.
+   */
+  searchRangeScopeEmphasis?: boolean;
   linkCard?: LinkCardProps;
   rangeDialog?: RangeDialogProps; // 坐标选区鼠标选择
   // 提醒弹窗
@@ -539,6 +559,14 @@ export function defaultContext(refs: RefValues): Context {
     formulaRangeNavRevision: 0,
     formulaCache: new FormulaCache(), // class will not be frozen by immer, can be mutated at any time.
     hooks: {},
+
+    showQuickSearch: false,
+    quickSearchFocusNonce: 0,
+    findReplacePrefill: undefined,
+    quickSearchLoading: false,
+    quickSearchHighlight: null,
+    searchRangeScopeHighlight: null,
+    searchRangeScopeEmphasis: false,
 
     getRefs: () => refs,
   };

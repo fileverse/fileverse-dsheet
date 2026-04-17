@@ -30,11 +30,14 @@ import {
   insertRowCol,
   deleteRowCol,
   getSheetIndex,
+  getFlowdata,
   fixRowStyleOverflowInFreeze,
   fixColumnStyleOverflowInFreeze,
   handleKeydownForZoom,
   isLegacyFormulaRangeMode,
   isFormulaReferenceInputMode,
+  expandCellRectForMerge,
+  seletedHighlistByindex,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext, { SetContextOptions } from '../../context';
@@ -103,6 +106,84 @@ function formulaRangeHighlightHcStyle(hex: string) {
 const SheetOverlay: React.FC = () => {
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
   const { info, rightclick } = locale(context);
+
+  const flowdataForQuickSearchDeps = getFlowdata(context);
+
+  const quickSearchOverlayRects = useMemo(() => {
+    if (!context.showQuickSearch) return [];
+    const hl = context.quickSearchHighlight;
+    if (!hl || hl.matches.length === 0) return [];
+    const { matches, activeIndex } = hl;
+    const active = matches[activeIndex] ?? matches[0]!;
+    const activeB = expandCellRectForMerge(context, active.r, active.c);
+    const activeKey = `${activeB.r1}_${activeB.r2}_${activeB.c1}_${activeB.c2}`;
+    const uniq = new Map<
+      string,
+      { r1: number; r2: number; c1: number; c2: number; active: boolean }
+    >();
+    matches.forEach(({ r, c }) => {
+      const b = expandCellRectForMerge(context, r, c);
+      const key = `${b.r1}_${b.r2}_${b.c1}_${b.c2}`;
+      const isActive = key === activeKey;
+      const prev = uniq.get(key);
+      if (!prev) uniq.set(key, { ...b, active: isActive });
+      else if (isActive) prev.active = true;
+    });
+    return Array.from(uniq.entries())
+      .map(([key, box]) => {
+        const rect = seletedHighlistByindex(
+          context,
+          box.r1,
+          box.r2,
+          box.c1,
+          box.c2,
+        );
+        return rect ? { key, box, rect } : null;
+      })
+      .filter((v): v is NonNullable<typeof v> => v != null);
+    // Granular deps + flowdata ref refresh highlights without deep cell equality
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    context.showQuickSearch,
+    context.quickSearchHighlight,
+    context.visibledatarow,
+    context.visibledatacolumn,
+    context.config.merge,
+    context.config.rowhidden,
+    context.config.colhidden,
+    context.currentSheetId,
+    context.luckysheetCellUpdate.length,
+    refs.globalCache.undoList.length,
+    refs.globalCache.redoList.length,
+    flowdataForQuickSearchDeps,
+  ]);
+  // Rect for the "Specific range" scope border in Find & Replace
+  const searchRangeScopeRect = useMemo(() => {
+    const hl = context.searchRangeScopeHighlight;
+    const findReplaceActive =
+      context.showSearch ||
+      context.showReplace ||
+      context.findReplaceHiddenDuringRangePick;
+    if (!findReplaceActive || !hl || !hl.row || !hl.column) return null;
+    const rect = seletedHighlistByindex(
+      context,
+      hl.row[0]!,
+      hl.row[1]!,
+      hl.column[0]!,
+      hl.column[1]!,
+    );
+    return rect ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
+    context.searchRangeScopeHighlight,
+    context.visibledatarow,
+    context.visibledatacolumn,
+    context.currentSheetId,
+  ]);
+
   const { showDialog } = useDialog();
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomAddRowInputRef = useRef<HTMLInputElement>(null);
@@ -650,9 +731,11 @@ const SheetOverlay: React.FC = () => {
         />
         <ColumnHeader />
       </div>
-      {(context.showSearch || context.showReplace) && (
-        <SearchReplace getContainer={() => containerRef.current!} />
-      )}
+      {(context.showSearch ||
+        context.showReplace ||
+        context.findReplaceHiddenDuringRangePick) && (
+          <SearchReplace getContainer={() => containerRef.current!} />
+        )}
       <div className="fortune-row-body">
         <RowHeader />
         <ScrollBar axis="x" />
@@ -682,29 +765,53 @@ const SheetOverlay: React.FC = () => {
               />
             </div>
           )}
-          {context.formulaRangeHighlight
-            .filter((v) => {
-              // Keyboard only (`formulaKeyboardRefSync`): skip duplicate vs `formulaRangeSelect`.
-              if (!context.formulaRangeSelect) return true;
-              if (context.formulaCache.formulaKeyboardRefSync !== true) return true;
-              return v.rangeIndex !== context.formulaRangeSelect.rangeIndex;
-            })
-            .map((v) => {
-              const { rangeIndex, backgroundColor } = v;
-              return (
+          {context.formulaRangeHighlight.map((v) => {
+            const { rangeIndex, backgroundColor } = v;
+            return (
+              <div
+                key={rangeIndex}
+                id="fortune-formula-functionrange-highlight"
+                className="fortune-selection-highlight fortune-formula-functionrange-highlight"
+                style={_.omit(v, 'backgroundColor')}
+              >
                 <div
-                  key={rangeIndex}
-                  id="fortune-formula-functionrange-highlight"
-                  className="fortune-selection-highlight fortune-formula-functionrange-highlight"
-                  style={_.omit(v, 'backgroundColor')}
-                >
-                  <div
-                    className="fortune-selection-copy-hc"
-                    style={formulaRangeHighlightHcStyle(backgroundColor)}
-                  />
-                </div>
-              );
-            })}
+                  className="fortune-selection-copy-hc"
+                  style={formulaRangeHighlightHcStyle(backgroundColor)}
+                />
+              </div>
+            );
+          })}
+          {quickSearchOverlayRects.map(({ key, box, rect }) => (
+            <div
+              key={`fortune-quick-search-hl-${key}`}
+              className={`fortune-quick-search-highlight${box.active ? ' fortune-quick-search-highlight--active' : ''
+                }`}
+              style={{
+                position: 'absolute',
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+                pointerEvents: 'none',
+                zIndex: 13,
+              }}
+            />
+          ))}
+          {searchRangeScopeRect && (
+            <div
+              className={`fortune-search-range-highlight${context.searchRangeScopeEmphasis ? ' fortune-search-range-highlight--active' : ''
+                }`}
+              style={{
+                position: 'absolute',
+                left: searchRangeScopeRect.left,
+                top: searchRangeScopeRect.top,
+                width: searchRangeScopeRect.width,
+                height: searchRangeScopeRect.height,
+                pointerEvents: 'none',
+                zIndex: 12,
+              }}
+            />
+          )}
           <div
             className="luckysheet-row-count-show luckysheet-count-show"
             id="luckysheet-row-count-show"
@@ -765,8 +872,7 @@ const SheetOverlay: React.FC = () => {
             }
             onMouseDown={(e) => e.preventDefault()}
           />
-          {(context.luckysheet_selection_range?.length ?? 0) > 0 &&
-            !suppressFortuneSelectionCopyOverlay && (
+          {(context.luckysheet_selection_range?.length ?? 0) > 0 && (
             <div id="fortune-selection-copy">
               {context.luckysheet_selection_range!.map((range) => {
                 const r1 = range.row[0];
@@ -810,6 +916,15 @@ const SheetOverlay: React.FC = () => {
               {context.luckysheet_select_save!.map((selection, index) => {
                 const isEditing =
                   (context.luckysheetCellUpdate?.length ?? 0) > 0;
+                const hideSelectionBecauseSearchScope =
+                  (context.showSearch || context.showReplace) &&
+                  !!context.searchRangeScopeHighlight &&
+                  selection.row[0] === context.searchRangeScopeHighlight.row[0] &&
+                  selection.row[1] === context.searchRangeScopeHighlight.row[1] &&
+                  selection.column[0] ===
+                  context.searchRangeScopeHighlight.column[0] &&
+                  selection.column[1] ===
+                  context.searchRangeScopeHighlight.column[1];
                 const isFormulaRangeSelecting =
                   context.formulaCache.rangestart ||
                   context.formulaCache.rangedrag_column_start ||
@@ -839,7 +954,11 @@ const SheetOverlay: React.FC = () => {
                           ? selection.height_move - (isMultiCell ? 0.6 : 1.8)
                           : selection.height_move,
                         borderWidth: isMultiCell ? 1 : 2,
-                        display: hideSelectionWhileEditing ? 'none' : 'block',
+                        display:
+                          hideSelectionWhileEditing ||
+                            hideSelectionBecauseSearchScope
+                            ? 'none'
+                            : 'block',
                       },
                       fixRowStyleOverflowInFreeze(
                         context,

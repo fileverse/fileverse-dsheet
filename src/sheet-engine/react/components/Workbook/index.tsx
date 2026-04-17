@@ -49,6 +49,7 @@ import Sheet from '../Sheet';
 import WorkbookContext, { RefValues, SetContextOptions } from '../../context';
 import Toolbar from '../Toolbar';
 import FxEditor from '../FxEditor';
+import QuickSearchBar from '../QuickSearch';
 import SheetTab from '../SheetTab';
 import ContextMenu from '../ContextMenu';
 import SVGDefines from '../SVGDefines';
@@ -1377,9 +1378,25 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                   moreToolbarItems={moreToolbarItems}
                 />
               )}
-              {mergedSettings.showFormulaBar && <FxEditor />}
+              {mergedSettings.showFormulaBar && (
+                <div className="fortune-formula-bar-row">
+                  <FxEditor />
+                </div>
+              )}
             </div>
             <Sheet sheet={sheet} />
+            {mergedSettings.showFormulaBar && context.showQuickSearch && (
+              <div
+                className="fortune-quick-search-float"
+                style={{
+                  top:
+                    (mergedSettings.showToolbar ? context.toolbarHeight : 0) +
+                    2,
+                }}
+              >
+                <QuickSearchBar />
+              </div>
+            )}
             {mergedSettings.showSheetTabs && <SheetTab />}
             <ContextMenu />
             <FilterMenu />

@@ -203,7 +203,30 @@ export { sortSelection, spillSortResult } from './sort';
 // screenshot — handleScreenShot already exported from toolbar
 
 // searchReplace
-export { searchAll, searchNext, replace, replaceAll } from './searchReplace';
+export {
+  searchAll,
+  searchNext,
+  replace,
+  replaceAll,
+  getSearchIndexArr,
+  getSearchIndexArrAsync,
+  getFindRangeOnCurrentSheet,
+  getQuickSearchIndexArr,
+  getQuickSearchHiddenConfig,
+  expandCellRectForMerge,
+  shouldQuickSearchUseAsync,
+  runQuickSearchIndexArrAsync,
+  QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
+  parseRangeText,
+} from './searchReplace';
+export type {
+  CheckModes,
+  HyperlinkMap,
+  FindSearchScope,
+  SearchHiddenConfig,
+  SearchNextResult,
+  ReplaceAllResult,
+} from './searchReplace';
 
 // hyperlink
 export {
