@@ -1,4 +1,5 @@
 import {
+  api,
   locale,
   searchAll,
   searchNext,
@@ -13,8 +14,11 @@ import {
   CheckModes,
   getSheetIndex,
   getFindRangeOnCurrentSheet,
+  parseRangeText,
+  replaceHtml,
   type FindSearchScope,
   type HyperlinkMap,
+  type Selection,
 } from '@sheet-engine/core';
 import {
   Button,
@@ -36,32 +40,52 @@ import {
   TextField,
 } from '@fileverse/ui';
 import produce from 'immer';
-import React, { useContext, useState, useCallback, useRef } from 'react';
+import React, {
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import _ from 'lodash';
 import WorkbookContext from '../../context';
 import { useAlert } from '../../hooks/useAlert';
 import './index.css';
 
-// Fix 5: Row height constant for the virtual results list
 const ROW_HEIGHT = 36;
 const VISIBLE_ROWS = 10;
 
-// Fix 15: Show confirmation when replacing at least this many cells
 const LARGE_REPLACE_THRESHOLD = 100;
 
 const SearchReplace: React.FC<{
   getContainer: () => HTMLDivElement;
-}> = () => {
+}> = ({ getContainer }) => {
   const { context, setContext, refs } = useContext(WorkbookContext);
   const { findAndReplace } = locale(context);
   const [searchText, setSearchText] = useState('');
   const [replaceText, setReplaceText] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResult[]>([]);
   const [selectedCell, setSelectedCell] = useState<{ r: number; c: number }>();
+  const [inlineInfo, setInlineInfo] = useState<string | null>(null);
   const { showAlert } = useAlert();
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dragTranslate, setDragTranslate] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragTranslateRef = useRef(dragTranslate);
+  dragTranslateRef.current = dragTranslate;
+  const dragSessionRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startTx: number;
+    startTy: number;
+  } | null>(null);
+  const wasDialogOpenRef = useRef(false);
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   // Fix 5: track scroll position for virtual list
   const [scrollTop, setScrollTop] = useState(0);
@@ -73,15 +97,182 @@ const SearchReplace: React.FC<{
     formulaCheck: false,
     linkCheck: false,
   });
-  const [searchScope, setSearchScope] = useState<FindSearchScope>('thisSheet');
+  const [searchScope, setSearchScope] = useState<FindSearchScope>('allSheets');
+  const [rangeText, setRangeText] = useState('');
+  const [rangeError, setRangeError] = useState<string | null>(null);
+
+  /** Returns the parsed Selection when scope is specificRange, or undefined otherwise. */
+  const getScopedRange = useCallback((): Selection | undefined => {
+    if (searchScope !== 'specificRange') return undefined;
+    const parsed = parseRangeText(rangeText, contextRef.current);
+    return parsed ?? undefined;
+  }, [searchScope, rangeText]);
+
+  /** Validates the range input; returns true if valid (or scope is not specificRange). */
+  const validateRangeInput = useCallback((): boolean => {
+    if (searchScope !== 'specificRange') return true;
+    if (!rangeText.trim()) {
+      setRangeError(findAndReplace.rangeInputInvalidError);
+      return false;
+    }
+    const parsed = parseRangeText(rangeText, contextRef.current);
+    if (!parsed) {
+      setRangeError(findAndReplace.rangeInputInvalidError);
+      return false;
+    }
+    setRangeError(null);
+    return true;
+  }, [searchScope, rangeText, findAndReplace.rangeInputInvalidError]);
 
   const closeDialog = useCallback(() => {
     _.set(refs.globalCache, 'searchDialog.mouseEnter', false);
     setContext((draftCtx) => {
       draftCtx.showSearch = false;
       draftCtx.showReplace = false;
+      draftCtx.findReplacePrefill = undefined;
+      draftCtx.searchRangeScopeHighlight = null;
+      draftCtx.findReplaceHiddenDuringRangePick = false;
+      draftCtx.findReplaceRestoreVisibility = undefined;
     });
   }, [refs.globalCache, setContext]);
+
+  useEffect(() => {
+    if (!(context.showSearch || context.showReplace)) return;
+    const pre = context.findReplacePrefill;
+    if (pre == null || pre === '') return;
+    setSearchText(pre);
+    setInlineInfo(null);
+    setContext((d) => {
+      d.findReplacePrefill = undefined;
+    });
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplacePrefill,
+    setContext,
+  ]);
+
+  useEffect(() => {
+    if (!(context.showSearch || context.showReplace)) return;
+    setInlineInfo(null);
+  }, [context.showSearch, context.showReplace]);
+
+  const clampTranslate = useCallback(
+    (tx: number, ty: number) => {
+      const container = getContainer();
+      const dialog = dialogRef.current;
+      if (!container || !dialog) return { x: tx, y: ty };
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      const dw = dialog.offsetWidth;
+      const dh = dialog.offsetHeight;
+      const loX = Math.min((dw - cw) / 2, (cw - dw) / 2);
+      const hiX = Math.max((dw - cw) / 2, (cw - dw) / 2);
+      const loY = Math.min((dh - ch) / 2, (ch - dh) / 2);
+      const hiY = Math.max((dh - ch) / 2, (ch - dh) / 2);
+      return {
+        x: Math.min(hiX, Math.max(loX, tx)),
+        y: Math.min(hiY, Math.max(loY, ty)),
+      };
+    },
+    [getContainer],
+  );
+
+  useEffect(() => {
+    const open = !!(
+      context.showSearch ||
+      context.showReplace ||
+      context.findReplaceHiddenDuringRangePick
+    );
+    if (open && !wasDialogOpenRef.current) {
+      setDragTranslate({ x: 0, y: 0 });
+    }
+    wasDialogOpenRef.current = open;
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
+  ]);
+
+  useEffect(() => {
+    const open = !!(
+      context.showSearch ||
+      context.showReplace ||
+      context.findReplaceHiddenDuringRangePick
+    );
+    if (!open) return;
+    const el = getContainer();
+    const ro = new ResizeObserver(() => {
+      setDragTranslate((t) => clampTranslate(t.x, t.y));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
+    getContainer,
+    clampTranslate,
+  ]);
+
+  const endHeaderDrag = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const session = dragSessionRef.current;
+    if (!session || session.pointerId !== e.pointerId) return;
+    dragSessionRef.current = null;
+    setIsDragging(false);
+    document.body.style.userSelect = '';
+    (document.body.style as { webkitUserSelect?: string }).webkitUserSelect =
+      '';
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released */
+    }
+  }, []);
+
+  const onHeaderPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if ((e.target as HTMLElement).closest('button')) return;
+      const t = dragTranslateRef.current;
+      dragSessionRef.current = {
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        startTx: t.x,
+        startTy: t.y,
+      };
+      setIsDragging(true);
+      document.body.style.userSelect = 'none';
+      (document.body.style as { webkitUserSelect?: string }).webkitUserSelect =
+        'none';
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [],
+  );
+
+  const onHeaderPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const session = dragSessionRef.current;
+      if (!session || session.pointerId !== e.pointerId) return;
+      const dx = e.clientX - session.startX;
+      const dy = e.clientY - session.startY;
+      setDragTranslate(
+        clampTranslate(session.startTx + dx, session.startTy + dy),
+      );
+    },
+    [clampTranslate],
+  );
+
+  useEffect(
+    () => () => {
+      dragSessionRef.current = null;
+      document.body.style.userSelect = '';
+      (document.body.style as { webkitUserSelect?: string }).webkitUserSelect =
+        '';
+    },
+    [],
+  );
 
   const setCheckMode = useCallback(
     (mode: string, value: boolean) =>
@@ -99,23 +290,194 @@ const SearchReplace: React.FC<{
   const visibleItems = searchResult.slice(startIdx, endIdx);
   const totalHeight = searchResult.length * ROW_HEIGHT;
 
+  // When scope switches to specificRange, pre-populate rangeText from current selection.
+  const prevScopeRef = useRef<FindSearchScope>(searchScope);
+  useEffect(() => {
+    if (
+      searchScope === 'specificRange' &&
+      prevScopeRef.current !== 'specificRange'
+    ) {
+      const sel = context.luckysheet_select_save;
+      if (sel && sel.length > 0) {
+        const last = sel[sel.length - 1]!;
+        const c1 = last.column[0]!;
+        const c2 = last.column[1]!;
+        const r1 = last.row[0]!;
+        const r2 = last.row[1]!;
+        // Convert to A1 notation: chatatABC is not available here, use simple letter fn
+        const colToLetter = (n: number): string => {
+          let s = '';
+          let col = n + 1;
+          while (col > 0) {
+            const rem = (col - 1) % 26;
+            s = String.fromCharCode(65 + rem) + s;
+            col = Math.floor((col - 1) / 26);
+          }
+          return s;
+        };
+        setRangeText(`${colToLetter(c1)}${r1 + 1}:${colToLetter(c2)}${r2 + 1}`);
+      }
+    }
+    if (searchScope !== 'specificRange') {
+      setRangeError(null);
+      setContext((draftCtx) => {
+        draftCtx.searchRangeScopeHighlight = null;
+      });
+    }
+    prevScopeRef.current = searchScope;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchScope]);
+
+  // Sync scope highlight into context whenever rangeText changes (debounced).
+  useEffect(() => {
+    if (
+      !(
+        context.showSearch ||
+        context.showReplace ||
+        context.findReplaceHiddenDuringRangePick
+      )
+    )
+      return;
+    if (searchScope !== 'specificRange') return;
+    const t = setTimeout(() => {
+      const parsed = parseRangeText(rangeText, contextRef.current);
+      setContext((draftCtx) => {
+        draftCtx.searchRangeScopeHighlight = parsed
+          ? { row: parsed.row, column: parsed.column }
+          : null;
+      });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [
+    rangeText,
+    searchScope,
+    context.showSearch,
+    context.showReplace,
+    context.findReplaceHiddenDuringRangePick,
+    context.currentSheetId,
+    setContext,
+  ]);
+
+  // After the range dialog closes, restore Find & Replace visibility and apply range.
+  useEffect(() => {
+    const rd = context.rangeDialog;
+    if (!rd || rd.show || rd.type !== 'searchRange') return;
+
+    const restoreVis = context.findReplaceRestoreVisibility;
+    if (context.findReplaceHiddenDuringRangePick && restoreVis) {
+      setContext((d) => {
+        d.showSearch = restoreVis.showSearch;
+        d.showReplace = restoreVis.showReplace;
+        d.findReplaceHiddenDuringRangePick = false;
+        d.findReplaceRestoreVisibility = undefined;
+      });
+    }
+
+    if (rd.rangeTxt) {
+      setRangeText(rd.rangeTxt.trim());
+      setRangeError(null);
+    }
+  }, [
+    context.rangeDialog,
+    context.findReplaceHiddenDuringRangePick,
+    context.findReplaceRestoreVisibility,
+    setContext,
+  ]);
+
   /** Execute a do-replace wrapped in a confirmation for large counts (Fix 15) */
   const doReplaceAll = useCallback(() => {
+    const scopedRange = getScopedRange();
     setContext((draftCtx) => {
       setSelectedCell(undefined);
-      const alertMsg = replaceAll(draftCtx, searchText, replaceText, checkMode);
-      if (alertMsg != null) showAlert(alertMsg);
+      const result = replaceAll(
+        draftCtx,
+        searchText,
+        replaceText,
+        checkMode,
+        scopedRange,
+      );
+      if (!result.ok) {
+        setInlineInfo(result.message);
+        return;
+      }
+      const { findAndReplace: fr } = locale(draftCtx);
+      const find = searchText;
+      const replace = replaceText;
+      if (result.skipped > 0) {
+        setInlineInfo(
+          replaceHtml(fr.replaceAllSuccessWithSkippedInfotext, {
+            n: result.replaced,
+            skipped: result.skipped,
+            find,
+            replace,
+          }),
+        );
+      } else {
+        setInlineInfo(
+          replaceHtml(fr.replaceAllSuccessInfotext, {
+            n: result.replaced,
+            find,
+            replace,
+          }),
+        );
+      }
     });
-  }, [checkMode, replaceText, searchText, setContext, showAlert]);
+  }, [checkMode, getScopedRange, replaceText, searchText, setContext]);
+
+  const runFindNext = useCallback(
+    (direction: 'next' | 'prev') => {
+      if (!validateRangeInput()) return;
+      const scopedRange = getScopedRange();
+      setContext((draftCtx) => {
+        setSearchResult([]);
+        const result = searchNext(
+          draftCtx,
+          searchText,
+          checkMode,
+          searchScope,
+          direction,
+          scopedRange,
+        );
+        if (result.alertMsg === findAndReplace.noFindTip) {
+          setInlineInfo(result.alertMsg);
+          return;
+        }
+        setInlineInfo(null);
+        if (result.alertMsg != null) showAlert(result.alertMsg);
+      });
+    },
+    [
+      checkMode,
+      findAndReplace.noFindTip,
+      getScopedRange,
+      searchScope,
+      searchText,
+      setContext,
+      showAlert,
+      validateRangeInput,
+    ],
+  );
+
+  const workbookReadOnly = context.allowEdit === false || context.isFlvReadOnly;
+
+  const findReplaceUiSuspended =
+    !!context.findReplaceHiddenDuringRangePick &&
+    !context.showSearch &&
+    !context.showReplace;
+
+  if (findReplaceUiSuspended) {
+    return null;
+  }
 
   return (
     <div
       id="fortune-search-replace"
+      ref={dialogRef}
       className="fortune-search-replace fortune-dialog"
       style={{
         top: '50%',
         left: '50%',
-        transform: 'translate(-50%, -50%)',
+        transform: `translate(calc(-50% + ${dragTranslate.x}px), calc(-50% + ${dragTranslate.y}px))`,
       }}
       onMouseEnter={() => {
         _.set(refs.globalCache, 'searchDialog.mouseEnter', true);
@@ -125,7 +487,16 @@ const SearchReplace: React.FC<{
       }}
     >
       <div>
-        <div className="flex items-center justify-between border-b color-border-default py-3 px-6">
+        <div
+          className={cn(
+            'fortune-search-replace-header flex items-center justify-between border-b color-border-default py-3 px-6',
+            isDragging && 'fortune-search-replace-header--dragging',
+          )}
+          onPointerDown={onHeaderPointerDown}
+          onPointerMove={onHeaderPointerMove}
+          onPointerUp={endHeaderDrag}
+          onPointerCancel={endHeaderDrag}
+        >
           <h3 className="text-heading-sm">Find and replace</h3>
           <IconButton
             icon="X"
@@ -149,7 +520,21 @@ const SearchReplace: React.FC<{
                   className="formulaInputFocus"
                   autoFocus
                   spellCheck="false"
-                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      runFindNext(e.shiftKey ? 'prev' : 'next');
+                      return;
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeDialog();
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
                   onMouseDown={(e) => {
                     if (
                       e.target === searchInputRef.current ||
@@ -162,6 +547,7 @@ const SearchReplace: React.FC<{
                   onChange={(e) => {
                     const v = e.target.value;
                     setSearchText(v);
+                    setInlineInfo(null);
                     if (v.length === 0) setSearchResult([]);
                   }}
                 />
@@ -177,7 +563,22 @@ const SearchReplace: React.FC<{
                   ref={replaceInputRef}
                   className="formulaInputFocus"
                   spellCheck="false"
-                  onKeyDown={(e) => e.stopPropagation()}
+                  disabled={workbookReadOnly}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      runFindNext(e.shiftKey ? 'prev' : 'next');
+                      return;
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeDialog();
+                      return;
+                    }
+                    e.stopPropagation();
+                  }}
                   onMouseDown={(e) => {
                     if (
                       e.target === replaceInputRef.current ||
@@ -190,7 +591,7 @@ const SearchReplace: React.FC<{
                   onChange={(e) => setReplaceText(e.target.value)}
                 />
               </div>
-              <div className="flex flex-row gap-2 items-center">
+              <div className="flex flex-row gap-2 items-center min-w-0">
                 <span className="find-replace-label text-heading-xsm shrink-0">
                   {findAndReplace.searchScopeLabel}：
                 </span>
@@ -198,7 +599,7 @@ const SearchReplace: React.FC<{
                   value={searchScope}
                   onValueChange={(v) => setSearchScope(v as FindSearchScope)}
                 >
-                  <SelectTrigger className="flex-1 min-w-0">
+                  <SelectTrigger className="w-44 shrink-0 min-w-0">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -208,8 +609,80 @@ const SearchReplace: React.FC<{
                     <SelectItem value="thisSheet">
                       {findAndReplace.searchScopeThisSheet}
                     </SelectItem>
+                    <SelectItem value="specificRange">
+                      {findAndReplace.searchScopeSpecificRange}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                {searchScope === 'specificRange' && (
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="find-replace-range-field relative min-w-0 flex-1">
+                      <TextField
+                        className="formulaInputFocus min-w-0 w-full [&_input]:pr-10"
+                        spellCheck="false"
+                        placeholder={findAndReplace.rangeInputPlaceholder}
+                        value={rangeText}
+                        onChange={(e) => {
+                          setRangeText(e.target.value);
+                          setRangeError(null);
+                        }}
+                        onBlur={() => {
+                          if (rangeText.trim()) {
+                            setRangeText(rangeText.trim().toUpperCase());
+                          }
+                          validateRangeInput();
+                        }}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      />
+                      <IconButton
+                        type="button"
+                        className="absolute right-1 top-1/2 z-[1] -translate-y-1/2"
+                        icon="LayoutGrid"
+                        variant="ghost"
+                        title={findAndReplace.rangeSelectOnSheetTitle}
+                        aria-label={findAndReplace.rangeSelectOnSheetTitle}
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          _.set(
+                            refs.globalCache,
+                            'searchDialog.mouseEnter',
+                            false,
+                          );
+                          setContext((draftCtx) => {
+                            draftCtx.findReplaceRestoreVisibility = {
+                              showSearch: !!draftCtx.showSearch,
+                              showReplace: !!draftCtx.showReplace,
+                            };
+                            draftCtx.findReplaceHiddenDuringRangePick = true;
+                            draftCtx.showSearch = false;
+                            draftCtx.showReplace = false;
+
+                            const trimmed = rangeText.trim();
+                            if (trimmed) {
+                              const parsed = parseRangeText(trimmed, draftCtx);
+                              if (parsed) {
+                                api.setSelection(draftCtx, [parsed], {});
+                              }
+                            }
+                            draftCtx.rangeDialog = {
+                              show: true,
+                              rangeTxt: trimmed,
+                              type: 'searchRange',
+                              singleSelect: false,
+                            };
+                          });
+                        }}
+                      />
+                    </div>
+                    {rangeError && (
+                      <div className="find-replace-range-error text-body-sm">
+                        {rangeError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex flex-row gap-2">
@@ -279,17 +752,104 @@ const SearchReplace: React.FC<{
                 </div>
               </div>
             </div>
-            <Divider className="w-full border-t-[1px]" />
-            <div className="flex flex-row gap-2 justify-end items-center mb-4">
+            <div
+              className={cn(
+                'find-replace-inline-info',
+                !inlineInfo && 'find-replace-inline-info--empty',
+              )}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {inlineInfo ?? findAndReplace.noFindTip}
+            </div>
+            <div className="flex flex-row gap-2 justify-end items-center mb-4 flex-wrap">
+              <Button
+                id="searchNextBtn"
+                variant="default"
+                className="min-w-fit"
+                onClick={() => {
+                  runFindNext('next');
+                }}
+                tabIndex={0}
+                disabled={searchText.length === 0}
+              >
+                {findAndReplace.findBtn}
+              </Button>
+              <Button
+                id="searchAllBtn"
+                variant="secondary"
+                className="min-w-fit"
+                onClick={() => {
+                  if (!validateRangeInput()) return;
+                  const scopedRange = getScopedRange();
+                  setContext((draftCtx) => {
+                    setSelectedCell(undefined);
+                    if (!searchText) return;
+                    const res = searchAll(
+                      draftCtx,
+                      searchText,
+                      checkMode,
+                      searchScope,
+                      scopedRange,
+                    );
+                    setSearchResult(res);
+                    if (_.isEmpty(res)) {
+                      setInlineInfo(findAndReplace.noFindTip);
+                    } else {
+                      setInlineInfo(null);
+                    }
+                  });
+                }}
+                tabIndex={0}
+                disabled={searchText.length === 0}
+              >
+                {findAndReplace.allFindBtn}
+              </Button>
+              <Button
+                id="replaceBtn"
+                variant="secondary"
+                className="min-w-fit"
+                onClick={() => {
+                  if (!validateRangeInput()) return;
+                  const scopedRange = getScopedRange();
+                  setContext((draftCtx) => {
+                    setSelectedCell(undefined);
+                    const alertMsg = replace(
+                      draftCtx,
+                      searchText,
+                      replaceText,
+                      checkMode,
+                      scopedRange,
+                    );
+                    setInlineInfo(null);
+                    if (alertMsg != null) {
+                      showAlert(alertMsg);
+                    }
+                  });
+                }}
+                tabIndex={0}
+                disabled={
+                  searchText.length === 0 ||
+                  replaceText.length === 0 ||
+                  workbookReadOnly
+                }
+              >
+                {findAndReplace.replaceBtn}
+              </Button>
               <Button
                 id="replaceAllBtn"
                 variant="secondary"
                 className="min-w-fit"
                 onClick={() => {
+                  if (!validateRangeInput()) return;
                   // Fix 15: Confirm before replacing a large number of cells
                   const flowdata = getFlowdata(context);
                   if (flowdata) {
-                    const range = getFindRangeOnCurrentSheet(flowdata);
+                    const scopedRange = getScopedRange();
+                    const range = scopedRange
+                      ? [scopedRange]
+                      : getFindRangeOnCurrentSheet(flowdata);
                     if (range == null) {
                       return;
                     }
@@ -318,75 +878,13 @@ const SearchReplace: React.FC<{
                   doReplaceAll();
                 }}
                 tabIndex={0}
-                disabled={searchText.length === 0 || replaceText.length === 0}
+                disabled={
+                  searchText.length === 0 ||
+                  replaceText.length === 0 ||
+                  workbookReadOnly
+                }
               >
                 {findAndReplace.allReplaceBtn}
-              </Button>
-              <Button
-                id="replaceBtn"
-                variant="secondary"
-                className="min-w-fit"
-                onClick={() => {
-                  setContext((draftCtx) => {
-                    setSelectedCell(undefined);
-                    const alertMsg = replace(
-                      draftCtx,
-                      searchText,
-                      replaceText,
-                      checkMode,
-                    );
-                    if (alertMsg != null) {
-                      showAlert(alertMsg);
-                    }
-                  });
-                }}
-                tabIndex={0}
-                disabled={searchText.length === 0 || replaceText.length === 0}
-              >
-                {findAndReplace.replaceBtn}
-              </Button>
-              <Button
-                id="searchAllBtn"
-                variant="secondary"
-                className="min-w-fit"
-                onClick={() => {
-                  setContext((draftCtx) => {
-                    setSelectedCell(undefined);
-                    if (!searchText) return;
-                    const res = searchAll(
-                      draftCtx,
-                      searchText,
-                      checkMode,
-                      searchScope,
-                    );
-                    setSearchResult(res);
-                    if (_.isEmpty(res)) showAlert(findAndReplace.noFindTip);
-                  });
-                }}
-                tabIndex={0}
-                disabled={searchText.length === 0}
-              >
-                {findAndReplace.allFindBtn}
-              </Button>
-              <Button
-                id="searchNextBtn"
-                variant="default"
-                className="min-w-fit"
-                onClick={() => {
-                  setContext((draftCtx) => {
-                    setSearchResult([]);
-                    const alertMsg = searchNext(
-                      draftCtx,
-                      searchText,
-                      checkMode,
-                    );
-                    if (alertMsg != null) showAlert(alertMsg);
-                  });
-                }}
-                tabIndex={0}
-                disabled={searchText.length === 0}
-              >
-                {findAndReplace.findBtn}
               </Button>
             </div>
           </div>

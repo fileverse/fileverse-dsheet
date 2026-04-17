@@ -164,6 +164,46 @@
   /* display: none; */
 }
 
+.fortune-quick-search-highlight {
+  background-color: rgba(255, 225, 0, 0.249);
+  box-sizing: border-box;
+}
+
+.fortune-quick-search-highlight--active {
+  border: 2px solid #efc703;
+}
+
+.fortune-quick-search-highlight--dim {
+  opacity: 0.45;
+}
+
+.fortune-search-range-highlight {
+  box-sizing: border-box;
+  border: 2px solid #efc703;
+}
+
+.fortune-quick-search-icon-btn:disabled,
+.fortune-quick-search-icon-btn[disabled],
+.fortune-quick-search-icon-btn[aria-disabled='true'] {
+  background-color: transparent !important;
+}
+
+#fortune-search-replace .fortune-search-replace-header {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+#fortune-search-replace .fortune-search-replace-header--dragging {
+  cursor: grabbing;
+}
+
+.fortune-search-range-highlight {
+  box-sizing: border-box;
+  border: 2px dashed #efc703;
+  background-color: #efc8030e;
+}
+
 .fortune-cell-selected-extend {
   position: absolute;
   pointer-events: none;
@@ -591,7 +631,9 @@
   top: 0;
 }
 
-.luckysheet-postil-show-active .luckysheet-postil-dialog-move .luckysheet-postil-dialog-move-item {
+.luckysheet-postil-show-active
+  .luckysheet-postil-dialog-move
+  .luckysheet-postil-dialog-move-item {
   border-color: #0188fb;
 }
 

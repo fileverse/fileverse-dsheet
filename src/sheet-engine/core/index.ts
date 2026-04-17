@@ -78,6 +78,7 @@ export {
   // formula
   FormulaCache,
   groupValuesRefresh,
+  execFunctionGroup,
   setCaretPosition,
   getrangeseleciton,
   getFormulaEditorOwner,
@@ -103,10 +104,6 @@ export {
   // inline-string
   isInlineStringCell,
   getInlineStringNoStyle,
-  applyLinkToSelection,
-  getHyperlinksFromInlineSegments,
-  getUniformLinkFromWindowSelectionInEditor,
-  getHyperlinkAtCaretInContentEditable,
   // location
   rowLocation,
   rowLocationByIndex,
@@ -156,7 +153,6 @@ export {
   handleTextSize,
   handleSum,
   handleLink,
-  captureLinkEditorOpenSnapshot,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   handleScreenShot,
@@ -190,19 +186,18 @@ export {
   getSearchIndexArr,
   getSearchIndexArrAsync,
   getFindRangeOnCurrentSheet,
+  getQuickSearchIndexArr,
+  getQuickSearchHiddenConfig,
+  expandCellRectForMerge,
+  shouldQuickSearchUseAsync,
+  runQuickSearchIndexArrAsync,
+  QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
+  parseRangeText,
   // hyperlink
   getCellRowColumn,
   getCellHyperlink,
-  getCellHyperlinks,
-  getHyperlinkDisplayTextInCell,
-  getInlineLinkPlainRange,
-  getUniformLinkCoveringPlainRange,
-  getUniformLinkAtPlainOffset,
   saveHyperlink,
   removeHyperlink,
-  removeHyperlinkForLink,
-  updateHyperlinkForLink,
-  syncLinkCardAfterHyperlinkChange,
   showLinkCard,
   goToLink,
   isLinkValid,
@@ -271,7 +266,6 @@ export {
   spillSortResult,
   // formula (internal)
   execfunction,
-  execFunctionGroup,
   insertUpdateFunctionGroup,
   remapFormulaReferencesByMap,
   // ConditionFormat (internal)
@@ -310,7 +304,6 @@ export type {
   Cell,
   CellWithRowAndCol,
   CellMatrix,
-  HyperlinkEntry,
   Selection,
   Presence,
   Sheet,
@@ -327,6 +320,9 @@ export type {
   CheckModes,
   HyperlinkMap,
   FindSearchScope,
+  SearchHiddenConfig,
+  SearchNextResult,
+  ReplaceAllResult,
 } from './modules/searchReplace';
 
 // animate
