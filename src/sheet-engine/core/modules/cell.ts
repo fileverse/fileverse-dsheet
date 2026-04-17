@@ -301,6 +301,22 @@ export function setCellValue(
     vupdate = removeCommasValidated(vupdate);
   }
 
+  const cellObj = _.isPlainObject(cell) ? (cell as Cell) : null;
+  const isTextFormattedCell =
+    cellObj != null && (cellObj.ct?.fa === "@" || cellObj.qp === 1);
+  if (
+    typeof vupdate === "string" &&
+    !isTextFormattedCell &&
+    /^[+-]?\d+\.\d+$/.test(vupdate)
+  ) {
+    const normalizedDecimal = vupdate
+      .replace(/(\.\d*?[1-9])0+$/, "$1")
+      .replace(/\.0+$/, "");
+    if (normalizedDecimal !== vupdate) {
+      vupdate = normalizedDecimal;
+    }
+  }
+
   if (isRealNull(vupdate)) {
     if (_.isPlainObject(cell)) {
       delete cell!.m;
