@@ -12,6 +12,30 @@ import { changeSheet } from './sheet';
 /** Where find/replace scans on the current sheet (workbook-wide only applies to find-all). */
 export type FindSearchScope = 'allSheets' | 'thisSheet' | 'specificRange';
 
+function fullSheetRangeForData(
+  flowdata: CellMatrix | undefined,
+  sheetRow?: number,
+  sheetColumn?: number,
+): { row: number[]; column: number[] }[] | null {
+  const rowCountFromData = flowdata?.length ?? 0;
+  const colCountFromData = flowdata?.[0]?.length ?? 0;
+
+  // Some sheets can have `data` but the first row is missing/empty while `row`/`column` are set.
+  const rowCount =
+    rowCountFromData > 0 ? rowCountFromData : Math.max(0, sheetRow ?? 0);
+  const colCount =
+    colCountFromData > 0 ? colCountFromData : Math.max(0, sheetColumn ?? 0);
+
+  if (rowCount <= 0 || colCount <= 0) return null;
+
+  return [
+    {
+      row: [0, rowCount - 1],
+      column: [0, colCount - 1],
+    },
+  ];
+}
+
 /**
  * Return value of {@link searchNext}.
  *
@@ -411,14 +435,12 @@ export function searchNext(
       const sid = sheet.id ?? '';
       if (!sid || !sheet.data) continue;
       const sheetFlowdata = sheet.data as CellMatrix;
-      if (!sheetFlowdata.length || !sheetFlowdata[0]?.length) continue;
-
-      const fullRange = [
-        {
-          row: [0, sheetFlowdata.length - 1],
-          column: [0, sheetFlowdata[0].length - 1],
-        },
-      ];
+      const fullRange = fullSheetRangeForData(
+        sheetFlowdata,
+        sheet.row,
+        sheet.column,
+      );
+      if (fullRange == null) continue;
       const hits = getSearchIndexArr(
         searchText,
         fullRange,
@@ -662,14 +684,12 @@ export function searchAll(
     for (const sheet of ctx.luckysheetfile) {
       if (!sheet.data) continue;
       const sheetFlowdata = sheet.data as CellMatrix;
-      if (!sheetFlowdata.length || !sheetFlowdata[0]?.length) continue;
-
-      const fullRange = [
-        {
-          row: [0, sheetFlowdata.length - 1],
-          column: [0, sheetFlowdata[0].length - 1],
-        },
-      ];
+      const fullRange = fullSheetRangeForData(
+        sheetFlowdata,
+        sheet.row,
+        sheet.column,
+      );
+      if (fullRange == null) continue;
 
       const indexArr = getSearchIndexArr(
         searchText,

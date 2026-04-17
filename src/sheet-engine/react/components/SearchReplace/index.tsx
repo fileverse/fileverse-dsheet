@@ -975,6 +975,18 @@ const SearchReplace: React.FC<{
                           setContext((draftCtx) => {
                             // Fix 8: Switch to the result's sheet if needed
                             if (v.sheetId !== draftCtx.currentSheetId) {
+                              const toIdx = getSheetIndex(draftCtx, v.sheetId);
+                              if (toIdx != null) {
+                                draftCtx.luckysheetfile[toIdx].luckysheet_select_save =
+                                  [
+                                    {
+                                      row: [v.r, v.r],
+                                      column: [v.c, v.c],
+                                      row_focus: v.r,
+                                      column_focus: v.c,
+                                    },
+                                  ];
+                              }
                               changeSheet(draftCtx, v.sheetId);
                             }
                             draftCtx.luckysheet_select_save =

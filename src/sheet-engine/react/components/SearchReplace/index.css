@@ -1,4 +1,4 @@
-@import "@fileverse/ui/styles";
+@import '@fileverse/ui/styles';
 /*查找替换弹出框样式*/
 #fortune-search-replace {
   position: absolute;
@@ -64,7 +64,7 @@
   line-height: 30px;
 }
 
-#fortune-search-replace .checkboxs input[type="checkbox"] {
+#fortune-search-replace .checkboxs input[type='checkbox'] {
   float: left;
   margin-top: 9px;
 }
@@ -188,4 +188,9 @@
 
 #fortune-search-replace .table-container::-webkit-scrollbar-button {
   display: none;
+}
+
+.find-replace-inline-info {
+  font-size: 14px;
+  font-weight: bold;
 }
