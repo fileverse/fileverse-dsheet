@@ -200,7 +200,7 @@
 
 .fortune-search-range-highlight {
   box-sizing: border-box;
-  border: 2px dashed #efc703;
+  border: 2px solid #efc703;
   background-color: #efc8030e;
 }
 
