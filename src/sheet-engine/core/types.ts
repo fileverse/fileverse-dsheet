@@ -357,6 +357,8 @@ export type GlobalCache = {
       cursorMoveStartPosition: { x: number; y: number } | undefined;
     };
   };
+  /** Element to restore focus to after closing Quick Search (not stored in Immer context). */
+  quickSearchReturnFocus?: Element | null;
   linkCard?: {
     mouseEnter?: boolean;
     rangeSelectionModal?: {
