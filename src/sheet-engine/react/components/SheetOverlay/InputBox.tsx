@@ -1134,8 +1134,6 @@ const InputBox: React.FC = () => {
         const range = sel.getRangeAt(0);
         if (!editor.contains(range.startContainer)) return false;
 
-        range.deleteContents();
-
         const br = document.createElement('br');
         const typingSpan = document.createElement('span');
         typingSpan.className = 'luckysheet-input-span';
@@ -1145,10 +1143,36 @@ const InputBox: React.FC = () => {
         const textNode = document.createTextNode('\u200B');
         typingSpan.appendChild(textNode);
 
-        const frag = document.createDocumentFragment();
-        frag.appendChild(br);
-        frag.appendChild(typingSpan);
-        range.insertNode(frag);
+        const startEl =
+          range.startContainer instanceof HTMLElement
+            ? range.startContainer
+            : range.startContainer.parentElement;
+        let hostSpan: HTMLElement | null = startEl;
+        while (hostSpan && hostSpan !== editor && hostSpan.tagName !== 'SPAN') {
+          hostSpan = hostSpan.parentElement;
+        }
+
+        // Root-cause fix for duplicate text:
+        // if we insert <br> + typing span at a text-node caret inside an existing span,
+        // the new typing span can become nested. Commit serialization then reads both
+        // outer+inner spans and duplicates typed text (e.g. "reallyreally").
+        // Insert as top-level siblings when caret is in a plain/no-link typing span.
+        if (
+          hostSpan &&
+          hostSpan !== editor &&
+          hostSpan.tagName === 'SPAN' &&
+          !hostSpan.dataset?.linkType &&
+          !hostSpan.dataset?.linkAddress
+        ) {
+          hostSpan.insertAdjacentElement('afterend', br);
+          br.insertAdjacentElement('afterend', typingSpan);
+        } else {
+          range.deleteContents();
+          const frag = document.createDocumentFragment();
+          frag.appendChild(br);
+          frag.appendChild(typingSpan);
+          range.insertNode(frag);
+        }
 
         const out = document.createRange();
         out.setStart(textNode, 1);
@@ -1161,13 +1185,9 @@ const InputBox: React.FC = () => {
       const isTextInsertKey =
         !e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1;
       if (isTextInsertKey) {
-        const movedOutOfLink = moveCaretOutsideTrailingLinkSpan();
-        if (movedOutOfLink) {
-          // Some contenteditable states still insert into the prior linked span.
-          // Force insertion at the freshly-created plain span caret.
-          e.preventDefault();
-          document.execCommand('insertText', false, e.key);
-        }
+        // Move caret out of a trailing link span before native text insertion.
+        // Let the browser perform the actual insertion once to avoid double-write paths.
+        moveCaretOutsideTrailingLinkSpan();
       }
 
       setContext((draftCtx) => {
@@ -1441,6 +1461,9 @@ const InputBox: React.FC = () => {
         e.preventDefault();
       } else if (e.key === 'Enter' && context.luckysheetCellUpdate.length > 0) {
         if (e.altKey || e.metaKey) {
+          // Fully own Cmd/Alt+Enter behavior to avoid native contenteditable
+          // insertion running in parallel with our custom newline path.
+          e.preventDefault();
           // Match Space behavior in multiline mode too: link the token before caret first.
           autoLinkUrlsInEditorRef.current('commit', {
             preserveCaret: true,
