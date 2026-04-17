@@ -409,19 +409,19 @@ const SheetOverlay: React.FC = () => {
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
-                type: 'column',
-                index: selection!.column[0],
-                count: 1,
-                direction: 'lefttop',
-                id: context.currentSheetId,
-              }
+                  type: 'column',
+                  index: selection!.column[0],
+                  count: 1,
+                  direction: 'lefttop',
+                  id: context.currentSheetId,
+                }
               : {
-                type: 'row',
-                index: selection!.row[1],
-                count: 1,
-                direction: 'rightbottom',
-                id: context.currentSheetId,
-              };
+                  type: 'row',
+                  index: selection!.row[1],
+                  count: 1,
+                  direction: 'rightbottom',
+                  id: context.currentSheetId,
+                };
 
           setContext(
             (draftCtx) => {
@@ -671,21 +671,17 @@ const SheetOverlay: React.FC = () => {
       {(context.showSearch ||
         context.showReplace ||
         context.findReplaceHiddenDuringRangePick) && (
-<<<<<<< HEAD
-          <SearchReplace getContainer={() => containerRef.current!} />
-        )}
-=======
         <SearchReplace getContainer={() => containerRef.current!} />
       )}
->>>>>>> cb115c0 (fix: re select range)
       <div className="fortune-row-body">
         <RowHeader />
         <ScrollBar axis="x" />
         <ScrollBar axis="y" />
         <div
           ref={refs.cellArea}
-          className={`fortune-cell-area ${context.luckysheetPaintModelOn ? 'cursor-paint' : ''
-            }`}
+          className={`fortune-cell-area ${
+            context.luckysheetPaintModelOn ? 'cursor-paint' : ''
+          }`}
           onMouseDown={cellAreaMouseDown}
           onDoubleClick={cellAreaDoubleClick}
           onContextMenu={cellAreaContextMenu}
@@ -726,11 +722,13 @@ const SheetOverlay: React.FC = () => {
           {quickSearchOverlayRects.map(({ key, box, rect }) => (
             <div
               key={`fortune-quick-search-hl-${key}`}
-              className={`fortune-quick-search-highlight${box.active ? ' fortune-quick-search-highlight--active' : ''
-                }${context.luckysheetCellUpdate.length > 0
+              className={`fortune-quick-search-highlight${
+                box.active ? ' fortune-quick-search-highlight--active' : ''
+              }${
+                context.luckysheetCellUpdate.length > 0
                   ? ' fortune-quick-search-highlight--dim'
                   : ''
-                }`}
+              }`}
               style={{
                 position: 'absolute',
                 left: rect.left,
@@ -785,33 +783,33 @@ const SheetOverlay: React.FC = () => {
             style={
               (context.luckysheet_select_save?.length ?? 0) > 0
                 ? (() => {
-                  const selection = _.last(context.luckysheet_select_save)!;
-                  return _.assign(
-                    {
-                      left: selection.left,
-                      top: selection.top,
-                      width: selection.width
-                        ? selection.width - 1.8
-                        : selection.width,
-                      height: selection.height
-                        ? selection.height - 1.8
-                        : selection.height,
-                      display: 'block',
-                    },
-                    fixRowStyleOverflowInFreeze(
-                      context,
-                      selection.row_focus || 0,
-                      selection.row_focus || 0,
-                      refs.globalCache.freezen?.[context.currentSheetId],
-                    ),
-                    fixColumnStyleOverflowInFreeze(
-                      context,
-                      selection.column_focus || 0,
-                      selection.column_focus || 0,
-                      refs.globalCache.freezen?.[context.currentSheetId],
-                    ),
-                  );
-                })()
+                    const selection = _.last(context.luckysheet_select_save)!;
+                    return _.assign(
+                      {
+                        left: selection.left,
+                        top: selection.top,
+                        width: selection.width
+                          ? selection.width - 1.8
+                          : selection.width,
+                        height: selection.height
+                          ? selection.height - 1.8
+                          : selection.height,
+                        display: 'block',
+                      },
+                      fixRowStyleOverflowInFreeze(
+                        context,
+                        selection.row_focus || 0,
+                        selection.row_focus || 0,
+                        refs.globalCache.freezen?.[context.currentSheetId],
+                      ),
+                      fixColumnStyleOverflowInFreeze(
+                        context,
+                        selection.column_focus || 0,
+                        selection.column_focus || 0,
+                        refs.globalCache.freezen?.[context.currentSheetId],
+                      ),
+                    );
+                  })()
                 : {}
             }
             onMouseDown={(e) => e.preventDefault()}
@@ -876,8 +874,9 @@ const SheetOverlay: React.FC = () => {
                   <div
                     key={index}
                     id="luckysheet-cell-selected"
-                    className={`luckysheet-cell-selected${isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
-                      }`}
+                    className={`luckysheet-cell-selected${
+                      isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
+                    }`}
                     style={_.assign(
                       {
                         left: selection.left_move,
