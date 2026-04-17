@@ -594,9 +594,15 @@ export function handleWithCtrlOrMetaKey(
     }
     e.stopPropagation();
     return;
-  } else if (e.code === "KeyF") {
-    // Ctrl + F  查找
-    ctx.showSearch = true;
+  } else if (e.code === 'KeyF') {
+    // Ctrl/Cmd + F — in-sheet Quick Search (browser find suppressed below)
+    ctx.showSearch = false;
+    ctx.showReplace = false;
+    if (ctx.showQuickSearch) {
+      ctx.quickSearchFocusNonce = (ctx.quickSearchFocusNonce ?? 0) + 1;
+    } else {
+      ctx.showQuickSearch = true;
+    }
   } else if (e.code === "KeyH") {
     // Ctrl + H  替换
     ctx.showReplace = true;
@@ -1028,12 +1034,16 @@ export async function handleGlobalKeyDown(
   );
   const restCod = !ignoredKeys.has(kstr);
 
+  const passFindReplaceThroughEdit =
+    (e.ctrlKey || e.metaKey) && (e.code === 'KeyF' || e.code === 'KeyH');
+
   if (
     // $("#luckysheet-modal-dialog-mask").is(":visible") ||
     // $(event.target).hasClass("luckysheet-mousedown-cancel") ||
     // $(event.target).hasClass("sp-input") ||
     ctx.luckysheetCellUpdate.length > 0 &&
-    restCod
+    restCod &&
+    !passFindReplaceThroughEdit
   ) {
     // const anchor = $(window.getSelection().anchorNode);
 

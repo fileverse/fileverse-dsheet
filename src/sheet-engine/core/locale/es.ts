@@ -11585,6 +11585,18 @@ export default {
     lessTwoRowTip: 'Selecciona al menos dos filas',
     lessTwoColumnTip: 'Selecciona al menos dos columnas',
 
+    quickSearchDialogAria: 'Búsqueda rápida',
+    quickSearchPlaceholder: 'Buscar',
+    quickSearchSearching: 'Buscando…',
+    quickSearchNoResults: 'Sin resultados',
+    quickSearchCounterTemplate: '{current} de {total}',
+    quickSearchMatchCountAria: '{current} de {total} coincidencias',
+    quickSearchPrevAria: 'Coincidencia anterior',
+    quickSearchNextAria: 'Siguiente coincidencia',
+    quickSearchMoreOptionsTitle: 'Más opciones',
+    quickSearchOpenFindReplaceAria: 'Abrir buscar y reemplazar',
+    quickSearchCloseAria: 'Cerrar búsqueda rápida',
+
     findTextbox: 'Encontrar Contenido',
     replaceTextbox: 'Reemplazar Contenido',
 

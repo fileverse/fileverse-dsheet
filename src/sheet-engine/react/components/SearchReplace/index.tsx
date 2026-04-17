@@ -768,7 +768,7 @@ const SearchReplace: React.FC<{
               aria-live="polite"
               aria-atomic="true"
             >
-              {inlineInfo ?? findAndReplace.noFindTip}
+              {inlineInfo || ''}
             </div>
             <div className="flex flex-row gap-2 justify-end items-center mb-4 flex-wrap">
               <Button

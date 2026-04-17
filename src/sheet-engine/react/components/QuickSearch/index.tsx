@@ -233,8 +233,8 @@ const QuickSearchBar: React.FC = () => {
       : matchCount === 0
         ? findAndReplace.quickSearchNoResults
         : findAndReplace.quickSearchMatchCountAria
-          .replace('{current}', String(activeIdx + 1))
-          .replace('{total}', String(matchCount));
+            .replace('{current}', String(activeIdx + 1))
+            .replace('{total}', String(matchCount));
 
   return (
     <div
@@ -270,7 +270,7 @@ const QuickSearchBar: React.FC = () => {
               {findAndReplace.quickSearchSearching}
             </span>
           ) : !hasQuery ? null : noResults ? (
-            findAndReplace.quickSearchNoResults || 'No results'
+            findAndReplace.quickSearchNoResults
           ) : (
             findAndReplace.quickSearchCounterTemplate
               .replace('{current}', String(activeIdx + 1))

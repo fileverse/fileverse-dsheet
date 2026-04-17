@@ -11625,6 +11625,18 @@ export default {
     lessTwoRowTip: 'कृपया कम से कम दो पंक्तियाँ चुनें',
     lessTwoColumnTip: 'कृपया कम से कम दो स्तंभ चुनें',
 
+    quickSearchDialogAria: 'त्वरित खोज',
+    quickSearchPlaceholder: 'खोजें',
+    quickSearchSearching: 'खोज रहे हैं…',
+    quickSearchNoResults: 'कोई परिणाम नहीं',
+    quickSearchCounterTemplate: '{current} / {total}',
+    quickSearchMatchCountAria: '{total} में से {current} मिलान',
+    quickSearchPrevAria: 'पिछला मिलान',
+    quickSearchNextAria: 'अगला मिलान',
+    quickSearchMoreOptionsTitle: 'और विकल्प',
+    quickSearchOpenFindReplaceAria: 'खोजें और बदलें खोलें',
+    quickSearchCloseAria: 'त्वरित खोज बंद करें',
+
     findTextbox: 'खोज सामग्री',
     replaceTextbox: 'सामग्री बदलें',
 

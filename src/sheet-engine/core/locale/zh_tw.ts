@@ -11611,6 +11611,18 @@ export default {
     lessTwoRowTip: '請選擇最少兩行',
     lessTwoColumnTip: '請選擇最少兩行',
 
+    quickSearchDialogAria: '快速搜尋',
+    quickSearchPlaceholder: '搜尋',
+    quickSearchSearching: '搜尋中…',
+    quickSearchNoResults: '沒有結果',
+    quickSearchCounterTemplate: '{current} / {total}',
+    quickSearchMatchCountAria: '{current} / {total} 個相符項目',
+    quickSearchPrevAria: '上一個相符項目',
+    quickSearchNextAria: '下一個相符項目',
+    quickSearchMoreOptionsTitle: '更多選項',
+    quickSearchOpenFindReplaceAria: '開啟尋找與取代',
+    quickSearchCloseAria: '關閉快速搜尋',
+
     findTextbox: '查找内容',
     replaceTextbox: '替換內容',
 

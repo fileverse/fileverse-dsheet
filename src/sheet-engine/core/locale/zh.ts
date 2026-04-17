@@ -11652,6 +11652,18 @@ export default {
     lessTwoRowTip: '请选择最少两行',
     lessTwoColumnTip: '请选择最少两行',
 
+    quickSearchDialogAria: '快速搜索',
+    quickSearchPlaceholder: '搜索',
+    quickSearchSearching: '搜索中…',
+    quickSearchNoResults: '没有结果',
+    quickSearchCounterTemplate: '{current} / {total}',
+    quickSearchMatchCountAria: '{current} / {total} 个匹配项',
+    quickSearchPrevAria: '上一个匹配项',
+    quickSearchNextAria: '下一个匹配项',
+    quickSearchMoreOptionsTitle: '更多选项',
+    quickSearchOpenFindReplaceAria: '打开查找和替换',
+    quickSearchCloseAria: '关闭快速搜索',
+
     findTextbox: '查找内容',
     replaceTextbox: '替换内容',
 
