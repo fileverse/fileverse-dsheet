@@ -59,7 +59,6 @@ export {
   functionStrChange,
   setFormulaEditorOwner,
   getAllFunctionGroup,
-  execFunctionGroup,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
 
@@ -67,7 +66,14 @@ export {
 export { initFreeze } from './freeze';
 
 // inline-string
-export { isInlineStringCell, getInlineStringNoStyle } from './inline-string';
+export {
+  isInlineStringCell,
+  getInlineStringNoStyle,
+  applyLinkToSelection,
+  getHyperlinksFromInlineSegments,
+  getUniformLinkFromWindowSelectionInEditor,
+  getHyperlinkAtCaretInContentEditable,
+} from './inline-string';
 
 // location
 export {
@@ -137,6 +143,7 @@ export {
   handleTextSize,
   handleSum,
   handleLink,
+  captureLinkEditorOpenSnapshot,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   updateFormatCell,
@@ -202,8 +209,16 @@ export { searchAll, searchNext, replace, replaceAll } from './searchReplace';
 export {
   getCellRowColumn,
   getCellHyperlink,
+  getCellHyperlinks,
+  getHyperlinkDisplayTextInCell,
+  getInlineLinkPlainRange,
+  getUniformLinkCoveringPlainRange,
+  getUniformLinkAtPlainOffset,
   saveHyperlink,
   removeHyperlink,
+  removeHyperlinkForLink,
+  updateHyperlinkForLink,
+  syncLinkCardAfterHyperlinkChange,
   showLinkCard,
   goToLink,
   isLinkValid,
@@ -298,6 +313,7 @@ export {
   iscelldata,
   getcellrange,
   execfunction,
+  execFunctionGroup,
   insertUpdateFunctionGroup,
   functionCopy,
 } from './formula';

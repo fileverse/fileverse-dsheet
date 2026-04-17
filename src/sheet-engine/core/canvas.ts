@@ -2934,7 +2934,7 @@ export class Canvas {
           ctx.beginPath();
           ctx.moveTo(
             Math.floor((pos_x + item.startX) / this.sheetCtx.zoomRatio) + 0.5,
-            Math.floor((pos_y + item.startY) / this.sheetCtx.zoomRatio),
+            Math.floor((pos_y + item.startY) / this.sheetCtx.zoomRatio) + 0.5,
           );
           ctx.lineTo(
             Math.floor((pos_x + item.endX) / this.sheetCtx.zoomRatio) + 0.5,

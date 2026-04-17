@@ -9,7 +9,7 @@ import {
 import { getdatabyselection } from "../modules/cell";
 import { update, genarate } from "../modules/format";
 import { normalizeSelection, selectionCache } from "../modules/selection";
-import { Cell, CellMatrix } from "../types";
+import { Cell, CellMatrix, HyperlinkEntry } from "../types";
 import { getSheetIndex, isAllowEdit } from "../utils";
 import { hasPartMC, isRealNum } from "../modules/validation";
 import { getBorderInfoCompute } from "../modules/border";
@@ -924,7 +924,7 @@ function setCellHyperlink(
   id: string,
   r: number,
   c: number,
-  link: { linkType: string; linkAddress: string }
+  link: HyperlinkEntry | HyperlinkEntry[]
 ) {
   const index = getSheetIndex(ctx, id) as number;
   if (!ctx.luckysheetfile[index].hyperlink) {

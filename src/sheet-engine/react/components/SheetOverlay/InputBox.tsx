@@ -36,6 +36,12 @@ import {
   setFormulaEditorOwner,
   normalizeSelection,
   snapSheetSelectionFocusToCellPreserveMultiRange,
+  captureLinkEditorOpenSnapshot,
+  showLinkCard,
+  getHyperlinkAtCaretInContentEditable,
+  getUniformLinkFromWindowSelectionInEditor,
+  applyLinkToSelection,
+  getCellHyperlink,
 } from '@sheet-engine/core';
 import React, {
   useContext,
@@ -83,6 +89,216 @@ function measureCellEditorContentWidth(el: HTMLElement | null): number {
   } catch {
     return el.scrollWidth;
   }
+}
+
+function findLastLinkSpanInEditor(editor: HTMLElement): HTMLElement | null {
+  const spans = editor.querySelectorAll('span');
+  for (let i = spans.length - 1; i >= 0; i -= 1) {
+    const el = spans[i] as HTMLElement;
+    if (el?.dataset?.linkType && el?.dataset?.linkAddress) return el;
+  }
+  return null;
+}
+
+/** True if a non-linked typing span already sits immediately after this link (avoids duplicate NBSP anchors). */
+function hasPlainTypingSpanAfterLink(linkSpan: HTMLElement): boolean {
+  const next = linkSpan.nextElementSibling;
+  return (
+    next instanceof HTMLElement &&
+    next.tagName === 'SPAN' &&
+    !next.dataset?.linkType &&
+    !next.dataset?.linkAddress
+  );
+}
+
+function ensureTrailingPlainSpanAfterLinkedTail(
+  editor: HTMLDivElement | null,
+): boolean {
+  if (!editor) return false;
+  const lastLink = findLastLinkSpanInEditor(editor);
+  if (!lastLink) return false;
+  if (hasPlainTypingSpanAfterLink(lastLink)) return false;
+  const anchor = document.createElement('span');
+  anchor.className = 'luckysheet-input-span';
+  anchor.setAttribute('data-no-link-anchor', '1');
+  anchor.textContent = '\u00A0';
+  lastLink.insertAdjacentElement('afterend', anchor);
+  return true;
+}
+
+function moveCaretToTrailingPlainSpan(editor: HTMLDivElement | null): boolean {
+  if (!editor) return false;
+  const lastLink = findLastLinkSpanInEditor(editor);
+  if (!lastLink) return false;
+  const next = lastLink.nextElementSibling;
+  if (
+    !(next instanceof HTMLElement) ||
+    next.tagName !== 'SPAN' ||
+    next.dataset?.linkType ||
+    next.dataset?.linkAddress
+  ) {
+    return false;
+  }
+  let textNode = next.firstChild as Text | null;
+  if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
+    textNode = document.createTextNode('\u00A0');
+    next.textContent = '';
+    next.appendChild(textNode);
+  }
+  const sel = window.getSelection();
+  if (!sel) return false;
+  const range = document.createRange();
+  range.setStart(textNode, textNode.textContent?.length || 0);
+  range.collapse(true);
+  editor.focus({ preventScroll: true });
+  sel.removeAllRanges();
+  sel.addRange(range);
+  return true;
+}
+
+function buildSingleLinkEditorHtml(
+  text: string,
+  link: { linkType: string; linkAddress: string },
+): string {
+  const escaped = escapeHTMLTag(escapeScriptTag(text))
+    .replace(/\r\n/g, '<br>')
+    .replace(/\r/g, '<br>')
+    .replace(/\n/g, '<br>');
+  const safeType = String(link.linkType).replace(/"/g, '&quot;');
+  const safeAddress = String(link.linkAddress).replace(/"/g, '&quot;');
+  return `<span class="luckysheet-input-span" style="color: rgb(0, 0, 255); border-bottom: 1px solid rgb(0, 0, 255);" data-link-type="${safeType}" data-link-address="${safeAddress}">${escaped}</span>`;
+}
+
+function getCaretCharacterOffsetInEditor(element: HTMLDivElement): number | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  const focusNode = sel.focusNode;
+  if (!focusNode || !element.contains(focusNode)) return null;
+  const pre = document.createRange();
+  pre.selectNodeContents(element);
+  pre.setEnd(focusNode, sel.focusOffset);
+  return pre.toString().replace(/\r\n/g, '\n').replace(/\r/g, '\n').length;
+}
+
+function setSelectionByCharacterOffsetInEditor(
+  element: HTMLDivElement,
+  start: number,
+  end: number,
+): boolean {
+  const normalizeForSelection = (s: string) =>
+    s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normInner = normalizeForSelection(
+    element.innerText ?? element.textContent ?? '',
+  );
+  // Whole-cell selection from toolbar / Cmd+K: DOM may use <br> for line breaks;
+  // walking only text nodes under-counts. selectNodeContents matches innerText.
+  if (
+    start === 0 &&
+    end === normInner.length &&
+    normInner.length > 0 &&
+    element.childNodes.length > 0
+  ) {
+    const sel = window.getSelection();
+    if (!sel) return false;
+    const r = document.createRange();
+    r.selectNodeContents(element);
+    element.focus({ preventScroll: true });
+    sel.removeAllRanges();
+    sel.addRange(r);
+    return true;
+  }
+  const rawOffsetFromNormalized = (raw: string, normalizedOffset: number) => {
+    if (normalizedOffset <= 0) return 0;
+    let rawIdx = 0;
+    let normIdx = 0;
+    while (rawIdx < raw.length && normIdx < normalizedOffset) {
+      const ch = raw[rawIdx];
+      if (ch === '\r') {
+        if (rawIdx + 1 < raw.length && raw[rawIdx + 1] === '\n') {
+          rawIdx += 2;
+        } else {
+          rawIdx += 1;
+        }
+        normIdx += 1;
+        continue;
+      }
+      rawIdx += 1;
+      normIdx += 1;
+    }
+    return rawIdx;
+  };
+  const sel = window.getSelection();
+  if (!sel) return false;
+  let charIndex = 0;
+  let startNode: Node | null = null;
+  let startOffset = 0;
+  let endNode: Node | null = null;
+  let endOffset = 0;
+
+  const walk = (node: Node): boolean => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const rawText = node.textContent || '';
+      const normalizedText = normalizeForSelection(rawText);
+      const len = normalizedText.length;
+      if (startNode == null && charIndex + len > start) {
+        startNode = node;
+        startOffset = rawOffsetFromNormalized(rawText, start - charIndex);
+      }
+      if (endNode == null && charIndex + len >= end) {
+        endNode = node;
+        endOffset = rawOffsetFromNormalized(rawText, end - charIndex);
+        return true;
+      }
+      charIndex += len;
+      return false;
+    }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName === 'BR') {
+        const brLen = 1;
+        const parent = el.parentNode;
+        if (parent) {
+          const idx = Array.prototype.indexOf.call(parent.childNodes, el);
+          if (startNode == null && charIndex + brLen > start) {
+            startNode = parent;
+            startOffset = start <= charIndex ? idx : idx + 1;
+          }
+          if (endNode == null && charIndex + brLen >= end) {
+            endNode = parent;
+            endOffset = end <= charIndex ? idx : idx + 1;
+            charIndex += brLen;
+            return true;
+          }
+        }
+        charIndex += brLen;
+        return false;
+      }
+    }
+    const children = node.childNodes;
+    for (let i = 0; i < children.length; i += 1) {
+      if (walk(children[i])) return true;
+    }
+    return false;
+  };
+
+  walk(element);
+  // End-boundary caret case: offsets can point to text end where `walk` never
+  // enters `charIndex + len > start` branch. Fall back to editor end.
+  if (!startNode) {
+    startNode = element;
+    startOffset = element.childNodes.length;
+  }
+  if (!endNode) {
+    endNode = element;
+    endOffset = element.childNodes.length;
+  }
+  const r = document.createRange();
+  r.setStart(startNode, Math.max(0, startOffset));
+  r.setEnd(endNode, Math.max(0, endOffset));
+  element.focus({ preventScroll: true });
+  sel.removeAllRanges();
+  sel.addRange(r);
+  return true;
 }
 
 const InputBox: React.FC = () => {
@@ -150,6 +366,13 @@ const InputBox: React.FC = () => {
 
   const ZWSP = '\u200B';
   const inputBoxInnerRef = useRef<HTMLDivElement>(null);
+  const lastAppliedLinkSelectionKeyRef = useRef<string | null>(null);
+  const autoLinkUrlsInEditorRef = useRef<
+    (
+      mode?: 'space' | 'commit',
+      options?: { preserveCaret?: boolean; deferCaretRestore?: boolean },
+    ) => void
+  >(() => { });
   const [linkSelectionHighlightRects, setLinkSelectionHighlightRects] =
     useState<{ left: number; top: number; width: number; height: number }[]>(
       [],
@@ -218,6 +441,21 @@ const InputBox: React.FC = () => {
         firstSelectionActiveCell.row_focus!,
         firstSelectionActiveCell.column_focus!,
       );
+      // Hyperlink cells can carry blue/underline as cell-level style (especially after import).
+      // In edit mode that decorates the entire input box; keep decoration on link spans only.
+      const activeHyperlink = getCellHyperlink(
+        context,
+        firstSelectionActiveCell.row_focus!,
+        firstSelectionActiveCell.column_focus!,
+      );
+      if (activeHyperlink?.linkAddress) {
+        style = {
+          ...style,
+          color: undefined,
+          borderBottom: undefined,
+          textDecoration: undefined,
+        };
+      }
       if (cellEditorIsFormula) {
         style = { ...style, textAlign: 'left' };
       }
@@ -281,6 +519,15 @@ const InputBox: React.FC = () => {
       }
       const flowdata = getFlowdata(context);
       const cell = flowdata?.[row_index]?.[col_index];
+      const inlineCellHasLinkRuns =
+        cell?.ct?.t === 'inlineStr' &&
+        Array.isArray(cell.ct.s) &&
+        cell.ct.s.some(
+          (seg: any) =>
+            !!seg?.link?.linkType &&
+            !!seg?.link?.linkAddress,
+        );
+      const cellHyperlink = getCellHyperlink(context, row_index, col_index);
       const overwrite = refs.globalCache.overwriteCell;
       let value = '';
       if (cell && !overwrite) {
@@ -300,8 +547,23 @@ const InputBox: React.FC = () => {
       }
       refs.globalCache.overwriteCell = false;
       let wroteEditorFromStoredCell = false;
+      let wroteSingleHydratedLinkSpan = false;
       if (!refs.globalCache.ignoreWriteCell && inputRef.current && value) {
-        inputRef.current!.innerHTML = escapeHTMLTag(escapeScriptTag(value));
+        if (
+          cellHyperlink?.linkType &&
+          cellHyperlink?.linkAddress &&
+          !isInlineStringCell(cell as any) &&
+          !inlineCellHasLinkRuns &&
+          String(value).trim().length > 0
+        ) {
+          inputRef.current!.innerHTML = buildSingleLinkEditorHtml(
+            String(value),
+            cellHyperlink,
+          );
+          wroteSingleHydratedLinkSpan = true;
+        } else {
+          inputRef.current!.innerHTML = escapeHTMLTag(escapeScriptTag(value));
+        }
         wroteEditorFromStoredCell = true;
       } else if (
         !refs.globalCache.ignoreWriteCell &&
@@ -315,6 +577,9 @@ const InputBox: React.FC = () => {
         wroteEditorFromStoredCell = true;
       }
       refs.globalCache.ignoreWriteCell = false;
+      if ((isInlineStringCell(cell as any) && inlineCellHasLinkRuns) || wroteSingleHydratedLinkSpan) {
+        ensureTrailingPlainSpanAfterLinkedTail(inputRef.current);
+      }
       if (inputRef.current) {
         setCellEditorIsFormula(
           inputRef.current.innerText.trim().startsWith('='),
@@ -322,6 +587,12 @@ const InputBox: React.FC = () => {
       }
       if (wroteEditorFromStoredCell && !refs.globalCache.doNotFocus) {
         setTimeout(() => {
+          if (
+            (wroteSingleHydratedLinkSpan || inlineCellHasLinkRuns) &&
+            moveCaretToTrailingPlainSpan(inputRef.current)
+          ) {
+            return;
+          }
           moveToEnd(inputRef.current!);
         });
       }
@@ -340,11 +611,114 @@ const InputBox: React.FC = () => {
       if (inputRef.current) {
         inputRef.current.innerHTML = '';
       }
+      lastKeyDownEventRef.current = null;
       delete refs.globalCache.pendingTypeOverCell;
+      delete refs.globalCache.linkEditorOpenSnapshot;
       setCellEditorIsFormula(false);
       resetFormulaHistory();
     }
   }, [context.luckysheetCellUpdate, resetFormulaHistory, refs.globalCache]);
+
+  // Keep link insert offsets accurate when toolbar/modals steal focus: refresh snapshot on caret moves.
+  const contextRefForLinkSnapshot = useRef(context);
+  contextRefForLinkSnapshot.current = context;
+  const lastCaretViewLinkKeyRef = useRef<string | null>(null);
+  const caretLinkCardRafRef = useRef<number>(0);
+  useEffect(() => {
+    if (_.isEmpty(context.luckysheetCellUpdate) || !refs.cellInput.current) {
+      return;
+    }
+    lastCaretViewLinkKeyRef.current = null;
+    const el = refs.cellInput.current;
+    const flushCaretViewLinkCard = () => {
+      caretLinkCardRafRef.current = 0;
+      const ctx = contextRefForLinkSnapshot.current;
+      const editor = refs.cellInput.current;
+      if (!editor || _.isEmpty(ctx.luckysheetCellUpdate)) return;
+      const [r, c] = ctx.luckysheetCellUpdate;
+      const text = editor.innerText ?? '';
+      if (text.trimStart().startsWith('=')) {
+        lastCaretViewLinkKeyRef.current = null;
+        setContext((draftCtx) => {
+          if (draftCtx.linkCard?.isEditing) return;
+          if (
+            draftCtx.linkCard &&
+            draftCtx.linkCard.r === r &&
+            draftCtx.linkCard.c === c
+          ) {
+            draftCtx.linkCard = undefined;
+          }
+        });
+        return;
+      }
+      const sel = window.getSelection();
+      if (!sel?.focusNode || !editor.contains(sel.focusNode)) {
+        lastCaretViewLinkKeyRef.current = null;
+        setContext((draftCtx) => {
+          if (draftCtx.linkCard?.isEditing) return;
+          if (
+            draftCtx.linkCard &&
+            draftCtx.linkCard.r === r &&
+            draftCtx.linkCard.c === c
+          ) {
+            draftCtx.linkCard = undefined;
+          }
+        });
+        return;
+      }
+      if (ctx.linkCard?.isEditing) return;
+      const caretLink = getHyperlinkAtCaretInContentEditable(editor);
+      const key = caretLink
+        ? `${caretLink.linkType}\u0001${caretLink.linkAddress}`
+        : '';
+      if (key === lastCaretViewLinkKeyRef.current) return;
+      lastCaretViewLinkKeyRef.current = key;
+      setContext((draftCtx) => {
+        if (draftCtx.linkCard?.isEditing) return;
+        if (caretLink) {
+          showLinkCard(
+            draftCtx,
+            r,
+            c,
+            { caretViewLink: caretLink },
+            false,
+            false,
+          );
+        } else if (
+          draftCtx.linkCard &&
+          draftCtx.linkCard.r === r &&
+          draftCtx.linkCard.c === c
+        ) {
+          draftCtx.linkCard = undefined;
+        }
+      });
+    };
+    const onSelectionChange = () => {
+      const sel = window.getSelection();
+      if (sel?.focusNode && el.contains(sel.focusNode)) {
+        captureLinkEditorOpenSnapshot(
+          contextRefForLinkSnapshot.current,
+          el,
+          refs.globalCache,
+        );
+      }
+      if (caretLinkCardRafRef.current) {
+        cancelAnimationFrame(caretLinkCardRafRef.current);
+      }
+      caretLinkCardRafRef.current = requestAnimationFrame(
+        flushCaretViewLinkCard,
+      );
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    onSelectionChange();
+    return () => {
+      document.removeEventListener('selectionchange', onSelectionChange);
+      if (caretLinkCardRafRef.current) {
+        cancelAnimationFrame(caretLinkCardRafRef.current);
+        caretLinkCardRafRef.current = 0;
+      }
+    };
+  }, [context.luckysheetCellUpdate, refs.cellInput, refs.globalCache, setContext]);
 
   // Clear type-to-edit flag after all useLayoutEffect runs in this commit (including
   // React Strict Mode's second layout pass). Clearing inside layout let the second
@@ -617,9 +991,9 @@ const InputBox: React.FC = () => {
       const refRange = preferFuncRange
         ? { row: fsr!.row, column: fsr!.column }
         : {
-            row: currentSelection.row,
-            column: currentSelection.column,
-          };
+          row: currentSelection.row,
+          column: currentSelection.column,
+        };
 
       // Point rangechangeindex at the ref under/near the caret — not always the
       // last span (e.g. `=,A4` with caret between `=` and `,` must not replace A4).
@@ -648,7 +1022,8 @@ const InputBox: React.FC = () => {
 
       rangeHightlightselected(ctx, cellInputEl);
 
-      // Ref highlights + live range frame (inner hc matches completed-ref highlights).
+      // Mirror mouse behavior: show blue dotted formula-range selection
+      // for keyboard-driven reference selection as well.
       if (!_.isNil(ctx.formulaCache.rangechangeindex)) {
         ctx.formulaCache.selectingRangeIndex =
           ctx.formulaCache.rangechangeindex;
@@ -690,6 +1065,111 @@ const InputBox: React.FC = () => {
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const moveCaretOutsideTrailingLinkSpan = () => {
+        const editor = inputRef.current;
+        if (!editor) return false;
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return false;
+        const range = sel.getRangeAt(0);
+        if (!range.collapsed || !editor.contains(range.startContainer)) return false;
+
+        const placeCaretInFreshPlainSpanAfter = (anchorSpan: HTMLElement) => {
+          const typingSpan = document.createElement('span');
+          typingSpan.className = 'luckysheet-input-span';
+          const textNode = document.createTextNode('');
+          typingSpan.appendChild(textNode);
+          anchorSpan.insertAdjacentElement('afterend', typingSpan);
+
+          const out = document.createRange();
+          out.setStart(textNode, 0);
+          out.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(out);
+        };
+
+        // Boundary case: caret can be positioned on the editor/root element with
+        // offset after a linked span (not inside the text node itself).
+        if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+          const node = range.startContainer as HTMLElement;
+          const idx = range.startOffset - 1;
+          const prev = idx >= 0 ? node.childNodes[idx] : null;
+          if (
+            prev instanceof HTMLElement &&
+            prev.tagName === 'SPAN' &&
+            prev.dataset?.linkType &&
+            prev.dataset?.linkAddress
+          ) {
+            placeCaretInFreshPlainSpanAfter(prev);
+            return true;
+          }
+        }
+
+        let span: HTMLElement | null =
+          range.startContainer instanceof HTMLElement
+            ? range.startContainer
+            : range.startContainer.parentElement;
+        while (span && span !== editor && span.tagName !== 'SPAN') {
+          span = span.parentElement;
+        }
+        if (!span || span === editor || span.tagName !== 'SPAN') return false;
+        if (!span.dataset?.linkType || !span.dataset?.linkAddress) return false;
+
+        const pre = document.createRange();
+        pre.selectNodeContents(span);
+        pre.setEnd(range.startContainer, range.startOffset);
+        const caretOffsetInSpan = pre.toString().length;
+        if (caretOffsetInSpan !== (span.textContent ?? '').length) return false;
+
+        // Create an explicit non-link typing container so browser doesn't keep
+        // extending the linked span with new characters.
+        placeCaretInFreshPlainSpanAfter(span);
+        return true;
+      };
+
+      const insertPlainLineBreakAtCaret = () => {
+        const editor = inputRef.current;
+        if (!editor) return false;
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return false;
+        const range = sel.getRangeAt(0);
+        if (!editor.contains(range.startContainer)) return false;
+
+        range.deleteContents();
+
+        const br = document.createElement('br');
+        const typingSpan = document.createElement('span');
+        typingSpan.className = 'luckysheet-input-span';
+        typingSpan.setAttribute('data-no-link-anchor', '1');
+        // Use ZWSP as a caret placeholder for the new line typing span.
+        // Serialization strips it so it never persists to cell value.
+        const textNode = document.createTextNode('\u200B');
+        typingSpan.appendChild(textNode);
+
+        const frag = document.createDocumentFragment();
+        frag.appendChild(br);
+        frag.appendChild(typingSpan);
+        range.insertNode(frag);
+
+        const out = document.createRange();
+        out.setStart(textNode, 1);
+        out.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(out);
+        return true;
+      };
+
+      const isTextInsertKey =
+        !e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1;
+      if (isTextInsertKey) {
+        const movedOutOfLink = moveCaretOutsideTrailingLinkSpan();
+        if (movedOutOfLink) {
+          // Some contenteditable states still insert into the prior linked span.
+          // Force insertion at the freshly-created plain span caret.
+          e.preventDefault();
+          document.execCommand('insertText', false, e.key);
+        }
+      }
+
       setContext((draftCtx) => {
         setFormulaEditorOwner(draftCtx, 'cell');
       });
@@ -961,11 +1441,26 @@ const InputBox: React.FC = () => {
         e.preventDefault();
       } else if (e.key === 'Enter' && context.luckysheetCellUpdate.length > 0) {
         if (e.altKey || e.metaKey) {
-          // originally `enterKeyControll`
-          document.execCommand('insertHTML', false, '\n '); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
-          document.execCommand('delete', false);
+          // Match Space behavior in multiline mode too: link the token before caret first.
+          autoLinkUrlsInEditorRef.current('commit', {
+            preserveCaret: true,
+            deferCaretRestore: false,
+          });
+          // If caret is at the end of a hyperlink span, move to a plain typing span first.
+          // Otherwise Cmd/Alt+Enter inserts <br> inside the linked span, and next-line text
+          // keeps inheriting link metadata/style.
+          moveCaretOutsideTrailingLinkSpan();
+          // Use explicit newline insertion with a plain typing span so the new line never
+          // inherits hyperlink blue/underline from the previous linked run.
+          if (!insertPlainLineBreakAtCaret()) {
+            // Fallback to legacy execCommand behavior if selection shape is unexpected.
+            document.execCommand('insertHTML', false, '\n ');
+            document.execCommand('delete', false);
+          }
           e.stopPropagation();
         } else {
+          // Single-line Enter commit should also auto-link like Space.
+          autoLinkUrlsInEditorRef.current('commit');
           selectActiveFormula(e);
           // Let Enter bubble to Workbook `handleGlobalEnter` (commit / multi-range
           // advance). Block contenteditable newline if formula list did not consume it.
@@ -1080,6 +1575,75 @@ const InputBox: React.FC = () => {
     ],
   );
 
+  const onBeforeInput = useCallback(
+    (e: React.FormEvent<HTMLDivElement>) => {
+      const ie = e.nativeEvent as InputEvent;
+      if (ie?.isComposing) return;
+      if (!ie || ie.inputType !== 'insertText' || !ie.data) return;
+      const editor = inputRef.current;
+      if (!editor) return;
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if (!range.collapsed || !editor.contains(range.startContainer)) return;
+
+      const placeCaretInFreshPlainSpanAfter = (anchorSpan: HTMLElement) => {
+        const typingSpan = document.createElement('span');
+        typingSpan.className = 'luckysheet-input-span';
+        const textNode = document.createTextNode('');
+        typingSpan.appendChild(textNode);
+        anchorSpan.insertAdjacentElement('afterend', typingSpan);
+
+        const out = document.createRange();
+        out.setStart(textNode, 0);
+        out.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(out);
+      };
+
+      const tryMoveOutOfLinkedTail = () => {
+        if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+          const node = range.startContainer as HTMLElement;
+          const idx = range.startOffset - 1;
+          const prev = idx >= 0 ? node.childNodes[idx] : null;
+          if (
+            prev instanceof HTMLElement &&
+            prev.tagName === 'SPAN' &&
+            prev.dataset?.linkType &&
+            prev.dataset?.linkAddress
+          ) {
+            placeCaretInFreshPlainSpanAfter(prev);
+            return true;
+          }
+        }
+        let span: HTMLElement | null =
+          range.startContainer instanceof HTMLElement
+            ? range.startContainer
+            : range.startContainer.parentElement;
+        while (span && span !== editor && span.tagName !== 'SPAN') {
+          span = span.parentElement;
+        }
+        if (!span || span === editor || span.tagName !== 'SPAN') return false;
+        if (!span.dataset?.linkType || !span.dataset?.linkAddress) return false;
+
+        const pre = document.createRange();
+        pre.selectNodeContents(span);
+        pre.setEnd(range.startContainer, range.startOffset);
+        const caretOffsetInSpan = pre.toString().length;
+        if (caretOffsetInSpan !== (span.textContent ?? '').length) return false;
+
+        placeCaretInFreshPlainSpanAfter(span);
+        return true;
+      };
+
+      if (!tryMoveOutOfLinkedTail()) return;
+      // Only relocate caret out of the linked tail; let native beforeinput/input
+      // perform the text insertion once. Manual execCommand insertion here can
+      // double-apply text in some multiline selection states after Cmd/Alt+Enter.
+    },
+    [],
+  );
+
   const handleHideShowHint = () => {
     const searchElFx = document.getElementsByClassName('fx-search')?.[0];
     const searchElCell = document.getElementsByClassName('cell-search')?.[0];
@@ -1104,6 +1668,147 @@ const InputBox: React.FC = () => {
     }
   };
 
+  const maybeAutoLinkUrlsInEditor = useCallback(
+    (
+      mode: 'space' | 'commit' = 'space',
+      options?: { preserveCaret?: boolean; deferCaretRestore?: boolean },
+    ) => {
+      const editor = inputRef.current;
+      if (!editor) return;
+      const plain = editor.innerText ?? '';
+      if (plain.trimStart().startsWith('=')) return;
+      const normalized = plain.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const shouldRestoreCaret = options?.preserveCaret !== false;
+      const shouldDeferRestore = options?.deferCaretRestore !== false;
+      const found: Array<{ start: number; end: number; url: string }> = [];
+      // Primary path for typing+Space: only convert the just-finished token before caret.
+      const sel = window.getSelection();
+      if (sel?.rangeCount && sel.focusNode && editor.contains(sel.focusNode)) {
+        const current = sel.getRangeAt(0);
+        if (current.collapsed) {
+          const pre = document.createRange();
+          pre.selectNodeContents(editor);
+          pre.setEnd(current.startContainer, current.startOffset);
+          const beforeCaret = pre
+            .toString()
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n');
+          const lineStart = beforeCaret.lastIndexOf('\n') + 1;
+          const lineBeforeCaret = beforeCaret.slice(lineStart);
+          const m = lineBeforeCaret.match(
+            mode === 'space'
+              ? /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)\s$/i
+              : /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)$/i,
+          );
+          if (m) {
+            const token = m[1];
+            const trailingAdjust = mode === 'space' ? 1 : 0;
+            let tokenStart =
+              lineStart + (lineBeforeCaret.length - trailingAdjust - token.length);
+            let tokenEnd = tokenStart + token.length;
+            while (
+              tokenEnd > tokenStart &&
+              /[),.!?:;"']/.test(beforeCaret[tokenEnd - 1])
+            ) {
+              tokenEnd -= 1;
+            }
+            if (tokenEnd > tokenStart) {
+              found.push({
+                start: tokenStart,
+                end: tokenEnd,
+                url: beforeCaret.slice(tokenStart, tokenEnd),
+              });
+            }
+          }
+        }
+      }
+      // Important for multiline stability: do NOT run full-editor fallback scans here.
+      // Space auto-link should only touch the just-finished token around caret.
+      if (found.length === 0) return;
+
+      let appliedLinkViaApplyLink = false;
+      const caretBefore = getCaretCharacterOffsetInEditor(editor);
+      for (const item of found) {
+        if (!setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)) continue;
+        const selNow = window.getSelection();
+        if (!selNow || selNow.rangeCount === 0) continue;
+        const rangeNow = selNow.getRangeAt(0);
+        const selectedNow = (selNow.toString() ?? '')
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n');
+        const normalizedSelected = selectedNow
+          .replace(/\u00a0/g, ' ')
+          .replace(/\u200b/g, '')
+          .trim();
+        const normalizedUrl = item.url
+          .replace(/\u00a0/g, ' ')
+          .replace(/\u200b/g, '')
+          .trim();
+        // Guard against element-node ranges (e.g. editor DIV boundary ranges), which can
+        // make applyLinkToSelection slice HTML by node offsets and corrupt editor content.
+        // Special-case commit when the entire editor equals the URL token (e.g. `test.com` + Enter).
+        if (
+          rangeNow.startContainer === editor ||
+          rangeNow.endContainer === editor ||
+          !editor.contains(rangeNow.startContainer) ||
+          !editor.contains(rangeNow.endContainer)
+        ) {
+          if (mode === 'commit') {
+            const editorPlain = (editor.innerText ?? editor.textContent ?? '')
+              .replace(/\r\n/g, '\n')
+              .replace(/\r/g, '\n')
+              .replace(/\u00a0/g, ' ')
+              .replace(/\u200b/g, '')
+              .trim();
+            if (editorPlain === normalizedUrl && normalizedSelected === normalizedUrl) {
+              editor.innerHTML = buildSingleLinkEditorHtml(
+                editorPlain,
+                { linkType: 'webpage', linkAddress: item.url },
+              );
+              continue;
+            }
+          }
+          continue;
+        }
+        if (mode === 'space') {
+          if (normalizedSelected !== normalizedUrl) continue;
+        } else if (!normalizedSelected.includes(normalizedUrl)) {
+          // Commit path can see small selection shape differences at Enter time.
+          // Require token inclusion, not exact equality.
+          continue;
+        }
+        const existing = getUniformLinkFromWindowSelectionInEditor(editor);
+        if (
+          existing?.linkType === 'webpage' &&
+          (existing.linkAddress || '').trim() === item.url.trim()
+        ) {
+          continue;
+        }
+        applyLinkToSelection(editor, 'webpage', item.url);
+        appliedLinkViaApplyLink = true;
+      }
+      ensureTrailingPlainSpanAfterLinkedTail(editor);
+      if (!shouldRestoreCaret) return;
+      // applyLinkToSelection already moves the caret into a plain span after the new link.
+      // Restoring caretBefore remaps badly after DOM changes (NBSP / split spans, multiline +
+      // <br>): caret can jump to the wrong line — e.g. Cmd+Enter inserts a break but selection
+      // stays on the previous line. Skip restore whenever we actually applied a link (Space or
+      // commit paths, including Cmd/Alt+Enter pre-newline auto-link).
+      if (appliedLinkViaApplyLink) {
+        return;
+      }
+      const restoreOffset = caretBefore ?? normalized.length;
+      const restoreCaret = () =>
+        setSelectionByCharacterOffsetInEditor(editor, restoreOffset, restoreOffset);
+      restoreCaret();
+      if (shouldDeferRestore) {
+        requestAnimationFrame(restoreCaret);
+      }
+    },
+    [],
+  );
+  autoLinkUrlsInEditorRef.current = maybeAutoLinkUrlsInEditor;
+
   const onChange = useCallback(
     (__: any, isBlur?: boolean) => {
       if (context.isFlvReadOnly) return;
@@ -1125,6 +1830,9 @@ const InputBox: React.FC = () => {
       // console.log("onChange", __);
       const e = lastKeyDownEventRef.current;
       if (!e) {
+        if (isBlur) {
+          autoLinkUrlsInEditorRef.current('commit');
+        }
         const cellEl = refs.cellInput.current;
         if (
           cellEl &&
@@ -1209,6 +1917,9 @@ const InputBox: React.FC = () => {
           // }
         });
       }
+      if (kcode === 32) {
+        maybeAutoLinkUrlsInEditor('space');
+      }
       // Snapshot current editor HTML/caret after all DOM rewrites caused by
       // this keystroke (plain text, rich text formatting, and formula tokens).
       requestAnimationFrame(() => {
@@ -1223,6 +1934,7 @@ const InputBox: React.FC = () => {
       refs.fxInput,
       setContext,
       appendEditorHistoryFromPrimaryEditor,
+      maybeAutoLinkUrlsInEditor,
     ],
   );
 
@@ -1266,6 +1978,11 @@ const InputBox: React.FC = () => {
   /** Padding on `.luckysheet-input-box-inner` is outside the contenteditable; forward clicks into the editor. */
   const onInputBoxInnerMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      if (context.linkCard) {
+        setContext((draftCtx) => {
+          draftCtx.linkCard = undefined;
+        });
+      }
       if (!edit || isHidenRC || context.luckysheetCellUpdate.length === 0) {
         return;
       }
@@ -1281,6 +1998,7 @@ const InputBox: React.FC = () => {
     [
       edit,
       isHidenRC,
+      context.linkCard,
       context.luckysheetCellUpdate.length,
       refs.cellInput,
       setContext,
@@ -1475,6 +2193,84 @@ const InputBox: React.FC = () => {
     context.luckysheetCellUpdate,
   ]);
 
+  // When **starting** edit on a cell, clear a passive view-only card for that cell so
+  // it does not sit over the editor. Must not run on every `linkCard` change during edit
+  // (caret-driven view) — that cleared the card immediately and caused a blink.
+  useEffect(() => {
+    const startedEdit =
+      (prevCellUpdate?.length ?? 0) === 0 &&
+      context.luckysheetCellUpdate.length === 2;
+    if (!startedEdit) return;
+    const [er, ec] = context.luckysheetCellUpdate;
+    const lc = context.linkCard;
+    if (!lc || lc.isEditing) return;
+    if (lc.r !== er || lc.c !== ec) return;
+    setContext((draftCtx) => {
+      if (draftCtx.linkCard && !draftCtx.linkCard.isEditing) {
+        draftCtx.linkCard = undefined;
+      }
+    });
+  }, [
+    context.luckysheetCellUpdate,
+    context.linkCard,
+    prevCellUpdate,
+    setContext,
+  ]);
+
+  // In edit mode, also apply real DOM selection so typed edits target that link text.
+  useLayoutEffect(() => {
+    const lc = context.linkCard;
+    const isSameCell =
+      context.luckysheetCellUpdate?.length === 2 &&
+      lc &&
+      context.luckysheetCellUpdate[0] === lc.r &&
+      context.luckysheetCellUpdate[1] === lc.c;
+    if (
+      !lc?.isEditing ||
+      !lc?.applyToSelection ||
+      !lc?.selectionOffsets ||
+      !isSameCell ||
+      !inputRef.current
+    ) {
+      lastAppliedLinkSelectionKeyRef.current = null;
+      return;
+    }
+    const { start, end } = lc.selectionOffsets;
+    const selectionKey = [
+      lc.r,
+      lc.c,
+      start,
+      end,
+      lc.editingLinkIndex ?? '',
+    ].join(':');
+    if (lastAppliedLinkSelectionKeyRef.current === selectionKey) {
+      return;
+    }
+    const el = inputRef.current;
+    const trySelect = () =>
+      setSelectionByCharacterOffsetInEditor(el, start, end);
+    if (trySelect()) {
+      lastAppliedLinkSelectionKeyRef.current = selectionKey;
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (lastAppliedLinkSelectionKeyRef.current === selectionKey) return;
+      const box = inputRef.current;
+      if (!box) return;
+      if (setSelectionByCharacterOffsetInEditor(box, start, end)) {
+        lastAppliedLinkSelectionKeyRef.current = selectionKey;
+      }
+    });
+  }, [
+    context.linkCard?.isEditing,
+    context.linkCard?.applyToSelection,
+    context.linkCard?.selectionOffsets,
+    context.linkCard?.r,
+    context.linkCard?.c,
+    context.linkCard?.editingLinkIndex,
+    context.luckysheetCellUpdate,
+  ]);
+
   useLayoutEffect(() => {
     if (context.luckysheetCellUpdate.length === 0) {
       setCellEditorExtendRight(false);
@@ -1586,7 +2382,13 @@ const InputBox: React.FC = () => {
       className="luckysheet-input-box"
       id="luckysheet-input-box"
       style={getInputBoxPosition()}
-      onMouseDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        if (!context.linkCard) return;
+        setContext((draftCtx) => {
+          draftCtx.linkCard = undefined;
+        });
+      }}
       onMouseUp={(e) => e.stopPropagation()}
     >
       {firstSelection && !context.rangeDialog?.show && showAddressIndicator && (

@@ -15,6 +15,7 @@ import {
   RawSheetImage,
 } from '../utils/xlsx-image-utils';
 import { removeFileExtension } from '../utils/export-filename';
+import { normalizeImportedHyperlinkCellV } from '../utils/xlsx-hyperlink-inline';
 import { toast } from '@fileverse/ui';
 
 /** Predefined option colors for data validation dropdowns (when XLSX has no color). */
@@ -494,7 +495,7 @@ export const useXLSXImport = ({
           // Extract hyperlinks, freeze info, cell formatting, and data validation from all worksheets
           const hyperlinksBySheet: Record<
             number,
-            Record<string, { linkType: string; linkAddress: string }>
+            Record<string, { linkType: string; linkAddress: string }[]>
           > = {};
           const frozenBySheet: Record<
             number,
@@ -535,7 +536,7 @@ export const useXLSXImport = ({
             // Hyperlinks
             const sheetHyperlinks: Record<
               string,
-              { linkType: string; linkAddress: string }
+              { linkType: string; linkAddress: string }[]
             > = {};
 
             // Freeze panes from worksheet views
@@ -580,10 +581,12 @@ export const useXLSXImport = ({
                 const key = `${rowNumber - 1}_${colNumber - 1}`;
 
                 if (cell.hyperlink) {
-                  sheetHyperlinks[key] = {
-                    linkType: 'webpage',
-                    linkAddress: cell.hyperlink,
-                  };
+                  sheetHyperlinks[key] = [
+                    {
+                      linkType: 'webpage',
+                      linkAddress: cell.hyperlink,
+                    },
+                  ];
                 }
 
                 // Extract cell formatting
@@ -704,6 +707,11 @@ export const useXLSXImport = ({
             file,
             function (exportJson: { sheets: Sheet[] }) {
               let sheets = exportJson.sheets;
+              console.log('[xlsx-import] parsed sheets data', {
+                fileName: file.name,
+                sheetCount: sheets.length,
+                sheets,
+              });
               sheets.forEach((sheet, sheetIndex) => {
                 const sheetDv = dataVerificationBySheet[sheetIndex];
                 if (sheetDv && Object.keys(sheetDv).length > 0) {
@@ -850,12 +858,28 @@ export const useXLSXImport = ({
                       }
                       // Apply formatting extracted from exceljs
                       if (styleKeys?.[key]) {
-                        Object.assign(cell.v, styleKeys[key]);
+                        const styleFromExcel = styleKeys[key] as Record<
+                          string,
+                          unknown
+                        >;
+                        const hasHyperlink = !!hlKeys?.[key];
+                        if (hasHyperlink) {
+                          // Hyperlink cells: avoid root-level fc/un inheritance.
+                          const { fc: _fc, un: _un, ...rest } = styleFromExcel;
+                          Object.assign(cell.v, rest);
+                        } else {
+                          Object.assign(cell.v, styleFromExcel);
+                        }
                       }
-                      // Override font color + underline for hyperlink cells
-                      if (hlKeys?.[key]) {
-                        cell.v.fc = 'rgb(0, 0, 255)';
-                        cell.v.un = 1;
+                      // Hyperlink cells: shared normalization (single ct.s run, styles on segment only).
+                      if (hlKeys?.[key] && !cell.v.f) {
+                        const hyperlink = hlKeys[key][0];
+                        if (hyperlink) {
+                          normalizeImportedHyperlinkCellV(
+                            cell.v as Record<string, unknown>,
+                            hyperlink,
+                          );
+                        }
                       }
                       // Fix date cells: luckyexcel leaves ct.t unset and v as a string
                       const fa = cell.v.ct?.fa;

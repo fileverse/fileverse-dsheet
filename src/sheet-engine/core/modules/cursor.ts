@@ -69,6 +69,25 @@ export function selectTextContentCross(sEle: HTMLElement, eEle: HTMLElement) {
   }
 }
 
+function normalizePlainForOffset(s: string): string {
+  return s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+/**
+ * Flat character offset (normalized newlines) of the selection **focus** within `element`.
+ * Use for insert position when opening link UI so appended text goes where the caret was.
+ */
+export function getFocusCharacterOffset(element: HTMLElement): number | null {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return null;
+  const focusNode = sel.focusNode;
+  if (!focusNode || !element.contains(focusNode)) return null;
+  const pre = document.createRange();
+  pre.selectNodeContents(element);
+  pre.setEnd(focusNode, sel.focusOffset);
+  return normalizePlainForOffset(pre.toString()).length;
+}
+
 /** Returns character offsets of the current selection within the element, or null if collapsed/outside. */
 export function getSelectionCharacterOffsets(
   element: Node,
@@ -86,8 +105,9 @@ export function getSelectionCharacterOffsets(
   const pre = document.createRange();
   pre.selectNodeContents(element);
   pre.setEnd(range.startContainer, range.startOffset);
-  const start = pre.toString().length;
-  return { start, end: start + range.toString().length };
+  const start = normalizePlainForOffset(pre.toString()).length;
+  const selNorm = normalizePlainForOffset(range.toString());
+  return { start, end: start + selNorm.length };
 }
 
 /** Sets the selection in the element to the character range [start, end] and focuses it. */
@@ -96,7 +116,7 @@ export function setSelectionByCharacterOffset(
   start: number,
   end: number,
 ) {
-  element.focus();
+  element.focus({ preventScroll: true });
   const sel = window.getSelection();
   if (!sel) return;
   let charIndex = 0;
@@ -120,12 +140,44 @@ export function setSelectionByCharacterOffset(
       charIndex += len;
       return false;
     }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName === "BR") {
+        const brLen = 1;
+        const parent = el.parentNode;
+        if (parent) {
+          const idx = Array.prototype.indexOf.call(parent.childNodes, el);
+          if (startNode == null && charIndex + brLen > start) {
+            startNode = parent;
+            startOffset = start <= charIndex ? idx : idx + 1;
+          }
+          if (endNode == null && charIndex + brLen >= end) {
+            endNode = parent;
+            endOffset = end <= charIndex ? idx : idx + 1;
+            charIndex += brLen;
+            return true;
+          }
+        }
+        charIndex += brLen;
+        return false;
+      }
+    }
     for (let i = 0; i < node.childNodes.length; i += 1) {
       if (walk(node.childNodes[i])) return true;
     }
     return false;
   }
   walk(element);
+  // Boundary case: caret exactly at text end (start/end === total length).
+  // In this case walk() may not set startNode because it uses `>` checks.
+  if (startNode == null) {
+    startNode = element;
+    startOffset = element.childNodes.length;
+  }
+  if (endNode == null) {
+    endNode = element;
+    endOffset = element.childNodes.length;
+  }
   if (startNode && endNode) {
     const range = document.createRange();
     range.setStart(startNode, startOffset);
@@ -166,6 +218,28 @@ export function getRangeRectsByCharacterOffset(
       }
       charIndex += len;
       return false;
+    }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName === "BR") {
+        const brLen = 1;
+        const parent = el.parentNode;
+        if (parent) {
+          const idx = Array.prototype.indexOf.call(parent.childNodes, el);
+          if (startNode == null && charIndex + brLen > start) {
+            startNode = parent;
+            startOffset = start <= charIndex ? idx : idx + 1;
+          }
+          if (endNode == null && charIndex + brLen >= end) {
+            endNode = parent;
+            endOffset = end <= charIndex ? idx : idx + 1;
+            charIndex += brLen;
+            return true;
+          }
+        }
+        charIndex += brLen;
+        return false;
+      }
     }
     for (let i = 0; i < node.childNodes.length; i += 1) {
       if (walk(node.childNodes[i])) return true;

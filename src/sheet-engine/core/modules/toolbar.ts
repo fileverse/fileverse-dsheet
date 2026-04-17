@@ -12,7 +12,10 @@ import {
   setCellValue,
 } from "./cell";
 import { colors } from "./color";
-import { getSelectionCharacterOffsets } from "./cursor";
+import {
+  getFocusCharacterOffset,
+  getSelectionCharacterOffsets,
+} from "./cursor";
 import { datenum_local, genarate, is_date, update } from "./format";
 import {
   execfunction,
@@ -23,6 +26,7 @@ import {
   createFormulaRangeSelect,
 } from "./formula";
 import {
+  getUniformLinkFromWindowSelectionInEditor,
   inlineStyleAffectAttribute,
   updateInlineStringFormat,
   updateInlineStringFormatOutside,
@@ -41,7 +45,12 @@ import {
   isRealNull,
   isRealNum,
 } from "./validation";
-import { showLinkCard } from "./hyperlink";
+import {
+  getCellHyperlinks,
+  getUniformLinkAtPlainOffset,
+  getUniformLinkCoveringPlainRange,
+  showLinkCard,
+} from "./hyperlink";
 import { cfSplitRange } from "./conditionalFormat";
 import { clearMeasureTextCache, getCellTextInfo } from "./text";
 
@@ -323,6 +332,12 @@ export function updateFormat(
   foucsStatus: any,
   canvas?: CanvasRenderingContext2D
 ) {
+  console.log('[format] updateFormat', {
+    attr,
+    foucsStatus,
+    editingCell: ctx.luckysheetCellUpdate,
+    selections: ctx.luckysheet_select_save,
+  });
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
 
@@ -1369,6 +1384,10 @@ export function handleFormatPainter(ctx: Context) {
 
 // 2022-10-10 废弃了handleClearFormat中的foreach写法，改为可跳出的every写法，以防止选区多次覆盖
 export function handleClearFormat(ctx: Context) {
+  console.log('[format] handleClearFormat', {
+    editingCell: ctx.luckysheetCellUpdate,
+    selections: ctx.luckysheet_select_save,
+  });
   if (ctx.allowEdit === false) return;
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;
@@ -1685,9 +1704,56 @@ export function handleSum(
   autoSelectionFormula(ctx, cellInput, fxInput, "SUM", cache!);
 }
 
+/** Match contenteditable / innerText newline normalization for offset math. */
+function normalizeCellPlainTextForEditor(s: string): string {
+  return s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+/**
+ * Records caret and selection offsets for the active cell editor into `cache`.
+ * Call on toolbar link mousedown (before focus leaves the editor) and from selectionchange while editing.
+ */
+export function captureLinkEditorOpenSnapshot(
+  ctx: Context,
+  cellInput: HTMLDivElement | null | undefined,
+  cache: GlobalCache | undefined
+): void {
+  if (!cache || !cellInput) return;
+  if (ctx.luckysheetCellUpdate.length !== 2) {
+    delete cache.linkEditorOpenSnapshot;
+    return;
+  }
+  const [r, c] = ctx.luckysheetCellUpdate;
+  const value = cellInput.innerText ?? "";
+  if (value.startsWith("=")) {
+    delete cache.linkEditorOpenSnapshot;
+    return;
+  }
+  const fullNorm = normalizeCellPlainTextForEditor(value);
+  const range = getSelectionCharacterOffsets(cellInput);
+  const focusOff = getFocusCharacterOffset(cellInput);
+  if (focusOff == null && range == null) {
+    delete cache.linkEditorOpenSnapshot;
+    return;
+  }
+  let selectedPlain = "";
+  if (range) {
+    selectedPlain = fullNorm.slice(range.start, range.end);
+  }
+  cache.linkEditorOpenSnapshot = {
+    sheetId: ctx.currentSheetId,
+    r,
+    c,
+    focusOffset: focusOff ?? range?.start ?? 0,
+    range,
+    selectedPlain,
+  };
+}
+
 export function handleLink(
   ctx: Context,
-  cellInput: HTMLDivElement | null | undefined
+  cellInput: HTMLDivElement | null | undefined,
+  cache?: GlobalCache
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
@@ -1705,23 +1771,113 @@ export function handleLink(
   let applyToSelection = false;
   let originText: string | undefined;
   let selectionOffsets: { start: number; end: number } | undefined;
+  let linkInsertOffset: number | undefined;
+  let prefillLink:
+    | { linkType: string; linkAddress: string }
+    | undefined;
+  const selectedCell = flowdata?.[r]?.[c];
 
   if (isEditMode && cellInput) {
-    const sel = window.getSelection();
-    if (
-      sel &&
-      sel.rangeCount > 0 &&
-      !sel.getRangeAt(0).collapsed &&
-      cellInput.contains(sel.anchorNode)
-    ) {
-      const value = cellInput.innerText ?? "";
-      if (value.substring(0, 1) !== "=") {
-        originText = sel.toString();
-        applyToSelection = true;
-        const off = getSelectionCharacterOffsets(cellInput);
-        if (off) selectionOffsets = off;
+    const value = cellInput.innerText ?? "";
+    if (value.substring(0, 1) !== "=") {
+      const snap = cache?.linkEditorOpenSnapshot;
+      const snapOk =
+        snap &&
+        snap.sheetId === ctx.currentSheetId &&
+        snap.r === r &&
+        snap.c === c;
+
+      if (snapOk) {
+        linkInsertOffset = snap.focusOffset;
+        if (snap.range) {
+          applyToSelection = true;
+          selectionOffsets = { start: snap.range.start, end: snap.range.end };
+          originText = snap.selectedPlain;
+        } else {
+          applyToSelection = true;
+          selectionOffsets = { start: snap.focusOffset, end: snap.focusOffset };
+          originText = "";
+        }
+        delete cache!.linkEditorOpenSnapshot;
+      } else {
+        const focusOff = getFocusCharacterOffset(cellInput);
+        if (focusOff != null) {
+          linkInsertOffset = focusOff;
+        }
+        const sel = window.getSelection();
+        if (
+          sel &&
+          sel.rangeCount > 0 &&
+          cellInput.contains(sel.anchorNode)
+        ) {
+          const r0 = sel.getRangeAt(0);
+          if (!r0.collapsed) {
+            originText = sel.toString();
+            applyToSelection = true;
+            const off = getSelectionCharacterOffsets(cellInput);
+            if (off) selectionOffsets = off;
+          } else if (focusOff != null) {
+            applyToSelection = true;
+            selectionOffsets = { start: focusOff, end: focusOff };
+            originText = "";
+          }
+        }
       }
     }
+    if (selectionOffsets && selectedCell && value.substring(0, 1) !== "=") {
+      prefillLink =
+        getUniformLinkFromWindowSelectionInEditor(cellInput) ??
+        getUniformLinkCoveringPlainRange(
+          selectedCell as Cell,
+          selectionOffsets.start,
+          selectionOffsets.end
+        ) ??
+        getUniformLinkAtPlainOffset(
+          selectedCell as Cell,
+          selectionOffsets.start
+        );
+    }
+  }
+
+  // If link action is triggered from a selected (non-editing) cell,
+  // switch that cell into edit mode so insert/edit link happens in-editor.
+  if (!isEditMode) {
+    delete cache?.linkEditorOpenSnapshot;
+    const rawFull = (() => {
+      if (
+        selectedCell?.ct?.t === "inlineStr" &&
+        Array.isArray((selectedCell as any).ct?.s)
+      ) {
+        return ((selectedCell as any).ct.s as Array<{ v?: string }>)
+          .map((s) => s?.v ?? "")
+          .join("");
+      }
+      if (selectedCell?.v == null || Array.isArray(selectedCell?.v)) return "";
+      return `${selectedCell.v}`;
+    })();
+    const fullNorm = normalizeCellPlainTextForEditor(rawFull);
+    const endPos = fullNorm.length;
+    applyToSelection = true;
+
+    const existingLinks = getCellHyperlinks(ctx, r, c);
+    const firstExisting = existingLinks[0];
+    // Insert from toolbar / Cmd+K while not editing: always treat display + in-editor
+    // selection as the **entire** cell so the modal shows full text and highlight matches.
+    // (Partial inline runs are for edit-mode / pencil flows; sheet hyperlink map must not
+    // shrink selection to only the linked substring here.)
+    if (endPos > 0) {
+      selectionOffsets = { start: 0, end: endPos };
+      originText = fullNorm;
+      linkInsertOffset = endPos;
+    } else {
+      selectionOffsets = { start: 0, end: 0 };
+      originText = "";
+      linkInsertOffset = 0;
+    }
+    if (firstExisting) {
+      prefillLink = firstExisting;
+    }
+    ctx.luckysheetCellUpdate = [r, c];
   }
 
   showLinkCard(
@@ -1732,6 +1888,8 @@ export function handleLink(
       applyToSelection: applyToSelection || undefined,
       originText,
       selectionOffsets,
+      linkInsertOffset,
+      prefillLink,
     },
     true,
     false
@@ -1755,7 +1913,7 @@ const handlerMap: Record<string, ToolbarItemClickHandler> = {
   search: (ctx: Context) => {
     ctx.showSearch = true;
   },
-  link: handleLink,
+  link: (ctx, cellInput, c) => handleLink(ctx, cellInput, c),
 };
 
 const selectedMap: Record<string, ToolbarItemSelectedFunc> = {

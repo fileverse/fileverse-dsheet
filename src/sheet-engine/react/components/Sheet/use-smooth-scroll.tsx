@@ -96,6 +96,7 @@ export const useSmoothScroll = (
     getPixelScale: () => number,
   ) {
     let isDragging = false;
+    let hasDragged = false;
     let startX = 0;
     let startY = 0;
     let lastX = 0;
@@ -194,6 +195,7 @@ export const useSmoothScroll = (
       }
 
       isDragging = true;
+      hasDragged = false;
       scrollDirection = 'none'; // Reset scroll direction
       startX = e.clientX;
       startY = e.clientY;
@@ -203,8 +205,8 @@ export const useSmoothScroll = (
       velocityX = 0;
       velocityY = 0;
 
-      containerEl.style.cursor = 'grabbing';
-      e.preventDefault();
+      // Do not switch cursor on plain click.
+      // We only set grabbing after user crosses drag threshold in mousemove.
     }
 
     function onMouseMove(e: MouseEvent) {
@@ -239,6 +241,10 @@ export const useSmoothScroll = (
         scrollDirection === 'none' &&
         (absMovedX > MIN_DRAG_THRESHOLD || absMovedY > MIN_DRAG_THRESHOLD)
       ) {
+        if (!hasDragged) {
+          hasDragged = true;
+          containerEl.style.cursor = 'grabbing';
+        }
         if (absMovedX > absMovedY * DIRECTION_LOCK_THRESHOLD) {
           scrollDirection = 'horizontal';
         } else if (absMovedY > absMovedX * DIRECTION_LOCK_THRESHOLD) {
@@ -311,13 +317,16 @@ export const useSmoothScroll = (
       lastY = e.clientY;
       lastMoveTime = currentTime;
 
-      e.preventDefault();
+      if (hasDragged) {
+        e.preventDefault();
+      }
     }
 
     function onMouseUp() {
       if (!isDragging) return;
 
       isDragging = false;
+      hasDragged = false;
       stopAutoScroll();
       containerEl.style.cursor = '';
     }

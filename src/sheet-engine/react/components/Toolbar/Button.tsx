@@ -6,6 +6,7 @@ type Props = {
   tooltip: string;
   iconId: string;
   onClick?: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
+  onMouseDown?: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
   disabled?: boolean;
   selected?: boolean;
   children?: React.ReactNode;
@@ -16,6 +17,7 @@ type Props = {
 const Button: React.FC<Props> = ({
   tooltip,
   onClick,
+  onMouseDown,
   iconId,
   disabled,
   selected,
@@ -31,6 +33,7 @@ const Button: React.FC<Props> = ({
         className={`fortune-toolbar-button fortune-toolbar-item fortune-toolbar-button__cta fortune-toolbar-button--${iconIdClass}`}
         data-icon-id={iconId}
         onClick={onClick}
+        onMouseDown={onMouseDown}
         tabIndex={0}
         role="button"
         style={selected ? { backgroundColor: '#FFDF0A' } : style}
