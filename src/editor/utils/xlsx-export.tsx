@@ -69,7 +69,7 @@ export const handleExportToXLSX = async (
   workbookRef: MutableRefObject<WorkbookInstance | null>,
   ydocRef: MutableRefObject<Y.Doc | null>,
   dsheetId: string,
-  getDocumentTitle?: () => string,
+  getDocumentTitle?: (dsheetId: string) => Promise<string>,
 ) => {
   if (!workbookRef.current || !ydocRef.current) return;
 
@@ -385,7 +385,7 @@ export const handleExportToXLSX = async (
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
-    const title = getDocumentTitle?.() ?? 'Untitled';
+    const title = (await getDocumentTitle?.(dsheetId)) || 'Untitled';
 
     // Pass 1: write to buffer with xlsx-js-style (preserves all cell styling)
     const xlsxBuffer: ArrayBuffer = XLSXWrite(workbook, {

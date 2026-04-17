@@ -36,6 +36,8 @@ import {
   handleKeydownForZoom,
   expandCellRectForMerge,
   seletedHighlistByindex,
+  isLegacyFormulaRangeMode,
+  isFormulaReferenceInputMode,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext, { SetContextOptions } from '../../context';
@@ -181,6 +183,21 @@ const SheetOverlay: React.FC = () => {
   const bottomAddRowInputRef = useRef<HTMLInputElement>(null);
   const dataVerificationHintBoxRef = useRef<HTMLDivElement>(null);
   const { showAlert } = useAlert();
+  // Hide `#fortune-selection-copy` while formula refs are active (avoids double outline
+  // with `formulaRangeHighlight` / `formulaRangeSelect`; lone `=A2` may have empty highlights).
+  const editingSheetCell = (context.luckysheetCellUpdate?.length ?? 0) > 0;
+  const cellInputText = refs.cellInput.current?.innerText?.trim() ?? '';
+  const fxInputText = refs.fxInput.current?.innerText?.trim() ?? '';
+  const editingAsFormula =
+    editingSheetCell &&
+    (cellInputText.startsWith('=') || fxInputText.startsWith('='));
+  const suppressFortuneSelectionCopyOverlay =
+    context.formulaRangeSelect != null ||
+    editingAsFormula ||
+    isLegacyFormulaRangeMode(context) ||
+    isFormulaReferenceInputMode(context) ||
+    ((context.formulaRangeHighlight?.length ?? 0) > 0 && editingSheetCell);
+
   // const isMobile = browser.mobilecheck();
   const cellAreaMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
@@ -406,29 +423,50 @@ const SheetOverlay: React.FC = () => {
       if (isInsertByPlusShortcut) {
         const selection = context.luckysheet_select_save?.[0];
         if (selection?.column_select || selection?.row_select) {
+          const selectedCount = selection.column_select
+            ? selection.column[1] - selection.column[0] + 1
+            : selection.row[1] - selection.row[0] + 1;
           const insertRowColOp: SetContextOptions['insertRowColOp'] =
             selection.column_select
               ? {
-                  type: 'column',
-                  index: selection!.column[0],
-                  count: 1,
-                  direction: 'lefttop',
-                  id: context.currentSheetId,
-                }
+                type: 'column',
+                index: selection!.column[0],
+                count: selectedCount,
+                direction: 'lefttop',
+                id: context.currentSheetId,
+              }
               : {
-                  type: 'row',
-                  index: selection!.row[1],
-                  count: 1,
-                  direction: 'rightbottom',
-                  id: context.currentSheetId,
-                };
+                type: 'row',
+                index: selection!.row[1],
+                count: selectedCount,
+                direction: 'rightbottom',
+                id: context.currentSheetId,
+              };
 
-          setContext(
-            (draftCtx) => {
-              insertRowCol(draftCtx, insertRowColOp, false);
-            },
-            { insertRowColOp },
-          );
+          setContext((draftCtx) => {
+            insertRowCol(draftCtx, insertRowColOp, false);
+          }, { insertRowColOp });
+        } else if (selection) {
+          const workbookRect =
+            refs.workbookContainer.current?.getBoundingClientRect();
+          const baseX = selection.left_move ?? selection.left ?? 0;
+          const selectionWidth = selection.width_move ?? selection.width ?? 0;
+          // Open shortcut menu after the selected range (multi-cell aware),
+          // instead of anchoring near the first selected cell.
+          const menuX = Math.max(0, baseX + selectionWidth + 55);
+          const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
+
+          setContext((draftCtx) => {
+            draftCtx.contextMenu = {
+              x: menuX,
+              y: menuY,
+              pageX: (workbookRect?.left ?? 0) + menuX,
+              pageY: (workbookRect?.top ?? 0) + menuY,
+              headerMenu: undefined,
+              // @ts-ignore custom menu variant for shortcut insert actions
+              menuType: 'insert-shortcut',
+            };
+          });
         }
         ev.preventDefault();
         return;
@@ -494,6 +532,27 @@ const SheetOverlay: React.FC = () => {
                 ];
               }
             }
+          });
+        } else if (selection) {
+          const workbookRect =
+            refs.workbookContainer.current?.getBoundingClientRect();
+          const baseX = selection.left_move ?? selection.left ?? 0;
+          const selectionWidth = selection.width_move ?? selection.width ?? 0;
+          // Open shortcut menu after the selected range (multi-cell aware),
+          // instead of anchoring near the first selected cell.
+          const menuX = Math.max(0, baseX + selectionWidth + 55);
+          const menuY = (selection.top_move ?? selection.top ?? 0) + 22;
+
+          setContext((draftCtx) => {
+            draftCtx.contextMenu = {
+              x: menuX,
+              y: menuY,
+              pageX: (workbookRect?.left ?? 0) + menuX,
+              pageY: (workbookRect?.top ?? 0) + menuY,
+              headerMenu: undefined,
+              // @ts-ignore custom menu variant for shortcut delete actions
+              menuType: 'delete-shortcut',
+            };
           });
         }
         ev.preventDefault();
@@ -671,17 +730,16 @@ const SheetOverlay: React.FC = () => {
       {(context.showSearch ||
         context.showReplace ||
         context.findReplaceHiddenDuringRangePick) && (
-        <SearchReplace getContainer={() => containerRef.current!} />
-      )}
+          <SearchReplace getContainer={() => containerRef.current!} />
+        )}
       <div className="fortune-row-body">
         <RowHeader />
         <ScrollBar axis="x" />
         <ScrollBar axis="y" />
         <div
           ref={refs.cellArea}
-          className={`fortune-cell-area ${
-            context.luckysheetPaintModelOn ? 'cursor-paint' : ''
-          }`}
+          className={`fortune-cell-area ${context.luckysheetPaintModelOn ? 'cursor-paint' : ''
+            }`}
           onMouseDown={cellAreaMouseDown}
           onDoubleClick={cellAreaDoubleClick}
           onContextMenu={cellAreaContextMenu}
@@ -703,118 +761,117 @@ const SheetOverlay: React.FC = () => {
               />
             </div>
           )}
-          {context.formulaRangeHighlight.map((v) => {
-            const { rangeIndex, backgroundColor } = v;
-            return (
-              <div
-                key={rangeIndex}
-                id="fortune-formula-functionrange-highlight"
-                className="fortune-selection-highlight fortune-formula-functionrange-highlight"
-                style={_.omit(v, 'backgroundColor')}
-              >
+          {context.formulaRangeHighlight
+            .filter((v) => {
+              // Keyboard only (`formulaKeyboardRefSync`): skip duplicate vs `formulaRangeSelect`.
+              if (!context.formulaRangeSelect) return true;
+              if (context.formulaCache.formulaKeyboardRefSync !== true) return true;
+              return v.rangeIndex !== context.formulaRangeSelect.rangeIndex;
+            })
+            .map((v) => {
+              const { rangeIndex, backgroundColor } = v;
+              return (
                 <div
                   className="fortune-selection-copy-hc"
                   style={formulaRangeHighlightHcStyle(backgroundColor)}
-                />
-              </div>
-            );
-          })}
-          {quickSearchOverlayRects.map(({ key, box, rect }) => (
-            <div
-              key={`fortune-quick-search-hl-${key}`}
-              className={`fortune-quick-search-highlight${
-                box.active ? ' fortune-quick-search-highlight--active' : ''
-              }${
-                context.luckysheetCellUpdate.length > 0
-                  ? ' fortune-quick-search-highlight--dim'
-                  : ''
+                />);
+            })}
+        </div>
+        {quickSearchOverlayRects.map(({ key, box, rect }) => (
+          <div
+            key={`fortune-quick-search-hl-${key}`}
+            className={`fortune-quick-search-highlight${box.active ? ' fortune-quick-search-highlight--active' : ''
+              }${context.luckysheetCellUpdate.length > 0
+                ? ' fortune-quick-search-highlight--dim'
+                : ''
               }`}
-              style={{
-                position: 'absolute',
-                left: rect.left,
-                top: rect.top,
-                width: rect.width,
-                height: rect.height,
-                pointerEvents: 'none',
-                zIndex: 13,
-              }}
-            />
-          ))}
-          {searchRangeScopeRect && (
-            <div
-              className="fortune-search-range-highlight"
-              style={{
-                position: 'absolute',
-                left: searchRangeScopeRect.left,
-                top: searchRangeScopeRect.top,
-                width: searchRangeScopeRect.width,
-                height: searchRangeScopeRect.height,
-                pointerEvents: 'none',
-                zIndex: 12,
-              }}
-            />
-          )}
-          <div
-            className="luckysheet-row-count-show luckysheet-count-show"
-            id="luckysheet-row-count-show"
+            style={{
+              position: 'absolute',
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+              pointerEvents: 'none',
+              zIndex: 13,
+            }}
           />
+        ))}
+        {searchRangeScopeRect && (
           <div
-            className="luckysheet-column-count-show luckysheet-count-show"
-            id="luckysheet-column-count-show"
+            className="fortune-search-range-highlight"
+            style={{
+              position: 'absolute',
+              left: searchRangeScopeRect.left,
+              top: searchRangeScopeRect.top,
+              width: searchRangeScopeRect.width,
+              height: searchRangeScopeRect.height,
+              pointerEvents: 'none',
+              zIndex: 12,
+            }}
           />
-          <div
-            className="fortune-change-size-line"
-            hidden={
-              !context.luckysheet_cols_change_size &&
-              !context.luckysheet_rows_change_size &&
-              !context.luckysheet_cols_freeze_drag &&
-              !context.luckysheet_rows_freeze_drag
-            }
-          />
-          <div
-            className="fortune-freeze-drag-line"
-            hidden={
-              !context.luckysheet_cols_freeze_drag &&
-              !context.luckysheet_rows_freeze_drag
-            }
-          />
-          <div
-            className="luckysheet-cell-selected-focus"
-            style={
-              (context.luckysheet_select_save?.length ?? 0) > 0
-                ? (() => {
-                    const selection = _.last(context.luckysheet_select_save)!;
-                    return _.assign(
-                      {
-                        left: selection.left,
-                        top: selection.top,
-                        width: selection.width
-                          ? selection.width - 1.8
-                          : selection.width,
-                        height: selection.height
-                          ? selection.height - 1.8
-                          : selection.height,
-                        display: 'block',
-                      },
-                      fixRowStyleOverflowInFreeze(
-                        context,
-                        selection.row_focus || 0,
-                        selection.row_focus || 0,
-                        refs.globalCache.freezen?.[context.currentSheetId],
-                      ),
-                      fixColumnStyleOverflowInFreeze(
-                        context,
-                        selection.column_focus || 0,
-                        selection.column_focus || 0,
-                        refs.globalCache.freezen?.[context.currentSheetId],
-                      ),
-                    );
-                  })()
-                : {}
-            }
-            onMouseDown={(e) => e.preventDefault()}
-          />
-          {(context.luckysheet_selection_range?.length ?? 0) > 0 && (
+        )}
+        <div
+          className="luckysheet-row-count-show luckysheet-count-show"
+          id="luckysheet-row-count-show"
+        />
+        <div
+          className="luckysheet-column-count-show luckysheet-count-show"
+          id="luckysheet-column-count-show"
+        />
+        <div
+          className="fortune-change-size-line"
+          hidden={
+            !context.luckysheet_cols_change_size &&
+            !context.luckysheet_rows_change_size &&
+            !context.luckysheet_cols_freeze_drag &&
+            !context.luckysheet_rows_freeze_drag
+          }
+        />
+        <div
+          className="fortune-freeze-drag-line"
+          hidden={
+            !context.luckysheet_cols_freeze_drag &&
+            !context.luckysheet_rows_freeze_drag
+          }
+        />
+        <div
+          className="luckysheet-cell-selected-focus"
+          style={
+            (context.luckysheet_select_save?.length ?? 0) > 0
+              ? (() => {
+                const selection = _.last(context.luckysheet_select_save)!;
+                return _.assign(
+                  {
+                    left: selection.left,
+                    top: selection.top,
+                    width: selection.width
+                      ? selection.width - 1.8
+                      : selection.width,
+                    height: selection.height
+                      ? selection.height - 1.8
+                      : selection.height,
+                    display: 'block',
+                  },
+                  fixRowStyleOverflowInFreeze(
+                    context,
+                    selection.row_focus || 0,
+                    selection.row_focus || 0,
+                    refs.globalCache.freezen?.[context.currentSheetId],
+                  ),
+                  fixColumnStyleOverflowInFreeze(
+                    context,
+                    selection.column_focus || 0,
+                    selection.column_focus || 0,
+                    refs.globalCache.freezen?.[context.currentSheetId],
+                  ),
+                );
+              })()
+              : {}
+          }
+          onMouseDown={(e) => e.preventDefault()}
+        />
+        {(context.luckysheet_selection_range?.length ?? 0) > 0 &&
+          !suppressFortuneSelectionCopyOverlay && (
             <div id="fortune-selection-copy">
               {context.luckysheet_selection_range!.map((range) => {
                 const r1 = range.row[0];
@@ -846,324 +903,323 @@ const SheetOverlay: React.FC = () => {
               })}
             </div>
           )}
-          <div id="luckysheet-chart-rangeShow" />
-          <div className="fortune-cell-selected-extend" />
-          <div
-            className="fortune-cell-selected-move"
-            id="fortune-cell-selected-move"
-            onMouseDown={(e) => e.preventDefault()}
-          />
-          {(context.luckysheet_select_save?.length ?? 0) > 0 && (
-            <div id="luckysheet-cell-selected-boxs">
-              {context.luckysheet_select_save!.map((selection, index) => {
-                const isEditing =
-                  (context.luckysheetCellUpdate?.length ?? 0) > 0;
-                const isFormulaRangeSelecting =
-                  context.formulaCache.rangestart ||
-                  context.formulaCache.rangedrag_column_start ||
-                  context.formulaCache.rangedrag_row_start ||
-                  israngeseleciton(context);
-                const isMultiCell =
-                  selection.row[0] !== selection.row[1] ||
-                  selection.column[0] !== selection.column[1];
-                // Single-cell edit: hide the duplicate chrome (input covers the cell).
-                // Multi-cell: keep the range visible while typing into the active cell.
-                const hideSelectionWhileEditing = isEditing && !isMultiCell;
-                const hideFillHandle = isEditing || isFormulaRangeSelecting;
-                return (
-                  <div
-                    key={index}
-                    id="luckysheet-cell-selected"
-                    className={`luckysheet-cell-selected${
-                      isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
-                    }`}
-                    style={_.assign(
-                      {
-                        left: selection.left_move,
-                        top: selection.top_move,
-                        width: selection.width_move
-                          ? selection.width_move - (isMultiCell ? 0.6 : 1.8)
-                          : selection.width_move,
-                        height: selection.height_move
-                          ? selection.height_move - (isMultiCell ? 0.6 : 1.8)
-                          : selection.height_move,
-                        borderWidth: isMultiCell ? 1 : 2,
-                        display: hideSelectionWhileEditing ? 'none' : 'block',
-                      },
-                      fixRowStyleOverflowInFreeze(
-                        context,
-                        selection.row[0],
-                        selection.row[1],
-                        refs.globalCache.freezen?.[context.currentSheetId],
-                      ),
-                      fixColumnStyleOverflowInFreeze(
-                        context,
-                        selection.column[0],
-                        selection.column[1],
-                        refs.globalCache.freezen?.[context.currentSheetId],
-                      ),
-                    )}
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      const { nativeEvent } = e;
-                      setContext((draftCtx) => {
-                        onCellsMoveStart(
-                          draftCtx,
-                          refs.globalCache,
-                          nativeEvent,
-                          refs.scrollbarX.current!,
-                          refs.scrollbarY.current!,
-                          containerRef.current!,
-                        );
-                      });
-                    }}
-                  >
-                    <div className="luckysheet-cs-inner-border" />
-                    {!hideFillHandle && (
-                      <div
-                        className="luckysheet-cs-fillhandle"
-                        onMouseDown={(e) => {
-                          const { nativeEvent } = e;
-                          setContext((draftContext) => {
-                            createDropCellRange(
-                              draftContext,
-                              nativeEvent,
-                              containerRef.current!,
-                            );
-                          });
-                          e.stopPropagation();
-                        }}
-                      />
-                    )}
-                    <div className="luckysheet-cs-inner-border" />
-                    <div
-                      className="luckysheet-cs-draghandle-top luckysheet-cs-draghandle"
-                      onMouseDown={(e) => e.preventDefault()}
-                    />
-                    <div
-                      className="luckysheet-cs-draghandle-bottom luckysheet-cs-draghandle"
-                      onMouseDown={(e) => e.preventDefault()}
-                    />
-                    <div
-                      className="luckysheet-cs-draghandle-left luckysheet-cs-draghandle"
-                      onMouseDown={(e) => e.preventDefault()}
-                    />
-                    <div
-                      className="luckysheet-cs-draghandle-right luckysheet-cs-draghandle"
-                      onMouseDown={(e) => e.preventDefault()}
-                    />
-                    <div className="luckysheet-cs-touchhandle luckysheet-cs-touchhandle-lt">
-                      <div className="luckysheet-cs-touchhandle-btn" />
-                    </div>
-                    <div className="luckysheet-cs-touchhandle luckysheet-cs-touchhandle-rb">
-                      <div className="luckysheet-cs-touchhandle-btn" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          {(() => {
-            const editing = (context.luckysheetCellUpdate?.length ?? 0) > 0;
-            if (editing) return null;
-            const primary = getPrimaryCellHighlightRc(context);
-            if (primary == null) return null;
-            const { r: r1, c: c1 } = primary;
-            const row = context.visibledatarow[r1];
-            const col = context.visibledatacolumn[c1];
-            if (row == null || col == null) return null;
-            const row_pre = r1 - 1 === -1 ? 0 : context.visibledatarow[r1 - 1];
-            const col_pre =
-              c1 - 1 === -1 ? 0 : context.visibledatacolumn[c1 - 1];
-            const rawW = col - col_pre - 1;
-            const rawH = row - row_pre - 1;
-            return (
-              <div
-                className="luckysheet-primary-cell-active"
-                aria-hidden
-                style={_.assign(
-                  {
-                    left: col_pre,
-                    top: row_pre,
-                    width: rawW ? rawW - 1.8 : rawW,
-                    height: rawH ? rawH - 1.8 : rawH,
-                    display: 'block',
-                  },
-                  fixRowStyleOverflowInFreeze(
-                    context,
-                    r1,
-                    r1,
-                    refs.globalCache.freezen?.[context.currentSheetId],
-                  ),
-                  fixColumnStyleOverflowInFreeze(
-                    context,
-                    c1,
-                    c1,
-                    refs.globalCache.freezen?.[context.currentSheetId],
-                  ),
-                )}
-              />
-            );
-          })()}
-          {(context.presences?.length ?? 0) > 0 &&
-            context.presences!.map((presence, index) => {
-              if (presence.sheetId !== context.currentSheetId) {
-                return null;
-              }
-              const {
-                selection: { r, c },
-                color,
-              } = presence;
-              const row_pre = r - 1 === -1 ? 0 : context.visibledatarow[r - 1];
-              const col_pre =
-                c - 1 === -1 ? 0 : context.visibledatacolumn[c - 1];
-              const row = context.visibledatarow[r];
-              const col = context.visibledatacolumn[c];
-              const width = col - col_pre - 1;
-              const height = row - row_pre - 1;
-              const usernameStyle = {
-                maxWidth: width + 1,
-                backgroundColor: color,
-              };
-              _.set(usernameStyle, r === 0 ? 'top' : 'bottom', height);
-
+        <div id="luckysheet-chart-rangeShow" />
+        <div className="fortune-cell-selected-extend" />
+        <div
+          className="fortune-cell-selected-move"
+          id="fortune-cell-selected-move"
+          onMouseDown={(e) => e.preventDefault()}
+        />
+        {(context.luckysheet_select_save?.length ?? 0) > 0 && (
+          <div id="luckysheet-cell-selected-boxs">
+            {context.luckysheet_select_save!.map((selection, index) => {
+              const isEditing =
+                (context.luckysheetCellUpdate?.length ?? 0) > 0;
+              const isFormulaRangeSelecting =
+                context.formulaCache.rangestart ||
+                context.formulaCache.rangedrag_column_start ||
+                context.formulaCache.rangedrag_row_start ||
+                israngeseleciton(context);
+              const isMultiCell =
+                selection.row[0] !== selection.row[1] ||
+                selection.column[0] !== selection.column[1];
+              // Single-cell edit: hide the duplicate chrome (input covers the cell).
+              // Multi-cell: keep the range visible while typing into the active cell.
+              const hideSelectionWhileEditing = isEditing && !isMultiCell;
+              const hideFillHandle = isEditing || isFormulaRangeSelecting;
               return (
                 <div
-                  key={presence?.userId || index}
-                  className="fortune-presence-selection"
-                  style={{
-                    left: col_pre,
-                    top: row_pre - 2,
-                    width,
-                    height,
-                    borderColor: color,
-                    borderWidth: 1,
+                  key={index}
+                  id="luckysheet-cell-selected"
+                  className={`luckysheet-cell-selected${isEditing ? ' luckysheet-cell-selected-edit-mode' : ''
+                    }`}
+                  style={_.assign(
+                    {
+                      left: selection.left_move,
+                      top: selection.top_move,
+                      width: selection.width_move
+                        ? selection.width_move - (isMultiCell ? 0.6 : 1.8)
+                        : selection.width_move,
+                      height: selection.height_move
+                        ? selection.height_move - (isMultiCell ? 0.6 : 1.8)
+                        : selection.height_move,
+                      borderWidth: isMultiCell ? 1 : 2,
+                      display: hideSelectionWhileEditing ? 'none' : 'block',
+                    },
+                    fixRowStyleOverflowInFreeze(
+                      context,
+                      selection.row[0],
+                      selection.row[1],
+                      refs.globalCache.freezen?.[context.currentSheetId],
+                    ),
+                    fixColumnStyleOverflowInFreeze(
+                      context,
+                      selection.column[0],
+                      selection.column[1],
+                      refs.globalCache.freezen?.[context.currentSheetId],
+                    ),
+                  )}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    const { nativeEvent } = e;
+                    setContext((draftCtx) => {
+                      onCellsMoveStart(
+                        draftCtx,
+                        refs.globalCache,
+                        nativeEvent,
+                        refs.scrollbarX.current!,
+                        refs.scrollbarY.current!,
+                        containerRef.current!,
+                      );
+                    });
                   }}
                 >
+                  <div className="luckysheet-cs-inner-border" />
+                  {!hideFillHandle && (
+                    <div
+                      className="luckysheet-cs-fillhandle"
+                      onMouseDown={(e) => {
+                        const { nativeEvent } = e;
+                        setContext((draftContext) => {
+                          createDropCellRange(
+                            draftContext,
+                            nativeEvent,
+                            containerRef.current!,
+                          );
+                        });
+                        e.stopPropagation();
+                      }}
+                    />
+                  )}
+                  <div className="luckysheet-cs-inner-border" />
                   <div
-                    className="fortune-presence-username"
-                    style={usernameStyle}
-                  >
-                    {presence.username}
+                    className="luckysheet-cs-draghandle-top luckysheet-cs-draghandle"
+                    onMouseDown={(e) => e.preventDefault()}
+                  />
+                  <div
+                    className="luckysheet-cs-draghandle-bottom luckysheet-cs-draghandle"
+                    onMouseDown={(e) => e.preventDefault()}
+                  />
+                  <div
+                    className="luckysheet-cs-draghandle-left luckysheet-cs-draghandle"
+                    onMouseDown={(e) => e.preventDefault()}
+                  />
+                  <div
+                    className="luckysheet-cs-draghandle-right luckysheet-cs-draghandle"
+                    onMouseDown={(e) => e.preventDefault()}
+                  />
+                  <div className="luckysheet-cs-touchhandle luckysheet-cs-touchhandle-lt">
+                    <div className="luckysheet-cs-touchhandle-btn" />
+                  </div>
+                  <div className="luckysheet-cs-touchhandle luckysheet-cs-touchhandle-rb">
+                    <div className="luckysheet-cs-touchhandle-btn" />
                   </div>
                 </div>
               );
             })}
-          {context.linkCard?.sheetId === context.currentSheetId && (
-            <LinkEditCard {...context.linkCard} />
-          )}
-          {context.rangeDialog?.show && <RangeDialog />}
-          <FilterOptions getContainer={() => containerRef.current!} />
-          <InputBox />
-          <NotationBoxes />
-          <ErrorBoxes />
-          <div id="luckysheet-multipleRange-show" />
-          <div id="luckysheet-dynamicArray-hightShow" />
-          <ImgBoxs />
-          <IframeBoxs />
-          <div
-            id="luckysheet-dataVerification-dropdown-btn"
-            onClick={() => {
-              setContext((ctx) => {
-                ctx.dataVerificationDropDownList = true;
-                dataVerificationHintBoxRef.current!.style.display = 'none';
-              });
-            }}
-            tabIndex={0}
-            style={{ display: 'none' }}
-          >
-            {/* <SVGIcon name="caret-down-fill" width={16} height={16} /> */}
           </div>
-          {context.dataVerificationDropDownList &&
-            (context.dataVerification!.dataRegulation!.value1 !== '' ||
-              context.dataVerification!.dataRegulation!.value2 !== '') && (
-              <DropDownList />
-            )}
-          {/* <div
+        )}
+        {(() => {
+          const editing = (context.luckysheetCellUpdate?.length ?? 0) > 0;
+          if (editing) return null;
+          const primary = getPrimaryCellHighlightRc(context);
+          if (primary == null) return null;
+          const { r: r1, c: c1 } = primary;
+          const row = context.visibledatarow[r1];
+          const col = context.visibledatacolumn[c1];
+          if (row == null || col == null) return null;
+          const row_pre = r1 - 1 === -1 ? 0 : context.visibledatarow[r1 - 1];
+          const col_pre =
+            c1 - 1 === -1 ? 0 : context.visibledatacolumn[c1 - 1];
+          const rawW = col - col_pre - 1;
+          const rawH = row - row_pre - 1;
+          return (
+            <div
+              className="luckysheet-primary-cell-active"
+              aria-hidden
+              style={_.assign(
+                {
+                  left: col_pre,
+                  top: row_pre,
+                  width: rawW ? rawW - 1.8 : rawW,
+                  height: rawH ? rawH - 1.8 : rawH,
+                  display: 'block',
+                },
+                fixRowStyleOverflowInFreeze(
+                  context,
+                  r1,
+                  r1,
+                  refs.globalCache.freezen?.[context.currentSheetId],
+                ),
+                fixColumnStyleOverflowInFreeze(
+                  context,
+                  c1,
+                  c1,
+                  refs.globalCache.freezen?.[context.currentSheetId],
+                ),
+              )}
+            />
+          );
+        })()}
+        {(context.presences?.length ?? 0) > 0 &&
+          context.presences!.map((presence, index) => {
+            if (presence.sheetId !== context.currentSheetId) {
+              return null;
+            }
+            const {
+              selection: { r, c },
+              color,
+            } = presence;
+            const row_pre = r - 1 === -1 ? 0 : context.visibledatarow[r - 1];
+            const col_pre =
+              c - 1 === -1 ? 0 : context.visibledatacolumn[c - 1];
+            const row = context.visibledatarow[r];
+            const col = context.visibledatacolumn[c];
+            const width = col - col_pre - 1;
+            const height = row - row_pre - 1;
+            const usernameStyle = {
+              maxWidth: width + 1,
+              backgroundColor: color,
+            };
+            _.set(usernameStyle, r === 0 ? 'top' : 'bottom', height);
+
+            return (
+              <div
+                key={presence?.userId || index}
+                className="fortune-presence-selection"
+                style={{
+                  left: col_pre,
+                  top: row_pre - 2,
+                  width,
+                  height,
+                  borderColor: color,
+                  borderWidth: 1,
+                }}
+              >
+                <div
+                  className="fortune-presence-username"
+                  style={usernameStyle}
+                >
+                  {presence.username}
+                </div>
+              </div>
+            );
+          })}
+        {context.linkCard?.sheetId === context.currentSheetId && (
+          <LinkEditCard {...context.linkCard} />
+        )}
+        {context.rangeDialog?.show && <RangeDialog />}
+        <FilterOptions getContainer={() => containerRef.current!} />
+        <InputBox />
+        <NotationBoxes />
+        <ErrorBoxes />
+        <div id="luckysheet-multipleRange-show" />
+        <div id="luckysheet-dynamicArray-hightShow" />
+        <ImgBoxs />
+        <IframeBoxs />
+        <div
+          id="luckysheet-dataVerification-dropdown-btn"
+          onClick={() => {
+            setContext((ctx) => {
+              ctx.dataVerificationDropDownList = true;
+              dataVerificationHintBoxRef.current!.style.display = 'none';
+            });
+          }}
+          tabIndex={0}
+          style={{ display: 'none' }}
+        >
+          {/* <SVGIcon name="caret-down-fill" width={16} height={16} /> */}
+        </div>
+        {context.dataVerificationDropDownList &&
+          (context.dataVerification!.dataRegulation!.value1 !== '' ||
+            context.dataVerification!.dataRegulation!.value2 !== '') && (
+            <DropDownList />
+          )}
+        {/* <div
             id="luckysheet-dataVerification-dropdown-List"
             className="luckysheet-mousedown-cancel"
           /> */}
-          <div
-            id="luckysheet-dataVerification-showHintBox"
-            ref={dataVerificationHintBoxRef}
-          />
-          <div className="luckysheet-cell-copy" />
-          <div className="luckysheet-grdblkflowpush" />
-          <div
-            id="luckysheet-cell-flow_0"
-            className="luckysheet-cell-flow luckysheetsheetchange"
-          >
-            <div className="luckysheet-cell-flow-clip">
-              <div className="luckysheet-grdblkpush" />
+        <div
+          id="luckysheet-dataVerification-showHintBox"
+          ref={dataVerificationHintBoxRef}
+        />
+        <div className="luckysheet-cell-copy" />
+        <div className="luckysheet-grdblkflowpush" />
+        <div
+          id="luckysheet-cell-flow_0"
+          className="luckysheet-cell-flow luckysheetsheetchange"
+        >
+          <div className="luckysheet-cell-flow-clip">
+            <div className="luckysheet-grdblkpush" />
+            <div
+              id="luckysheetcoltable_0"
+              className="luckysheet-cell-flow-col"
+            >
               <div
-                id="luckysheetcoltable_0"
-                className="luckysheet-cell-flow-col"
+                id="luckysheet-sheettable_0"
+                className="luckysheet-cell-sheettable"
+                style={{
+                  height: context.rh_height,
+                  width: context.ch_width,
+                }}
+              />
+              <div
+                id="luckysheet-bottom-controll-row"
+                className="luckysheet-bottom-controll-row"
+                onMouseDown={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
+                // onMouseMove={(e) => {
+                //   e.stopPropagation();
+                //   e.preventDefault();
+                // }}
+                onKeyDown={(e) => e.stopPropagation()}
+                onKeyUp={(e) => e.stopPropagation()}
+                onKeyPress={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                tabIndex={0}
+                style={{
+                  left: context.scrollLeft,
+                  display: context.allowEdit ? 'block' : 'none',
+                }}
               >
                 <div
-                  id="luckysheet-sheettable_0"
-                  className="luckysheet-cell-sheettable"
-                  style={{
-                    height: context.rh_height,
-                    width: context.ch_width,
+                  className="fortune-add-row-button"
+                  onClick={() => {
+                    handleBottomAddRow();
                   }}
-                />
-                <div
-                  id="luckysheet-bottom-controll-row"
-                  className="luckysheet-bottom-controll-row"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onMouseUp={(e) => e.stopPropagation()}
-                  // onMouseMove={(e) => {
-                  //   e.stopPropagation();
-                  //   e.preventDefault();
-                  // }}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  onKeyUp={(e) => e.stopPropagation()}
-                  onKeyPress={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onDoubleClick={(e) => e.stopPropagation()}
                   tabIndex={0}
-                  style={{
-                    left: context.scrollLeft,
-                    display: context.allowEdit ? 'block' : 'none',
-                  }}
                 >
-                  <div
-                    className="fortune-add-row-button"
-                    onClick={() => {
-                      handleBottomAddRow();
-                    }}
-                    tabIndex={0}
-                  >
-                    {info.add}
-                  </div>
-                  <input
-                    ref={bottomAddRowInputRef}
-                    type="text"
-                    style={{ width: 50 }}
-                    placeholder={context.addDefaultRows.toString()}
-                  />{' '}
-                  <span style={{ fontSize: 14 }}>{info.row}</span>{' '}
-                  <span style={{ fontSize: 14, color: '#9c9c9c' }}>
-                    ({info.addLast})
-                  </span>
-                  <span
-                    className="fortune-add-row-button"
-                    onClick={() => {
-                      setContext((ctx) => {
-                        ctx.scrollTop = 0;
-                      });
-                    }}
-                    tabIndex={0}
-                  >
-                    {info.backTop}
-                  </span>
+                  {info.add}
                 </div>
+                <input
+                  ref={bottomAddRowInputRef}
+                  type="text"
+                  style={{ width: 50 }}
+                  placeholder={context.addDefaultRows.toString()}
+                />{' '}
+                <span style={{ fontSize: 14 }}>{info.row}</span>{' '}
+                <span style={{ fontSize: 14, color: '#9c9c9c' }}>
+                  ({info.addLast})
+                </span>
+                <span
+                  className="fortune-add-row-button"
+                  onClick={() => {
+                    setContext((ctx) => {
+                      ctx.scrollTop = 0;
+                    });
+                  }}
+                  tabIndex={0}
+                >
+                  {info.backTop}
+                </span>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </div >
+    </div >
   );
 };
 

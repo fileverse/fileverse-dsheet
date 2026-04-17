@@ -725,6 +725,38 @@ const Toolbar: React.FC<{
           } else {
             refs.globalCache.recentBackgroundColor = color;
           }
+          if (name === 'format') {
+            let currentFmt = defaultFormat[0].text;
+            if (cell) {
+              const curr = normalizedCellAttr(cell, 'ct');
+              const format = _.find(defaultFormat, (v) => v.value === curr?.fa);
+              if (curr?.fa != null) {
+                const hasTime = /[hH]:/.test(curr.fa);
+
+                if (curr.t === 'd') {
+                  currentFmt = hasTime ? 'Date time' : 'Date';
+                } else if (curr.t === 'g' && curr.fa === 'General') {
+                  // General lives at index 0 ("Auto"); last item is "more formats", not Automatic.
+                  currentFmt = defaultFormat[0].text;
+                } else if (format != null) {
+                  // Exact preset match (Currency, Accounting, Number, etc.) before heuristics:
+                  // currency/accounting patterns contain "#,##0" and would be mislabeled "Number".
+                  currentFmt = format.text;
+                } else if (is_date(curr.fa)) {
+                  currentFmt = hasTime ? 'Date time' : 'Date';
+                } else if (
+                  curr.t === 'n' ||
+                  curr.fa.includes('#,##0') ||
+                  curr.fa === '0' ||
+                  curr.fa === '0.00'
+                ) {
+                  currentFmt = 'Number';
+                } else {
+                  currentFmt = defaultFormat[0].text;
+                }
+              }
+            }
+          }
         };
         return (
           <div style={{ position: 'relative' }} key={name}>

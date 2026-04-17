@@ -29,7 +29,7 @@ export const getCustomToolbarItems = ({
 }: {
   handleContentPortal?: any;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
-  getDocumentTitle?: () => string;
+  getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   // setShowFetchURLModal: React.Dispatch<React.SetStateAction<boolean>>;
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -55,13 +55,13 @@ export const getCustomToolbarItems = ({
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
     dsheetId: string,
-    getDocumentTitle?: () => string,
+    getDocumentTitle?: (dsheetId: string) => Promise<string>,
   ) => void;
   handleExportToCSV: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,
     ydocRef: React.RefObject<Y.Doc | null>,
     dsheetId: string,
-    getDocumentTitle?: () => string,
+    getDocumentTitle?: (dsheetId: string) => Promise<string>,
   ) => void;
   handleExportToJSON: (
     sheetEditorRef: React.RefObject<WorkbookInstance | null>,

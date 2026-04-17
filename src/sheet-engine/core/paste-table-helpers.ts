@@ -517,6 +517,7 @@ export function handlePastedTable(
   tableColGropup.forEach((colGroup, index) => {
     const colWidth = colGroup?.getAttribute('width');
     const intColWidth = parseInt(colWidth || '0', 10);
+    if (intColWidth <= 0) return;
     const anchorCol = ctx.luckysheet_select_save![0].column[0];
     const absoluteCol = anchorCol + index;
     setColumnWidth(ctx, { [absoluteCol]: intColWidth });
