@@ -133,6 +133,7 @@ const SearchReplace: React.FC<{
       draftCtx.showReplace = false;
       draftCtx.findReplacePrefill = undefined;
       draftCtx.searchRangeScopeHighlight = null;
+      draftCtx.searchRangeScopeEmphasis = false;
       draftCtx.findReplaceHiddenDuringRangePick = false;
       draftCtx.findReplaceRestoreVisibility = undefined;
     });
@@ -324,6 +325,7 @@ const SearchReplace: React.FC<{
       setRangeError(null);
       setContext((draftCtx) => {
         draftCtx.searchRangeScopeHighlight = null;
+        draftCtx.searchRangeScopeEmphasis = false;
       });
     }
     prevScopeRef.current = searchScope;
@@ -347,6 +349,8 @@ const SearchReplace: React.FC<{
         draftCtx.searchRangeScopeHighlight = parsed
           ? { row: parsed.row, column: parsed.column }
           : null;
+        // New/edited range: show the lighter border until the user runs Find.
+        draftCtx.searchRangeScopeEmphasis = false;
       });
     }, 150);
     return () => clearTimeout(t);
@@ -431,6 +435,9 @@ const SearchReplace: React.FC<{
       if (!validateRangeInput()) return;
       const scopedRange = getScopedRange();
       setContext((draftCtx) => {
+        if (searchScope === 'specificRange') {
+          draftCtx.searchRangeScopeEmphasis = true;
+        }
         setSearchResult([]);
         const result = searchNext(
           draftCtx,
@@ -786,6 +793,9 @@ const SearchReplace: React.FC<{
                   if (!validateRangeInput()) return;
                   const scopedRange = getScopedRange();
                   setContext((draftCtx) => {
+                    if (searchScope === 'specificRange') {
+                      draftCtx.searchRangeScopeEmphasis = true;
+                    }
                     setSelectedCell(undefined);
                     if (!searchText) return;
                     const res = searchAll(
@@ -816,6 +826,9 @@ const SearchReplace: React.FC<{
                   if (!validateRangeInput()) return;
                   const scopedRange = getScopedRange();
                   setContext((draftCtx) => {
+                    if (searchScope === 'specificRange') {
+                      draftCtx.searchRangeScopeEmphasis = true;
+                    }
                     setSelectedCell(undefined);
                     const alertMsg = replace(
                       draftCtx,
@@ -845,6 +858,11 @@ const SearchReplace: React.FC<{
                 className="min-w-fit"
                 onClick={() => {
                   if (!validateRangeInput()) return;
+                  if (searchScope === 'specificRange') {
+                    setContext((draftCtx) => {
+                      draftCtx.searchRangeScopeEmphasis = true;
+                    });
+                  }
                   // Fix 15: Confirm before replacing a large number of cells
                   const flowdata = getFlowdata(context);
                   if (flowdata) {

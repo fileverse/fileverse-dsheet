@@ -165,7 +165,7 @@
 }
 
 .fortune-quick-search-highlight {
-  background-color: rgba(255, 225, 0, 0.249);
+  background-color: rgba(255, 225, 0, 0.384);
   box-sizing: border-box;
 }
 
@@ -173,13 +173,13 @@
   border: 2px solid #efc703;
 }
 
-.fortune-quick-search-highlight--dim {
-  opacity: 0.45;
-}
-
 .fortune-search-range-highlight {
   box-sizing: border-box;
   border: 2px solid #efc703;
+}
+
+.fortune-search-range-highlight--active {
+  border-width: 2px;
 }
 
 .fortune-quick-search-icon-btn:disabled,

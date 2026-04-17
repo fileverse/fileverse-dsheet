@@ -981,14 +981,23 @@ export async function handleGlobalKeyDown(
     return;
   }
 
-  // Quick search owns keyboard while its UI is focused; otherwise global handler
-  // would start in-cell type-over and/or refocus the cell editor at the end.
-  if (ctx.showQuickSearch) {
-    const t = e.target as HTMLElement | undefined;
-    if (t?.closest?.('.fortune-quick-search')) {
-      e.stopPropagation();
-      return;
-    }
+  // Quick Search should only "own" keyboard when it's actually focused.
+  // When it's merely visible (open) but the user has clicked back into the grid,
+  // type-to-edit should work normally.
+  const quickSearchOwnsKeys = (() => {
+    if (!ctx.showQuickSearch) return false;
+    const target = e.target as HTMLElement | null | undefined;
+    if (target?.closest?.('.fortune-quick-search')) return true;
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.closest?.('.fortune-quick-search')) return true;
+    return false;
+  })();
+
+  // If Quick Search owns the keyboard, let its local handlers run without
+  // triggering grid type-to-edit.
+  if (quickSearchOwnsKeys) {
+    e.stopPropagation();
+    return;
   }
 
   const allowEdit = isAllowEdit(ctx);
@@ -1259,7 +1268,7 @@ export async function handleGlobalKeyDown(
       kcode === 0 ||
       (e.ctrlKey && kcode === 86)
     ) {
-      if (!ctx.showQuickSearch) {
+      if (!quickSearchOwnsKeys) {
         if (!allowEdit) return;
         if (
           String.fromCharCode(kcode) != null &&
@@ -1332,7 +1341,7 @@ export async function handleGlobalKeyDown(
     }
   }
 
-  if (!ctx.showQuickSearch && cellInput !== document.activeElement) {
+  if (!quickSearchOwnsKeys && cellInput !== document.activeElement) {
     cellInput?.focus();
   }
 
