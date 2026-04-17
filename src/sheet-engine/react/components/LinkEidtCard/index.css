@@ -175,6 +175,30 @@
   min-width: 0;
 }
 
+.fortune-link-card__preview-line--email {
+  min-height: 26px;
+  align-items: center;
+}
+
+.fortune-link-card__preview-line--email .fortune-link-card__preview-text {
+  display: flex;
+  justify-content: center;
+}
+
+.fortune-link-card__preview-line--email .fortune-link-card__link-label {
+  line-height: 1.35;
+}
+
+.fortune-link-card__preview-line--sheet {
+  min-height: 26px;
+  align-items: center;
+}
+
+.fortune-link-card__preview-line--sheet .fortune-link-card__preview-text {
+  display: flex;
+  justify-content: center;
+}
+
 .fortune-link-card__favicon {
   width: 20px;
   height: 20px;
@@ -187,7 +211,23 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  color: #1f1f1f;
+  color: #202124;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
+
+.fortune-link-card__favicon-fallback svg {
+  width: 16px !important;
+  height: 16px !important;
+  display: block;
+}
+
+.fortune-link-card__favicon-fallback--sheet {
+  width: 16px;
+  height: 16px;
+  color: #5f6368;
 }
 
 .fortune-link-card__preview-text {

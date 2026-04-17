@@ -536,9 +536,24 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                     const meta =
                       previewByKey[getPreviewKey(item.linkType, item.linkAddress)] ||
                       fallbackPreview(item.linkAddress);
+                    const emailLike = isEmailLikeAddress(item.linkAddress);
+                    const isSheetLink = item.linkType === 'sheet';
                     return (
-                      <div className="fortune-link-card__preview-line">
-                        {isEmailLikeAddress(item.linkAddress) ? (
+                      <div
+                        className={`fortune-link-card__preview-line${
+                          emailLike
+                            ? ' fortune-link-card__preview-line--email'
+                            : isSheetLink
+                              ? ' fortune-link-card__preview-line--sheet'
+                              : ''
+                        }`}
+                      >
+                        {isSheetLink ? (
+                          <LucideIcon
+                            name="Grid2x2"
+                            className="fortune-link-card__favicon-fallback fortune-link-card__favicon-fallback--sheet"
+                          />
+                        ) : emailLike ? (
                           <LucideIcon
                             name="Mail"
                             className="fortune-link-card__favicon-fallback"
@@ -559,7 +574,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                           <span className="fortune-link-card__link-label" title={meta.title}>
                             {meta.title}
                           </span>
-                          {meta.urlText && (
+                          {item.linkType === 'webpage' && meta.urlText && (
                             <span
                               className="fortune-link-card__url-label"
                               title={meta.urlText}
@@ -664,9 +679,23 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                 {(() => {
                   const address = originAddress || linkAddress;
                   const emailLike = isEmailLikeAddress(address);
+                  const isSheetLink = linkType === 'sheet';
                   return (
-                    <div className="fortune-link-card__preview-line">
-                      {emailLike ? (
+                    <div
+                      className={`fortune-link-card__preview-line${
+                        emailLike
+                          ? ' fortune-link-card__preview-line--email'
+                          : isSheetLink
+                            ? ' fortune-link-card__preview-line--sheet'
+                            : ''
+                      }`}
+                    >
+                      {isSheetLink ? (
+                        <LucideIcon
+                          name="Grid2x2"
+                          className="fortune-link-card__favicon-fallback fortune-link-card__favicon-fallback--sheet"
+                        />
+                      ) : emailLike ? (
                         <LucideIcon
                           name="Mail"
                           className="fortune-link-card__favicon-fallback"
@@ -691,7 +720,9 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                           {singleMeta?.title ||
                             getViewLabel(linkType, originAddress || linkAddress, insertLink.openLink)}
                         </span>
-                        {(singleMeta?.urlText || (!emailLike && (originAddress || linkAddress))) && (
+                        {linkType === 'webpage' &&
+                          (singleMeta?.urlText ||
+                            (!emailLike && (originAddress || linkAddress))) && (
                           <span
                             className="fortune-link-card__url-label"
                             title={singleMeta?.urlText || originAddress || linkAddress}

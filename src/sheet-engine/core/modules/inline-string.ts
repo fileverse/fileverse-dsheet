@@ -231,12 +231,24 @@ export function convertSpanToShareString(
       // If user types in this span it becomes "\u00A0text".
       // Preserve one real separator space so linked + non-linked words don't merge.
       if (v.startsWith("\u00A0")) {
-        v = v.length === 1 ? "" : ` ${v.slice(1)}`;
+        const afterLineBreak =
+          span.previousSibling instanceof HTMLElement &&
+          span.previousSibling.tagName === "BR";
+        // Newline typing anchor uses a leading NBSP placeholder only for caret behavior.
+        // Do not persist it as an actual starting space on the next line.
+        if (afterLineBreak) {
+          v = v.length === 1 ? "" : v.slice(1);
+        } else {
+          v = v.length === 1 ? "" : ` ${v.slice(1)}`;
+        }
       }
       if (v.length === 0) continue;
     }
     // Placeholder / caret NBSP must not persist in stored runs (shows as odd gaps or "&nbsp;").
     v = v.replace(/\u00A0/g, " ");
+    // Newline typing span can use ZWSP as caret placeholder; drop it fully.
+    v = v.replace(/\u200B/g, "");
+    v = v.replace(/&nbsp;/gi, " ");
     v = v.replace(/\n/g, "\r\n");
     if (i === $dom.length - 1) {
       if (v.endsWith("\r\n") && !v.endsWith("\r\n\r\n")) {
@@ -903,16 +915,16 @@ export function applyLinkToSelection(
   // Space auto-link token), wrap via DOM Range APIs instead of slicing parent innerHTML.
   // String slicing with HTML offsets is fragile around <br> and can duplicate content.
   const hasMultilineBreaksInEditor = $textEditor.querySelector("br") != null;
-  if (
-    hasMultilineBreaksInEditor &&
+  const parentEl =
+    startContainer.parentElement?.tagName === "SPAN"
+      ? (startContainer.parentElement as HTMLElement)
+      : null;
+  const shouldUseDomRangeWrap =
     startContainer === endContainer &&
     startContainer.nodeType === Node.TEXT_NODE &&
-    range.toString().length > 0
-  ) {
-    const parentEl =
-      startContainer.parentElement?.tagName === "SPAN"
-        ? (startContainer.parentElement as HTMLElement)
-        : null;
+    range.toString().length > 0 &&
+    hasMultilineBreaksInEditor;
+  if (shouldUseDomRangeWrap) {
     let cssText = parentEl?.style?.cssText || "";
     const inherit = $textEditor.innerHTML.substring(0, 5) !== "<span";
     if (inherit && parentEl) {
@@ -934,7 +946,10 @@ export function applyLinkToSelection(
 
   if (startContainer === endContainer) {
     const span = startContainer.parentNode as HTMLElement | null;
-    const content = span?.innerHTML || "";
+    const isNoLinkAnchorSpan = span?.dataset?.noLinkAnchor === "1";
+    const content = isNoLinkAnchorSpan
+      ? span?.textContent || ""
+      : span?.innerHTML || "";
     const fullContent = $textEditor.innerHTML;
     const inherit = fullContent.substring(0, 5) !== "<span";
     const s2 = span

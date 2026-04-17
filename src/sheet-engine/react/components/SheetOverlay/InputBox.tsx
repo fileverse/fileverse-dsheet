@@ -1140,9 +1140,9 @@ const InputBox: React.FC = () => {
         const typingSpan = document.createElement('span');
         typingSpan.className = 'luckysheet-input-span';
         typingSpan.setAttribute('data-no-link-anchor', '1');
-        // Keep a single NBSP placeholder so leading spaces on the new line are preserved
-        // without introducing hidden zero-width characters into editor serialization.
-        const textNode = document.createTextNode('\u00A0');
+        // Use ZWSP as a caret placeholder for the new line typing span.
+        // Serialization strips it so it never persists to cell value.
+        const textNode = document.createTextNode('\u200B');
         typingSpan.appendChild(textNode);
 
         const frag = document.createDocumentFragment();
@@ -1450,9 +1450,13 @@ const InputBox: React.FC = () => {
           // Otherwise Cmd/Alt+Enter inserts <br> inside the linked span, and next-line text
           // keeps inheriting link metadata/style.
           moveCaretOutsideTrailingLinkSpan();
-          // originally `enterKeyControll`
-          document.execCommand('insertHTML', false, '\n '); // 换行符后面的空白符是为了强制让他换行，在下一步的delete中会删掉
-          document.execCommand('delete', false);
+          // Use explicit newline insertion with a plain typing span so the new line never
+          // inherits hyperlink blue/underline from the previous linked run.
+          if (!insertPlainLineBreakAtCaret()) {
+            // Fallback to legacy execCommand behavior if selection shape is unexpected.
+            document.execCommand('insertHTML', false, '\n ');
+            document.execCommand('delete', false);
+          }
           e.stopPropagation();
         } else {
           // Single-line Enter commit should also auto-link like Space.
