@@ -332,6 +332,12 @@ export function updateFormat(
   foucsStatus: any,
   canvas?: CanvasRenderingContext2D
 ) {
+  console.log('[format] updateFormat', {
+    attr,
+    foucsStatus,
+    editingCell: ctx.luckysheetCellUpdate,
+    selections: ctx.luckysheet_select_save,
+  });
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
 
@@ -1378,6 +1384,10 @@ export function handleFormatPainter(ctx: Context) {
 
 // 2022-10-10 废弃了handleClearFormat中的foreach写法，改为可跳出的every写法，以防止选区多次覆盖
 export function handleClearFormat(ctx: Context) {
+  console.log('[format] handleClearFormat', {
+    editingCell: ctx.luckysheetCellUpdate,
+    selections: ctx.luckysheet_select_save,
+  });
   if (ctx.allowEdit === false) return;
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;

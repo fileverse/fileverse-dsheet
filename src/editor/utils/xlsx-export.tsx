@@ -13,6 +13,10 @@ import {
   applyRichTextToWorksheet,
   type CellRichTextValue,
 } from './xlsx-richtext-utils';
+import {
+  concatInlineStrRunsText,
+  getFirstHyperlinkEntry,
+} from './xlsx-hyperlink-inline';
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -63,32 +67,6 @@ const parseColorToHex = (color: string): string | null => {
 
   // Unknown format → ignore styling
   return null;
-};
-
-const getFirstHyperlinkEntry = (
-  raw: unknown,
-): { linkType: string; linkAddress: string } | undefined => {
-  if (Array.isArray(raw)) {
-    const first = raw[0];
-    if (
-      first &&
-      typeof first === 'object' &&
-      typeof (first as any).linkType === 'string' &&
-      typeof (first as any).linkAddress === 'string'
-    ) {
-      return first as { linkType: string; linkAddress: string };
-    }
-    return undefined;
-  }
-  if (
-    raw &&
-    typeof raw === 'object' &&
-    typeof (raw as any).linkType === 'string' &&
-    typeof (raw as any).linkAddress === 'string'
-  ) {
-    return raw as { linkType: string; linkAddress: string };
-  }
-  return undefined;
 };
 
 export const handleExportToXLSX = async (
@@ -185,17 +163,6 @@ export const handleExportToXLSX = async (
       }
 
       // PROCESS CELL DATA
-      // Log first non-null cell from data to inspect format
-      outer: for (let ri = 0; ri < (sheet.data?.length ?? 0); ri++) {
-        const row = (sheet.data as any)?.[ri];
-        if (!Array.isArray(row)) continue;
-        for (let ci = 0; ci < row.length; ci++) {
-          const cv = row[ci];
-          if (cv && typeof cv === 'object') {
-            break outer;
-          }
-        }
-      }
       // Track cells styled via celldata so the sheet.data fallback loop below skips them
       const celldataStyled = new Set<string>();
       (sheet.celldata ?? []).forEach((cell: any) => {
@@ -216,7 +183,7 @@ export const handleExportToXLSX = async (
         // For inlineStr (rich text), concatenate all runs as the plain-text fallback.
         // Pass 2 (ExcelJS) will overwrite with the real rich text value.
         if (!v.f && v.ct?.t === 'inlineStr' && Array.isArray(v.ct.s)) {
-          newCell.v = v.ct.s.map((seg: any) => seg.v ?? '').join('');
+          newCell.v = concatInlineStrRunsText(v.ct.s);
           newCell.t = 's';
         } else {
           newCell.v = v.v ?? v?.ct?.s?.[0]?.v;
@@ -389,7 +356,7 @@ export const handleExportToXLSX = async (
         row.forEach((v: any, c: number) => {
           if (!v || v.ct?.t !== 'inlineStr' || !Array.isArray(v.ct.s)) return;
           const cellRef = XLSXUtil.encode_cell({ r, c });
-          const plainText = v.ct.s.map((seg: any) => seg.v ?? '').join('');
+          const plainText = concatInlineStrRunsText(v.ct.s);
           worksheet[cellRef] = {
             ...(worksheet[cellRef] || {}),
             v: plainText,
@@ -442,6 +409,7 @@ export const handleExportToXLSX = async (
 
       // XLSX export supports one hyperlink per cell. Accept both legacy single-entry
       // shape and the newer array shape, exporting only the first entry.
+      const grid = sheet.data as any[] | undefined;
       Object.entries(sheet.hyperlink || {}).forEach(([rowColKey, rawLink]) => {
         const firstLink = getFirstHyperlinkEntry(rawLink);
         if (!firstLink?.linkAddress) return;
@@ -449,10 +417,27 @@ export const handleExportToXLSX = async (
         if (Number.isNaN(row) || Number.isNaN(col)) return;
         const cellAddress = XLSXUtil.encode_cell({ r: row, c: col });
         const cell = ws.getCell(cellAddress) as any;
+        const fv = grid?.[row]?.[col];
+        let fromFortune = '';
+        if (
+          fv &&
+          typeof fv === 'object' &&
+          fv.ct?.t === 'inlineStr' &&
+          Array.isArray(fv.ct.s)
+        ) {
+          fromFortune = concatInlineStrRunsText(fv.ct.s);
+        }
         const currentText =
-          typeof cell.text === 'string' && cell.text.length > 0
+          fromFortune ||
+          (typeof cell.text === 'string' && cell.text.length > 0
             ? cell.text
-            : cell.value?.text || cell.value?.richText?.map((x: any) => x.text || '').join('') || '';
+            : cell.value?.text ||
+              (Array.isArray(cell.value?.richText)
+                ? cell.value.richText
+                    .map((x: { text?: string }) => x.text || '')
+                    .join('')
+                : '') ||
+              '');
         cell.value = {
           text: currentText || firstLink.linkAddress,
           hyperlink: firstLink.linkAddress,

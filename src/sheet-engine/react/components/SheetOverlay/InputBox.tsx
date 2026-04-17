@@ -169,13 +169,6 @@ function buildSingleLinkEditorHtml(
   return `<span class="luckysheet-input-span" style="color: rgb(0, 0, 255); border-bottom: 1px solid rgb(0, 0, 255);" data-link-type="${safeType}" data-link-address="${safeAddress}">${escaped}</span>`;
 }
 
-function getInlinePlainText(cell: any): string {
-  if (cell?.ct?.t === 'inlineStr' && Array.isArray(cell.ct.s)) {
-    return cell.ct.s.map((seg: any) => String(seg?.v ?? '')).join('');
-  }
-  return '';
-}
-
 function getCaretCharacterOffsetInEditor(element: HTMLDivElement): number | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
@@ -379,7 +372,7 @@ const InputBox: React.FC = () => {
       mode?: 'space' | 'commit',
       options?: { preserveCaret?: boolean; deferCaretRestore?: boolean },
     ) => void
-  >(() => {});
+  >(() => { });
   const [linkSelectionHighlightRects, setLinkSelectionHighlightRects] =
     useState<{ left: number; top: number; width: number; height: number }[]>(
       [],
@@ -538,12 +531,8 @@ const InputBox: React.FC = () => {
       const overwrite = refs.globalCache.overwriteCell;
       let value = '';
       if (cell && !overwrite) {
-        if (isInlineStringCell(cell) && inlineCellHasLinkRuns) {
+        if (isInlineStringCell(cell)) {
           value = getInlineStringHTML(row_index, col_index, flowdata);
-        } else if (isInlineStringCell(cell)) {
-          // Imported XLSX often keeps plain text as inlineStr runs even without link runs.
-          // Use full joined run text here; generic getCellValue can collapse to partial run.
-          value = getInlinePlainText(cell);
         } else if (cell.f) {
           value = getCellValue(row_index, col_index, flowdata, 'f');
           setContext((ctx) => {
@@ -563,6 +552,7 @@ const InputBox: React.FC = () => {
         if (
           cellHyperlink?.linkType &&
           cellHyperlink?.linkAddress &&
+          !isInlineStringCell(cell as any) &&
           !inlineCellHasLinkRuns &&
           String(value).trim().length > 0
         ) {
@@ -597,7 +587,10 @@ const InputBox: React.FC = () => {
       }
       if (wroteEditorFromStoredCell && !refs.globalCache.doNotFocus) {
         setTimeout(() => {
-          if (wroteSingleHydratedLinkSpan && moveCaretToTrailingPlainSpan(inputRef.current)) {
+          if (
+            (wroteSingleHydratedLinkSpan || inlineCellHasLinkRuns) &&
+            moveCaretToTrailingPlainSpan(inputRef.current)
+          ) {
             return;
           }
           moveToEnd(inputRef.current!);
@@ -998,9 +991,9 @@ const InputBox: React.FC = () => {
       const refRange = preferFuncRange
         ? { row: fsr!.row, column: fsr!.column }
         : {
-            row: currentSelection.row,
-            column: currentSelection.column,
-          };
+          row: currentSelection.row,
+          column: currentSelection.column,
+        };
 
       // Point rangechangeindex at the ref under/near the caret — not always the
       // last span (e.g. `=,A4` with caret between `=` and `,` must not replace A4).
@@ -1684,50 +1677,50 @@ const InputBox: React.FC = () => {
       const shouldRestoreCaret = options?.preserveCaret !== false;
       const shouldDeferRestore = options?.deferCaretRestore !== false;
       const found: Array<{ start: number; end: number; url: string }> = [];
-    // Primary path for typing+Space: only convert the just-finished token before caret.
-    const sel = window.getSelection();
-    if (sel?.rangeCount && sel.focusNode && editor.contains(sel.focusNode)) {
-      const current = sel.getRangeAt(0);
-      if (current.collapsed) {
-        const pre = document.createRange();
-        pre.selectNodeContents(editor);
-        pre.setEnd(current.startContainer, current.startOffset);
-        const beforeCaret = pre
-          .toString()
-          .replace(/\r\n/g, '\n')
-          .replace(/\r/g, '\n');
-        const lineStart = beforeCaret.lastIndexOf('\n') + 1;
-        const lineBeforeCaret = beforeCaret.slice(lineStart);
-        const m = lineBeforeCaret.match(
-          mode === 'space'
-            ? /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)\s$/i
-            : /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)$/i,
-        );
-        if (m) {
-          const token = m[1];
-          const trailingAdjust = mode === 'space' ? 1 : 0;
-          let tokenStart =
-            lineStart + (lineBeforeCaret.length - trailingAdjust - token.length);
-          let tokenEnd = tokenStart + token.length;
-          while (
-            tokenEnd > tokenStart &&
-            /[),.!?:;"']/.test(beforeCaret[tokenEnd - 1])
-          ) {
-            tokenEnd -= 1;
-          }
-          if (tokenEnd > tokenStart) {
-            found.push({
-              start: tokenStart,
-              end: tokenEnd,
-              url: beforeCaret.slice(tokenStart, tokenEnd),
-            });
+      // Primary path for typing+Space: only convert the just-finished token before caret.
+      const sel = window.getSelection();
+      if (sel?.rangeCount && sel.focusNode && editor.contains(sel.focusNode)) {
+        const current = sel.getRangeAt(0);
+        if (current.collapsed) {
+          const pre = document.createRange();
+          pre.selectNodeContents(editor);
+          pre.setEnd(current.startContainer, current.startOffset);
+          const beforeCaret = pre
+            .toString()
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n');
+          const lineStart = beforeCaret.lastIndexOf('\n') + 1;
+          const lineBeforeCaret = beforeCaret.slice(lineStart);
+          const m = lineBeforeCaret.match(
+            mode === 'space'
+              ? /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)\s$/i
+              : /(?:^|[\s(])((?:https?:\/\/|www\.|(?:[a-z0-9-]+\.)+[a-z]{2,})(?:\/[^\s]*)?)$/i,
+          );
+          if (m) {
+            const token = m[1];
+            const trailingAdjust = mode === 'space' ? 1 : 0;
+            let tokenStart =
+              lineStart + (lineBeforeCaret.length - trailingAdjust - token.length);
+            let tokenEnd = tokenStart + token.length;
+            while (
+              tokenEnd > tokenStart &&
+              /[),.!?:;"']/.test(beforeCaret[tokenEnd - 1])
+            ) {
+              tokenEnd -= 1;
+            }
+            if (tokenEnd > tokenStart) {
+              found.push({
+                start: tokenStart,
+                end: tokenEnd,
+                url: beforeCaret.slice(tokenStart, tokenEnd),
+              });
+            }
           }
         }
       }
-    }
-    // Important for multiline stability: do NOT run full-editor fallback scans here.
-    // Space auto-link should only touch the just-finished token around caret.
-    if (found.length === 0) return;
+      // Important for multiline stability: do NOT run full-editor fallback scans here.
+      // Space auto-link should only touch the just-finished token around caret.
+      if (found.length === 0) return;
 
       let appliedLinkViaApplyLink = false;
       const caretBefore = getCaretCharacterOffsetInEditor(editor);

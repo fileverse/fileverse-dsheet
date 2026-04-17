@@ -207,6 +207,23 @@ export function convertSpanToShareString(
       };
     }
 
+    // Plain hyperlink (format cleared): hydration omits default blue/underline; convertCssToStyleList
+    // still seeds fc/un from originCell — drop so we persist link metadata without re-adding decoration.
+    if (span.dataset?.linkPlain === "1" && styleList.link) {
+      const css = span.style.cssText;
+      const explicitColor = /(?:^|;)\s*color\s*:/i.test(css);
+      const explicitUnderline =
+        /(?:^|;)\s*(border-bottom|text-decoration(-line)?)\s*:/i.test(css) ||
+        (typeof span.style.textDecoration === "string" &&
+          span.style.textDecoration.includes("underline"));
+      if (!explicitColor) {
+        delete (styleList as Partial<CellStyle>).fc;
+      }
+      if (!explicitUnderline) {
+        delete (styleList as Partial<CellStyle>).un;
+      }
+    }
+
     const curStyleListString = JSON.stringify(_.omit(styleList, "link"));
     let v = span.innerText;
     if (span.dataset?.noLinkAnchor === "1") {
@@ -218,6 +235,8 @@ export function convertSpanToShareString(
       }
       if (v.length === 0) continue;
     }
+    // Placeholder / caret NBSP must not persist in stored runs (shows as odd gaps or "&nbsp;").
+    v = v.replace(/\u00A0/g, " ");
     v = v.replace(/\n/g, "\r\n");
     if (i === $dom.length - 1) {
       if (v.endsWith("\r\n") && !v.endsWith("\r\n\r\n")) {
@@ -447,6 +466,11 @@ export function updateInlineStringFormat(
   value: any,
   cellInput: HTMLDivElement
 ) {
+  console.log("[format] updateInlineStringFormat", {
+    attr,
+    value,
+    editingCell: ctx.luckysheetCellUpdate,
+  });
   // let s = ctx.inlineStringEditCache;
   const w = window.getSelection();
   if (!w) return;

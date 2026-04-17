@@ -922,6 +922,13 @@ export function updateCell(
   value?: any,
   canvas?: CanvasRenderingContext2D
 ) {
+  console.log('[format] updateCell', {
+    r,
+    c,
+    value,
+    hasInput: !!$input,
+    editingCell: ctx.luckysheetCellUpdate,
+  });
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
 
@@ -1955,16 +1962,40 @@ export function getInlineStringHTML(
           style.fontFamily = "Arial";
         }
         const { link } = strObj as any;
+        const segObj = strObj as Record<string, unknown>;
+        const linkHasExplicitFc = Object.prototype.hasOwnProperty.call(
+          segObj,
+          "fc"
+        );
+        const linkHasExplicitUn = Object.prototype.hasOwnProperty.call(
+          segObj,
+          "un"
+        );
+        const unRaw = segObj.un;
+        const segmentUnderlineOn =
+          linkHasExplicitUn &&
+          (unRaw === 1 ||
+            unRaw === 3 ||
+            Number(unRaw) === 1 ||
+            Number(unRaw) === 3);
+        // Only apply default hyperlink blue/underline when the segment still stores
+        // explicit typography (fc/un). Cleared-format links keep metadata only — no keys —
+        // so we must not re-inject chrome on each edit (see convertSpanToShareString + data-link-plain).
         if (link?.linkType && link?.linkAddress) {
-          style.color = style.color || "rgb(0, 0, 255)";
-          if (options?.useSemanticMarkup) {
-            style.textDecoration = style.textDecoration
-              ? `${style.textDecoration} underline`
-              : "underline";
-            style.textDecorationSkipInk = "none";
-          } else {
-            style.borderBottom =
-              style.borderBottom || "1px solid rgb(0, 0, 255)";
+          if (linkHasExplicitFc && !style.color) {
+            style.color = "rgb(0, 0, 255)";
+          }
+          if (segmentUnderlineOn) {
+            if (options?.useSemanticMarkup) {
+              if (!String(style.textDecoration || "").includes("underline")) {
+                style.textDecoration = style.textDecoration
+                  ? `${style.textDecoration} underline`
+                  : "underline";
+                style.textDecorationSkipInk = "none";
+              }
+            } else if (!style.borderBottom) {
+              style.borderBottom = "1px solid rgb(0, 0, 255)";
+            }
           }
         }
         const styleStr = _.toPairs(style)
@@ -1973,6 +2004,10 @@ export function getInlineStringHTML(
             return `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`;
           })
           .join(" ");
+        const isPlainLinkDecor =
+          Boolean(link?.linkType && link?.linkAddress) &&
+          !linkHasExplicitFc &&
+          !linkHasExplicitUn;
         const dataAttrs =
           !options?.useSemanticMarkup && link?.linkType && link?.linkAddress
             ? ` data-link-type='${String(link.linkType).replace(
@@ -1981,7 +2016,7 @@ export function getInlineStringHTML(
             )}' data-link-address='${String(link.linkAddress).replace(
               /'/g,
               "&#39;"
-            )}'`
+            )}'${isPlainLinkDecor ? " data-link-plain='1'" : ""}`
             : "";
         if (options?.isRichTextCopy) {
           if (options?.useSemanticMarkup) {
@@ -2254,12 +2289,48 @@ export function getDataBySelectionNoCopy(ctx: Context, range: Selection) {
 
 function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
   if (!cell) return cell ?? null;
-  const { v: rawValue, m: displayText, f: formula } = cell;
-  return rawValue !== undefined ||
+  const { v: rawValue, m: displayText, f: formula, ct } = cell;
+  const keepInlineStringContent =
+    ct?.t === "inlineStr" &&
+    Array.isArray((ct as { s?: unknown[] }).s) &&
+    (ct as { s?: unknown[] }).s!.length > 0;
+
+  const sanitizedInlineCt = keepInlineStringContent
+    ? {
+      ...(ct as { fa?: string; t?: string; tb?: string }),
+      s: ((ct as { s?: Array<Record<string, unknown>> }).s || []).map((seg) => {
+        const cleaned: Record<string, unknown> = {
+          v: String(seg?.v ?? ""),
+        };
+        // Keep hyperlink metadata as content, drop styling (bl/it/fs/fc/un/etc).
+        const link = seg?.link as
+          | { linkType?: string; linkAddress?: string }
+          | undefined;
+        if (link?.linkType && link?.linkAddress) {
+          cleaned.link = {
+            linkType: link.linkType,
+            linkAddress: link.linkAddress,
+          };
+        }
+        return cleaned;
+      }),
+    }
+    : undefined;
+
+  if (
+    rawValue !== undefined ||
     displayText !== undefined ||
-    formula !== undefined
-    ? { v: rawValue, m: displayText, f: formula }
-    : null;
+    formula !== undefined ||
+    keepInlineStringContent
+  ) {
+    return {
+      v: rawValue,
+      m: displayText,
+      f: formula,
+      ...(sanitizedInlineCt ? { ct: sanitizedInlineCt } : {}),
+    };
+  }
+  return null;
 }
 
 export function clearSelectedCellFormat(ctx: Context) {
