@@ -979,6 +979,33 @@ export async function handleGlobalKeyDown(
     ctx.luckysheet_selection_range = [];
   }
 
+  if (kstr === 'Escape' && ctx.showQuickSearch) {
+    ctx.showQuickSearch = false;
+    ctx.quickSearchHighlight = null;
+    ctx.quickSearchLoading = false;
+    e.preventDefault();
+    return;
+  }
+
+  // Quick Search should only "own" keyboard when it's actually focused.
+  // When it's merely visible (open) but the user has clicked back into the grid,
+  // type-to-edit should work normally.
+  const quickSearchOwnsKeys = (() => {
+    if (!ctx.showQuickSearch) return false;
+    const target = e.target as HTMLElement | null | undefined;
+    if (target?.closest?.('.fortune-quick-search')) return true;
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.closest?.('.fortune-quick-search')) return true;
+    return false;
+  })();
+
+  // If Quick Search owns the keyboard, let its local handlers run without
+  // triggering grid type-to-edit.
+  if (quickSearchOwnsKeys) {
+    e.stopPropagation();
+    return;
+  }
+
   const allowEdit = isAllowEdit(ctx);
 
   // @ts-ignore // eslint-disable-next-line no-restricted-globals
@@ -1243,80 +1270,82 @@ export async function handleGlobalKeyDown(
       kcode === 0 ||
       (e.ctrlKey && kcode === 86)
     ) {
-      if (!allowEdit) return;
-      if (
-        String.fromCharCode(kcode) != null &&
-        !_.isEmpty(ctx.luckysheet_select_save) && // $("#luckysheet-cell-selected").is(":visible") &&
-        kstr !== "CapsLock" &&
-        kstr !== "Win" &&
-        kcode !== 18
-      ) {
-        // 激活输入框，并将按键输入到输入框
-        const last =
-          ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1];
+      if (!quickSearchOwnsKeys) {
+        if (!allowEdit) return;
+        if (
+          String.fromCharCode(kcode) != null &&
+          !_.isEmpty(ctx.luckysheet_select_save) && // $("#luckysheet-cell-selected").is(":visible") &&
+          kstr !== 'CapsLock' &&
+          kstr !== 'Win' &&
+          kcode !== 18
+        ) {
+          // 激活输入框，并将按键输入到输入框
+          const last =
+            ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1];
 
-        const row_index = last.row_focus;
-        const col_index = last.column_focus;
-        if (_.isNil(row_index) || _.isNil(col_index)) return;
+          const row_index = last.row_focus;
+          const col_index = last.column_focus;
+          if (_.isNil(row_index) || _.isNil(col_index)) return;
 
-        const flowdata = getFlowdata(ctx);
-        const cellAt = flowdata?.[row_index]?.[col_index] as
-          | { f?: string }
-          | null
-          | undefined;
-        const existingFormula =
-          cellAt?.f != null && String(cellAt.f).trim() !== ""
-            ? String(cellAt.f).replace(/[\r\n]/g, "")
-            : null;
+          const flowdata = getFlowdata(ctx);
+          const cellAt = flowdata?.[row_index]?.[col_index] as
+            | { f?: string }
+            | null
+            | undefined;
+          const existingFormula =
+            cellAt?.f != null && String(cellAt.f).trim() !== ""
+              ? String(cellAt.f).replace(/[\r\n]/g, "")
+              : null;
 
-        if (existingFormula != null) {
-          suppressFormulaRangeSelectionForInitialEdit(ctx);
+          if (existingFormula != null) {
+            suppressFormulaRangeSelectionForInitialEdit(ctx);
+          }
+
+          ctx.luckysheetCellUpdate = [row_index, col_index];
+          cache.overwriteCell = true;
+          cache.pendingTypeOverCell = [row_index, col_index];
+          setFormulaEditorOwner(ctx, "cell");
+
+          // First key replaces the cell content (type-over), same as Excel/Sheets — including
+          // when the cell currently holds a formula. Use F2 / double-click to edit in place.
+          cache.enteredEditByTyping = true;
+
+          cellInput.focus();
+          const initial = getTypeOverInitialContent(e);
+          if (initial !== undefined) {
+            cellInput.textContent = initial;
+            if (fxInput) fxInput.textContent = initial;
+            handleFormulaInput(ctx, fxInput, cellInput, kcode);
+            e.preventDefault();
+          } else {
+            cellInput.textContent = "";
+            if (fxInput) fxInput.textContent = "";
+            handleFormulaInput(ctx, fxInput, cellInput, kcode);
+          }
+
+          // After focus + handleFormulaInput, caret can sit before the first character.
+          // Only adjust the in-cell editor: moveToEnd() calls focus() and would steal
+          // focus to the formula bar if applied to fxInput.
+          queueMicrotask(() => {
+            moveToEnd(cellInput);
+          });
+
+          // if (kstr === "Backspace") {
+          //   $("#luckysheet-rich-text-editor").html("<br/>");
+          // }
+          // formula.functionInputHanddler(
+          //   $("#luckysheet-functionbox-cell"),
+          //   $("#luckysheet-rich-text-editor"),
+          //   kcode
+          // );
         }
-
-        ctx.luckysheetCellUpdate = [row_index, col_index];
-        cache.overwriteCell = true;
-        cache.pendingTypeOverCell = [row_index, col_index];
-        setFormulaEditorOwner(ctx, "cell");
-
-        // First key replaces the cell content (type-over), same as Excel/Sheets — including
-        // when the cell currently holds a formula. Use F2 / double-click to edit in place.
-        cache.enteredEditByTyping = true;
-
-        cellInput.focus();
-        const initial = getTypeOverInitialContent(e);
-        if (initial !== undefined) {
-          cellInput.textContent = initial;
-          if (fxInput) fxInput.textContent = initial;
-          handleFormulaInput(ctx, fxInput, cellInput, kcode);
-          e.preventDefault();
-        } else {
-          cellInput.textContent = "";
-          if (fxInput) fxInput.textContent = "";
-          handleFormulaInput(ctx, fxInput, cellInput, kcode);
-        }
-
-        // After focus + handleFormulaInput, caret can sit before the first character.
-        // Only adjust the in-cell editor: moveToEnd() calls focus() and would steal
-        // focus to the formula bar if applied to fxInput.
-        queueMicrotask(() => {
-          moveToEnd(cellInput);
-        });
-
-        // if (kstr === "Backspace") {
-        //   $("#luckysheet-rich-text-editor").html("<br/>");
-        // }
-        // formula.functionInputHanddler(
-        //   $("#luckysheet-functionbox-cell"),
-        //   $("#luckysheet-rich-text-editor"),
-        //   kcode
-        // );
       }
     }
-  }
 
-  if (cellInput !== document.activeElement) {
-    cellInput?.focus();
-  }
+    if (!quickSearchOwnsKeys && cellInput !== document.activeElement) {
+      cellInput?.focus();
+    }
 
-  e.stopPropagation();
+    e.stopPropagation();
+  }
 }

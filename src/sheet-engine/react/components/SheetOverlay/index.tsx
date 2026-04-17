@@ -785,9 +785,6 @@ const SheetOverlay: React.FC = () => {
             <div
               key={`fortune-quick-search-hl-${key}`}
               className={`fortune-quick-search-highlight${box.active ? ' fortune-quick-search-highlight--active' : ''
-                }${context.luckysheetCellUpdate.length > 0
-                  ? ' fortune-quick-search-highlight--dim'
-                  : ''
                 }`}
               style={{
                 position: 'absolute',
@@ -802,7 +799,8 @@ const SheetOverlay: React.FC = () => {
           ))}
           {searchRangeScopeRect && (
             <div
-              className="fortune-search-range-highlight"
+              className={`fortune-search-range-highlight${context.searchRangeScopeEmphasis ? ' fortune-search-range-highlight--active' : ''
+                }`}
               style={{
                 position: 'absolute',
                 left: searchRangeScopeRect.left,
@@ -918,6 +916,15 @@ const SheetOverlay: React.FC = () => {
               {context.luckysheet_select_save!.map((selection, index) => {
                 const isEditing =
                   (context.luckysheetCellUpdate?.length ?? 0) > 0;
+                const hideSelectionBecauseSearchScope =
+                  (context.showSearch || context.showReplace) &&
+                  !!context.searchRangeScopeHighlight &&
+                  selection.row[0] === context.searchRangeScopeHighlight.row[0] &&
+                  selection.row[1] === context.searchRangeScopeHighlight.row[1] &&
+                  selection.column[0] ===
+                  context.searchRangeScopeHighlight.column[0] &&
+                  selection.column[1] ===
+                  context.searchRangeScopeHighlight.column[1];
                 const isFormulaRangeSelecting =
                   context.formulaCache.rangestart ||
                   context.formulaCache.rangedrag_column_start ||
@@ -947,7 +954,11 @@ const SheetOverlay: React.FC = () => {
                           ? selection.height_move - (isMultiCell ? 0.6 : 1.8)
                           : selection.height_move,
                         borderWidth: isMultiCell ? 1 : 2,
-                        display: hideSelectionWhileEditing ? 'none' : 'block',
+                        display:
+                          hideSelectionWhileEditing ||
+                            hideSelectionBecauseSearchScope
+                            ? 'none'
+                            : 'block',
                       },
                       fixRowStyleOverflowInFreeze(
                         context,

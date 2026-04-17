@@ -75,6 +75,12 @@ export type Context = {
     row: number[];
     column: number[];
   } | null;
+  /**
+   * When true, render the specific-range scope border in an emphasized style
+   * (e.g. after pressing Find). When false, keep a lighter border after
+   * confirming the range.
+   */
+  searchRangeScopeEmphasis?: boolean;
   linkCard?: LinkCardProps;
   rangeDialog?: RangeDialogProps; // 坐标选区鼠标选择
   // 提醒弹窗
@@ -559,6 +565,8 @@ export function defaultContext(refs: RefValues): Context {
     findReplacePrefill: undefined,
     quickSearchLoading: false,
     quickSearchHighlight: null,
+    searchRangeScopeHighlight: null,
+    searchRangeScopeEmphasis: false,
 
     getRefs: () => refs,
   };
