@@ -1218,8 +1218,7 @@ const SheetOverlay: React.FC = () => {
           </div>
         </div>
       </div>
-    </div >
-    </div >
+    </div>
   );
 };
 
