@@ -12,7 +12,7 @@ import {
 } from "../utils";
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
-import { genarate, update } from "./format";
+import { genarate, refreshGeneralNumericDisplay, update } from "./format";
 import { clearCellError } from "../api";
 import {
   delFunctionGroup,
@@ -572,19 +572,15 @@ export function setCellValue(
         }
         cell.v =
           vupdate; /* 备注：如果使用parseFloat，1.1111111111111111会转换为1.1111111111111112 ? */
-        cell.m = v.m ? v.m : String(cell.v);
+        const preserveDp = cell.ct?.dp;
         cell.ct = { fa: "General", t: "g" };
-        if (cell.v === Infinity || cell.v === -Infinity) {
-          cell.m = cell.v.toString();
-        } else if (cell.v != null && !cell.m) {
-          const mask = genarate(cell.v as string);
-          if (mask) {
-            if (v.m) {
-              cell.m = v.m;
-            } else {
-              cell.m = mask[0].toString();
-            }
-          }
+        if (preserveDp != null && typeof preserveDp === "number") {
+          cell.ct.dp = preserveDp;
+        }
+        if (v.m) {
+          cell.m = v.m;
+        } else {
+          refreshGeneralNumericDisplay(cell as Cell);
         }
       } else {
         const mask = genarate(vupdate);

@@ -3,7 +3,7 @@ import _ from 'lodash';
 import { isRealNum, valueIsError, detectDateFormat } from './validation';
 // @ts-ignore
 import SSF from './ssf';
-import { CellMatrix } from '../types';
+import { Cell, CellMatrix } from '../types';
 import { getCellValue } from './cell';
 
 const base1904 = new Date(1900, 2, 1, 0, 0, 0);
@@ -270,6 +270,39 @@ export function genarate(value: string | number | boolean) {
 
 export function update(fmt: string, v: any) {
   return SSF.format(fmt, v);
+}
+
+/** Max decimal places for toolbar +/- on General (Auto) without switching to a numeric `fa`. */
+export const MAX_GENERAL_AUTO_DP = 15;
+
+/**
+ * Recompute `m` for numeric cells with `fa === "General"`.
+ * When `ct.dp` is set (1..MAX), uses fixed decimals like Sheets Auto + decimal buttons.
+ * Otherwise uses the usual `genarate` General display.
+ */
+export function refreshGeneralNumericDisplay(cell: Cell): void {
+  const ct = cell.ct;
+  if (!ct || ct.fa !== "General") return;
+  const v = cell.v;
+  if (v === Infinity || v === -Infinity) {
+    cell.m = String(v);
+    return;
+  }
+  if (!isRealNum(v)) return;
+  const num = Number(v);
+  if (ct.dp != null && ct.dp >= 1) {
+    const d = Math.min(MAX_GENERAL_AUTO_DP, Math.max(1, Math.floor(ct.dp)));
+    const s = num.toString();
+    if (s.toLowerCase().includes("e")) {
+      const g = genarate(num);
+      if (g) cell.m = g[0].toString();
+      return;
+    }
+    cell.m = num.toFixed(d);
+    return;
+  }
+  const g = genarate(num);
+  if (g) cell.m = g[0].toString();
 }
 
 export function is_date(fmt: string, v?: any) {

@@ -783,7 +783,14 @@ const Toolbar: React.FC<{
               if (curr.t === 'd') {
                 currentFmt = hasTime ? 'Date time' : 'Date';
               } else if (curr.t === 'g' && curr.fa === 'General') {
-                currentFmt = defaultFormat[defaultFormat.length - 1].text;
+                // General lives at index 0 ("Auto"); last item is "more formats", not Automatic.
+                currentFmt = defaultFormat[0].text;
+              } else if (format != null) {
+                // Exact preset match (Currency, Accounting, Number, etc.) before heuristics:
+                // currency/accounting patterns contain "#,##0" and would be mislabeled "Number".
+                currentFmt = format.text;
+              } else if (is_date(curr.fa)) {
+                currentFmt = hasTime ? 'Date time' : 'Date';
               } else if (
                 curr.t === 'n' ||
                 curr.fa.includes('#,##0') ||
@@ -791,12 +798,8 @@ const Toolbar: React.FC<{
                 curr.fa === '0.00'
               ) {
                 currentFmt = 'Number';
-              } else if (is_date(curr.fa)) {
-                currentFmt = hasTime ? 'Date time' : 'Date';
-              } else if (format != null) {
-                currentFmt = format.text;
               } else {
-                currentFmt = defaultFormat[defaultFormat.length - 1].text;
+                currentFmt = defaultFormat[0].text;
               }
             }
           }
