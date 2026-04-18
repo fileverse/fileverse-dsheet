@@ -25,6 +25,7 @@ import {
 } from "./formula";
 import {
   convertSpanToShareString,
+  getHyperlinksFromInlineSegments,
   isInlineStringCell,
   isInlineStringCT,
 } from "./inline-string";
@@ -179,6 +180,68 @@ function closeUnclosedParenthesesInFormula(formula: string): string {
   }
   if (depth <= 0) return formula;
   return `${formula}${")".repeat(depth)}`;
+}
+
+/**
+ * Contenteditable can produce text/div/br nodes after linked spans in multiline edits.
+ * convertSpanToShareString reads only spans, so normalize mixed children into spans
+ * before extracting inline runs to avoid dropping trailing lines on commit.
+ */
+function normalizeEditorChildrenToSpans(editor: HTMLDivElement) {
+  const hasNonSpanTopLevel = Array.from(editor.childNodes).some(
+    (n) => !(n.nodeType === Node.ELEMENT_NODE && (n as HTMLElement).tagName === "SPAN")
+  );
+  if (!hasNonSpanTopLevel) return;
+
+  const out = document.createElement("div");
+  const appendTextSpan = (text: string) => {
+    if (!text) return;
+    const sp = document.createElement("span");
+    sp.className = "luckysheet-input-span";
+    sp.textContent = text;
+    out.appendChild(sp);
+  };
+  const appendBreakSpan = () => {
+    const sp = document.createElement("span");
+    sp.className = "luckysheet-input-span";
+    sp.appendChild(document.createElement("br"));
+    out.appendChild(sp);
+  };
+
+  for (const node of Array.from(editor.childNodes)) {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName === "SPAN") {
+        out.appendChild(el.cloneNode(true));
+        continue;
+      }
+      if (el.tagName === "BR") {
+        appendBreakSpan();
+        continue;
+      }
+      const text = (el.innerText ?? el.textContent ?? "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      const parts = text.split("\n");
+      parts.forEach((part, idx) => {
+        appendTextSpan(part);
+        if (idx < parts.length - 1) appendBreakSpan();
+      });
+      continue;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent ?? "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n");
+      const parts = text.split("\n");
+      parts.forEach((part, idx) => {
+        appendTextSpan(part);
+        if (idx < parts.length - 1) appendBreakSpan();
+      });
+    }
+  }
+
+  editor.innerHTML = out.innerHTML;
 }
 
 export function getCellValue(
@@ -875,6 +938,13 @@ export function updateCell(
   value?: any,
   canvas?: CanvasRenderingContext2D
 ) {
+  console.log('[format] updateCell', {
+    r,
+    c,
+    value,
+    hasInput: !!$input,
+    editingCell: ctx.luckysheetCellUpdate,
+  });
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
 
@@ -899,17 +969,9 @@ export function updateCell(
     const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
     const { dataVerification } = ctx.luckysheetfile[index];
 
-    // --- hyperlink-on-edit-paste support ---
+    // --- hyperlink sync support ---
     const sheetFile = ctx.luckysheetfile[index] as any;
-
-    const getUrlFromText = (text?: string): string | null => {
-      const t = (text ?? "").trim();
-      // only treat a single token as a URL (no spaces/newlines)
-      if (!t || /[\s\r\n]/.test(t)) return null;
-      if (!/^(https?:\/\/|www\.)\S+$/i.test(t)) return null;
-      return t.startsWith("http") ? t : `https://${t}`;
-    };
-    // --- end ---s
+    // --- end ---
 
     if (!_.isNil(dataVerification)) {
       const dvItem = dataVerification[`${r}_${c}`];
@@ -972,6 +1034,7 @@ export function updateCell(
 
       curv.ct.t = "inlineStr";
 
+      normalizeEditorChildrenToSpans($input!);
       curv.ct.s = convertSpanToShareString(
         $input!.querySelectorAll("span"),
         curv
@@ -1322,29 +1385,32 @@ export function updateCell(
       console.log("[updateCell] spill failed; falling back", e);
     }
 
-    // --- hyperlink-on-edit-paste support ---
-    // If user pasted a URL while editing (double click), persist hyperlink using sheet.hyperlink + cell.hl
-    const url = getUrlFromText($input?.innerText);
-    if (url && typeof value === "object" && value) {
-      (value as any).hl = 1;
-
+    // --- hyperlink support ---
+    const hyperlinkKey = `${r}_${c}`;
+    const prevHyperlink = sheetFile.hyperlink?.[hyperlinkKey];
+    if (
+      typeof value === "object" &&
+      value &&
+      (value as Cell).ct?.t === "inlineStr"
+    ) {
+      const links = getHyperlinksFromInlineSegments(value as Cell);
       if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
-      sheetFile.hyperlink[`${r}_${c}`] = {
-        linkType: "webpage",
-        linkAddress: url,
-      };
-
-      if (typeof (value as any).v !== "string") {
-        (value as any).v = $input?.innerText ?? url;
+      if (links.length === 0) {
+        delete sheetFile.hyperlink[hyperlinkKey];
+      } else {
+        sheetFile.hyperlink[hyperlinkKey] =
+          links.length === 1 ? links[0] : links;
       }
-
-      if ((value as any).m == null) {
-        (value as any).m = (value as any).v;
+      if (typeof value === "object" && value && "hl" in (value as any)) {
+        delete (value as any).hl;
       }
-
-      // Persist hyperlink look (blue + underline)
-      if ((value as any).fc == null) (value as any).fc = "rgb(0, 0, 255)";
-      if ((value as any).un == null) (value as any).un = 1;
+    } else {
+      if (prevHyperlink && sheetFile.hyperlink) {
+        delete sheetFile.hyperlink[hyperlinkKey];
+      }
+      if (typeof value === "object" && value && "hl" in (value as any)) {
+        delete (value as any).hl;
+      }
     }
 
     // --- end ---
@@ -1912,16 +1978,40 @@ export function getInlineStringHTML(
           style.fontFamily = "Arial";
         }
         const { link } = strObj as any;
+        const segObj = strObj as Record<string, unknown>;
+        const linkHasExplicitFc = Object.prototype.hasOwnProperty.call(
+          segObj,
+          "fc"
+        );
+        const linkHasExplicitUn = Object.prototype.hasOwnProperty.call(
+          segObj,
+          "un"
+        );
+        const unRaw = segObj.un;
+        const segmentUnderlineOn =
+          linkHasExplicitUn &&
+          (unRaw === 1 ||
+            unRaw === 3 ||
+            Number(unRaw) === 1 ||
+            Number(unRaw) === 3);
+        // Only apply default hyperlink blue/underline when the segment still stores
+        // explicit typography (fc/un). Cleared-format links keep metadata only — no keys —
+        // so we must not re-inject chrome on each edit (see convertSpanToShareString + data-link-plain).
         if (link?.linkType && link?.linkAddress) {
-          style.color = style.color || "rgb(0, 0, 255)";
-          if (options?.useSemanticMarkup) {
-            style.textDecoration = style.textDecoration
-              ? `${style.textDecoration} underline`
-              : "underline";
-            style.textDecorationSkipInk = "none";
-          } else {
-            style.borderBottom =
-              style.borderBottom || "1px solid rgb(0, 0, 255)";
+          if (linkHasExplicitFc && !style.color) {
+            style.color = "rgb(0, 0, 255)";
+          }
+          if (segmentUnderlineOn) {
+            if (options?.useSemanticMarkup) {
+              if (!String(style.textDecoration || "").includes("underline")) {
+                style.textDecoration = style.textDecoration
+                  ? `${style.textDecoration} underline`
+                  : "underline";
+                style.textDecorationSkipInk = "none";
+              }
+            } else if (!style.borderBottom) {
+              style.borderBottom = "1px solid rgb(0, 0, 255)";
+            }
           }
         }
         const styleStr = _.toPairs(style)
@@ -1930,6 +2020,10 @@ export function getInlineStringHTML(
             return `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`;
           })
           .join(" ");
+        const isPlainLinkDecor =
+          Boolean(link?.linkType && link?.linkAddress) &&
+          !linkHasExplicitFc &&
+          !linkHasExplicitUn;
         const dataAttrs =
           !options?.useSemanticMarkup && link?.linkType && link?.linkAddress
             ? ` data-link-type='${String(link.linkType).replace(
@@ -1938,9 +2032,8 @@ export function getInlineStringHTML(
             )}' data-link-address='${String(link.linkAddress).replace(
               /'/g,
               "&#39;"
-            )}'`
+            )}'${isPlainLinkDecor ? " data-link-plain='1'" : ""}`
             : "";
-
         if (options?.isRichTextCopy) {
           if (options?.useSemanticMarkup) {
             value += buildClipboardCompatibleInlineRuns(strObj.v, styleStr);
@@ -2212,12 +2305,48 @@ export function getDataBySelectionNoCopy(ctx: Context, range: Selection) {
 
 function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
   if (!cell) return cell ?? null;
-  const { v: rawValue, m: displayText, f: formula } = cell;
-  return rawValue !== undefined ||
+  const { v: rawValue, m: displayText, f: formula, ct } = cell;
+  const keepInlineStringContent =
+    ct?.t === "inlineStr" &&
+    Array.isArray((ct as { s?: unknown[] }).s) &&
+    (ct as { s?: unknown[] }).s!.length > 0;
+
+  const sanitizedInlineCt = keepInlineStringContent
+    ? {
+      ...(ct as { fa?: string; t?: string; tb?: string }),
+      s: ((ct as { s?: Array<Record<string, unknown>> }).s || []).map((seg) => {
+        const cleaned: Record<string, unknown> = {
+          v: String(seg?.v ?? ""),
+        };
+        // Keep hyperlink metadata as content, drop styling (bl/it/fs/fc/un/etc).
+        const link = seg?.link as
+          | { linkType?: string; linkAddress?: string }
+          | undefined;
+        if (link?.linkType && link?.linkAddress) {
+          cleaned.link = {
+            linkType: link.linkType,
+            linkAddress: link.linkAddress,
+          };
+        }
+        return cleaned;
+      }),
+    }
+    : undefined;
+
+  if (
+    rawValue !== undefined ||
     displayText !== undefined ||
-    formula !== undefined
-    ? { v: rawValue, m: displayText, f: formula }
-    : null;
+    formula !== undefined ||
+    keepInlineStringContent
+  ) {
+    return {
+      v: rawValue,
+      m: displayText,
+      f: formula,
+      ...(sanitizedInlineCt ? { ct: sanitizedInlineCt } : {}),
+    };
+  }
+  return null;
 }
 
 export function clearSelectedCellFormat(ctx: Context) {

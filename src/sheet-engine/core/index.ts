@@ -62,6 +62,10 @@ export {
   getRangetxt,
   getRangeByTxt,
   getInlineStringHTML,
+  applyLinkToSelection,
+  getHyperlinksFromInlineSegments,
+  getUniformLinkFromWindowSelectionInEditor,
+  getHyperlinkAtCaretInContentEditable,
   getStyleByCell,
   clearSelectedCellFormat,
   clearRowsCellsFormat,
@@ -153,6 +157,7 @@ export {
   handleTextSize,
   handleSum,
   handleLink,
+  captureLinkEditorOpenSnapshot,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   handleScreenShot,
@@ -183,6 +188,24 @@ export {
   searchNext,
   replace,
   replaceAll,
+  getSearchIndexArr,
+  getSearchIndexArrAsync,
+  getFindRangeOnCurrentSheet,
+  getQuickSearchIndexArr,
+  getQuickSearchHiddenConfig,
+  getCellHyperlinks,
+  getHyperlinkDisplayTextInCell,
+  getInlineLinkPlainRange,
+  getUniformLinkCoveringPlainRange,
+  getUniformLinkAtPlainOffset,
+  removeHyperlinkForLink,
+  updateHyperlinkForLink,
+  syncLinkCardAfterHyperlinkChange,
+  expandCellRectForMerge,
+  shouldQuickSearchUseAsync,
+  runQuickSearchIndexArrAsync,
+  QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
+  parseRangeText,
   // hyperlink
   getCellRowColumn,
   getCellHyperlink,
@@ -294,6 +317,7 @@ export type {
   Cell,
   CellWithRowAndCol,
   CellMatrix,
+  HyperlinkEntry,
   Selection,
   Presence,
   Sheet,
@@ -305,6 +329,15 @@ export type {
   LiveQueryData,
   Freezen,
 } from './types';
+
+export type {
+  CheckModes,
+  HyperlinkMap,
+  FindSearchScope,
+  SearchHiddenConfig,
+  SearchNextResult,
+  ReplaceAllResult,
+} from './modules/searchReplace';
 
 // animate
 export { cellFadeAnimator, markCellChanged } from './animate';

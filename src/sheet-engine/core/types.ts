@@ -49,7 +49,7 @@ export type Cell = {
   m?: string | number;
   mc?: { r: number; c: number; rs?: number; cs?: number };
   f?: string;
-  ct?: { fa?: string; t?: string; s?: any };
+  ct?: { fa?: string; t?: string; tb?: string; s?: any };
   qp?: number;
   spl?: any;
   bg?: string;
@@ -78,6 +78,8 @@ export type CellWithRowAndCol = {
 };
 
 export type CellMatrix = (Cell | null)[][];
+
+export type HyperlinkEntry = { linkType: string; linkAddress: string };
 
 export type Selection = {
   left?: number;
@@ -203,7 +205,7 @@ export type Sheet = {
   luckysheet_alternateformat_save?: any[];
   dataVerification?: any;
   conditionRules?: ConditionRulesProps;
-  hyperlink?: Record<string, { linkType: string; linkAddress: string }>;
+  hyperlink?: Record<string, HyperlinkEntry | HyperlinkEntry[]>;
   dynamicArray_compute?: any;
   dynamicArray?: any[];
   frozen?: {
@@ -244,6 +246,10 @@ export type LinkCardProps = {
   originText: string;
   originType: string;
   originAddress: string;
+  /** Distinct links in this cell (rich text); view lists each with its own actions */
+  links?: HyperlinkEntry[];
+  /** When editing, index into `links` for multi-link cells (which URL is being edited) */
+  editingLinkIndex?: number | null;
   position: { cellLeft: number; cellBottom: number };
   isEditing: boolean;
   selectingCellRange?: boolean;
@@ -251,6 +257,11 @@ export type LinkCardProps = {
   applyToSelection?: boolean;
   /** Character offsets in the cell to restore selection before applying link on Insert */
   selectionOffsets?: { start: number; end: number };
+  /**
+   * Normalized flat offset where typed / appended link text should go (selection focus),
+   * especially when display text is edited and inserted. Falls back to selection end if unset.
+   */
+  linkInsertOffset?: number;
 };
 
 export type RangeDialogProps = {
@@ -346,12 +357,26 @@ export type GlobalCache = {
       cursorMoveStartPosition: { x: number; y: number } | undefined;
     };
   };
+  /** Element to restore focus to after closing Quick Search (not stored in Immer context). */
+  quickSearchReturnFocus?: Element | null;
   linkCard?: {
     mouseEnter?: boolean;
     rangeSelectionModal?: {
       initialPosition: Rect | undefined;
       cursorMoveStartPosition: { x: number; y: number } | undefined;
     };
+  };
+  /**
+   * Last caret/selection in the cell editor while editing, captured on selectionchange
+   * and on toolbar link mousedown so handleLink still knows insert offsets after focus moves.
+   */
+  linkEditorOpenSnapshot?: {
+    sheetId: string;
+    r: number;
+    c: number;
+    focusOffset: number;
+    range: { start: number; end: number } | null;
+    selectedPlain: string;
   };
   dragCellStartPos?: {
     x: number;

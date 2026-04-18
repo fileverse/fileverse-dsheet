@@ -59,7 +59,6 @@ export {
   functionStrChange,
   setFormulaEditorOwner,
   getAllFunctionGroup,
-  execFunctionGroup,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
 
@@ -67,7 +66,14 @@ export {
 export { initFreeze } from './freeze';
 
 // inline-string
-export { isInlineStringCell, getInlineStringNoStyle } from './inline-string';
+export {
+  isInlineStringCell,
+  getInlineStringNoStyle,
+  applyLinkToSelection,
+  getHyperlinksFromInlineSegments,
+  getUniformLinkFromWindowSelectionInEditor,
+  getHyperlinkAtCaretInContentEditable,
+} from './inline-string';
 
 // location
 export {
@@ -137,6 +143,7 @@ export {
   handleTextSize,
   handleSum,
   handleLink,
+  captureLinkEditorOpenSnapshot,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   updateFormatCell,
@@ -196,14 +203,45 @@ export { sortSelection, spillSortResult } from './sort';
 // screenshot — handleScreenShot already exported from toolbar
 
 // searchReplace
-export { searchAll, searchNext, replace, replaceAll } from './searchReplace';
+export {
+  searchAll,
+  searchNext,
+  replace,
+  replaceAll,
+  getSearchIndexArr,
+  getSearchIndexArrAsync,
+  getFindRangeOnCurrentSheet,
+  getQuickSearchIndexArr,
+  getQuickSearchHiddenConfig,
+  expandCellRectForMerge,
+  shouldQuickSearchUseAsync,
+  runQuickSearchIndexArrAsync,
+  QUICK_SEARCH_ASYNC_ROW_THRESHOLD,
+  parseRangeText,
+} from './searchReplace';
+export type {
+  CheckModes,
+  HyperlinkMap,
+  FindSearchScope,
+  SearchHiddenConfig,
+  SearchNextResult,
+  ReplaceAllResult,
+} from './searchReplace';
 
 // hyperlink
 export {
   getCellRowColumn,
   getCellHyperlink,
+  getCellHyperlinks,
+  getHyperlinkDisplayTextInCell,
+  getInlineLinkPlainRange,
+  getUniformLinkCoveringPlainRange,
+  getUniformLinkAtPlainOffset,
   saveHyperlink,
   removeHyperlink,
+  removeHyperlinkForLink,
+  updateHyperlinkForLink,
+  syncLinkCardAfterHyperlinkChange,
   showLinkCard,
   goToLink,
   isLinkValid,
@@ -298,6 +336,7 @@ export {
   iscelldata,
   getcellrange,
   execfunction,
+  execFunctionGroup,
   insertUpdateFunctionGroup,
   functionCopy,
 } from './formula';

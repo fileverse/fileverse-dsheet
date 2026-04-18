@@ -19,6 +19,7 @@ import {
   showHideAllComments,
   autoSelectionFormula,
   handleSum,
+  captureLinkEditorOpenSnapshot,
   locale,
   handleMerge,
   handleBorder,
@@ -782,14 +783,7 @@ const Toolbar: React.FC<{
               if (curr.t === 'd') {
                 currentFmt = hasTime ? 'Date time' : 'Date';
               } else if (curr.t === 'g' && curr.fa === 'General') {
-                // General lives at index 0 ("Auto"); last item is "more formats", not Automatic.
-                currentFmt = defaultFormat[0].text;
-              } else if (format != null) {
-                // Exact preset match (Currency, Accounting, Number, etc.) before heuristics:
-                // currency/accounting patterns contain "#,##0" and would be mislabeled "Number".
-                currentFmt = format.text;
-              } else if (is_date(curr.fa)) {
-                currentFmt = hasTime ? 'Date time' : 'Date';
+                currentFmt = defaultFormat[defaultFormat.length - 1].text;
               } else if (
                 curr.t === 'n' ||
                 curr.fa.includes('#,##0') ||
@@ -797,8 +791,12 @@ const Toolbar: React.FC<{
                 curr.fa === '0.00'
               ) {
                 currentFmt = 'Number';
+              } else if (is_date(curr.fa)) {
+                currentFmt = hasTime ? 'Date time' : 'Date';
+              } else if (format != null) {
+                currentFmt = format.text;
               } else {
-                currentFmt = defaultFormat[0].text;
+                currentFmt = defaultFormat[defaultFormat.length - 1].text;
               }
             }
           }
@@ -2019,6 +2017,18 @@ const Toolbar: React.FC<{
                 context.luckysheetCellUpdate.length > 0
               }
               selected={toolbarItemSelectedFunc(name)?.(cell)}
+              onMouseDown={(e) => {
+                if (name === 'link') {
+                  // Keep in-cell caret/selection when opening link from toolbar;
+                  // otherwise browser focuses toolbar button on mousedown.
+                  e.preventDefault();
+                  captureLinkEditorOpenSnapshot(
+                    context,
+                    refs.cellInput.current ?? undefined,
+                    refs.globalCache,
+                  );
+                }
+              }}
               onClick={() =>
                 setContext((draftCtx) => {
                   const isDecimalAction =
@@ -2064,6 +2074,7 @@ const Toolbar: React.FC<{
         filter,
         splitText,
         findAndReplace,
+        context,
         context.luckysheet_select_save,
         context.defaultFontSize,
         context.allowEdit,

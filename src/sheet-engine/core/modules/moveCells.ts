@@ -15,7 +15,7 @@ import { getBorderInfoCompute } from "./border";
 import { normalizeSelection } from "./selection";
 import { getSheetIndex, isAllowEdit } from "../utils";
 import { cfSplitRange } from "./conditionalFormat";
-import { GlobalCache } from "../types";
+import { GlobalCache, HyperlinkEntry } from "../types";
 import { jfrefreshgrid } from "./refresh";
 import { CFSplitRange } from "./ConditionFormat";
 import { functionMoveReference } from "./formula";
@@ -330,13 +330,7 @@ export function onCellsMoveEnd(
     type?: "update" | "delete";
   }[] = [];
 
-  const hyperLinkList: Record<
-    string,
-    {
-      linkType: string;
-      linkAddress: string;
-    }
-  > = {};
+  const hyperLinkList: Record<string, HyperlinkEntry | HyperlinkEntry[]> = {};
   // 删除原本位置的数据
   // const RowlChange = null;
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
