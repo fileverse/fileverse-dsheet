@@ -46,6 +46,34 @@ const operatorjson: Record<string, number> = {};
 for (let i = 0; i < operatorArr.length; i += 1) {
   operatorjson[operatorArr[i].toString()] = 1;
 }
+function formulaDebugPreview(value: any) {
+  if (Array.isArray(value)) {
+    return {
+      type: "array",
+      rows: value.length,
+      cols: Array.isArray(value[0]) ? value[0].length : undefined,
+    };
+  }
+  if (value instanceof Date) {
+    return { type: "date", value: value.toISOString() };
+  }
+  if (value && typeof value === "object") {
+    return { type: "object", keys: Object.keys(value).slice(0, 8) };
+  }
+  return { type: typeof value, value };
+}
+
+function formulaDebugStable(value: any) {
+  const preview = formulaDebugPreview(value);
+  if (preview.type === "object" || preview.type === "array") {
+    try {
+      return { ...preview, json: JSON.stringify(value) };
+    } catch (e) {
+      return { ...preview, json: "[unserializable]" };
+    }
+  }
+  return preview;
+}
 const simpleSheetName = "[A-Za-z0-9_\u00C0-\u02AF]+";
 const quotedSheetName = "'(?:(?!').|'')*'";
 const sheetNameRegexp = `(${simpleSheetName}|${quotedSheetName})!`;
@@ -146,6 +174,14 @@ export class FormulaCache {
           `${cellCoord.row.index}_${cellCoord.column.index}_${id}`
           ] || flowdata?.[cellCoord.row.index]?.[cellCoord.column.index];
         const v = that.tryGetCellAsNumber(cell);
+        console.log("[formula-debug] callCellValue -> parser", {
+          sheetId: id,
+          row: cellCoord.row.index,
+          col: cellCoord.column.index,
+          cellCtType: typeof cell?.ct,
+          cellVType: typeof cell?.v,
+          resolved: formulaDebugStable(v),
+        });
         done(v);
       }
     );
@@ -226,6 +262,18 @@ export class FormulaCache {
         }
 
         if (fragment) {
+          console.log("[formula-debug] callRangeValue -> parser", {
+            sheetId: id,
+            start: `${startCellCoord.row.index},${startCellCoord.column.index}`,
+            end: `${endCellCoord.row.index},${endCellCoord.column.index}`,
+            rangeShape: {
+              rows: fragment.length,
+              cols: Array.isArray(fragment[0]) ? fragment[0].length : 0,
+            },
+            firstValue: formulaDebugStable(fragment?.[0]?.[0]),
+            cryptoDenomination,
+            cryptoDecimal,
+          });
           done(fragment, cryptoDenomination, cryptoDecimal);
         }
       }
@@ -233,6 +281,23 @@ export class FormulaCache {
   }
 
   tryGetCellAsNumber(cell: Cell) {
+    const rawV = cell?.v;
+    const normalizedV =
+      typeof rawV === "string" ? rawV.trim().replace(/,/g, "") : rawV;
+    const isLongIntegerString =
+      typeof normalizedV === "string" && /^-?\d{16,}$/.test(normalizedV);
+    const isDecimalString =
+      typeof normalizedV === "string" && /^-?\d+\.\d+$/.test(normalizedV);
+    // Keep 16+ digit integer literals as strings to avoid IEEE-754 rounding
+    // when formulas like XLOOKUP/VLOOKUP return source values.
+    if (isLongIntegerString) {
+      return normalizedV;
+    }
+    // Decimal literals are treated as numbers for formula math.
+    if (isDecimalString) {
+      return Number(normalizedV);
+    }
+
     // FLV crypto denomination --START--
     const isCryptoDeno =
       typeof cell?.m === "string"
@@ -1244,14 +1309,30 @@ export function execfunction(
   */
 
   ctx.formulaCache.parser.context = ctx;
-  const parsedResponse = ctx.formulaCache.parser.parse(txt.substring(1), {
+  const parserExpression = txt.substring(1);
+  const parserOptions = {
     sheetId: id || ctx.currentSheetId,
     row: r,
     column: c,
+  };
+  console.log("[formula-debug] parse input", {
+    expr: parserExpression,
+    options: parserOptions,
+    sourceCell: `${r},${c}`,
   });
+  const parsedResponse = ctx.formulaCache.parser.parse(
+    parserExpression,
+    parserOptions
+  );
 
   const { error: formulaError } = parsedResponse;
   let { result } = parsedResponse;
+  console.log("[formula-debug] parse output", {
+    sourceCell: `${r},${c}`,
+    expr: parserExpression,
+    error: formulaError ? String(formulaError) : null,
+    result: formulaDebugStable(result),
+  });
 
   // https://stackoverflow.com/a/643827/8200626
   // https://github.com/ruilisi/fortune-sheet/issues/551
@@ -1272,8 +1353,7 @@ export function execfunction(
         (typeof result === "number" || typeof result === "string")
       ) {
         const resultStr = Number(result)
-          .toFixed(ctx.formulaCache.parser.cryptoDecimals)
-          .toLowerCase();
+          .toFixed(ctx.formulaCache.parser.cryptoDecimals);
         finalResult = `${resultStr} ${ctx.formulaCache.parser.cryptoDenomination}`;
       }
       // eslint-disable-next-line no-use-before-define
@@ -1314,10 +1394,15 @@ export function execfunction(
     (typeof result === "number" || typeof result === "string")
   ) {
     const resultStr = Number(result)
-      .toFixed(ctx.formulaCache.parser.cryptoDecimals)
-      .toLowerCase();
+      .toFixed(ctx.formulaCache.parser.cryptoDecimals);
     finalResult = `${resultStr} ${ctx.formulaCache.parser.cryptoDenomination}`;
   }
+  console.log("[formula-debug] final output", {
+    sourceCell: `${r},${c}`,
+    expr: parserExpression,
+    isError: !_.isNil(formulaError),
+    finalResult: formulaDebugStable(finalResult),
+  });
   const isError = !_.isNil(formulaError);
   const detectedErrorFromValue = detectErrorFromValue(finalResult?.toString());
   if (isError || detectedErrorFromValue) {

@@ -13,10 +13,12 @@ import {
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
 import {
+  formatScientificForComputedNumber,
   formatMForNumericCellAvoidingGsRules,
   genarate,
   isSixteenPlusDigitIntegerString,
   refreshGeneralNumericDisplay,
+  shouldUseScientificForComputedNumber,
   update,
 } from "./format";
 import { clearCellError } from "../api";
@@ -120,8 +122,10 @@ export function normalizedCellAttr(
     // Spreadsheet-style default alignment:
     // - text: left
     // - number/date-time-like numeric cells: right
+    const isExplicitPlainText = (cell as Cell)?.ct?.fa === "@";
     const isNumericCell =
       !!cell &&
+      !isExplicitPlainText &&
       ((cell as Cell).ct?.t === "n" ||
         typeof (cell as Cell).v === "number" ||
         isRealNum((cell as Cell).v) ||
@@ -365,9 +369,9 @@ export function setCellValue(
   let commaPresent = false;
   if (vupdate && typeof vupdate === "string" && vupdate.includes(",")) {
     commaPresent = vupdate.includes(",");
-    const removeCommasValidated = (str: string) =>
-      /^[\d,.]+$/.test(str) ? str?.replace(/,/g, "") : str;
-    vupdate = removeCommasValidated(vupdate);
+    // Keep user-entered commas intact.
+    // - Valid thousand-grouped inputs are parsed downstream by `genarate`.
+    // - Invalid/random comma placement should remain text, not coerced to number.
   }
 
   const cellObj = _.isPlainObject(cell) ? (cell as Cell) : null;
@@ -471,18 +475,19 @@ export function setCellValue(
       }
     } else if (
       !_.isNil(cell.f) &&
-      isRealNum(vupdate) &&
+      typeof vupdate === "number" &&
+      Number.isFinite(vupdate) &&
       !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-        vupdate
+        vupdateStr
       )
     ) {
-      cell.v = parseFloat(vupdate);
+      cell.v = vupdate;
       if (_.isNil(cell.ct)) {
         cell.ct = { fa: "General", t: "g" };
       }
 
       // if output is number fetch fa from referenced cells
-      const isDigit = /^\d+$/.test(vupdate);
+      const isDigit = /^\d+$/.test(vupdateStr);
       if (isDigit) {
         const flowdata = getFlowdata(ctx);
         const args = getContentInParentheses(cell?.f)?.split(",");
@@ -496,7 +501,9 @@ export function setCellValue(
       if (cell.v === Infinity || cell.v === -Infinity) {
         cell.m = cell.v.toString();
       } else {
-        if (cell.v.toString().toLowerCase().indexOf("e") > -1) {
+        if (shouldUseScientificForComputedNumber(cell.v as number)) {
+          cell.m = formatScientificForComputedNumber(cell.v as number);
+        } else if (cell.v.toString().toLowerCase().indexOf("e") > -1) {
           cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
         } else {
           const v_p = Math.round(cell.v * 1000000000) / 1000000000;
