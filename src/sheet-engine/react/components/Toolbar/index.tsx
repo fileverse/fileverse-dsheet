@@ -41,6 +41,7 @@ import {
   api,
   getSheetIndex,
   is_date,
+  isTypedCurrencyDisplayFormat,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import {
@@ -789,8 +790,21 @@ const Toolbar: React.FC<{
                 // Exact preset match (Currency, Accounting, Number, etc.) before heuristics:
                 // currency/accounting patterns contain "#,##0" and would be mislabeled "Number".
                 currentFmt = format.text;
+              } else if (curr.fa.includes('%')) {
+                // Freshly typed percentages use the implicit "0%" mask from auto-detect.
+                // Keep these under Auto so behavior matches other direct typed values.
+                // Explicit percent presets (e.g. "#0.00%") should still show Percent.
+                currentFmt = curr.fa === '0%' ? defaultFormat[0].text : 'Percent';
               } else if (is_date(curr.fa)) {
                 currentFmt = hasTime ? 'Date time' : 'Date';
+              } else if (
+                isTypedCurrencyDisplayFormat(
+                  curr.fa,
+                  locale(context).currencyDetail,
+                )
+              ) {
+                // Typed $123 / BTC… keeps currency display via `fa` but format menu shows Auto (like plain numbers).
+                currentFmt = defaultFormat[0].text;
               } else if (
                 curr.t === 'n' ||
                 curr.fa.includes('#,##0') ||

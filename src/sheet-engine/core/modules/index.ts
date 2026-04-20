@@ -28,7 +28,13 @@ export { default as clipboard } from './clipboard';
 export { moveToEnd, getRangeRectsByCharacterOffset } from './cursor';
 
 // format
-export { update, is_date, valueShowEs } from './format';
+export {
+  update,
+  is_date,
+  valueShowEs,
+  isTypedCurrencyDisplayFormat,
+  isCurrencyLikeNumberFormat,
+} from './format';
 
 // formula
 export {

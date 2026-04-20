@@ -79,6 +79,8 @@ export {
   update,
   is_date,
   valueShowEs,
+  isTypedCurrencyDisplayFormat,
+  isCurrencyLikeNumberFormat,
   // formula
   FormulaCache,
   groupValuesRefresh,

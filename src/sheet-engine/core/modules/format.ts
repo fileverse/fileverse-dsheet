@@ -386,6 +386,142 @@ export function genarate(value: string | number | boolean) {
   return [m, ct, v];
 }
 
+/** Crypto tickers for typed prefix (e.g. BTC123) — keep aligned with toolbar CRYPTO_OPTIONS. */
+export const TYPED_CRYPTO_CURRENCY_PREFIXES = ['BTC', 'ETH', 'SOL'] as const;
+
+function getSortedFiatPrefixSymbols(currencyDetail: unknown): string[] {
+  const fiatArr = Array.isArray(currencyDetail)
+    ? currencyDetail.filter((c: { pos?: string }) => c && c.pos !== 'after')
+    : [];
+  const indexByValue = new Map<string, number>();
+  fiatArr.forEach((c: { value?: string }, i: number) => {
+    if (c?.value && !indexByValue.has(c.value)) indexByValue.set(c.value, i);
+  });
+  return [
+    ...new Set(
+      fiatArr
+        .map((c: { value?: string }) => c.value)
+        .filter((v): v is string => typeof v === 'string' && v.length > 0),
+    ),
+  ].sort((a: string, b: string) =>
+    b.length - a.length ||
+    (indexByValue.get(a) ?? 0) - (indexByValue.get(b) ?? 0),
+  );
+}
+
+/**
+ * True when `fa` matches formats produced by typed currency/crypto prefix (or the same shape).
+ * Used so the format dropdown shows "Currency" instead of mislabeling `#,##0` masks as "Number".
+ */
+export function isTypedCurrencyDisplayFormat(
+  fa: string | undefined,
+  currencyDetail: unknown,
+): boolean {
+  if (!fa) return false;
+  for (const c of TYPED_CRYPTO_CURRENCY_PREFIXES) {
+    if (fa.includes(`"${c}"`)) return true;
+  }
+  return getSortedFiatPrefixSymbols(currencyDetail).some(
+    (sym) => fa.startsWith(sym) && /#,##0/.test(fa),
+  );
+}
+
+/**
+ * True for currency / accounting / crypto number formats where we should keep `fa` when the user
+ * types plain text, so a later numeric entry still formats like Google Sheets.
+ */
+export function isCurrencyLikeNumberFormat(
+  fa: string | undefined,
+  currencyDetail: unknown,
+): boolean {
+  if (!fa || fa === 'General' || fa === '@') return false;
+  if (isTypedCurrencyDisplayFormat(fa, currencyDetail)) return true;
+  // Accounting: _("$"* #,##0...
+  if (fa.includes('_("') && /#,?#+0/.test(fa)) return true;
+  // Toolbar Currency / fiat with symbol + grouping (not plain #,##0 number preset)
+  if (/#,##0/.test(fa) && !fa.includes('%')) {
+    const syms = getSortedFiatPrefixSymbols(currencyDetail);
+    if (syms.some((sym) => fa.includes(sym))) return true;
+  }
+  return false;
+}
+
+/**
+ * If the user types a known currency/crypto prefix immediately followed by a parseable number
+ * (e.g. `$1,234.5`, `€100`, `BTC1.5`), return numeric cell value + matching currency format.
+ * Uses locale `currencyDetail` (fiat symbols); object-shaped locales yield no fiat prefixes.
+ */
+export function parseCurrencyPrefixedInput(
+  raw: string,
+  currencyDetail: unknown,
+): [string, { fa: string; t: string }, number] | null {
+  if (typeof raw !== 'string' || raw.trim() === '') return null;
+  let s = raw.trim();
+  if (s.startsWith('=') || s.startsWith("'")) return null;
+
+  let sign = 1;
+  if (s.startsWith('-')) {
+    sign = -1;
+    s = s.slice(1).trim();
+  } else if (s.startsWith('+')) {
+    s = s.slice(1).trim();
+  }
+  if (s === '') return null;
+
+  const fiatSymbols = getSortedFiatPrefixSymbols(currencyDetail);
+
+  const cryptoSorted = [...TYPED_CRYPTO_CURRENCY_PREFIXES].sort(
+    (a, b) => b.length - a.length,
+  );
+
+  const entries: { sym: string; kind: 'crypto' | 'fiat' }[] = [
+    ...cryptoSorted.map((sym) => ({ sym, kind: 'crypto' as const })),
+    ...fiatSymbols.map((sym) => ({ sym, kind: 'fiat' as const })),
+  ].sort((a, b) => b.sym.length - a.sym.length);
+
+  for (const { sym, kind } of entries) {
+    if (!s.startsWith(sym)) continue;
+    const rest = s.slice(sym.length).trim();
+    if (rest === '') continue;
+    if (rest.includes('%')) continue;
+
+    const g = genarate(rest);
+    if (!g) continue;
+    const [, ct] = g;
+    if (ct.t !== 'n' || String(ct.fa || '').includes('%')) continue;
+    const vNum = g[2];
+    if (typeof vNum !== 'number' || !Number.isFinite(vNum)) continue;
+
+    const finalV = sign * vNum;
+    if (!Number.isFinite(finalV)) continue;
+
+    // Integer-style currency (no fractional places); values round in display via SSF.
+    // No space before `#,##0` so masks align with locale Currency presets and toolbar labeling.
+    if (kind === 'crypto') {
+      const fa = `0 "${sym}"`;
+      const ctOut = { fa, t: 'n' };
+      const m = SSF.format(fa, finalV);
+      return [m, ctOut, finalV];
+    }
+    const fa = `${sym}#,##0`;
+    const ctOut = { fa, t: 'n' };
+    const m = SSF.format(fa, finalV);
+    return [m, ctOut, finalV];
+  }
+
+  return null;
+}
+
+export function genarateOrCurrencyPrefixed(
+  vupdateStr: string,
+  vupdate: any,
+  currencyDetail: unknown,
+): ReturnType<typeof genarate> {
+  const cur = parseCurrencyPrefixedInput(vupdateStr, currencyDetail);
+  if (cur) return cur;
+  return genarate(vupdate);
+}
+
 export function update(fmt: string, v: any) {
   return SSF.format(fmt, v);
 }
