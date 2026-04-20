@@ -144,6 +144,7 @@ export {
   handleSum,
   handleLink,
   captureLinkEditorOpenSnapshot,
+  isHyperlinkCreationBlocked,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   updateFormatCell,

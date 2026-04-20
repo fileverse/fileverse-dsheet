@@ -378,6 +378,8 @@ export type GlobalCache = {
     range: { start: number; end: number } | null;
     selectedPlain: string;
   };
+  /** Injected by React: show modal when link insert is blocked (formula / = in editor). */
+  onHyperlinkInsertBlocked?: () => void;
   dragCellStartPos?: {
     x: number;
     y: number;

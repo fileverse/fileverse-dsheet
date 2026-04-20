@@ -41,6 +41,7 @@ import {
   api,
   getSheetIndex,
   is_date,
+  isHyperlinkCreationBlocked,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import {
@@ -477,6 +478,25 @@ const Toolbar: React.FC<{
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1480);
     const { showDialog, hideDialog } = useDialog();
     const { showAlert, hideAlert } = useAlert();
+
+    useEffect(() => {
+      const gc = refs.globalCache;
+      if (!gc) return undefined;
+      gc.onHyperlinkInsertBlocked = () => {
+        showDialog(
+          'Cannot create hyperlink. Cell may be non-editable or may contain a formula.',
+          'ok',
+          'There was a problem',
+          'OK',
+          undefined,
+          hideDialog,
+          hideDialog,
+        );
+      };
+      return () => {
+        delete gc.onHyperlinkInsertBlocked;
+      };
+    }, [refs, showDialog, hideDialog]);
     const firstSelection = context.luckysheet_select_save?.[0];
     const flowdata = getFlowdata(context);
     contextRef.current = context;
@@ -2006,6 +2026,12 @@ const Toolbar: React.FC<{
             />
           );
         }
+        const hyperlinkInsertBlocked =
+          name === 'link' &&
+          isHyperlinkCreationBlocked(
+            context,
+            refs.cellInput.current ?? undefined,
+          );
         return (
           <Tooltip text={tooltip} position="bottom">
             <Button
@@ -2013,8 +2039,13 @@ const Toolbar: React.FC<{
               tooltip={tooltip}
               key={name}
               selected={toolbarItemSelectedFunc(name)?.(cell)}
+              disabled={Boolean(hyperlinkInsertBlocked)}
               onMouseDown={(e) => {
                 if (name === 'link') {
+                  if (hyperlinkInsertBlocked) {
+                    e.preventDefault();
+                    return;
+                  }
                   // Keep in-cell caret/selection when opening link from toolbar;
                   // otherwise browser focuses toolbar button on mousedown.
                   e.preventDefault();
@@ -2025,15 +2056,19 @@ const Toolbar: React.FC<{
                   );
                 }
               }}
-              onClick={() =>
+              onClick={() => {
+                if (name === 'link' && hyperlinkInsertBlocked) {
+                  refs.globalCache?.onHyperlinkInsertBlocked?.();
+                  return;
+                }
                 setContext((draftCtx) => {
                   toolbarItemClickHandler(name)?.(
                     draftCtx,
                     refs.cellInput.current!,
                     refs.globalCache,
                   );
-                })
-              }
+                });
+              }}
             />
           </Tooltip>
         );

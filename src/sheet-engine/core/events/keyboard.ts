@@ -949,6 +949,9 @@ export async function handleGlobalKeyDown(
   }
   if ((e.metaKey || e.ctrlKey) && e.code === "KeyK") {
     handleLink(ctx, cellInput, cache);
+    e.preventDefault();
+    e.stopPropagation();
+    return;
   }
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === "Semicolon") {
     fillDate(ctx);

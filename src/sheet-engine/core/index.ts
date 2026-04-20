@@ -158,6 +158,7 @@ export {
   handleSum,
   handleLink,
   captureLinkEditorOpenSnapshot,
+  isHyperlinkCreationBlocked,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   handleScreenShot,

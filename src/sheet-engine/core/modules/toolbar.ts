@@ -20,6 +20,7 @@ import { datenum_local, genarate, is_date, update } from "./format";
 import {
   execfunction,
   execFunctionGroup,
+  getFormulaEditorOwner,
   israngeseleciton,
   rangeSetValue,
   setCaretPosition,
@@ -1713,6 +1714,54 @@ function normalizeCellPlainTextForEditor(s: string): string {
  * Records caret and selection offsets for the active cell editor into `cache`.
  * Call on toolbar link mousedown (before focus leaves the editor) and from selectionchange while editing.
  */
+/** Plain text from the active cell or formula-bar editor (when editing). */
+function getActiveEditPlainTextForHyperlink(
+  ctx: Context,
+  cellInput: HTMLDivElement | null | undefined
+): string {
+  const editing =
+    ctx.luckysheetCellUpdate?.length === 2 &&
+    ctx.luckysheetCellUpdate[0] != null &&
+    ctx.luckysheetCellUpdate[1] != null;
+  if (!editing) return "";
+  const owner = getFormulaEditorOwner(ctx);
+  if (owner === "fx") {
+    const el = document.getElementById(
+      "luckysheet-functionbox-cell"
+    ) as HTMLDivElement | null;
+    return el?.innerText ?? "";
+  }
+  return cellInput?.innerText ?? "";
+}
+
+/**
+ * Hyperlink insert is not supported for formula cells or when the user is entering a formula
+ * (cell / formula bar content starts with `=`).
+ */
+export function isHyperlinkCreationBlocked(
+  ctx: Context,
+  cellInput: HTMLDivElement | null | undefined
+): boolean {
+  const selection = ctx.luckysheet_select_save?.[0];
+  const flowdata = getFlowdata(ctx);
+  if (flowdata == null || selection == null) return false;
+
+  const r = selection.row[0];
+  const c = selection.column[0];
+  const cell = flowdata[r]?.[c];
+  const hasFormula =
+    cell?.f != null && String(cell.f).trim() !== "";
+
+  if (hasFormula) return true;
+
+  const editText = getActiveEditPlainTextForHyperlink(ctx, cellInput);
+  if (editText.length > 0 && editText.trimStart().startsWith("=")) {
+    return true;
+  }
+
+  return false;
+}
+
 export function captureLinkEditorOpenSnapshot(
   ctx: Context,
   cellInput: HTMLDivElement | null | undefined,
@@ -1757,6 +1806,10 @@ export function handleLink(
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
+  if (isHyperlinkCreationBlocked(ctx, cellInput)) {
+    cache?.onHyperlinkInsertBlocked?.();
+    return;
+  }
   const selection = ctx.luckysheet_select_save?.[0];
   const flowdata = getFlowdata(ctx);
   if (flowdata == null || selection == null) return;

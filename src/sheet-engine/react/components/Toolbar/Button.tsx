@@ -32,11 +32,20 @@ const Button: React.FC<Props> = ({
         id={id}
         className={`fortune-toolbar-button fortune-toolbar-item fortune-toolbar-button__cta fortune-toolbar-button--${iconIdClass}`}
         data-icon-id={iconId}
-        onClick={onClick}
+        onClick={(e) => {
+          if (disabled) return;
+          onClick?.(e);
+        }}
         onMouseDown={onMouseDown}
         tabIndex={0}
         role="button"
-        style={selected ? { backgroundColor: '#FFDF0A' } : style}
+        style={
+          selected
+            ? { backgroundColor: '#FFDF0A' }
+            : disabled
+              ? { ...style, pointerEvents: 'none', opacity: 0.45 }
+              : style
+        }
         data-testid={`toolbar-cta-${id ?? iconId}`}
       >
         <span
