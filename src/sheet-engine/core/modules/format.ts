@@ -8,6 +8,55 @@ import { getCellValue } from './cell';
 
 const base1904 = new Date(1900, 2, 1, 0, 0, 0);
 
+/** Below this absolute value, never use automatic scientific (Sheets-like). */
+export const GS_PLAIN_MAX_ABS = 999999999999997;
+/** Smallest 16-digit positive integer — use plain / text, not E-notation. */
+export const GS_SIXTEEN_DIGIT_MIN_ABS = 1e15;
+
+/** Scientific only in (GS_PLAIN_MAX_ABS, 1e15) — 999…997 itself stays plain. */
+export function gsAllowsScientificMagnitude(av: number): boolean {
+  return (
+    Number.isFinite(av) &&
+    av > GS_PLAIN_MAX_ABS &&
+    av < GS_SIXTEEN_DIGIT_MIN_ABS
+  );
+}
+
+/** Integer string (optional `-`, optional `,`) with ≥16 digits — store literally under General/Auto. */
+export function isSixteenPlusDigitIntegerString(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const t = value.trim().replace(/,/g, "");
+  if (!/^-?\d+$/.test(t)) return false;
+  const core = t.startsWith("-") ? t.slice(1) : t;
+  return core.length >= 16;
+}
+
+/**
+ * Display string for a JS number when `toString()` may use `e` notation.
+ * Applies Sheets-like rules: no E below GS_PLAIN_MAX_ABS or at/above 16-digit scale.
+ */
+export function formatMForNumericCellAvoidingGsRules(v: number): string {
+  const av = Math.abs(v);
+  if (v === Infinity || v === -Infinity) return String(v);
+  if (gsAllowsScientificMagnitude(av)) {
+    const s = v.toString();
+    let len = 0;
+    if (s.toLowerCase().includes("e")) {
+      const mant = s.split(/[eE]/)[0];
+      if (mant.includes(".")) {
+        len = Math.min(5, (mant.split(".")[1] || "").length);
+      }
+    } else if (s.includes(".")) {
+      len = Math.min(5, (s.split(".")[1] || "").split(/[eE]/)[0].length);
+    }
+    return v.toExponential(len);
+  }
+  if (av >= GS_SIXTEEN_DIGIT_MIN_ABS) {
+    return v.toLocaleString("en-US", { maximumFractionDigits: 50, useGrouping: false });
+  }
+  return v.toLocaleString("en-US", { maximumFractionDigits: 21, useGrouping: false });
+}
+
 export function datenum_local(v: Date, date1904?: number) {
   let epoch = Date.UTC(
     v.getFullYear(),
@@ -71,11 +120,16 @@ export function genarate(value: string | number | boolean) {
   ) {
     m = value.toString();
     ct = { fa: '@', t: 's' };
+  } else if (isSixteenPlusDigitIntegerString(value)) {
+    const raw = (value as string).trim().replace(/,/g, '');
+    m = raw;
+    v = raw;
+    ct = { fa: 'General', t: 'g' };
   } else if (
     isRealNum(value) &&
     Math.abs(parseFloat(value as string)) > 0 &&
-    (Math.abs(parseFloat(value as string)) >= 1e11 ||
-      Math.abs(parseFloat(value as string)) < 1e-9)
+    (Math.abs(parseFloat(value as string)) < 1e-9 ||
+      gsAllowsScientificMagnitude(Math.abs(parseFloat(value as string))))
   ) {
     v = parseFloat(value as string);
     const str = v.toExponential();
@@ -210,9 +264,15 @@ export function genarate(value: string | number | boolean) {
       ct = { fa: '@', t: 's' };
     }
   } else if (isRealNum(value)) {
-    m = parseFloat(value as string).toString();
+    const pv = parseFloat(value as string);
+    const av = Math.abs(pv);
+    v = pv;
     ct = { fa: 'General', t: 'n' };
-    v = parseFloat(value as string);
+    if (av >= GS_SIXTEEN_DIGIT_MIN_ABS) {
+      m = pv.toLocaleString('en-US', { maximumFractionDigits: 50, useGrouping: false });
+    } else {
+      m = pv.toString();
+    }
   } else if (typeof value === 'string') {
     const df = detectDateFormat(value.toString());
     if (df) {
@@ -287,6 +347,14 @@ export function refreshGeneralNumericDisplay(cell: Cell): void {
   if (v === Infinity || v === -Infinity) {
     cell.m = String(v);
     return;
+  }
+  // Long integer strings: keep exact digits (IEEE doubles cannot represent them).
+  if (typeof v === "string" && /^-?\d+$/.test(v)) {
+    const core = v.startsWith("-") ? v.slice(1) : v;
+    if (core.length >= 16) {
+      cell.m = v;
+      return;
+    }
   }
   if (!isRealNum(v)) return;
   const num = Number(v);

@@ -12,7 +12,13 @@ import {
 } from "../utils";
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
-import { genarate, refreshGeneralNumericDisplay, update } from "./format";
+import {
+  formatMForNumericCellAvoidingGsRules,
+  genarate,
+  isSixteenPlusDigitIntegerString,
+  refreshGeneralNumericDisplay,
+  update,
+} from "./format";
 import { clearCellError } from "../api";
 import {
   delFunctionGroup,
@@ -452,6 +458,18 @@ export function setCellValue(
     cell.v = vupdate;
   } else {
     if (
+      isSixteenPlusDigitIntegerString(vupdateStr) &&
+      _.isNil(cell.f)
+    ) {
+      const raw = vupdateStr.trim().replace(/,/g, "");
+      cell.m = raw;
+      cell.v = raw;
+      if (cell.ct?.fa === "@") {
+        cell.ct = { fa: "@", t: "s" };
+      } else {
+        cell.ct = { fa: "General", t: "g" };
+      }
+    } else if (
       !_.isNil(cell.f) &&
       isRealNum(vupdate) &&
       !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
@@ -478,17 +496,8 @@ export function setCellValue(
       if (cell.v === Infinity || cell.v === -Infinity) {
         cell.m = cell.v.toString();
       } else {
-        if (cell.v.toString().indexOf("e") > -1) {
-          let len;
-          if (cell.v.toString().split(".").length === 1) {
-            len = 0;
-          } else {
-            len = cell.v.toString().split(".")[1].split("e")[0].length;
-          }
-          if (len > 5) {
-            len = 5;
-          }
-          cell.m = cell.v.toExponential(len).toString();
+        if (cell.v.toString().toLowerCase().indexOf("e") > -1) {
+          cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
         } else {
           const v_p = Math.round(cell.v * 1000000000) / 1000000000;
           if (_.isNil(cell.ct)) {
