@@ -58,6 +58,8 @@ import {
   setCursorPosition,
   buildFormulaSuggestionText,
   shouldShowFormulaFunctionList,
+  isStrictFormulaEditorText,
+  isFormulaCompleteAtCaret,
 } from '../SheetOverlay/helper';
 import { isFormulaSegmentBoundaryKey } from '../SheetOverlay/formula-segment-boundary';
 
@@ -859,6 +861,21 @@ const FxEditor: React.FC = () => {
       shouldShowFormulaFunctionList(refs.fxInput?.current ?? null),
     );
 
+    const isStrictFormula = isStrictFormulaEditorText(refs.fxInput.current);
+    if (!isStrictFormula) {
+      setContext((draftCtx) => {
+        if (draftCtx.functionCandidates.length > 0) {
+          draftCtx.functionCandidates = [];
+        }
+        if (draftCtx.defaultCandidates.length > 0) {
+          draftCtx.defaultCandidates = [];
+        }
+        if (draftCtx.functionHint) {
+          draftCtx.functionHint = '';
+        }
+      });
+    }
+
     const currentCommaCount = countCommasBeforeCursor(refs.fxInput?.current!);
     setCommaCount(currentCommaCount);
     const e = lastKeyDownEventRef.current;
@@ -1164,14 +1181,17 @@ const FxEditor: React.FC = () => {
                 )}
 
                 <div className="fx-hint">
-                  {showFormulaHint && fn && !showSearchHint && (
-                    <FormulaHint
-                      handleShowFormulaHint={handleShowFormulaHint}
-                      showFormulaHint={showFormulaHint}
-                      commaCount={commaCount}
-                      functionName={functionName}
-                    />
-                  )}
+                  {showFormulaHint &&
+                    fn &&
+                    !showSearchHint &&
+                    !isFormulaCompleteAtCaret(refs.fxInput.current) && (
+                      <FormulaHint
+                        handleShowFormulaHint={handleShowFormulaHint}
+                        showFormulaHint={showFormulaHint}
+                        commaCount={commaCount}
+                        functionName={functionName}
+                      />
+                    )}
                   {!showFormulaHint && fn && !showSearchHint && (
                     <Tooltip
                       text="Turn on formula suggestions (F10)"

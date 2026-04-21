@@ -70,6 +70,8 @@ import {
   isLetterNumberPattern,
   countCommasBeforeCursor,
   shouldShowFormulaFunctionList,
+  isStrictFormulaEditorText,
+  isFormulaCompleteAtCaret,
   isEditorUndoRedoKeyEvent,
 } from './helper';
 import { isFormulaSegmentBoundaryKey } from './formula-segment-boundary';
@@ -1838,11 +1840,26 @@ const InputBox: React.FC = () => {
       handleHideShowHint();
 
       const editorText = inputRef.current?.innerText?.trim() ?? '';
-      setCellEditorIsFormula(editorText.startsWith('='));
+      const isStrictFormula = isStrictFormulaEditorText(inputRef.current);
+      setCellEditorIsFormula(isStrictFormula);
 
       setShowSearchHint(
         shouldShowFormulaFunctionList(inputRef?.current ?? null),
       );
+
+      if (!isStrictFormula) {
+        setContext((draftCtx) => {
+          if (draftCtx.functionCandidates.length > 0) {
+            draftCtx.functionCandidates = [];
+          }
+          if (draftCtx.defaultCandidates.length > 0) {
+            draftCtx.defaultCandidates = [];
+          }
+          if (draftCtx.functionHint) {
+            draftCtx.functionHint = '';
+          }
+        });
+      }
 
       if (!isComposingRef.current) {
         const currentCommaCount = countCommasBeforeCursor(inputRef?.current!);
@@ -2572,14 +2589,17 @@ const InputBox: React.FC = () => {
               />
             )}
             <div className="cell-hint">
-              {showFormulaHint && fn && !showSearchHint && (
-                <FormulaHint
-                  handleShowFormulaHint={handleShowFormulaHint}
-                  showFormulaHint={showFormulaHint}
-                  commaCount={commaCount}
-                  functionName={functionName}
-                />
-              )}
+              {showFormulaHint &&
+                fn &&
+                !showSearchHint &&
+                !isFormulaCompleteAtCaret(inputRef.current) && (
+                  <FormulaHint
+                    handleShowFormulaHint={handleShowFormulaHint}
+                    showFormulaHint={showFormulaHint}
+                    commaCount={commaCount}
+                    functionName={functionName}
+                  />
+                )}
               {!showFormulaHint && fn && !showSearchHint && (
                 <Tooltip
                   text="Turn on formula suggestions (F10)"

@@ -205,21 +205,94 @@ export function isLetterNumberPattern(str: string): boolean {
   return regex.test(str);
 }
 
+function normalizeEditorTextForFormula(s: string): string {
+  // Keep string length stable for caret math where possible.
+  // - NBSP behaves like space in editors; normalize to plain space.
+  // - Strip zero-width spaces that can appear around spans.
+  return (s || '').replace(/\u00a0/g, ' ').replace(/\u200b/g, '');
+}
+
+function getNormalizedTextAndCaret(editor: HTMLDivElement): {
+  text: string;
+  beforeCaret: string;
+  caret: number;
+} {
+  const raw = editor.innerText ?? '';
+  const caretRaw = getCursorPosition(editor);
+  const beforeRaw = raw.slice(0, Math.max(0, Math.min(caretRaw, raw.length)));
+  const text = normalizeEditorTextForFormula(raw);
+  const beforeCaret = normalizeEditorTextForFormula(beforeRaw);
+  return { text, beforeCaret, caret: beforeCaret.length };
+}
+
+export function isStrictFormulaEditorText(editor: HTMLDivElement | null): boolean {
+  if (!editor) return false;
+  const raw = editor.innerText ?? '';
+  const text = normalizeEditorTextForFormula(raw);
+  return text[0] === '=';
+}
+
 /** Same rule as InputBox/Fx onChange: show function list while typing a name after `=`. */
 export function shouldShowFormulaFunctionList(
   editor: HTMLDivElement | null
 ): boolean {
   if (!editor) return false;
-  if (!editor.innerText?.includes("=")) return false;
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(
-    `<div>${editor.innerHTML}</div>`,
-    "text/html"
-  );
-  const spans = doc.querySelectorAll("span");
-  const lastSpan = spans[spans.length - 1];
-  const lastText = lastSpan?.innerText ?? "";
-  return /^=?[A-Za-z]*$/.test(lastText);
+  const { text, beforeCaret } = getNormalizedTextAndCaret(editor);
+  if (!text) return false;
+
+  // Strict rule: treat as a formula only if '=' is the very first character.
+  if (text[0] !== '=') return false;
+
+  // Delay dropdown: do not open until the user typed some non-space after '='.
+  if (text.slice(1).trim().length === 0) return false;
+
+  // Caret-aware: show suggestions while typing a function identifier near caret.
+  const tokenMatch = beforeCaret.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+  if (!tokenMatch) return false;
+  const token = tokenMatch[0];
+  const tokenStart = beforeCaret.length - token.length;
+
+  // Require a valid token boundary: allow after '=' and after spaces, as well as
+  // common separators inside a formula.
+  const charBefore = tokenStart > 0 ? beforeCaret[tokenStart - 1] : '';
+  const okBoundary = tokenStart === 1 || /[\s=(,+\-*/&^<>]/.test(charBefore);
+  if (!okBoundary) return false;
+
+  // Ensure the token is not before '='.
+  if (tokenStart <= 0) return false;
+
+  return true;
+}
+
+/**
+ * True when the formula looks complete at the caret:
+ * - strict first character '='
+ * - caret at end of editor text
+ * - parentheses are balanced (no negative depth; final depth 0)
+ */
+export function isFormulaCompleteAtCaret(
+  editor: HTMLDivElement | null
+): boolean {
+  if (!editor) return false;
+  const { text, caret } = getNormalizedTextAndCaret(editor);
+  if (!text || text[0] !== '=') return false;
+  if (caret !== text.length) return false;
+
+  const body = text.slice(1);
+  let depth = 0;
+  let sawOpenParen = false;
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i];
+    if (ch === '(') {
+      depth += 1;
+      sawOpenParen = true;
+    } else if (ch === ')') {
+      depth -= 1;
+      if (depth < 0) return false;
+    }
+  }
+  if (!sawOpenParen) return false;
+  return depth === 0;
 }
 
 const FORMULA_FUNC_CLASS = "luckysheet-formula-text-func";
