@@ -43,6 +43,7 @@ import {
   getSheetIndex,
   is_date,
   isHyperlinkCreationBlocked,
+  isTypedCurrencyDisplayFormat,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import {
@@ -804,7 +805,27 @@ const Toolbar: React.FC<{
               if (curr.t === 'd') {
                 currentFmt = hasTime ? 'Date time' : 'Date';
               } else if (curr.t === 'g' && curr.fa === 'General') {
-                currentFmt = defaultFormat[defaultFormat.length - 1].text;
+                // General lives at index 0 ("Auto"); last item is "more formats", not Automatic.
+                currentFmt = defaultFormat[0].text;
+              } else if (format != null) {
+                // Exact preset match (Currency, Accounting, Number, etc.) before heuristics:
+                // currency/accounting patterns contain "#,##0" and would be mislabeled "Number".
+                currentFmt = format.text;
+              } else if (curr.fa.includes('%')) {
+                // Freshly typed percentages use the implicit "0%" mask from auto-detect.
+                // Keep these under Auto so behavior matches other direct typed values.
+                // Explicit percent presets (e.g. "#0.00%") should still show Percent.
+                currentFmt = curr.fa === '0%' ? defaultFormat[0].text : 'Percent';
+              } else if (is_date(curr.fa)) {
+                currentFmt = hasTime ? 'Date time' : 'Date';
+              } else if (
+                isTypedCurrencyDisplayFormat(
+                  curr.fa,
+                  locale(context).currencyDetail,
+                )
+              ) {
+                // Typed $123 / BTC… keeps currency display via `fa` but format menu shows Auto (like plain numbers).
+                currentFmt = defaultFormat[0].text;
               } else if (
                 curr.t === 'n' ||
                 curr.fa.includes('#,##0') ||
@@ -812,12 +833,8 @@ const Toolbar: React.FC<{
                 curr.fa === '0.00'
               ) {
                 currentFmt = 'Number';
-              } else if (is_date(curr.fa)) {
-                currentFmt = hasTime ? 'Date time' : 'Date';
-              } else if (format != null) {
-                currentFmt = format.text;
               } else {
-                currentFmt = defaultFormat[defaultFormat.length - 1].text;
+                currentFmt = defaultFormat[0].text;
               }
             }
           }
@@ -2049,6 +2066,10 @@ const Toolbar: React.FC<{
               iconId={name}
               tooltip={tooltip}
               key={name}
+              disabled={
+                (name === 'number-decrease' || name === 'number-increase') &&
+                context.luckysheetCellUpdate.length > 0
+              }
               selected={toolbarItemSelectedFunc(name)?.(cell)}
               disabled={Boolean(hyperlinkInsertBlocked)}
               onMouseDown={(e) => {
@@ -2073,6 +2094,14 @@ const Toolbar: React.FC<{
                   return;
                 }
                 setContext((draftCtx) => {
+                  const isDecimalAction =
+                    name === 'number-decrease' || name === 'number-increase';
+                  if (
+                    isDecimalAction &&
+                    draftCtx.luckysheetCellUpdate.length > 0
+                  ) {
+                    return;
+                  }
                   toolbarItemClickHandler(name)?.(
                     draftCtx,
                     refs.cellInput.current!,

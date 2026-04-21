@@ -1309,6 +1309,15 @@ export async function handleGlobalKeyDown(
             cellAt?.f != null && String(cellAt.f).trim() !== ""
               ? String(cellAt.f).replace(/[\r\n]/g, "")
               : null;
+          const isPercentFormattedCell =
+            !!cellAt &&
+            typeof (cellAt as any)?.ct?.fa === "string" &&
+            String((cellAt as any).ct.fa).includes("%");
+          const isEmptyPercentFormattedCell =
+            isPercentFormattedCell &&
+            _.isNil((cellAt as any).v) &&
+            _.isNil((cellAt as any).m) &&
+            _.isNil((cellAt as any).f);
 
           if (existingFormula != null) {
             suppressFormulaRangeSelectionForInitialEdit(ctx);
@@ -1326,8 +1335,11 @@ export async function handleGlobalKeyDown(
           cellInput.focus();
           const initial = getTypeOverInitialContent(e);
           if (initial !== undefined) {
-            cellInput.textContent = initial;
-            if (fxInput) fxInput.textContent = initial;
+            const seededText = isPercentFormattedCell
+              ? `${initial}%`
+              : initial;
+            cellInput.textContent = seededText;
+            if (fxInput) fxInput.textContent = seededText;
             handleFormulaInput(ctx, fxInput, cellInput, kcode);
             e.preventDefault();
           } else {
@@ -1340,6 +1352,22 @@ export async function handleGlobalKeyDown(
           // Only adjust the in-cell editor: moveToEnd() calls focus() and would steal
           // focus to the formula bar if applied to fxInput.
           queueMicrotask(() => {
+            if (initial !== undefined && isPercentFormattedCell) {
+              const textNode = cellInput.firstChild;
+              const caretOffset = Math.max(
+                0,
+                (cellInput.textContent || "").length - 1
+              );
+              const sel = window.getSelection();
+              if (textNode && sel) {
+                const range = document.createRange();
+                range.setStart(textNode, Math.min(caretOffset, textNode.textContent?.length || 0));
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                return;
+              }
+            }
             moveToEnd(cellInput);
           });
 
