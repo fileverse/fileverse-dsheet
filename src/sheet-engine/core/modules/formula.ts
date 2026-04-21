@@ -77,7 +77,11 @@ function formulaDebugStable(value: any) {
 const simpleSheetName = "[A-Za-z0-9_\u00C0-\u02AF]+";
 const quotedSheetName = "'(?:(?!').|'')*'";
 const sheetNameRegexp = `(${simpleSheetName}|${quotedSheetName})!`;
-const rowColumnRegexp = `[$]?[A-Za-z]+[$]?[0-9]+`;
+// Used for sheet-qualified refs like `'Sheet 1'!A1`, `'Sheet'!A:A`, `'Sheet'!1:1`.
+const a1CellRegexp = `[$]?[A-Za-z]+[$]?[0-9]+`;
+const fullColumnRegexp = `[$]?[A-Za-z]+`;
+const fullRowRegexp = `[$]?[0-9]+`;
+const rowColumnRegexp = `(?:${a1CellRegexp}|${fullColumnRegexp}|${fullRowRegexp})`;
 const rowColumnWithSheetName = `(?:${sheetNameRegexp})?(${rowColumnRegexp})`;
 const LABEL_EXTRACT_REGEXP = new RegExp(
   `^${rowColumnWithSheetName}(?:[:]${rowColumnWithSheetName})?$`
@@ -466,8 +470,12 @@ export function iscelldata(txt: string) {
     [rangetxt] = val;
   }
 
+  // Allow:
+  // - A1:A2 (cell-to-cell)
+  // - A:A (column-to-column)
+  // - 1:1 (row-to-row)
   const realRangeRegex =
-    /^(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+):(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+)$/;
+    /^(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+|\$?\d+):(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+|\$?\d+)$/;
   if (rangetxt.includes(":") && !realRangeRegex.test(rangetxt)) {
     return false;
   }
@@ -497,8 +505,9 @@ export function iscelldata(txt: string) {
     return false;
   }
 
+  // Accept A1, $A$1, A, $A, 1, $1 for each side of a range.
   reg_cellRange =
-    /^(((([a-zA-Z]+)|([$][a-zA-Z]+))(([0-9]+)|([$][0-9]+)))|((([a-zA-Z]+)|([$][a-zA-Z]+)))|((([0-9]+)|([$][0-9]+s))))$/g;
+    /^((\$?[A-Za-z]+\$?\d+)|(\$?[A-Za-z]+)|(\$?\d+))$/g;
 
   const rangetxtArr = rangetxt.split(":");
 
