@@ -49,7 +49,8 @@ export type Cell = {
   m?: string | number;
   mc?: { r: number; c: number; rs?: number; cs?: number };
   f?: string;
-  ct?: { fa?: string; t?: string; tb?: string; s?: any };
+  /** `dp`: fixed decimal places for display when `fa` is General (Auto); does not change `fa`/`t`. */
+  ct?: { fa?: string; t?: string; tb?: string; s?: any; dp?: number };
   qp?: number;
   spl?: any;
   bg?: string;
@@ -378,6 +379,8 @@ export type GlobalCache = {
     range: { start: number; end: number } | null;
     selectedPlain: string;
   };
+  /** Injected by React: show modal when link insert is blocked (formula / = in editor). */
+  onHyperlinkInsertBlocked?: () => void;
   dragCellStartPos?: {
     x: number;
     y: number;

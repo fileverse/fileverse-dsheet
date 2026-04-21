@@ -12,7 +12,17 @@ import {
 } from "../utils";
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
-import { genarate, update } from "./format";
+import {
+  formatScientificForComputedNumber,
+  formatMForNumericCellAvoidingGsRules,
+  genarate,
+  genarateOrCurrencyPrefixed,
+  isCurrencyLikeNumberFormat,
+  isSixteenPlusDigitIntegerString,
+  refreshGeneralNumericDisplay,
+  shouldUseScientificForComputedNumber,
+  update,
+} from "./format";
 import { clearCellError } from "../api";
 import {
   delFunctionGroup,
@@ -114,8 +124,10 @@ export function normalizedCellAttr(
     // Spreadsheet-style default alignment:
     // - text: left
     // - number/date-time-like numeric cells: right
+    const isExplicitPlainText = (cell as Cell)?.ct?.fa === "@";
     const isNumericCell =
       !!cell &&
+      !isExplicitPlainText &&
       ((cell as Cell).ct?.t === "n" ||
         typeof (cell as Cell).v === "number" ||
         isRealNum((cell as Cell).v) ||
@@ -314,6 +326,13 @@ export function setCellValue(
   // let cell = $.extend(true, {}, d[r][c]);
   // const oldValue = _.cloneDeep(d[r][c]);
   let cell = d[r][c];
+  const hadDisplayValueBeforeEdit =
+    !!cell &&
+    !(
+      isRealNull((cell as Cell).v) &&
+      isRealNull((cell as Cell).m) &&
+      isRealNull((cell as Cell).f)
+    );
 
   let vupdate;
 
@@ -359,9 +378,25 @@ export function setCellValue(
   let commaPresent = false;
   if (vupdate && typeof vupdate === "string" && vupdate.includes(",")) {
     commaPresent = vupdate.includes(",");
-    const removeCommasValidated = (str: string) =>
-      /^[\d,.]+$/.test(str) ? str?.replace(/,/g, "") : str;
-    vupdate = removeCommasValidated(vupdate);
+    // Keep user-entered commas intact.
+    // - Valid thousand-grouped inputs are parsed downstream by `genarate`.
+    // - Invalid/random comma placement should remain text, not coerced to number.
+  }
+
+  const cellObj = _.isPlainObject(cell) ? (cell as Cell) : null;
+  const isTextFormattedCell =
+    cellObj != null && (cellObj.ct?.fa === "@" || cellObj.qp === 1);
+  if (
+    typeof vupdate === "string" &&
+    !isTextFormattedCell &&
+    /^[+-]?\d+\.\d+$/.test(vupdate)
+  ) {
+    const normalizedDecimal = vupdate
+      .replace(/(\.\d*?[1-9])0+$/, "$1")
+      .replace(/\.0+$/, "");
+    if (normalizedDecimal !== vupdate) {
+      vupdate = normalizedDecimal;
+    }
   }
 
   if (isRealNull(vupdate)) {
@@ -436,19 +471,32 @@ export function setCellValue(
     cell.v = vupdate;
   } else {
     if (
+      isSixteenPlusDigitIntegerString(vupdateStr) &&
+      _.isNil(cell.f)
+    ) {
+      const raw = vupdateStr.trim().replace(/,/g, "");
+      cell.m = raw;
+      cell.v = raw;
+      if (cell.ct?.fa === "@") {
+        cell.ct = { fa: "@", t: "s" };
+      } else {
+        cell.ct = { fa: "General", t: "g" };
+      }
+    } else if (
       !_.isNil(cell.f) &&
-      isRealNum(vupdate) &&
+      typeof vupdate === "number" &&
+      Number.isFinite(vupdate) &&
       !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-        vupdate
+        vupdateStr
       )
     ) {
-      cell.v = parseFloat(vupdate);
+      cell.v = vupdate;
       if (_.isNil(cell.ct)) {
         cell.ct = { fa: "General", t: "g" };
       }
 
       // if output is number fetch fa from referenced cells
-      const isDigit = /^\d+$/.test(vupdate);
+      const isDigit = /^\d+$/.test(vupdateStr);
       if (isDigit) {
         const flowdata = getFlowdata(ctx);
         const args = getContentInParentheses(cell?.f)?.split(",");
@@ -462,17 +510,10 @@ export function setCellValue(
       if (cell.v === Infinity || cell.v === -Infinity) {
         cell.m = cell.v.toString();
       } else {
-        if (cell.v.toString().indexOf("e") > -1) {
-          let len;
-          if (cell.v.toString().split(".").length === 1) {
-            len = 0;
-          } else {
-            len = cell.v.toString().split(".")[1].split("e")[0].length;
-          }
-          if (len > 5) {
-            len = 5;
-          }
-          cell.m = cell.v.toExponential(len).toString();
+        if (shouldUseScientificForComputedNumber(cell.v as number)) {
+          cell.m = formatScientificForComputedNumber(cell.v as number);
+        } else if (cell.v.toString().toLowerCase().indexOf("e") > -1) {
+          cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
         } else {
           const v_p = Math.round(cell.v * 1000000000) / 1000000000;
           if (_.isNil(cell.ct)) {
@@ -505,7 +546,52 @@ export function setCellValue(
       cell.ct.fa !== "General"
     ) {
       let { fa } = cell.ct;
-      if (isRealNum(vupdate)) {
+      const enteredEditByTyping =
+        ctx.getRefs?.()?.globalCache?.enteredEditByTyping === true;
+      const isInPlaceEditSession =
+        ctx.luckysheetCellUpdate.length > 0 && !enteredEditByTyping;
+      const shouldOverwritePercentFormat =
+        isInPlaceEditSession && fa.includes("%") && !vupdateStr.includes("%");
+      if (shouldOverwritePercentFormat) {
+        // Percent behaves as a literal suffix in editor input:
+        // if user edits value without "%", drop percent format.
+        if (
+          isRealNum(vupdate) &&
+          !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
+            vupdateStr
+          )
+        ) {
+          if (typeof vupdate === "string") {
+            const flag = vupdate
+              .split("")
+              .every((ele) => ele === "0" || ele === ".");
+            if (flag || /^0+\d/.test(vupdate)) {
+              vupdate = parseFloat(vupdate);
+            }
+          }
+          cell.v = vupdate;
+          const preserveDp = cell.ct?.dp;
+          cell.ct = { fa: "General", t: "g" };
+          if (preserveDp != null && typeof preserveDp === "number") {
+            cell.ct.dp = preserveDp;
+          }
+          if (v.m) {
+            cell.m = v.m;
+          } else {
+            refreshGeneralNumericDisplay(cell as Cell);
+          }
+        } else {
+          const mask = genarateOrCurrencyPrefixed(
+            vupdateStr,
+            vupdate,
+            locale(ctx).currencyDetail,
+          );
+          if (mask) {
+            cell.m = mask[0].toString();
+            [, cell.ct, cell.v] = mask;
+          }
+        }
+      } else if (isRealNum(vupdate)) {
         // Only override fa when the user explicitly typed commas that the format doesn't support.
         // Conditions that compared format commas/decimals against input were removed because they
         // incorrectly changed an explicit format (e.g. "#,##0.00") when a plain value like "42" was typed,
@@ -514,29 +600,78 @@ export function setCellValue(
           fa = getNumberFormat(String(vupdate), commaPresent);
         }
         vupdate = parseFloat(vupdate);
+        if (
+          fa.includes("%") &&
+          !vupdateStr.includes("%") &&
+          (!hadDisplayValueBeforeEdit || enteredEditByTyping)
+        ) {
+          // Empty cell already formatted as percent: treat freshly typed number
+          // as percentage points (5 -> 5.00%, stored as 0.05).
+          // Also apply this for sheet type-to-edit replacement on existing % cells
+          // so typing "9" over "5.00%" becomes "9.00%", not "900.00%".
+          vupdate /= 100;
+        }
         if (cell?.ct) {
           cell.ct = { ...cell.ct, fa, t: "n" };
         }
-      }
+        let mask: any = update(fa, vupdate);
 
-      let mask = update(fa, vupdate);
-
-      if (mask === vupdate) {
-        // 若原来单元格格式 应用不了 要更新的值，则获取更新值的 格式
-        const gen = genarate(vupdate as any);
-        if (gen) {
-          const [m, ct, v] = gen;
-          cell.m = m == null ? "" : String(m);
-          cell.ct = ct as Cell["ct"];
-          cell.v = v as Cell["v"];
-        }
-      } else {
-        if (v.m) {
-          cell.m = v.m;
+        if (mask === vupdate) {
+          // 若原来单元格格式 应用不了 要更新的值，则获取更新值的 格式
+          const gen = genarateOrCurrencyPrefixed(
+            vupdateStr,
+            vupdate,
+            locale(ctx).currencyDetail,
+          );
+          if (gen) {
+            const [m, ct, v] = gen;
+            cell.m = m == null ? "" : String(m);
+            cell.ct = ct as Cell["ct"];
+            cell.v = v as Cell["v"];
+          }
         } else {
-          cell.m = mask.toString();
+          if (v.m) {
+            cell.m = v.m;
+          } else {
+            cell.m = mask.toString();
+          }
+          cell.v = vupdate;
         }
-        cell.v = vupdate;
+      } else if (
+        isCurrencyLikeNumberFormat(fa, locale(ctx).currencyDetail) &&
+        typeof vupdate === "string" &&
+        !vupdateStr.startsWith("=") &&
+        !isRealNum(vupdate)
+      ) {
+        // Google Sheets–like: text in a currency cell keeps the currency mask so the next numeric
+        // entry still formats as currency (do not replace ct via genarate).
+        cell.v = vupdateStr;
+        cell.m = vupdateStr;
+        cell.ct = { fa, t: "s" };
+      } else {
+        let mask: any = update(fa, vupdate);
+
+        if (mask === vupdate) {
+          // 若原来单元格格式 应用不了 要更新的值，则获取更新值的 格式
+          const gen = genarateOrCurrencyPrefixed(
+            vupdateStr,
+            vupdate,
+            locale(ctx).currencyDetail,
+          );
+          if (gen) {
+            const [m, ct, v] = gen;
+            cell.m = m == null ? "" : String(m);
+            cell.ct = ct as Cell["ct"];
+            cell.v = v as Cell["v"];
+          }
+        } else {
+          if (v.m) {
+            cell.m = v.m;
+          } else {
+            cell.m = mask.toString();
+          }
+          cell.v = vupdate;
+        }
       }
     } else {
       if (
@@ -556,22 +691,22 @@ export function setCellValue(
         }
         cell.v =
           vupdate; /* 备注：如果使用parseFloat，1.1111111111111111会转换为1.1111111111111112 ? */
-        cell.m = v.m ? v.m : String(cell.v);
+        const preserveDp = cell.ct?.dp;
         cell.ct = { fa: "General", t: "g" };
-        if (cell.v === Infinity || cell.v === -Infinity) {
-          cell.m = cell.v.toString();
-        } else if (cell.v != null && !cell.m) {
-          const mask = genarate(cell.v as string);
-          if (mask) {
-            if (v.m) {
-              cell.m = v.m;
-            } else {
-              cell.m = mask[0].toString();
-            }
-          }
+        if (preserveDp != null && typeof preserveDp === "number") {
+          cell.ct.dp = preserveDp;
+        }
+        if (v.m) {
+          cell.m = v.m;
+        } else {
+          refreshGeneralNumericDisplay(cell as Cell);
         }
       } else {
-        const mask = genarate(vupdate);
+        const mask = genarateOrCurrencyPrefixed(
+          vupdateStr,
+          vupdate,
+          locale(ctx).currencyDetail,
+        );
         if (mask) {
           cell.m = mask[0].toString();
           [, cell.ct, cell.v] = mask;
@@ -974,6 +1109,20 @@ export function updateCell(
     }
 
     let curv = flowdata[r][c];
+
+    const enteredEditByTyping =
+      ctx.getRefs?.()?.globalCache?.enteredEditByTyping === true;
+    const inputLooksLikeOnlySeededPercent =
+      enteredEditByTyping &&
+      typeof inputText === "string" &&
+      inputText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim() === "%" &&
+      typeof (curv as any)?.ct?.fa === "string" &&
+      String((curv as any).ct.fa).includes("%");
+    if (inputLooksLikeOnlySeededPercent) {
+      // Type-to-edit on % cells pre-seeds a trailing "%". If user exits edit
+      // without entering any actual value, do not persist that placeholder.
+      inputText = "";
+    }
 
     // ctx.old value for hook function
     const oldValue = _.cloneDeep(curv);
@@ -2323,11 +2472,22 @@ function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
     formula !== undefined ||
     keepInlineStringContent
   ) {
+    // Clear formatting removes font/fill/border/alignment-style keys by rebuilding the cell from
+    // value parts only — but keep `ct` so number / currency / percent / date formats stay (matches
+    // handleClearFormat’s _.pick(..., "ct") and Google Sheets “clear formatting” for numbers).
+    if (sanitizedInlineCt) {
+      return {
+        v: rawValue,
+        m: displayText,
+        f: formula,
+        ct: sanitizedInlineCt,
+      };
+    }
     return {
       v: rawValue,
       m: displayText,
       f: formula,
-      ...(sanitizedInlineCt ? { ct: sanitizedInlineCt } : {}),
+      ...(ct != null && typeof ct === "object" ? { ct } : {}),
     };
   }
   return null;

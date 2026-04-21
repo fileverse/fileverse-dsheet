@@ -3,10 +3,122 @@ import _ from 'lodash';
 import { isRealNum, valueIsError, detectDateFormat } from './validation';
 // @ts-ignore
 import SSF from './ssf';
-import { CellMatrix } from '../types';
+import { Cell, CellMatrix } from '../types';
 import { getCellValue } from './cell';
 
 const base1904 = new Date(1900, 2, 1, 0, 0, 0);
+
+/** Below this absolute value, never use automatic scientific (Sheets-like). */
+export const GS_PLAIN_MAX_ABS = 999999999999997;
+/** Smallest 16-digit positive integer — use plain / text, not E-notation. */
+export const GS_SIXTEEN_DIGIT_MIN_ABS = 1e15;
+
+/** Scientific only in (GS_PLAIN_MAX_ABS, 1e15) — 999…997 itself stays plain. */
+export function gsAllowsScientificMagnitude(av: number): boolean {
+  return (
+    Number.isFinite(av) &&
+    av > GS_PLAIN_MAX_ABS &&
+    av < GS_SIXTEEN_DIGIT_MIN_ABS
+  );
+}
+
+/** Integer string (optional `-`, optional `,`) with ≥16 digits — store literally under General/Auto. */
+export function isSixteenPlusDigitIntegerString(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const t = value.trim().replace(/,/g, "");
+  if (!/^-?\d+$/.test(t)) return false;
+  const core = t.startsWith("-") ? t.slice(1) : t;
+  return core.length >= 16;
+}
+
+/**
+ * Display string for a JS number when `toString()` may use `e` notation.
+ * Applies Sheets-like rules: no E below GS_PLAIN_MAX_ABS or at/above 16-digit scale.
+ */
+export function formatMForNumericCellAvoidingGsRules(v: number): string {
+  const av = Math.abs(v);
+  if (v === Infinity || v === -Infinity) return String(v);
+  if (gsAllowsScientificMagnitude(av)) {
+    const s = v.toString();
+    let len = 0;
+    if (s.toLowerCase().includes("e")) {
+      const mant = s.split(/[eE]/)[0];
+      if (mant.includes(".")) {
+        len = Math.min(5, (mant.split(".")[1] || "").length);
+      }
+    } else if (s.includes(".")) {
+      len = Math.min(5, (s.split(".")[1] || "").split(/[eE]/)[0].length);
+    }
+    return formatCompactScientific(v, len);
+  }
+  if (av >= GS_SIXTEEN_DIGIT_MIN_ABS) {
+    return v.toLocaleString("en-US", { maximumFractionDigits: 50, useGrouping: false });
+  }
+  return v.toLocaleString("en-US", { maximumFractionDigits: 21, useGrouping: false });
+}
+
+function countSignificantDigits(v: number): number {
+  if (!Number.isFinite(v) || v === 0) return 1;
+  const mantissa = v.toExponential().split("e")[0].replace("-", "").replace(".", "");
+  const trimmed = mantissa.replace(/^0+/, "").replace(/0+$/, "");
+  return trimmed.length || 1;
+}
+
+/**
+ * Numeric safety gate for formula-computed numbers:
+ * - integer beyond MAX_SAFE_INTEGER => scientific
+ * - significant digits > 15 => scientific
+ */
+export function shouldUseScientificForComputedNumber(v: number): boolean {
+  if (!Number.isFinite(v)) return false;
+  if (Number.isInteger(v) && Math.abs(v) > Number.MAX_SAFE_INTEGER) return true;
+  return countSignificantDigits(v) > 15;
+}
+
+export function formatScientificForComputedNumber(v: number): string {
+  const mantissa = v.toExponential().split("e")[0];
+  let fracLen = 0;
+  if (mantissa.includes(".")) {
+    fracLen = (mantissa.split(".")[1] || "").length;
+  }
+  return formatCompactScientific(v, Math.min(5, Math.max(0, fracLen)));
+}
+
+export function formatCompactScientific(v: number, fractionDigits = 5): string {
+  if (!Number.isFinite(v)) return String(v);
+  const raw = v.toExponential(Math.max(0, Math.min(20, fractionDigits)));
+  const [mantissaRaw, expRaw = "0"] = raw.split("e");
+  const mantissa = mantissaRaw
+    .replace(/(\.\d*?[1-9])0+$/, "$1")
+    .replace(/\.0+$/, "")
+    .replace(/\.$/, "");
+  const expNum = Number(expRaw);
+  const expSign = expNum >= 0 ? "+" : "-";
+  const expAbs = Math.abs(expNum).toString().padStart(2, "0");
+  return `${mantissa}E${expSign}${expAbs}`;
+}
+
+/**
+ * Sheets-like Auto decimal display:
+ * keep about 10 visible digits total (integer digits + decimal digits), with rounding.
+ * Examples:
+ * - 999999999.478 -> 999999999.5
+ * - 123456.123456 -> 123456.1235
+ */
+export function formatGeneralAutoDecimalWithTenDigitRule(v: number): string | null {
+  if (!Number.isFinite(v)) return null;
+  if (Number.isInteger(v)) return null;
+  const av = Math.abs(v);
+  // Keep scientific handling in the existing special band.
+  if (gsAllowsScientificMagnitude(av)) return null;
+
+  const leftDigits = av >= 1 ? Math.floor(Math.log10(av)) + 1 : 1;
+  const maxDecimals = Math.max(0, 10 - leftDigits);
+  let rounded = Number(v.toFixed(maxDecimals));
+  if (Object.is(rounded, -0)) rounded = 0;
+  const fixed = rounded.toFixed(maxDecimals);
+  return fixed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+}
 
 export function datenum_local(v: Date, date1904?: number) {
   let epoch = Date.UTC(
@@ -35,13 +147,13 @@ export function genarate(value: string | number | boolean) {
   }
 
   if (
-    /^-?[0-9]{1,}[,][0-9]{3}(.[0-9]{1,2})?$/.test(value as string) &&
+    /^-?(?:\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/.test(value as string) &&
     !Array.isArray(value)
   ) {
     value = value as string;
     // 表述金额的字符串，如：12,000.00 或者 -12,000.00
     m = value;
-    v = Number(value.split('.')[0].replace(',', ''));
+    v = Number(value.replace(/,/g, ""));
     let fa = '#,##0';
     if (value.split('.')[1]) {
       fa = '#,##0.';
@@ -71,26 +183,26 @@ export function genarate(value: string | number | boolean) {
   ) {
     m = value.toString();
     ct = { fa: '@', t: 's' };
+  } else if (isSixteenPlusDigitIntegerString(value)) {
+    const raw = (value as string).trim().replace(/,/g, '');
+    m = raw;
+    v = raw;
+    ct = { fa: 'General', t: 'g' };
   } else if (
     isRealNum(value) &&
     Math.abs(parseFloat(value as string)) > 0 &&
-    (Math.abs(parseFloat(value as string)) >= 1e11 ||
-      Math.abs(parseFloat(value as string)) < 1e-9)
+    (Math.abs(parseFloat(value as string)) < 1e-9 ||
+      gsAllowsScientificMagnitude(Math.abs(parseFloat(value as string))))
   ) {
     v = parseFloat(value as string);
     const str = v.toExponential();
+    let precision = 0;
     if (str.indexOf('.') > -1) {
-      let strlen = str.split('.')[1].split('e')[0].length;
-      if (strlen > 5) {
-        strlen = 5;
-      }
-
-      ct = { fa: `#0.${new Array(strlen + 1).join('0')}E+00`, t: 'n' };
-    } else {
-      ct = { fa: '#0.E+00', t: 'n' };
+      precision = Math.min(5, str.split('.')[1].split('e')[0].length);
     }
-
-    m = SSF.format(ct.fa, v);
+    const optionalDecimals = precision > 0 ? `.${new Array(precision + 1).join('#')}` : "";
+    ct = { fa: `#0${optionalDecimals}E+00`, t: 'n' };
+    m = formatCompactScientific(v, precision);
   } else if (value.toString().indexOf('%') > -1) {
     const index = value.toString().indexOf('%');
     const value2 = value.toString().substring(0, index);
@@ -210,9 +322,15 @@ export function genarate(value: string | number | boolean) {
       ct = { fa: '@', t: 's' };
     }
   } else if (isRealNum(value)) {
-    m = parseFloat(value as string).toString();
+    const pv = parseFloat(value as string);
+    const av = Math.abs(pv);
+    v = pv;
     ct = { fa: 'General', t: 'n' };
-    v = parseFloat(value as string);
+    if (av >= GS_SIXTEEN_DIGIT_MIN_ABS) {
+      m = pv.toLocaleString('en-US', { maximumFractionDigits: 50, useGrouping: false });
+    } else {
+      m = pv.toString();
+    }
   } else if (typeof value === 'string') {
     const df = detectDateFormat(value.toString());
     if (df) {
@@ -268,8 +386,190 @@ export function genarate(value: string | number | boolean) {
   return [m, ct, v];
 }
 
+/** Crypto tickers for typed prefix (e.g. BTC123) — keep aligned with toolbar CRYPTO_OPTIONS. */
+export const TYPED_CRYPTO_CURRENCY_PREFIXES = ['BTC', 'ETH', 'SOL'] as const;
+
+function getSortedFiatPrefixSymbols(currencyDetail: unknown): string[] {
+  const fiatArr = Array.isArray(currencyDetail)
+    ? currencyDetail.filter((c: { pos?: string }) => c && c.pos !== 'after')
+    : [];
+  const indexByValue = new Map<string, number>();
+  fiatArr.forEach((c: { value?: string }, i: number) => {
+    if (c?.value && !indexByValue.has(c.value)) indexByValue.set(c.value, i);
+  });
+  return [
+    ...new Set(
+      fiatArr
+        .map((c: { value?: string }) => c.value)
+        .filter((v): v is string => typeof v === 'string' && v.length > 0),
+    ),
+  ].sort((a: string, b: string) =>
+    b.length - a.length ||
+    (indexByValue.get(a) ?? 0) - (indexByValue.get(b) ?? 0),
+  );
+}
+
+/**
+ * True when `fa` matches formats produced by typed currency/crypto prefix (or the same shape).
+ * Used so the format dropdown shows "Currency" instead of mislabeling `#,##0` masks as "Number".
+ */
+export function isTypedCurrencyDisplayFormat(
+  fa: string | undefined,
+  currencyDetail: unknown,
+): boolean {
+  if (!fa) return false;
+  for (const c of TYPED_CRYPTO_CURRENCY_PREFIXES) {
+    if (fa.includes(`"${c}"`)) return true;
+  }
+  return getSortedFiatPrefixSymbols(currencyDetail).some(
+    (sym) => fa.startsWith(sym) && /#,##0/.test(fa),
+  );
+}
+
+/**
+ * True for currency / accounting / crypto number formats where we should keep `fa` when the user
+ * types plain text, so a later numeric entry still formats like Google Sheets.
+ */
+export function isCurrencyLikeNumberFormat(
+  fa: string | undefined,
+  currencyDetail: unknown,
+): boolean {
+  if (!fa || fa === 'General' || fa === '@') return false;
+  if (isTypedCurrencyDisplayFormat(fa, currencyDetail)) return true;
+  // Accounting: _("$"* #,##0...
+  if (fa.includes('_("') && /#,?#+0/.test(fa)) return true;
+  // Toolbar Currency / fiat with symbol + grouping (not plain #,##0 number preset)
+  if (/#,##0/.test(fa) && !fa.includes('%')) {
+    const syms = getSortedFiatPrefixSymbols(currencyDetail);
+    if (syms.some((sym) => fa.includes(sym))) return true;
+  }
+  return false;
+}
+
+/**
+ * If the user types a known currency/crypto prefix immediately followed by a parseable number
+ * (e.g. `$1,234.5`, `€100`, `BTC1.5`), return numeric cell value + matching currency format.
+ * Uses locale `currencyDetail` (fiat symbols); object-shaped locales yield no fiat prefixes.
+ */
+export function parseCurrencyPrefixedInput(
+  raw: string,
+  currencyDetail: unknown,
+): [string, { fa: string; t: string }, number] | null {
+  if (typeof raw !== 'string' || raw.trim() === '') return null;
+  let s = raw.trim();
+  if (s.startsWith('=') || s.startsWith("'")) return null;
+
+  let sign = 1;
+  if (s.startsWith('-')) {
+    sign = -1;
+    s = s.slice(1).trim();
+  } else if (s.startsWith('+')) {
+    s = s.slice(1).trim();
+  }
+  if (s === '') return null;
+
+  const fiatSymbols = getSortedFiatPrefixSymbols(currencyDetail);
+
+  const cryptoSorted = [...TYPED_CRYPTO_CURRENCY_PREFIXES].sort(
+    (a, b) => b.length - a.length,
+  );
+
+  const entries: { sym: string; kind: 'crypto' | 'fiat' }[] = [
+    ...cryptoSorted.map((sym) => ({ sym, kind: 'crypto' as const })),
+    ...fiatSymbols.map((sym) => ({ sym, kind: 'fiat' as const })),
+  ].sort((a, b) => b.sym.length - a.sym.length);
+
+  for (const { sym, kind } of entries) {
+    if (!s.startsWith(sym)) continue;
+    const rest = s.slice(sym.length).trim();
+    if (rest === '') continue;
+    if (rest.includes('%')) continue;
+
+    const g = genarate(rest);
+    if (!g) continue;
+    const [, ct] = g;
+    if (ct.t !== 'n' || String(ct.fa || '').includes('%')) continue;
+    const vNum = g[2];
+    if (typeof vNum !== 'number' || !Number.isFinite(vNum)) continue;
+
+    const finalV = sign * vNum;
+    if (!Number.isFinite(finalV)) continue;
+
+    // Integer-style currency (no fractional places); values round in display via SSF.
+    // No space before `#,##0` so masks align with locale Currency presets and toolbar labeling.
+    if (kind === 'crypto') {
+      const fa = `0 "${sym}"`;
+      const ctOut = { fa, t: 'n' };
+      const m = SSF.format(fa, finalV);
+      return [m, ctOut, finalV];
+    }
+    const fa = `${sym}#,##0`;
+    const ctOut = { fa, t: 'n' };
+    const m = SSF.format(fa, finalV);
+    return [m, ctOut, finalV];
+  }
+
+  return null;
+}
+
+export function genarateOrCurrencyPrefixed(
+  vupdateStr: string,
+  vupdate: any,
+  currencyDetail: unknown,
+): ReturnType<typeof genarate> {
+  const cur = parseCurrencyPrefixedInput(vupdateStr, currencyDetail);
+  if (cur) return cur;
+  return genarate(vupdate);
+}
+
 export function update(fmt: string, v: any) {
   return SSF.format(fmt, v);
+}
+
+/** Max decimal places for toolbar +/- on General (Auto) without switching to a numeric `fa`. */
+export const MAX_GENERAL_AUTO_DP = 15;
+
+/**
+ * Recompute `m` for numeric cells with `fa === "General"`.
+ * When `ct.dp` is set (1..MAX), uses fixed decimals like Sheets Auto + decimal buttons.
+ * Otherwise uses the usual `genarate` General display.
+ */
+export function refreshGeneralNumericDisplay(cell: Cell): void {
+  const ct = cell.ct;
+  if (!ct || ct.fa !== "General") return;
+  const v = cell.v;
+  if (v === Infinity || v === -Infinity) {
+    cell.m = String(v);
+    return;
+  }
+  // Long integer strings: keep exact digits (IEEE doubles cannot represent them).
+  if (typeof v === "string" && /^-?\d+$/.test(v)) {
+    const core = v.startsWith("-") ? v.slice(1) : v;
+    if (core.length >= 16) {
+      cell.m = v;
+      return;
+    }
+  }
+  if (!isRealNum(v)) return;
+  const num = Number(v);
+  if (ct.dp != null && ct.dp >= 1) {
+    const d = Math.min(MAX_GENERAL_AUTO_DP, Math.max(1, Math.floor(ct.dp)));
+    const s = num.toString();
+    if (s.toLowerCase().includes("e")) {
+      const g = genarate(num);
+      if (g) cell.m = g[0].toString();
+      return;
+    }
+    cell.m = num.toFixed(d);
+    return;
+  }
+  const autoDecimal = formatGeneralAutoDecimalWithTenDigitRule(num);
+  if (autoDecimal != null) {
+    cell.m = autoDecimal;
+    return;
+  }
+  const g = genarate(num);
+  if (g) cell.m = g[0].toString();
 }
 
 export function is_date(fmt: string, v?: any) {

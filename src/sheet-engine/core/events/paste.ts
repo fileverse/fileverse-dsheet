@@ -394,6 +394,12 @@ const handleFormulaOnPaste = (ctx: Context, d: any) => {
 };
 
 function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
+  const normalizeDecimalStringOnPaste = (input: string): string => {
+    const trimmed = input.trim();
+    if (!/^[+-]?\d+\.\d+$/.test(trimmed)) return input;
+    return trimmed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+  };
+
   if (ctx.luckysheet_selection_range) {
     ctx.luckysheet_selection_range = [];
   }
@@ -729,12 +735,17 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         const url = getUrlFromText(normalizedValueStr);
         const isUrl = url !== null;
 
+        const normalizedNumericValueStr =
+          !isUrl && !isMultilineValue && isRealNum(value)
+            ? normalizeDecimalStringOnPaste(normalizedValueStr)
+            : normalizedValueStr;
+
         if (!isUrl && !isMultilineValue && isRealNum(value)) {
           // 如果单元格设置了纯文本格式，那么就不要转成数值类型了，防止数值过大自动转成科学计数法
           if (originCell && originCell.ct && originCell.ct.fa === "@") {
-            value = String(value);
+            value = normalizedNumericValueStr;
           } else if (!/^0x?[a-fA-F0-9]+$/.test(value)) {
-            value = parseFloat(value);
+            value = parseFloat(normalizedNumericValueStr);
           }
         }
 
@@ -742,13 +753,13 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           if (!isUrl && isMultilineValue) {
             applyMultilineTextToCell(originCell, normalizedValueStr);
           } else if (!isUrl) {
-            const generated = genarate(originalValueStr);
+            const generated = genarate(normalizedNumericValueStr);
             if (generated) {
               const [genM, genCt, genV] = generated;
               if (genCt?.t === "d") {
                 // Pasted value is a date — always update ct so toolbar shows "Date"
                 originCell.v = genV;
-                originCell.m = genM ?? originalValueStr;
+                originCell.m = genM ?? normalizedNumericValueStr;
                 originCell.ct = genCt;
               } else {
                 // Not a date: preserve destination format, just update value
@@ -831,9 +842,9 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               cell.m = value;
               cell.ct = { fa: "@", t: "s" };
             } else {
-              const [m, ct, v] = genarate(originalValueStr) ?? [];
-              cell.v = v ?? originalValueStr;
-              cell.m = m != null ? String(m) : originalValueStr;
+              const [m, ct, v] = genarate(normalizedNumericValueStr) ?? [];
+              cell.v = v ?? normalizedNumericValueStr;
+              cell.m = m != null ? String(m) : normalizedNumericValueStr;
               if (ct?.t === "n") {
                 cell.ct = { fa: "General", t: "g" };
               } else {

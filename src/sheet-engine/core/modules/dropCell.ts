@@ -6,7 +6,7 @@ import { CellMatrix, Rect, Cell } from '../types';
 import { colLocation, rowLocation } from './location';
 import { getSheetIndex, isAllowEdit, isAllowEditReadOnly } from '../utils';
 import { getBorderInfoCompute } from './border';
-import { genarate, update } from './format';
+import { formatMForNumericCellAvoidingGsRules, genarate, update } from './format';
 import * as formula from './formula';
 import { isRealNum, isNumericCellType } from './validation';
 import { CFSplitRange } from './ConditionFormat';
@@ -2395,16 +2395,8 @@ export function updateDropCell(ctx: Context) {
                 if (cell.v === Infinity || cell.v === -Infinity) {
                   cell.m = cell.v.toString();
                 } else {
-                  if (cell.v.toString().indexOf('e') > -1) {
-                    let len = cell.v
-                      .toString()
-                      .split('.')[1]
-                      .split('e')[0].length;
-                    if (len > 5) {
-                      len = 5;
-                    }
-
-                    cell.m = (cell.v as number).toExponential(len).toString();
+                  if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
+                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
                   } else {
                     let mask;
                     if (cell.ct?.fa === '##0.00') {
@@ -2529,16 +2521,8 @@ export function updateDropCell(ctx: Context) {
                 if (cell.v === Infinity || cell.v === -Infinity) {
                   cell.m = cell.v.toString();
                 } else {
-                  if (cell.v.toString().indexOf('e') > -1) {
-                    let len = cell.v
-                      .toString()
-                      .split('.')[1]
-                      .split('e')[0].length;
-                    if (len > 5) {
-                      len = 5;
-                    }
-
-                    cell.m = (cell.v as number).toExponential(len).toString();
+                  if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
+                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
                   } else {
                     const mask = genarate(
                       Math.round((cell.v as number) * 1000000000) / 1000000000,
@@ -2659,16 +2643,8 @@ export function updateDropCell(ctx: Context) {
                 if (cell.v === Infinity || cell.v === -Infinity) {
                   cell.m = cell.v.toString();
                 } else {
-                  if (cell.v.toString().indexOf('e') > -1) {
-                    let len = cell.v
-                      .toString()
-                      .split('.')[1]
-                      .split('e')[0].length;
-                    if (len > 5) {
-                      len = 5;
-                    }
-
-                    cell.m = (cell.v as number).toExponential(len).toString();
+                  if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
+                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
                   } else {
                     const mask = genarate(
                       Math.round((cell.v as number) * 1000000000) / 1000000000,
@@ -2779,16 +2755,8 @@ export function updateDropCell(ctx: Context) {
                 if (cell.v === Infinity || cell.v === -Infinity) {
                   cell.m = cell.v.toString();
                 } else {
-                  if (cell.v.toString().indexOf('e') > -1) {
-                    let len = cell.v
-                      .toString()
-                      .split('.')[1]
-                      .split('e')[0].length;
-                    if (len > 5) {
-                      len = 5;
-                    }
-
-                    cell.m = (cell.v as number).toExponential(len).toString();
+                  if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
+                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
                   } else {
                     const mask = genarate(
                       Math.round((cell.v as number) * 1000000000) / 1000000000,

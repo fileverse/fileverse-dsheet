@@ -38,6 +38,7 @@ import {
   isFormulaReferenceInputMode,
   expandCellRectForMerge,
   seletedHighlistByindex,
+  selectionIsExactlyOneMergeBlock,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext, { SetContextOptions } from '../../context';
@@ -60,7 +61,7 @@ import ErrorBoxes from '../ErrorState';
 
 /**
  * Cell to outline as "primary" for multi-cell ranges: `context.primaryCellActive`, else
- * focus cell, else top-left (covers drag-extend before cache sync).
+ * focus cell, else top-left. Skips merged blocks (one logical cell — no primary pill).
  */
 function getPrimaryCellHighlightRc(
   ctx: Context,
@@ -75,6 +76,9 @@ function getPrimaryCellHighlightRc(
     last.row[0] === last.row[1] &&
     last.column[0] === last.column[1]
   ) {
+    return null;
+  }
+  if (selectionIsExactlyOneMergeBlock(ctx, last)) {
     return null;
   }
   if (
@@ -930,9 +934,12 @@ const SheetOverlay: React.FC = () => {
                   context.formulaCache.rangedrag_column_start ||
                   context.formulaCache.rangedrag_row_start ||
                   israngeseleciton(context);
-                const isMultiCell =
+                const spansMultipleGridCells =
                   selection.row[0] !== selection.row[1] ||
                   selection.column[0] !== selection.column[1];
+                const isMultiCell =
+                  spansMultipleGridCells &&
+                  !selectionIsExactlyOneMergeBlock(context, selection);
                 // Single-cell edit: hide the duplicate chrome (input covers the cell).
                 // Multi-cell: keep the range visible while typing into the active cell.
                 const hideSelectionWhileEditing = isEditing && !isMultiCell;

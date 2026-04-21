@@ -28,7 +28,13 @@ export { default as clipboard } from './clipboard';
 export { moveToEnd, getRangeRectsByCharacterOffset } from './cursor';
 
 // format
-export { update, is_date, valueShowEs } from './format';
+export {
+  update,
+  is_date,
+  valueShowEs,
+  isTypedCurrencyDisplayFormat,
+  isCurrencyLikeNumberFormat,
+} from './format';
 
 // formula
 export {
@@ -101,6 +107,7 @@ export {
   selectTitlesRange,
   normalizeSelection,
   syncPrimaryCellActiveFromSelection,
+  selectionIsExactlyOneMergeBlock,
   setPrimaryCellActive,
   advancePrimaryCellInLastMultiSelection,
   snapSheetSelectionFocusToCellPreserveMultiRange,
@@ -144,6 +151,7 @@ export {
   handleSum,
   handleLink,
   captureLinkEditorOpenSnapshot,
+  isHyperlinkCreationBlocked,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   updateFormatCell,
@@ -195,7 +203,7 @@ export {
 } from './dropCell';
 
 // merge
-export { mergeCells } from './merge';
+export { mergeCells, mergeSelectionHasValues } from './merge';
 
 // sort
 export { sortSelection, spillSortResult } from './sort';

@@ -21,7 +21,7 @@ export const SERVICES_API_KEY: ServicesApiKeyType = RawServicesApiKey;
 export const DEFAULT_SHEET_DATA = [
   {
     id: '0',
-    name: 'Sheet2',
+    name: 'Sheet1',
     celldata: [],
     config: {},
     order: 0,

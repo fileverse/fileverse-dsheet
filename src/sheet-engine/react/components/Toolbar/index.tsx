@@ -22,6 +22,7 @@ import {
   captureLinkEditorOpenSnapshot,
   locale,
   handleMerge,
+  mergeSelectionHasValues,
   handleBorder,
   toolbarItemSelectedFunc,
   handleFreeze,
@@ -41,6 +42,8 @@ import {
   api,
   getSheetIndex,
   is_date,
+  isHyperlinkCreationBlocked,
+  isTypedCurrencyDisplayFormat,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import {
@@ -477,6 +480,25 @@ const Toolbar: React.FC<{
     const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1480);
     const { showDialog, hideDialog } = useDialog();
     const { showAlert, hideAlert } = useAlert();
+
+    useEffect(() => {
+      const gc = refs.globalCache;
+      if (!gc) return undefined;
+      gc.onHyperlinkInsertBlocked = () => {
+        showDialog(
+          'Cannot create hyperlink. Cell may be non-editable or may contain a formula.',
+          'ok',
+          'There was a problem',
+          'OK',
+          undefined,
+          hideDialog,
+          hideDialog,
+        );
+      };
+      return () => {
+        delete gc.onHyperlinkInsertBlocked;
+      };
+    }, [refs, showDialog, hideDialog]);
     const firstSelection = context.luckysheet_select_save?.[0];
     const flowdata = getFlowdata(context);
     contextRef.current = context;
@@ -783,7 +805,27 @@ const Toolbar: React.FC<{
               if (curr.t === 'd') {
                 currentFmt = hasTime ? 'Date time' : 'Date';
               } else if (curr.t === 'g' && curr.fa === 'General') {
-                currentFmt = defaultFormat[defaultFormat.length - 1].text;
+                // General lives at index 0 ("Auto"); last item is "more formats", not Automatic.
+                currentFmt = defaultFormat[0].text;
+              } else if (format != null) {
+                // Exact preset match (Currency, Accounting, Number, etc.) before heuristics:
+                // currency/accounting patterns contain "#,##0" and would be mislabeled "Number".
+                currentFmt = format.text;
+              } else if (curr.fa.includes('%')) {
+                // Freshly typed percentages use the implicit "0%" mask from auto-detect.
+                // Keep these under Auto so behavior matches other direct typed values.
+                // Explicit percent presets (e.g. "#0.00%") should still show Percent.
+                currentFmt = curr.fa === '0%' ? defaultFormat[0].text : 'Percent';
+              } else if (is_date(curr.fa)) {
+                currentFmt = hasTime ? 'Date time' : 'Date';
+              } else if (
+                isTypedCurrencyDisplayFormat(
+                  curr.fa,
+                  locale(context).currencyDetail,
+                )
+              ) {
+                // Typed $123 / BTC… keeps currency display via `fa` but format menu shows Auto (like plain numbers).
+                currentFmt = defaultFormat[0].text;
               } else if (
                 curr.t === 'n' ||
                 curr.fa.includes('#,##0') ||
@@ -791,12 +833,8 @@ const Toolbar: React.FC<{
                 curr.fa === '0.00'
               ) {
                 currentFmt = 'Number';
-              } else if (is_date(curr.fa)) {
-                currentFmt = hasTime ? 'Date time' : 'Date';
-              } else if (format != null) {
-                currentFmt = format.text;
               } else {
-                currentFmt = defaultFormat[defaultFormat.length - 1].text;
+                currentFmt = defaultFormat[0].text;
               }
             }
           }
@@ -1582,6 +1620,12 @@ const Toolbar: React.FC<{
               tooltip={tooltip}
               text="合并单元格"
               onClick={() => {
+                if (!mergeSelectionHasValues(context)) {
+                  setContext((ctx) => {
+                    handleMerge(ctx, 'merge-all');
+                  });
+                  return;
+                }
                 const confirmMessage = sheetconfig.confirmMerge;
                 showAlert(confirmMessage, 'yesno', () => {
                   setContext((ctx) => {
@@ -1604,9 +1648,13 @@ const Toolbar: React.FC<{
                           });
                           setOpen(false);
                         } else {
-                          // Close dropdown before showing alert
                           setOpen(false);
-                          // Show confirmation for all merge actions
+                          if (!mergeSelectionHasValues(context)) {
+                            setContext((ctx) => {
+                              handleMerge(ctx, value);
+                            });
+                            return;
+                          }
                           const confirmMessage = sheetconfig.confirmMerge;
                           showAlert(confirmMessage, 'yesno', () => {
                             setContext((ctx) => {
@@ -2006,15 +2054,30 @@ const Toolbar: React.FC<{
             />
           );
         }
+        const hyperlinkInsertBlocked =
+          name === 'link' &&
+          isHyperlinkCreationBlocked(
+            context,
+            refs.cellInput.current ?? undefined,
+          );
         return (
           <Tooltip text={tooltip} position="bottom">
             <Button
               iconId={name}
               tooltip={tooltip}
               key={name}
+              disabled={
+                ((name === 'number-decrease' || name === 'number-increase') &&
+                  context.luckysheetCellUpdate.length > 0) ||
+                Boolean(hyperlinkInsertBlocked)
+              }
               selected={toolbarItemSelectedFunc(name)?.(cell)}
               onMouseDown={(e) => {
                 if (name === 'link') {
+                  if (hyperlinkInsertBlocked) {
+                    e.preventDefault();
+                    return;
+                  }
                   // Keep in-cell caret/selection when opening link from toolbar;
                   // otherwise browser focuses toolbar button on mousedown.
                   e.preventDefault();
@@ -2025,15 +2088,27 @@ const Toolbar: React.FC<{
                   );
                 }
               }}
-              onClick={() =>
+              onClick={() => {
+                if (name === 'link' && hyperlinkInsertBlocked) {
+                  refs.globalCache?.onHyperlinkInsertBlocked?.();
+                  return;
+                }
                 setContext((draftCtx) => {
+                  const isDecimalAction =
+                    name === 'number-decrease' || name === 'number-increase';
+                  if (
+                    isDecimalAction &&
+                    draftCtx.luckysheetCellUpdate.length > 0
+                  ) {
+                    return;
+                  }
                   toolbarItemClickHandler(name)?.(
                     draftCtx,
                     refs.cellInput.current!,
                     refs.globalCache,
                   );
-                })
-              }
+                });
+              }}
             />
           </Tooltip>
         );

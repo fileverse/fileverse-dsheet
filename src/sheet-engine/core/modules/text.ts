@@ -612,11 +612,13 @@ export function getCellTextInfo(
 
     // Google Sheets-like default: when no explicit horizontal alignment is set,
     // numeric content should render right-aligned under General/Automatic.
+    // But explicit Plain text format (@) must remain text-left.
     if (!_.isNil(cell) && _.isNil((cell as Cell).ht)) {
+      const isPlainTextFormat = (cell as Cell).ct?.fa === '@';
       const numericCandidate = !_.isNil((cell as Cell).v)
         ? (cell as Cell).v
         : value;
-      if (isRealNum(numericCandidate)) {
+      if (!isPlainTextFormat && isRealNum(numericCandidate)) {
         horizonAlign = '2';
       }
     }

@@ -16,10 +16,17 @@ import {
   getFocusCharacterOffset,
   getSelectionCharacterOffsets,
 } from "./cursor";
-import { datenum_local, genarate, is_date, update } from "./format";
+import {
+  datenum_local,
+  is_date,
+  MAX_GENERAL_AUTO_DP,
+  refreshGeneralNumericDisplay,
+  update,
+} from "./format";
 import {
   execfunction,
   execFunctionGroup,
+  getFormulaEditorOwner,
   israngeseleciton,
   rangeSetValue,
   setCaretPosition,
@@ -61,6 +68,25 @@ type ToolbarItemClickHandler = (
 ) => void;
 
 type ToolbarItemSelectedFunc = (cell: Cell | null | undefined) => boolean;
+
+function pushToolbarCellDataUpdate(
+  ctx: Context,
+  r: number,
+  c: number,
+  d: CellMatrix
+) {
+  clearMeasureTextCache();
+  const cell = d[r]?.[c];
+  ctx.hooks?.updateCellYdoc?.([
+    {
+      sheetId: ctx.currentSheetId,
+      path: ["celldata"],
+      value: { r, c, v: cell },
+      key: `${r}_${c}`,
+      type: "update",
+    },
+  ]);
+}
 
 export function updateFormatCell(
   ctx: Context,
@@ -128,6 +154,7 @@ export function updateFormatCell(
             } else if (_.isPlainObject(d[r][c])) {
               // Cell exists but has no value — update its format in place
               if (_.isNil(d[r][c]!.ct)) d[r][c]!.ct = {};
+              delete d[r][c]!.ct!.dp;
               d[r][c]!.ct!.fa = foucsStatus;
               d[r][c]!.ct!.t = type;
               if (type === "n") d[r][c]!.ht = 2;
@@ -167,6 +194,7 @@ export function updateFormatCell(
           if (_.isNil(cell.ct)) {
             cell.ct = {};
           }
+          delete cell.ct.dp;
           cell.ct.fa = foucsStatus;
           cell.ct.t = type;
           cell.v = typeof value === "number" ? value : String(value);
@@ -1065,20 +1093,33 @@ export function handleNumberDecrease(ctx: Context, cellInput: HTMLDivElement) {
 
   let foucsStatus = normalizedAttr(flowdata, row_index, col_index, "ct");
   const cell = flowdata[row_index][col_index];
+  const numericSample = cell?.v ?? cell?.m;
+  if (foucsStatus == null && cell != null && isRealNum(numericSample)) {
+    foucsStatus = { fa: "General", t: "g" };
+  }
 
   if (
     foucsStatus == null ||
-    (foucsStatus.t !== "n" && !(foucsStatus.t === "g" && isRealNum(cell?.v)))
+    (foucsStatus.t !== "n" &&
+      !(foucsStatus.t === "g" && isRealNum(numericSample)))
   ) {
     return;
   }
 
+  // General (Auto): adjust display decimals via ct.dp only — keep fa General + t "g" (Sheets-like).
   if (foucsStatus.fa === "General") {
-    if (!cell || !cell.v) return;
-
-    const mask = genarate(cell.v);
-    if (!mask || mask.length < 2) return;
-    [, foucsStatus] = mask;
+    if (!cell || !_.isPlainObject(cell)) return;
+    const raw = cell.v ?? cell.m;
+    if (raw == null || !isRealNum(raw)) return;
+    if (!cell.ct?.dp || cell.ct.dp < 1) return;
+    if (cell.ct.dp <= 1) {
+      delete cell.ct.dp;
+    } else {
+      cell.ct.dp -= 1;
+    }
+    refreshGeneralNumericDisplay(cell);
+    pushToolbarCellDataUpdate(ctx, row_index, col_index, flowdata);
+    return;
   }
 
   // 万亿格式
@@ -1158,23 +1199,34 @@ export function handleNumberIncrease(ctx: Context, cellInput: HTMLDivElement) {
   if (row_index === undefined || col_index === undefined) return;
   let foucsStatus = normalizedAttr(flowdata, row_index, col_index, "ct");
   const cell = flowdata[row_index][col_index];
+  const numericSample = cell?.v ?? cell?.m;
+  if (foucsStatus == null && cell != null && isRealNum(numericSample)) {
+    foucsStatus = { fa: "General", t: "g" };
+  }
 
   if (
     foucsStatus == null ||
-    (foucsStatus.t !== "n" && !(foucsStatus.t === "g" && isRealNum(cell?.v)))
+    (foucsStatus.t !== "n" &&
+      !(foucsStatus.t === "g" && isRealNum(numericSample)))
   ) {
     return;
   }
 
+  // General (Auto): store decimal hint on ct.dp; keep fa/t as Auto (Sheets-like).
   if (foucsStatus.fa === "General") {
-    if (!cell || !cell.v) return;
-    const mask = genarate(cell.v);
-    if (!mask || mask.length < 2) return;
-    [, foucsStatus] = mask;
-  }
-
-  if (foucsStatus.fa === "General") {
-    updateFormat(ctx, cellInput, flowdata, "ct", "#.0");
+    if (!cell || !_.isPlainObject(cell)) return;
+    const raw = cell.v ?? cell.m;
+    if (raw == null || !isRealNum(raw)) return;
+    if (!cell.ct) cell.ct = {};
+    const nextDp = Math.min(
+      MAX_GENERAL_AUTO_DP,
+      (cell.ct.dp ?? 0) + 1,
+    );
+    cell.ct.fa = "General";
+    cell.ct.t = "g";
+    cell.ct.dp = nextDp;
+    refreshGeneralNumericDisplay(cell);
+    pushToolbarCellDataUpdate(ctx, row_index, col_index, flowdata);
     return;
   }
 
@@ -1713,6 +1765,54 @@ function normalizeCellPlainTextForEditor(s: string): string {
  * Records caret and selection offsets for the active cell editor into `cache`.
  * Call on toolbar link mousedown (before focus leaves the editor) and from selectionchange while editing.
  */
+/** Plain text from the active cell or formula-bar editor (when editing). */
+function getActiveEditPlainTextForHyperlink(
+  ctx: Context,
+  cellInput: HTMLDivElement | null | undefined
+): string {
+  const editing =
+    ctx.luckysheetCellUpdate?.length === 2 &&
+    ctx.luckysheetCellUpdate[0] != null &&
+    ctx.luckysheetCellUpdate[1] != null;
+  if (!editing) return "";
+  const owner = getFormulaEditorOwner(ctx);
+  if (owner === "fx") {
+    const el = document.getElementById(
+      "luckysheet-functionbox-cell"
+    ) as HTMLDivElement | null;
+    return el?.innerText ?? "";
+  }
+  return cellInput?.innerText ?? "";
+}
+
+/**
+ * Hyperlink insert is not supported for formula cells or when the user is entering a formula
+ * (cell / formula bar content starts with `=`).
+ */
+export function isHyperlinkCreationBlocked(
+  ctx: Context,
+  cellInput: HTMLDivElement | null | undefined
+): boolean {
+  const selection = ctx.luckysheet_select_save?.[0];
+  const flowdata = getFlowdata(ctx);
+  if (flowdata == null || selection == null) return false;
+
+  const r = selection.row[0];
+  const c = selection.column[0];
+  const cell = flowdata[r]?.[c];
+  const hasFormula =
+    cell?.f != null && String(cell.f).trim() !== "";
+
+  if (hasFormula) return true;
+
+  const editText = getActiveEditPlainTextForHyperlink(ctx, cellInput);
+  if (editText.length > 0 && editText.trimStart().startsWith("=")) {
+    return true;
+  }
+
+  return false;
+}
+
 export function captureLinkEditorOpenSnapshot(
   ctx: Context,
   cellInput: HTMLDivElement | null | undefined,
@@ -1757,6 +1857,10 @@ export function handleLink(
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
+  if (isHyperlinkCreationBlocked(ctx, cellInput)) {
+    cache?.onHyperlinkInsertBlocked?.();
+    return;
+  }
   const selection = ctx.luckysheet_select_save?.[0];
   const flowdata = getFlowdata(ctx);
   if (flowdata == null || selection == null) return;
@@ -1902,7 +2006,7 @@ const handlerMap: Record<string, ToolbarItemClickHandler> = {
   "number-decrease": handleNumberDecrease,
   "number-increase": handleNumberIncrease,
   "sort-cell": (ctx: Context) => handleSort(ctx, true),
-  "merge-all": (ctx: Context) => handleMerge(ctx, "mergeAll"),
+  "merge-all": (ctx: Context) => handleMerge(ctx, "merge-all"),
   "border-all": (ctx: Context) => handleBorder(ctx, "border-all"),
   bold: handleBold,
   italic: handleItalic,

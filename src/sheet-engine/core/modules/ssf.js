@@ -298,8 +298,19 @@ const make_ssf = function make_ssf(SSF) {
         .replace(exp_with_single_digit, "$10$2");
     }
     /* exponent >= -9 and <= 9 */
+    /* Google-Sheets-like: no E-notation below 999999999999997 or at/above 1e15 */
+    var GS_PLAIN_MAX = 999999999999997;
+    var GS_16_MIN = 1e15;
     function small_exp(v) {
       var w = v < 0 ? 12 : 11;
+      var av = Math.abs(v);
+      if (av <= GS_PLAIN_MAX || av >= GS_16_MIN) {
+        var o = strip_decimal(v.toFixed(12));
+        if (o.length <= w) return o;
+        o = v.toPrecision(10);
+        if (o.length <= w) return o;
+        return strip_decimal(v.toFixed(12));
+      }
       var o = strip_decimal(v.toFixed(12));
       if (o.length <= w) return o;
       o = v.toPrecision(10);
@@ -308,7 +319,11 @@ const make_ssf = function make_ssf(SSF) {
     }
     /* exponent >= 11 or <= -10 likely exponential */
     function large_exp(v) {
+      var av = Math.abs(v);
       var o = strip_decimal(v.toFixed(11));
+      if (av <= GS_PLAIN_MAX || av >= GS_16_MIN) {
+        return o;
+      }
       return o.length > (v < 0 ? 12 : 11) || o === "0" || o === "-0"
         ? v.toPrecision(6)
         : o;
