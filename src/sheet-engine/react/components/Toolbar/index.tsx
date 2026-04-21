@@ -22,6 +22,7 @@ import {
   captureLinkEditorOpenSnapshot,
   locale,
   handleMerge,
+  mergeSelectionHasValues,
   handleBorder,
   toolbarItemSelectedFunc,
   handleFreeze,
@@ -1602,6 +1603,12 @@ const Toolbar: React.FC<{
               tooltip={tooltip}
               text="合并单元格"
               onClick={() => {
+                if (!mergeSelectionHasValues(context)) {
+                  setContext((ctx) => {
+                    handleMerge(ctx, 'merge-all');
+                  });
+                  return;
+                }
                 const confirmMessage = sheetconfig.confirmMerge;
                 showAlert(confirmMessage, 'yesno', () => {
                   setContext((ctx) => {
@@ -1624,9 +1631,13 @@ const Toolbar: React.FC<{
                           });
                           setOpen(false);
                         } else {
-                          // Close dropdown before showing alert
                           setOpen(false);
-                          // Show confirmation for all merge actions
+                          if (!mergeSelectionHasValues(context)) {
+                            setContext((ctx) => {
+                              handleMerge(ctx, value);
+                            });
+                            return;
+                          }
                           const confirmMessage = sheetconfig.confirmMerge;
                           showAlert(confirmMessage, 'yesno', () => {
                             setContext((ctx) => {

@@ -1,8 +1,41 @@
 import _ from 'lodash';
-import { Context } from '../context';
+import { Context, getFlowdata } from '../context';
 import { Range } from '../types';
 import { getSheetIndex } from '../utils';
 import { isInlineStringCT } from './inline-string';
+
+/** Same “has content” notion as merge (plain value, inlineStr, formula, rich text). */
+function cellHasMergeRelevantContent(cell: any): boolean {
+  if (cell == null) return false;
+  return (
+    isInlineStringCT(cell.ct) ||
+    !_.isEmpty(cell.v) ||
+    cell.f != null ||
+    // @ts-ignore
+    cell.s != null ||
+    (cell.ct && cell.ct.s?.length)
+  );
+}
+
+/** True if any cell in the current selection has content that merge would consider. */
+export function mergeSelectionHasValues(ctx: Context): boolean {
+  const d = getFlowdata(ctx);
+  if (!d || !ctx.luckysheet_select_save?.length) return false;
+
+  for (let s = 0; s < ctx.luckysheet_select_save.length; s += 1) {
+    const r1 = ctx.luckysheet_select_save[s].row[0];
+    const r2 = ctx.luckysheet_select_save[s].row[1];
+    const c1 = ctx.luckysheet_select_save[s].column[0];
+    const c2 = ctx.luckysheet_select_save[s].column[1];
+
+    for (let r = r1; r <= r2; r += 1) {
+      for (let c = c1; c <= c2; c += 1) {
+        if (cellHasMergeRelevantContent(d[r]?.[c])) return true;
+      }
+    }
+  }
+  return false;
+}
 
 export function mergeCells(
   ctx: Context,

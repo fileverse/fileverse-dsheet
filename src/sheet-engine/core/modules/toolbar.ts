@@ -1955,7 +1955,7 @@ const handlerMap: Record<string, ToolbarItemClickHandler> = {
   "number-decrease": handleNumberDecrease,
   "number-increase": handleNumberIncrease,
   "sort-cell": (ctx: Context) => handleSort(ctx, true),
-  "merge-all": (ctx: Context) => handleMerge(ctx, "mergeAll"),
+  "merge-all": (ctx: Context) => handleMerge(ctx, "merge-all"),
   "border-all": (ctx: Context) => handleBorder(ctx, "border-all"),
   bold: handleBold,
   italic: handleItalic,

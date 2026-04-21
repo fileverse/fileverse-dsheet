@@ -1,6 +1,6 @@
 
 import _, { isPlainObject } from "lodash";
-import type { Sheet as SheetType, Freezen, Range } from "../types";
+import type { Sheet as SheetType, Freezen, Range, Selection } from "../types";
 import { Context, getFlowdata } from "../context";
 import {
   getCellValue,
@@ -107,6 +107,33 @@ export function seletedHighlistByindex(
 }
 
 /**
+ * True when the selection rectangle is exactly one merged block (multi grid cells, one
+ * logical cell). Literal 1×1 is false here — callers use row/column span for that.
+ */
+export function selectionIsExactlyOneMergeBlock(
+  ctx: Context,
+  selection: Selection
+): boolean {
+  const rLo = Math.min(selection.row[0], selection.row[1]);
+  const rHi = Math.max(selection.row[0], selection.row[1]);
+  const cLo = Math.min(selection.column[0], selection.column[1]);
+  const cHi = Math.max(selection.column[0], selection.column[1]);
+  if (rLo === rHi && cLo === cHi) {
+    return false;
+  }
+  const mergeMap = ctx.config?.merge;
+  if (!mergeMap) return false;
+  const mc = mergeMap[`${rLo}_${cLo}`];
+  if (!mc || mc.rs == null || mc.cs == null) return false;
+  return (
+    mc.r === rLo &&
+    mc.c === cLo &&
+    rHi === mc.r + mc.rs - 1 &&
+    cHi === mc.c + mc.cs - 1
+  );
+}
+
+/**
  * Updates `ctx.primaryCellActive` from a selection list (multi-cell → active focus cell;
  * else null). Pass `selection` explicitly when normalizing a **new** array that is not
  * yet assigned to `ctx.luckysheet_select_save`.
@@ -124,6 +151,10 @@ export function syncPrimaryCellActiveFromSelection(
   const multi =
     last.row[0] !== last.row[1] || last.column[0] !== last.column[1];
   if (!multi) {
+    ctx.primaryCellActive = null;
+    return;
+  }
+  if (selectionIsExactlyOneMergeBlock(ctx, last)) {
     ctx.primaryCellActive = null;
     return;
   }
