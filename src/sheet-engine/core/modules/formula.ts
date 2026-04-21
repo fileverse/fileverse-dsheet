@@ -2282,8 +2282,10 @@ export function createRangeHightlight(
   ctx.formulaRangeHighlight = formulaRanges;
 }
 
-export function moveCursorToEnd(editableDiv: HTMLDivElement) {
-  editableDiv?.focus(); // Ensure the element is focused
+export function moveCursorToEnd(editableDiv: HTMLDivElement | null | undefined) {
+  if (!editableDiv) return;
+  if (!(editableDiv instanceof Node)) return;
+  editableDiv.focus(); // Ensure the element is focused
 
   const range = document.createRange();
   const selection = window.getSelection();
@@ -2326,7 +2328,10 @@ export function setCaretPosition(
     sel?.addRange(range);
     el.focus();
   } catch {
-    moveCursorToEnd(parentTextDom as HTMLDivElement);
+    // Avoid crashing on invalid fallback element; best-effort caret placement.
+    if (parentTextDom && parentTextDom instanceof HTMLElement) {
+      moveCursorToEnd(parentTextDom as HTMLDivElement);
+    }
   }
 }
 
@@ -4239,7 +4244,7 @@ export function rangeSetValue(
     //   .find(`span[rangeindex='${formulaCache.rangechangeindex}']`)
     //   .html(range);
     spanToReplace.innerHTML = range;
-    setCaretPosition(ctx, spanToReplace, 0, range.length);
+    setCaretPosition(ctx, spanToReplace, 0, range.length, $editor);
     //   }
   } else {
     const function_str = `<span class="fortune-formula-functionrange-cell" rangeindex="${functionHTMLIndex}" dir="auto" style="color:${colors[functionHTMLIndex]};">${range}</span>`;
@@ -4272,9 +4277,13 @@ export function rangeSetValue(
     ctx.formulaCache.rangechangeindex = functionHTMLIndex;
     const span = $editor.querySelector(
       `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`
-    ) as HTMLSpanElement;
-
-    setCaretPosition(ctx, span, 0, range.length);
+    ) as HTMLSpanElement | null;
+    if (span) {
+      setCaretPosition(ctx, span, 0, range.length, $editor);
+    } else {
+      // Best-effort: avoid crashing on unexpected DOM; keep editor content updated.
+      moveCursorToEnd($editor);
+    }
     functionHTMLIndex += 1;
   }
 
