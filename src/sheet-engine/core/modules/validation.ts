@@ -8,6 +8,7 @@ import {
   ERROR_REF,
   ERROR_VALUE,
   ERROR,
+  CIRCULAR_REF_ERROR,
   // @ts-ignore
 } from '@sheet-engine/formula-parser';
 import { Context } from '../context';
@@ -34,7 +35,7 @@ export const errorMessagesFromValue: Record<string, string> = {
   [ERROR_REF]: 'Invalid reference',
   [ERROR_VALUE]: 'Invalid value',
   [ERROR]: 'Unknown error',
-  [error.circ]: 'Circular dependency.',
+  [CIRCULAR_REF_ERROR]: 'Circular dependency.',
 };
 
 export function detectErrorFromValue(input: string) {
