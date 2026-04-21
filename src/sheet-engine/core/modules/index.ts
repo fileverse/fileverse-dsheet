@@ -107,6 +107,7 @@ export {
   selectTitlesRange,
   normalizeSelection,
   syncPrimaryCellActiveFromSelection,
+  selectionIsExactlyOneMergeBlock,
   setPrimaryCellActive,
   advancePrimaryCellInLastMultiSelection,
   snapSheetSelectionFocusToCellPreserveMultiRange,
@@ -150,6 +151,7 @@ export {
   handleSum,
   handleLink,
   captureLinkEditorOpenSnapshot,
+  isHyperlinkCreationBlocked,
   toolbarItemClickHandler,
   toolbarItemSelectedFunc,
   updateFormatCell,
@@ -201,7 +203,7 @@ export {
 } from './dropCell';
 
 // merge
-export { mergeCells } from './merge';
+export { mergeCells, mergeSelectionHasValues } from './merge';
 
 // sort
 export { sortSelection, spillSortResult } from './sort';
