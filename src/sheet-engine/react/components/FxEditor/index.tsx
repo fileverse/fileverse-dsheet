@@ -99,7 +99,6 @@ const FxEditor: React.FC = () => {
       formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
       ? formulaSearchTopLockRef.current.top
       : null;
-  const prevFirstSelection = usePrevious(firstSelection);
   const prevCellUpdate = usePrevious<any[]>(context.luckysheetCellUpdate);
   const prevSheetId = usePrevious(context.currentSheetId);
   const recentText = useRef('');
@@ -149,13 +148,6 @@ const FxEditor: React.FC = () => {
     // 当选中行列是处于隐藏状态的话则不允许编辑
     setIsHidenRC(isShowHidenCR(context));
     if (context.luckysheetCellUpdate.length > 0) {
-      return;
-    }
-    if (
-      _.isEqual(prevFirstSelection, firstSelection) &&
-      context.currentSheetId === prevSheetId
-    ) {
-      // data change by a collabrative update should not trigger this effect
       return;
     }
     const d = getFlowdata(context);
