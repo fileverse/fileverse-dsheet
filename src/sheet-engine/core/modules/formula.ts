@@ -1535,12 +1535,6 @@ export function execfunction(
 
   const { error: formulaError } = parsedResponse;
   let { result } = parsedResponse;
-  console.log("[formula-debug] parse output", {
-    sourceCell: `${r},${c}`,
-    expr: parserExpression,
-    error: formulaError ? String(formulaError) : null,
-    result: formulaDebugStable(result),
-  });
 
   // https://stackoverflow.com/a/643827/8200626
   // https://github.com/ruilisi/fortune-sheet/issues/551
@@ -1605,12 +1599,6 @@ export function execfunction(
       .toFixed(ctx.formulaCache.parser.cryptoDecimals);
     finalResult = `${resultStr} ${ctx.formulaCache.parser.cryptoDenomination}`;
   }
-  console.log("[formula-debug] final output", {
-    sourceCell: `${r},${c}`,
-    expr: parserExpression,
-    isError: !_.isNil(formulaError),
-    finalResult: formulaDebugStable(finalResult),
-  });
   const isError = !_.isNil(formulaError);
   const detectedErrorFromValue = detectErrorFromValue(finalResult?.toString());
   if (isError || detectedErrorFromValue) {
