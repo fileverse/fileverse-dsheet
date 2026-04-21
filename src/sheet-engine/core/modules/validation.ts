@@ -22,6 +22,7 @@ export const error = {
   nm: '#NUM!', // 当公式或函数中某个数字有问题时
   nl: '#NULL!', // 交叉运算符（空格）使用不正确
   sp: '#SPILL!', // 数组范围有其它值
+  circ: '#CIRC!', // 循环引用
 };
 
 export const errorMessagesFromValue: Record<string, string> = {
@@ -33,6 +34,7 @@ export const errorMessagesFromValue: Record<string, string> = {
   [ERROR_REF]: 'Invalid reference',
   [ERROR_VALUE]: 'Invalid value',
   [ERROR]: 'Unknown error',
+  [error.circ]: 'Circular dependency.',
 };
 
 export function detectErrorFromValue(input: string) {

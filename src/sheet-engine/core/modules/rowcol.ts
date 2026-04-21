@@ -2461,19 +2461,18 @@ export function deleteRowCol(
 
   if (file.id === ctx.currentSheetId) {
     ctx.config = cfg;
-    // Re-evaluate all formulas that now contain #REF! so dependent cells propagate the error.
-    // execFunctionGroup uses execFunctionExist to know which cells "changed"; we seed it with
-    // every formula cell whose rewritten formula contains #REF! so their dependents are re-evaluated.
-    const refErrorCells: { r: number; c: number; i: string }[] = [];
-    const flowdata = getFlowdata(ctx);
-    newCalcChain.forEach((calc: { r: number; c: number; id: string }) => {
-      const cell = flowdata?.[calc.r]?.[calc.c];
-      if (cell?.f?.includes('#REF!')) {
-        refErrorCells.push({ r: calc.r, c: calc.c, i: ctx.currentSheetId });
-      }
-    });
-    if (refErrorCells.length > 0) {
-      ctx.formulaCache.execFunctionExist = refErrorCells;
+    // Structural edits rewrite formula strings (and may create/remove circular dependencies).
+    // Trigger a dependent-aware recalculation so:
+    // - values update
+    // - dependency graph is refreshed (used for #CIRC! detection/propagation)
+    const touchedFormulaCells: { r: number; c: number; i: string }[] =
+      (newCalcChain || []).map((calc: { r: number; c: number; id: string }) => ({
+        r: calc.r,
+        c: calc.c,
+        i: ctx.currentSheetId,
+      }));
+    if (touchedFormulaCells.length > 0) {
+      ctx.formulaCache.execFunctionExist = touchedFormulaCells;
       // @ts-expect-error: full-sheet recalc passes null for origin_r/c/value/id
       execFunctionGroup(ctx, null, null, null, null, getFlowdata(ctx));
       ctx.formulaCache.execFunctionExist = undefined;
