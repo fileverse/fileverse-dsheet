@@ -1110,6 +1110,20 @@ export function updateCell(
 
     let curv = flowdata[r][c];
 
+    const enteredEditByTyping =
+      ctx.getRefs?.()?.globalCache?.enteredEditByTyping === true;
+    const inputLooksLikeOnlySeededPercent =
+      enteredEditByTyping &&
+      typeof inputText === "string" &&
+      inputText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim() === "%" &&
+      typeof (curv as any)?.ct?.fa === "string" &&
+      String((curv as any).ct.fa).includes("%");
+    if (inputLooksLikeOnlySeededPercent) {
+      // Type-to-edit on % cells pre-seeds a trailing "%". If user exits edit
+      // without entering any actual value, do not persist that placeholder.
+      inputText = "";
+    }
+
     // ctx.old value for hook function
     const oldValue = _.cloneDeep(curv);
 
