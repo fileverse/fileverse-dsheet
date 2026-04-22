@@ -31,6 +31,15 @@ const POPOVER_STYLE = {
 
 const QUICK_ACTIONS = ['SUM', 'AVERAGE', 'COUNT', 'MAX', 'MIN'] as const;
 
+const PARSER_FUNCTIONS = new Set([
+  'CONVERT',
+  'TO_DATE',
+  'TO_DOLLARS',
+  'TO_PERCENT',
+  'TO_PURE_NUMBER',
+  'TO_TEXT',
+]);
+
 const TYPE_TO_CATEGORY_KEY: Record<number, string> = {
   0: 'Math',
   1: 'Statistical',
@@ -259,8 +268,11 @@ export const FunctionList = () => {
       if (!name) continue;
 
       const typeId = Number(item?.t);
-      const categoryKey =
-        typeId === 11 ? 'Operator' : TYPE_TO_CATEGORY_KEY[typeId] || 'Other';
+      const categoryKey = PARSER_FUNCTIONS.has(name)
+        ? 'Parser'
+        : typeId === 11
+          ? 'Operator'
+          : TYPE_TO_CATEGORY_KEY[typeId] || 'Other';
 
       if (!byCategory.has(categoryKey)) byCategory.set(categoryKey, new Set());
       byCategory.get(categoryKey)!.add(name);
