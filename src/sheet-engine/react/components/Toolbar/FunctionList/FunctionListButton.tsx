@@ -85,6 +85,15 @@ const isFromFunctionListSubmenuTarget = (target: EventTarget | null) => {
   );
 };
 
+const isFromSheetCellEditorTarget = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(
+    target.closest(
+      '#luckysheet-rich-text-editor, .luckysheet-cell-input, .luckysheet-cell-input *',
+    ),
+  );
+};
+
 function FunctionListSubmenuScrollArea({
   children,
   maxHeight = 360,
@@ -286,7 +295,7 @@ export const FunctionList = () => {
         }}
       >
         <PopoverTrigger asChild>
-          <div className="flex items-center justify-center w-[30px] h-[30px] hover:!color-bg-default-hover rounded">
+          <div className="flex items-center justify-center w-[30px] h-[30px] hover:!color-bg-default-hover rounded cursor-pointer">
             <LucideIcon name="Sigma" className="w-[16px] h-[16px]" />
           </div>
         </PopoverTrigger>
@@ -301,13 +310,28 @@ export const FunctionList = () => {
           // Radix can treat entering the submenu as an "outside interaction" and
           // close the parent popover immediately.
           onInteractOutside={(e: OutsideEvent) => {
-            if (isFromFunctionListSubmenuTarget(e.target)) e.preventDefault();
+            if (
+              isFromFunctionListSubmenuTarget(e.target) ||
+              isFromSheetCellEditorTarget(e.target)
+            ) {
+              e.preventDefault();
+            }
           }}
           onPointerDownOutside={(e: OutsideEvent) => {
-            if (isFromFunctionListSubmenuTarget(e.target)) e.preventDefault();
+            if (
+              isFromFunctionListSubmenuTarget(e.target) ||
+              isFromSheetCellEditorTarget(e.target)
+            ) {
+              e.preventDefault();
+            }
           }}
           onFocusOutside={(e: OutsideEvent) => {
-            if (isFromFunctionListSubmenuTarget(e.target)) e.preventDefault();
+            if (
+              isFromFunctionListSubmenuTarget(e.target) ||
+              isFromSheetCellEditorTarget(e.target)
+            ) {
+              e.preventDefault();
+            }
           }}
         >
           <div className="color-text-default">
