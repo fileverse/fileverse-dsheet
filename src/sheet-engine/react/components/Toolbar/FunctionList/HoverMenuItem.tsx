@@ -30,8 +30,8 @@ type SubmenuProps = {
 export type HoverMenuItemProps = CommonProps &
   (
     | {
-        renderSubmenu?: undefined;
-      }
+      renderSubmenu?: undefined;
+    }
     | SubmenuProps
   );
 
@@ -111,7 +111,6 @@ export function HoverMenuItem(props: HoverMenuItemProps) {
   const buttonClassName = useMemo(() => {
     return cn(
       'hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-between space-x-2 transition',
-      submenu ? 'pl-0' : undefined,
       props.disabled ? 'opacity-50 cursor-not-allowed' : undefined,
       props.className,
     );

@@ -1,5 +1,12 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
-import { useCallback, useContext, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { LucideIcon } from '@fileverse/ui';
 import { HoverMenuItem } from './HoverMenuItem';
 import WorkbookContext from '../../../context';
@@ -39,11 +46,12 @@ const TYPE_TO_CATEGORY_KEY: Record<number, string> = {
   15: 'Info',
   16: 'Operator',
   17: 'Database',
-  20: 'Crypto',
+  20: 'Datablock',
 };
 
 const CATEGORY_ORDER = [
   'All',
+  'Datablock',
   'Array',
   'Database',
   'Date',
@@ -57,7 +65,6 @@ const CATEGORY_ORDER = [
   'Parser',
   'Statistical',
   'Text',
-  'Crypto',
   'Other',
 ] as const;
 
@@ -77,6 +84,80 @@ const isFromFunctionListSubmenuTarget = (target: EventTarget | null) => {
     target.closest('[data-hovermenu-submenu="true"]'),
   );
 };
+
+function FunctionListSubmenuScrollArea({
+  children,
+  maxHeight = 360,
+}: {
+  children: React.ReactNode;
+  maxHeight?: number;
+}) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [thumb, setThumb] = useState<{ top: number; height: number } | null>(
+    null,
+  );
+
+  const recompute = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const viewportHeight = el.clientHeight;
+    const scrollHeight = el.scrollHeight;
+
+    if (scrollHeight <= viewportHeight) {
+      setThumb(null);
+      return;
+    }
+
+    const trackPadding = 2;
+    const trackHeight = Math.max(0, viewportHeight - trackPadding * 2);
+
+    const minThumbHeight = 24;
+    const rawThumbHeight = (viewportHeight / scrollHeight) * trackHeight;
+    const thumbHeight = Math.max(minThumbHeight, Math.floor(rawThumbHeight));
+
+    const maxScrollTop = scrollHeight - viewportHeight;
+    const scrollRatio = maxScrollTop > 0 ? el.scrollTop / maxScrollTop : 0;
+
+    const maxThumbTop = Math.max(0, trackHeight - thumbHeight);
+    const thumbTop = trackPadding + Math.round(scrollRatio * maxThumbTop);
+
+    setThumb({ top: thumbTop, height: thumbHeight });
+  }, []);
+
+  useEffect(() => {
+    recompute();
+    const onResize = () => recompute();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [recompute]);
+
+  return (
+    <div
+      className="fortune-functionlist-submenu-scrollarea"
+      style={{ maxHeight }}
+    >
+      <div
+        ref={scrollRef}
+        className="fortune-functionlist-submenu-viewport"
+        onScroll={recompute}
+      >
+        {children}
+      </div>
+      <div className="fortune-functionlist-submenu-scrollbar" aria-hidden>
+        {thumb ? (
+          <div
+            className="fortune-functionlist-submenu-thumb"
+            style={{
+              top: `${thumb.top}px`,
+              height: `${thumb.height}px`,
+            }}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 export const FunctionList = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
@@ -266,24 +347,38 @@ export const FunctionList = () => {
                 contentStyle={{
                   ...POPOVER_STYLE,
                   minWidth: '220px',
-                  maxHeight: '360px',
-                  overflowY: 'auto',
                 }}
                 renderSubmenu={() => (
-                  <div className="flex flex-col">
-                    {groupedFunctions.getFunctions(categoryKey).map((fn) => (
-                      <HoverMenuItem
-                        key={fn}
-                        label={fn}
-                        onClick={() => {
-                          insertFormulaIntoActiveCell(fn);
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <FunctionListSubmenuScrollArea>
+                    <div className="flex flex-col">
+                      {groupedFunctions.getFunctions(categoryKey).map((fn) => (
+                        <HoverMenuItem
+                          key={fn}
+                          label={fn}
+                          onClick={() => {
+                            insertFormulaIntoActiveCell(fn);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </FunctionListSubmenuScrollArea>
                 )}
               />
             ))}
+            <hr className="color-border-default my-1" />
+
+            <button
+              type="button"
+              className="hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-between space-x-2 transition"
+              onClick={() => {
+                const button = document.getElementById('function-button');
+                if (button) {
+                  button.click();
+                }
+              }}
+            >
+              <span className="text-body-sm truncate">Learn More</span>
+            </button>
           </div>
         </PopoverContent>
       </Popover>
