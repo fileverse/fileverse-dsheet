@@ -1,5 +1,11 @@
 import _ from 'lodash';
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { LucideIcon, Tooltip } from '@fileverse/ui';
 import { UNFilter } from './constant';
 import WorkbookContext from '../../../context';
@@ -44,18 +50,19 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
     (item) => item.n !== 'PNL',
   );
   const finalDefaultCandidates = !isAuthorized
-    ? filteredDefaultCandidates
+    ? filteredDefaultCandidates.slice(0, 10)
     : context.defaultCandidates.slice(0, 10);
 
   const finalFunctionCandidates = isAuthorized
     ? context.functionCandidates
     : context.functionCandidates.filter((item) => item.t !== 20);
+  const topFunctionCandidates = finalFunctionCandidates.slice(0, 10);
 
   const firstSelection = context.luckysheet_select_save?.[0];
   const hintRef = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(0);
 
-  const calcuatePopUpPlacement = () => {
+  const calcuatePopUpPlacement = useCallback(() => {
     if (lockedTop !== null) {
       if (top !== lockedTop) {
         setTop(lockedTop);
@@ -69,7 +76,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
       !hintRef.current
     )
       return;
-    const hintHeight = 360;
+    const hintHeight = 350;
     const inputBoxTop =
       parseInt(
         document.getElementById('luckysheet-input-box')?.style.top || '0',
@@ -84,22 +91,26 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
       ? selectionHeight - (divOffset + 80)
       : selectionHeight + 4;
     const el = document.getElementsByClassName('fx-hint')?.[0];
-    // @ts-ignore
+    // @ts-expect-error legacy DOM type mismatch
     if (el && el?.style?.display !== 'none') {
       topV = 25;
     }
     setTop(topV);
     onTopComputed?.(topV);
-  };
+  }, [
+    firstSelection?.height_move,
+    firstSelection?.top,
+    lockedTop,
+    onTopComputed,
+    top,
+  ]);
 
   useEffect(() => {
     calcuatePopUpPlacement();
     // Re-evaluate only when candidates/selection context changes.
     // The locked top, if provided, prevents re-position jump while editing.
   }, [
-    lockedTop,
-    firstSelection?.top,
-    firstSelection?.height_move,
+    calcuatePopUpPlacement,
     context.functionCandidates?.length,
     context.defaultCandidates?.length,
     context.functionHint,
@@ -113,9 +124,8 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
 
   return (
     <div
-      className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${
-        from === 'fx' ? 'fx-search' : 'cell-search'
-      }`}
+      className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${from === 'fx' ? 'fx-search' : 'cell-search'
+        }`}
       id="luckysheet-formula-search-c-p"
       style={{
         top,
@@ -189,9 +199,8 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                   style={{
                     cursor: 'pointer',
                   }}
-                  className={`luckysheet-formula-search-item ${
-                    index === 0 ? 'luckysheet-formula-search-item-active' : ''
-                  }`}
+                  className={`luckysheet-formula-search-item ${index === 0 ? 'luckysheet-formula-search-item-active' : ''
+                    }`}
                 >
                   <div
                     style={{ display: 'flex', justifyContent: 'space-between' }}
@@ -233,11 +242,10 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                           <div
                             style={{
                               borderRadius: '4px',
-                              backgroundColor: `${
-                                localStorage.getItem(v.API_KEY)
+                              backgroundColor: `${localStorage.getItem(v.API_KEY)
                                   ? '#177E23'
                                   : '#e8ebec'
-                              }`,
+                                }`,
                               width: '16px',
                               height: '16px',
                             }}
@@ -267,15 +275,14 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
           </>
         ) : (
           <>
-            {finalFunctionCandidates.length > 0 &&
-              finalFunctionCandidates.map((v, index) => {
+            {topFunctionCandidates.length > 0 &&
+              topFunctionCandidates.map((v, index) => {
                 return (
                   <div
                     key={v.n}
                     data-func={v.n}
-                    className={`luckysheet-formula-search-item ${
-                      index === 0 ? 'luckysheet-formula-search-item-active' : ''
-                    }`}
+                    className={`luckysheet-formula-search-item ${index === 0 ? 'luckysheet-formula-search-item-active' : ''
+                      }`}
                   >
                     <div
                       style={{
@@ -320,11 +327,10 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                             <div
                               style={{
                                 borderRadius: '4px',
-                                backgroundColor: `${
-                                  localStorage.getItem(v.API_KEY)
+                                backgroundColor: `${localStorage.getItem(v.API_KEY)
                                     ? '#177E23'
                                     : '#e8ebec'
-                                }`,
+                                  }`,
                                 width: '16px',
                                 height: '16px',
                               }}
@@ -351,7 +357,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                   </div>
                 );
               })}
-            {finalFunctionCandidates.length === 0 && (
+            {topFunctionCandidates.length === 0 && (
               <span>
                 {!isAuthorized && (
                   <div
@@ -404,7 +410,15 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
           className="flex gap-1 items-center color-border-default text-helper-sm"
         >
           <div className="border p-1 color-text-default rounded">Tab</div>
-          <p className="color-text-secondary">to insert</p>
+          <p className="color-text-secondary">to insert.</p>
+          {'   '}
+          <div className="border p-1 color-text-default rounded text-sm ">
+            ↑
+          </div>
+          <div className="border p-1 color-text-default rounded text-sm ">
+            ↓
+          </div>
+          <p className="color-text-secondary">to navigate</p>
         </div>
       </div>
     </div>

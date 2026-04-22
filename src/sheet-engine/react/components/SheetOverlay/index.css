@@ -367,7 +367,7 @@
     normal normal 400 13px arial,
     sans,
     sans-serif;
-  z-index: 15;
+  z-index: 14;
   display: flex;
   flex-direction: column;
 }

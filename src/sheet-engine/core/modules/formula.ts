@@ -77,11 +77,94 @@ function formulaDebugStable(value: any) {
 const simpleSheetName = "[A-Za-z0-9_\u00C0-\u02AF]+";
 const quotedSheetName = "'(?:(?!').|'')*'";
 const sheetNameRegexp = `(${simpleSheetName}|${quotedSheetName})!`;
-const rowColumnRegexp = `[$]?[A-Za-z]+[$]?[0-9]+`;
+// Used for sheet-qualified refs like `'Sheet 1'!A1`, `'Sheet'!A:A`, `'Sheet'!1:1`.
+const a1CellRegexp = `[$]?[A-Za-z]+[$]?[0-9]+`;
+const fullColumnRegexp = `[$]?[A-Za-z]+`;
+const fullRowRegexp = `[$]?[0-9]+`;
+const rowColumnRegexp = `(?:${a1CellRegexp}|${fullColumnRegexp}|${fullRowRegexp})`;
 const rowColumnWithSheetName = `(?:${sheetNameRegexp})?(${rowColumnRegexp})`;
 const LABEL_EXTRACT_REGEXP = new RegExp(
   `^${rowColumnWithSheetName}(?:[:]${rowColumnWithSheetName})?$`
 );
+
+const CIRCULAR_REF_ERROR = "#CIRC!";
+const CIRCULAR_REF_TITLE = "Circular Dependency";
+
+function findCycleNodesFrom(
+  startKey: string,
+  depsByCell: Map<string, Set<string>>
+): Set<string> {
+  const cycleNodes = new Set<string>();
+  const state = new Map<string, 0 | 1 | 2>(); // 0=unseen, 1=visiting, 2=done
+  const stack: string[] = [];
+  const stackIndex = new Map<string, number>();
+
+  const dfs = (key: string) => {
+    const st = state.get(key) ?? 0;
+    if (st === 1) {
+      const idx = stackIndex.get(key);
+      if (idx != null) {
+        for (let i = idx; i < stack.length; i += 1) {
+          cycleNodes.add(stack[i]);
+        }
+        cycleNodes.add(key);
+      } else {
+        cycleNodes.add(key);
+      }
+      return;
+    }
+    if (st === 2) return;
+
+    state.set(key, 1);
+    stackIndex.set(key, stack.length);
+    stack.push(key);
+
+    const deps = depsByCell.get(key);
+    if (deps) {
+      deps.forEach((depKey) => {
+        dfs(depKey);
+      });
+    }
+
+    stack.pop();
+    stackIndex.delete(key);
+    state.set(key, 2);
+  };
+
+  dfs(startKey);
+  return cycleNodes;
+}
+
+function collectImpactedFromCycles(
+  cycleNodes: Set<string>,
+  revDepsByCell: Map<string, Set<string>>
+): Set<string> {
+  const impacted = new Set<string>(cycleNodes);
+  const queue: string[] = Array.from(cycleNodes);
+
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    const dependents = revDepsByCell.get(cur);
+    if (!dependents) continue;
+    dependents.forEach((dep) => {
+      if (impacted.has(dep)) return;
+      impacted.add(dep);
+      queue.push(dep);
+    });
+  }
+  return impacted;
+}
+
+function parseCellKey(key: string): { sheetId: string; r: number; c: number } | null {
+  const first = key.indexOf(":");
+  const second = key.indexOf(":", first + 1);
+  if (first === -1 || second === -1) return null;
+  const sheetId = key.slice(0, first);
+  const r = Number(key.slice(first + 1, second));
+  const c = Number(key.slice(second + 1));
+  if (!sheetId || Number.isNaN(r) || Number.isNaN(c)) return null;
+  return { sheetId, r, c };
+}
 
 // FormulaCache is defined as class to avoid being frozen by immer
 export class FormulaCache {
@@ -149,8 +232,27 @@ export class FormulaCache {
 
   execFunctionGlobalData: any;
 
+  /** Formula dependency graph: cell -> referenced cells. Key format: `${sheetId}:${r}:${c}` */
+  depsByCell: Map<string, Set<string>>;
+
+  /** Reverse dependency graph: referenced cell -> dependent formula cells. */
+  revDepsByCell: Map<string, Set<string>>;
+
+  /**
+   * Dependency collection state for the currently-parsed formula, set by `execfunction`.
+   * When null, dependency recording is disabled.
+   */
+  activeDepCollection: null | { originKey: string; deps: Set<string> };
+
   constructor() {
     const that = this;
+    const toCellKey = (sheetId: string, r: number, c: number) =>
+      `${sheetId}:${r}:${c}`;
+    const recordDep = (key: string) => {
+      if (!that.activeDepCollection) return;
+      that.activeDepCollection.deps.add(key);
+    };
+
     this.data_parm_index = 0;
     this.selectingRangeIndex = -1;
     this.rangeSelectionActive = null;
@@ -158,6 +260,9 @@ export class FormulaCache {
     this.functionlistMap = {};
     this.execFunctionGlobalData = {};
     this.cellTextToIndexList = {};
+    this.depsByCell = new Map();
+    this.revDepsByCell = new Map();
+    this.activeDepCollection = null;
     this.parser = new Parser();
     this.parser.on(
       "callCellValue",
@@ -168,6 +273,7 @@ export class FormulaCache {
             ? options.sheetId
             : getSheetIdByName(context, cellCoord.sheetName);
         if (id == null) throw Error(ERROR_REF);
+        recordDep(toCellKey(id, cellCoord.row.index, cellCoord.column.index));
         const flowdata = getFlowdata(context, id);
         const cell =
           context?.formulaCache.execFunctionGlobalData?.[
@@ -214,6 +320,36 @@ export class FormulaCache {
         if (emptyRow && emptyCol) throw Error(ERROR_REF);
         let cryptoDenomination = "";
         let cryptoDecimal = 0;
+
+        // Record dependencies for cycle detection. Unlike value aggregation below (which skips origin),
+        // dependency recording must include the origin cell when it lies within the referenced range.
+        if (that.activeDepCollection) {
+          const originRow = typeof options === "object" ? options.row : null;
+          const originCol = typeof options === "object" ? options.column : null;
+          const originInRange =
+            originRow != null &&
+            originCol != null &&
+            originRow >= startRow &&
+            originRow <= endRow &&
+            originCol >= startCol &&
+            originCol <= endCol;
+
+          // Avoid blowing up for whole-row/whole-column refs by capping expansion.
+          const rowCount = endRow - startRow + 1;
+          const colCount = endCol - startCol + 1;
+          const MAX_RANGE_DEPS = 10_000;
+          const approxSize = rowCount * colCount;
+          if (approxSize <= MAX_RANGE_DEPS) {
+            for (let row = startRow; row <= endRow; row += 1) {
+              for (let col = startCol; col <= endCol; col += 1) {
+                recordDep(toCellKey(id, row, col));
+              }
+            }
+          } else if (originInRange) {
+            // Still record self-in-range to detect circular refs.
+            recordDep(toCellKey(id, originRow, originCol));
+          }
+        }
 
         for (let row = startRow; row <= endRow; row += 1) {
           const colFragment = [];
@@ -334,8 +470,12 @@ export function iscelldata(txt: string) {
     [rangetxt] = val;
   }
 
+  // Allow:
+  // - A1:A2 (cell-to-cell)
+  // - A:A (column-to-column)
+  // - 1:1 (row-to-row)
   const realRangeRegex =
-    /^(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+):(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+)$/;
+    /^(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+|\$?\d+):(\$?[A-Za-z]+\$?\d+|\$?[A-Za-z]+|\$?\d+)$/;
   if (rangetxt.includes(":") && !realRangeRegex.test(rangetxt)) {
     return false;
   }
@@ -365,8 +505,9 @@ export function iscelldata(txt: string) {
     return false;
   }
 
+  // Accept A1, $A$1, A, $A, 1, $1 for each side of a range.
   reg_cellRange =
-    /^(((([a-zA-Z]+)|([$][a-zA-Z]+))(([0-9]+)|([$][0-9]+)))|((([a-zA-Z]+)|([$][a-zA-Z]+)))|((([0-9]+)|([$][0-9]+s))))$/g;
+    /^((\$?[A-Za-z]+\$?\d+)|(\$?[A-Za-z]+)|(\$?\d+))$/g;
 
   const rangetxtArr = rangetxt.split(":");
 
@@ -992,6 +1133,19 @@ export function delFunctionGroup(
     id = ctx.currentSheetId;
   }
 
+  // Remove dependency edges for this cell (it is no longer a formula).
+  const originKey = `${id}:${r}:${c}`;
+  const prevDeps = ctx.formulaCache?.depsByCell?.get(originKey);
+  if (prevDeps) {
+    prevDeps.forEach((depKey) => {
+      const rev = ctx.formulaCache.revDepsByCell.get(depKey);
+      if (!rev) return;
+      rev.delete(originKey);
+      if (rev.size === 0) ctx.formulaCache.revDepsByCell.delete(depKey);
+    });
+    ctx.formulaCache.depsByCell.delete(originKey);
+  }
+
   const file = ctx.luckysheetfile[getSheetIndex(ctx, id)!];
 
   const { calcChain } = file;
@@ -1308,31 +1462,79 @@ export function execfunction(
   window.luckysheetCurrentFunction = null;
   */
 
+  const sheetId = id || ctx.currentSheetId;
+  const originKey = `${sheetId}:${r}:${c}`;
+  const deps = new Set<string>();
+  ctx.formulaCache.activeDepCollection = { originKey, deps };
+
   ctx.formulaCache.parser.context = ctx;
-  const parserExpression = txt.substring(1);
-  const parserOptions = {
-    sheetId: id || ctx.currentSheetId,
-    row: r,
-    column: c,
-  };
-  console.log("[formula-debug] parse input", {
-    expr: parserExpression,
-    options: parserOptions,
-    sourceCell: `${r},${c}`,
+  let parsedResponse: { error: any; result: any };
+  try {
+    parsedResponse = ctx.formulaCache.parser.parse(txt.substring(1), {
+      sheetId,
+      row: r,
+      column: c,
+    });
+  } finally {
+    ctx.formulaCache.activeDepCollection = null;
+  }
+
+  // Update dependency graph for this formula cell.
+  const prevDeps = ctx.formulaCache.depsByCell.get(originKey) ?? new Set<string>();
+  ctx.formulaCache.depsByCell.set(originKey, deps);
+  // Remove reverse edges for dependencies no longer referenced.
+  prevDeps.forEach((depKey) => {
+    if (deps.has(depKey)) return;
+    const rev = ctx.formulaCache.revDepsByCell.get(depKey);
+    if (!rev) return;
+    rev.delete(originKey);
+    if (rev.size === 0) ctx.formulaCache.revDepsByCell.delete(depKey);
   });
-  const parsedResponse = ctx.formulaCache.parser.parse(
-    parserExpression,
-    parserOptions
-  );
+  // Add reverse edges for newly referenced deps.
+  deps.forEach((depKey) => {
+    if (prevDeps.has(depKey)) return;
+    const rev = ctx.formulaCache.revDepsByCell.get(depKey) ?? new Set<string>();
+    rev.add(originKey);
+    ctx.formulaCache.revDepsByCell.set(depKey, rev);
+  });
+
+  // Non-iterative circular dependency semantics.
+  const cycleNodes = findCycleNodesFrom(originKey, ctx.formulaCache.depsByCell);
+  if (cycleNodes.has(originKey)) {
+    // Override any parser result/error; a cycle is always an error.
+    parsedResponse.error = CIRCULAR_REF_ERROR;
+    parsedResponse.result = CIRCULAR_REF_ERROR;
+    setCellError(ctx, r, c, {
+      row_column: `${r}_${c}`,
+      title: CIRCULAR_REF_TITLE,
+      message: "Circular dependency.",
+    });
+  }
+
+  // Propagate upstream circular dependency errors to dependents.
+  // If any referenced cell is circular, this formula is circular-by-propagation regardless
+  // of what the parser/evaluator produced.
+  if (deps.size > 0 && parsedResponse.error !== CIRCULAR_REF_ERROR) {
+    for (const depKey of deps) {
+      if (depKey === originKey) continue;
+      const parsedKey = parseCellKey(depKey);
+      if (!parsedKey) continue;
+      const flowdata = getFlowdata(ctx, parsedKey.sheetId);
+      const cell =
+        ctx?.formulaCache.execFunctionGlobalData?.[
+        `${parsedKey.r}_${parsedKey.c}_${parsedKey.sheetId}`
+        ] || flowdata?.[parsedKey.r]?.[parsedKey.c];
+      const raw = cell?.v ?? cell?.m;
+      if (raw === CIRCULAR_REF_ERROR) {
+        parsedResponse.error = CIRCULAR_REF_ERROR;
+        parsedResponse.result = CIRCULAR_REF_ERROR;
+        break;
+      }
+    }
+  }
 
   const { error: formulaError } = parsedResponse;
   let { result } = parsedResponse;
-  console.log("[formula-debug] parse output", {
-    sourceCell: `${r},${c}`,
-    expr: parserExpression,
-    error: formulaError ? String(formulaError) : null,
-    result: formulaDebugStable(result),
-  });
 
   // https://stackoverflow.com/a/643827/8200626
   // https://github.com/ruilisi/fortune-sheet/issues/551
@@ -1397,31 +1599,30 @@ export function execfunction(
       .toFixed(ctx.formulaCache.parser.cryptoDecimals);
     finalResult = `${resultStr} ${ctx.formulaCache.parser.cryptoDenomination}`;
   }
-  console.log("[formula-debug] final output", {
-    sourceCell: `${r},${c}`,
-    expr: parserExpression,
-    isError: !_.isNil(formulaError),
-    finalResult: formulaDebugStable(finalResult),
-  });
   const isError = !_.isNil(formulaError);
   const detectedErrorFromValue = detectErrorFromValue(finalResult?.toString());
   if (isError || detectedErrorFromValue) {
     setCellError(ctx, r, c, {
       row_column: `${r}_${c}`,
-      title: "Error",
+      title: formulaError === CIRCULAR_REF_ERROR ? CIRCULAR_REF_TITLE : "Error",
       message:
         formulaError?.toString() || detectedErrorFromValue || "Unknown Error",
     });
   } else {
     clearCellError(ctx, r, c);
   }
+  const outputValue = !isError
+    ? finalResult
+    : formulaError === CIRCULAR_REF_ERROR
+      ? CIRCULAR_REF_ERROR
+      : "#ERROR";
   return [
     true,
-    !isError ? finalResult : "#ERROR",
+    outputValue,
     originalTxt,
     isError && {
       row_column: `${r}_${c}`,
-      title: "Error",
+      title: formulaError === CIRCULAR_REF_ERROR ? CIRCULAR_REF_TITLE : "Error",
       message:
         formulaError?.toString() || detectedErrorFromValue || "Unknown Error",
     },
@@ -1550,6 +1751,12 @@ export function execFunctionGroup(
   if (_.isNil(id)) {
     id = ctx.currentSheetId;
   }
+
+  const originKey = `${id}:${origin_r}:${origin_c}`;
+  const cycleNodes = findCycleNodesFrom(originKey, ctx.formulaCache.depsByCell);
+  const impactedByCircular = cycleNodes.size
+    ? collectImpactedFromCycles(cycleNodes, ctx.formulaCache.revDepsByCell)
+    : new Set<string>();
 
   if (!_.isNil(value)) {
     // 此处setcellvalue 中this.execFunctionGroupData会保存想要更新的值，本函数结尾不要设为null,以备后续函数使用
@@ -1914,6 +2121,36 @@ export function execFunctionGroup(
     }
 
     const { calc_funcStr } = formulaCell;
+
+    const formulaCellKey = `${formulaCell.id}:${formulaCell.r}:${formulaCell.c}`;
+    if (impactedByCircular.has(formulaCellKey)) {
+      const isInCycle = cycleNodes.has(formulaCellKey);
+      const message = isInCycle
+        ? "Circular dependency."
+        : "Circular dependency (upstream).";
+      setCellError(ctx, formulaCell.r, formulaCell.c, {
+        row_column: `${formulaCell.r}_${formulaCell.c}`,
+        title: CIRCULAR_REF_TITLE,
+        message,
+      });
+
+      ctx.groupValuesRefreshData.push({
+        r: formulaCell.r,
+        c: formulaCell.c,
+        v: CIRCULAR_REF_ERROR,
+        f: calc_funcStr,
+        id: formulaCell.id,
+      });
+
+      ctx.formulaCache.execFunctionGlobalData[
+        `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
+      ] = {
+        v: CIRCULAR_REF_ERROR,
+        f: calc_funcStr,
+      };
+
+      continue;
+    }
 
     const v = execfunction(
       ctx,
@@ -2282,8 +2519,10 @@ export function createRangeHightlight(
   ctx.formulaRangeHighlight = formulaRanges;
 }
 
-export function moveCursorToEnd(editableDiv: HTMLDivElement) {
-  editableDiv?.focus(); // Ensure the element is focused
+export function moveCursorToEnd(editableDiv: HTMLDivElement | null | undefined) {
+  if (!editableDiv) return;
+  if (!(editableDiv instanceof Node)) return;
+  editableDiv.focus(); // Ensure the element is focused
 
   const range = document.createRange();
   const selection = window.getSelection();
@@ -2326,7 +2565,10 @@ export function setCaretPosition(
     sel?.addRange(range);
     el.focus();
   } catch {
-    moveCursorToEnd(parentTextDom as HTMLDivElement);
+    // Avoid crashing on invalid fallback element; best-effort caret placement.
+    if (parentTextDom && parentTextDom instanceof HTMLElement) {
+      moveCursorToEnd(parentTextDom as HTMLDivElement);
+    }
   }
 }
 
@@ -4239,7 +4481,7 @@ export function rangeSetValue(
     //   .find(`span[rangeindex='${formulaCache.rangechangeindex}']`)
     //   .html(range);
     spanToReplace.innerHTML = range;
-    setCaretPosition(ctx, spanToReplace, 0, range.length);
+    setCaretPosition(ctx, spanToReplace, 0, range.length, $editor);
     //   }
   } else {
     const function_str = `<span class="fortune-formula-functionrange-cell" rangeindex="${functionHTMLIndex}" dir="auto" style="color:${colors[functionHTMLIndex]};">${range}</span>`;
@@ -4272,9 +4514,13 @@ export function rangeSetValue(
     ctx.formulaCache.rangechangeindex = functionHTMLIndex;
     const span = $editor.querySelector(
       `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`
-    ) as HTMLSpanElement;
-
-    setCaretPosition(ctx, span, 0, range.length);
+    ) as HTMLSpanElement | null;
+    if (span) {
+      setCaretPosition(ctx, span, 0, range.length, $editor);
+    } else {
+      // Best-effort: avoid crashing on unexpected DOM; keep editor content updated.
+      moveCursorToEnd($editor);
+    }
     functionHTMLIndex += 1;
   }
 

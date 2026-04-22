@@ -6,6 +6,7 @@ export const ERROR_NULL = "NULL";
 export const ERROR_NUM = "NUM";
 export const ERROR_REF = "REF";
 export const ERROR_VALUE = "VALUE";
+export const CIRCULAR_REF_ERROR = "CIRC";
 
 const errors = {
   ['Error: lookup_range and result_range are required']: "Lookup range and result range are required",
@@ -17,6 +18,7 @@ const errors = {
   [ERROR_NUM]: "#NUM!",
   [ERROR_REF]: "#REF!",
   [ERROR_VALUE]: "#VALUE!",
+  [CIRCULAR_REF_ERROR]: "#CIRC!",
   ['search_key']: "Error: search_key is required",
   ['lookup_range']: "Error: lookup_range is required",
   ['result_range']: "Error: result_range is required",

@@ -70,6 +70,8 @@ import {
   isLetterNumberPattern,
   countCommasBeforeCursor,
   shouldShowFormulaFunctionList,
+  isStrictFormulaEditorText,
+  isFormulaCompleteAtCaret,
   isEditorUndoRedoKeyEvent,
 } from './helper';
 import { isFormulaSegmentBoundaryKey } from './formula-segment-boundary';
@@ -1838,11 +1840,26 @@ const InputBox: React.FC = () => {
       handleHideShowHint();
 
       const editorText = inputRef.current?.innerText?.trim() ?? '';
-      setCellEditorIsFormula(editorText.startsWith('='));
+      const isStrictFormula = isStrictFormulaEditorText(inputRef.current);
+      setCellEditorIsFormula(isStrictFormula);
 
       setShowSearchHint(
         shouldShowFormulaFunctionList(inputRef?.current ?? null),
       );
+
+      if (!isStrictFormula) {
+        setContext((draftCtx) => {
+          if (draftCtx.functionCandidates.length > 0) {
+            draftCtx.functionCandidates = [];
+          }
+          if (draftCtx.defaultCandidates.length > 0) {
+            draftCtx.defaultCandidates = [];
+          }
+          if (draftCtx.functionHint) {
+            draftCtx.functionHint = '';
+          }
+        });
+      }
 
       if (!isComposingRef.current) {
         const currentCommaCount = countCommasBeforeCursor(inputRef?.current!);
@@ -2013,6 +2030,7 @@ const InputBox: React.FC = () => {
       if (!editor) return;
       if (editor.contains(e.target as Node)) return;
       e.preventDefault();
+      editor.focus({ preventScroll: true });
       moveCursorToEnd(editor);
       setContext((draftCtx) => {
         setFormulaEditorOwner(draftCtx, 'cell');
@@ -2050,7 +2068,8 @@ const InputBox: React.FC = () => {
       return {
         left: frozenPosition.left,
         top: frozenPosition.top,
-        zIndex: _.isEmpty(context.luckysheetCellUpdate) ? -1 : 19,
+        // Keep the editor below formula search/hint popups.
+        zIndex: _.isEmpty(context.luckysheetCellUpdate) ? -1 : 14,
         display: 'block',
       };
     }
@@ -2063,7 +2082,8 @@ const InputBox: React.FC = () => {
     return {
       left: initialLeft,
       top: initialTop,
-      zIndex: _.isEmpty(context.luckysheetCellUpdate) ? -1 : 19,
+      // Keep the editor below formula search/hint popups.
+      zIndex: _.isEmpty(context.luckysheetCellUpdate) ? -1 : 14,
       display: 'block',
     };
   }, [
@@ -2441,6 +2461,18 @@ const InputBox: React.FC = () => {
         }
       >
         <ContentEditable
+          onMouseDown={() => {
+            // Mirror Fx editor behavior: preserve first click caret when switching
+            // from Fx → cell by preventing immediate hydration from wiping selection.
+            if (context.luckysheetCellUpdate.length === 0) {
+              refs.globalCache.doNotUpdateCell = true;
+            }
+            const editor = inputRef.current;
+            editor?.focus({ preventScroll: true });
+            setContext((draftCtx) => {
+              setFormulaEditorOwner(draftCtx, 'cell');
+            });
+          }}
           onCompositionStart={() => {
             isComposingRef.current = true;
           }}
@@ -2461,6 +2493,9 @@ const InputBox: React.FC = () => {
             setContext((draftCtx) => {
               setFormulaEditorOwner(draftCtx, 'cell');
             });
+            setShowSearchHint(
+              shouldShowFormulaFunctionList(inputRef?.current ?? null),
+            );
             if (!isComposingRef.current) {
               const currentCommaCount = countCommasBeforeCursor(
                 inputRef?.current!,
@@ -2572,14 +2607,17 @@ const InputBox: React.FC = () => {
               />
             )}
             <div className="cell-hint">
-              {showFormulaHint && fn && !showSearchHint && (
-                <FormulaHint
-                  handleShowFormulaHint={handleShowFormulaHint}
-                  showFormulaHint={showFormulaHint}
-                  commaCount={commaCount}
-                  functionName={functionName}
-                />
-              )}
+              {showFormulaHint &&
+                fn &&
+                !showSearchHint &&
+                !isFormulaCompleteAtCaret(inputRef.current) && (
+                  <FormulaHint
+                    handleShowFormulaHint={handleShowFormulaHint}
+                    showFormulaHint={showFormulaHint}
+                    commaCount={commaCount}
+                    functionName={functionName}
+                  />
+                )}
               {!showFormulaHint && fn && !showSearchHint && (
                 <Tooltip
                   text="Turn on formula suggestions (F10)"

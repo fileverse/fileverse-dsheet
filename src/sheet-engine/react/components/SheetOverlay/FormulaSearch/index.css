@@ -14,10 +14,9 @@
   font-size: 12px;
   background: #fff;
   width: 300px;
-  max-height: 325px;
-  overflow-y: auto;
-    border-radius: 10px;
-
+  max-height: 350px;
+  overflow: hidden;
+  border-radius: 10px;
 }
 
 .luckysheet-formula-search-c .luckysheet-formula-search-item {
@@ -41,6 +40,8 @@
 
 .luckysheet-formula-search-c .luckysheet-formula-search-item-active {
   display: block;
+  height: 64px;
+  box-sizing: border-box;
   border-top: 1px solid #ebebeb;
   border-bottom: 1px solid #ebebeb;
   background: #f2f4f5;
@@ -50,4 +51,74 @@
   .luckysheet-formula-search-item-active
   .luckysheet-formula-search-detail {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+#luckysheet-search-formula {
+  font-size: 12px;
+}
+
+#luckysheet-search-formula .inpbox {
+  margin-bottom: 5px;
+}
+
+#luckysheet-search-formula .inpbox div {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#luckysheet-search-formula .inpbox input {
+  width: 100%;
+  height: 24px;
+  line-height: 24px;
+  border: 1px solid #d4d4d4;
+  padding: 0 10px;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+#luckysheet-search-formula .selbox {
+  margin-bottom: 5px;
+}
+
+#luckysheet-search-formula .selbox select {
+  width: 50%;
+  height: 24px;
+  line-height: 24px;
+  border: 1px solid #d4d4d4;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+#luckysheet-search-formula .listbox label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#formulaTypeList {
+  width: 300px;
+  height: 170px;
+  border: 1px solid #d4d4d4;
+  overflow-y: scroll;
+}
+
+.formulaList {
+  width: 300px;
+  height: 170px;
+  border: 1px solid #d4d4d4;
+  overflow-y: scroll;
+}
+
+.listBox {
+  padding: 5px;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.listBox.on {
+  background-color: #8c89fe;
+  color: #fff;
 }
