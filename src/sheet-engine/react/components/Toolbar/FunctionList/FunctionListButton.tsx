@@ -1,9 +1,21 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@fileverse/ui';
-import { useContext, useMemo, useState } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { LucideIcon } from '@fileverse/ui';
 import { HoverMenuItem } from './HoverMenuItem';
 import WorkbookContext from '../../../context';
-import { locale } from '@sheet-engine/core';
+import {
+  api,
+  escapeHTMLTag,
+  escapeScriptTag,
+  functionHTMLGenerate,
+  getFormulaEditorOwner,
+  setFormulaEditorOwner,
+  locale,
+} from '@sheet-engine/core';
+import {
+  buildFormulaSuggestionText,
+  setCursorPosition,
+} from '../../SheetOverlay/helper';
 
 const POPOVER_STYLE = {
   border: '1px solid hsl(var(--color-border-default, #E8EBEC))',
@@ -67,10 +79,83 @@ const isFromFunctionListSubmenuTarget = (target: EventTarget | null) => {
 };
 
 export const FunctionList = () => {
-  const { context } = useContext(WorkbookContext);
+  const { context, setContext, refs } = useContext(WorkbookContext);
   const [isFunctionOpen, setIsFunctionOpen] = useState<boolean>(false);
   const [openSampleCategory, setOpenSampleCategory] = useState<string | null>(
     null,
+  );
+
+  const insertFormulaIntoActiveCell = useCallback(
+    (formulaName: string) => {
+      if (context.allowEdit === false || context.isFlvReadOnly === true) {
+        setIsFunctionOpen(false);
+        setOpenSampleCategory(null);
+        return;
+      }
+
+      const selection = context.luckysheet_select_save?.[0];
+      const row = selection?.row_focus ?? 0;
+      const col = selection?.column_focus ?? 0;
+
+      // If there's no selection yet, establish one (A1) before entering edit mode.
+      if (!selection) {
+        setContext((draftCtx) => {
+          api.setSelection(draftCtx, [{ row: [0, 0], column: [0, 0] }], {
+            id: draftCtx.currentSheetId,
+          });
+        });
+      }
+
+      const owner =
+        context.luckysheetCellUpdate.length > 0
+          ? getFormulaEditorOwner(context)
+          : 'cell';
+
+      refs.globalCache.doNotFocus = true;
+      refs.globalCache.doNotUpdateCell = true;
+
+      setContext((draftCtx) => {
+        setFormulaEditorOwner(draftCtx, owner);
+        draftCtx.luckysheetCellUpdate = [row, col];
+      });
+
+      requestAnimationFrame(() => {
+        const cellEditor = refs.cellInput.current;
+        const fxEditor = refs.fxInput.current;
+        const target = owner === 'fx' ? fxEditor : cellEditor;
+        if (!target) return;
+
+        const upper = String(formulaName || '')
+          .trim()
+          .toUpperCase();
+        const { text: baseText, caretOffset: baseCaret } =
+          buildFormulaSuggestionText(target, `=${upper}`);
+
+        const caretInsideParen = baseText.slice(baseCaret).startsWith('(')
+          ? baseCaret + 1
+          : baseCaret;
+
+        const nextText =
+          baseText[caretInsideParen] === ')'
+            ? baseText
+            : `${baseText.slice(0, caretInsideParen)})${baseText.slice(caretInsideParen)}`;
+
+        const safeText = escapeScriptTag(nextText);
+        const html = safeText.startsWith('=')
+          ? functionHTMLGenerate(safeText)
+          : escapeHTMLTag(safeText);
+
+        if (cellEditor) cellEditor.innerHTML = html;
+        if (fxEditor) fxEditor.innerHTML = html;
+
+        setCursorPosition(target, caretInsideParen);
+        target.focus({ preventScroll: true });
+      });
+
+      setIsFunctionOpen(false);
+      setOpenSampleCategory(null);
+    },
+    [context, refs.cellInput, refs.fxInput, refs.globalCache, setContext],
   );
 
   const groupedFunctions = useMemo(() => {
@@ -150,8 +235,7 @@ export const FunctionList = () => {
                 key={action}
                 label={action}
                 onClick={() => {
-                  setIsFunctionOpen(false);
-                  setOpenSampleCategory(null);
+                  insertFormulaIntoActiveCell(action);
                 }}
               />
             ))}
@@ -192,8 +276,7 @@ export const FunctionList = () => {
                         key={fn}
                         label={fn}
                         onClick={() => {
-                          setIsFunctionOpen(false);
-                          setOpenSampleCategory(null);
+                          insertFormulaIntoActiveCell(fn);
                         }}
                       />
                     ))}
