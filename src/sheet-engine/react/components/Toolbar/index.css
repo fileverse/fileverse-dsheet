@@ -21,6 +21,41 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+.fortune-functionlist-submenu-scrollarea {
+  position: relative;
+  overflow: hidden; /* we render our own scrollbar */
+  padding-right: 12px; /* reserve space for always-visible scrollbar */
+}
+
+.fortune-functionlist-submenu-viewport {
+  max-height: inherit;
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox: hide native scrollbar */
+}
+
+.fortune-functionlist-submenu-viewport::-webkit-scrollbar {
+  width: 0px; /* WebKit: hide native scrollbar */
+  height: 0px;
+}
+
+.fortune-functionlist-submenu-scrollbar {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  border-radius: 9999px;
+  background: rgba(17, 24, 39, 0.08);
+}
+
+.fortune-functionlist-submenu-thumb {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  border-radius: 9999px;
+  background: rgba(17, 24, 39, 0.35);
+}
+
 .fortune-toolbar-divider {
   width: 1px;
   height: 20px;
