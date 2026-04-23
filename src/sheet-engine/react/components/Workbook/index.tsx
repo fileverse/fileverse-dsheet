@@ -28,6 +28,10 @@ import {
   update, // formatting helper
   loadLocale,
 } from '@sheet-engine/core';
+import {
+  normalizeDateBaseLocale,
+  setDateBaseLocale,
+} from '@sheet-engine/core/modules/date-base-locale';
 import React, {
   useMemo,
   useState,
@@ -859,6 +863,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               draftCtx.devicePixelRatio = mergedSettings.devicePixelRatio;
             }
             draftCtx.lang = resolvedLang;
+            draftCtx.dateBaseLocale = normalizeDateBaseLocale(
+              mergedSettings.dateBaseLocale,
+            );
+            setDateBaseLocale(draftCtx.dateBaseLocale);
             draftCtx.allowEdit = mergedSettings.allowEdit;
             draftCtx.isFlvReadOnly = isFlvReadOnly ?? false;
             draftCtx.hooks = mergedSettings.hooks;
@@ -970,6 +978,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       mergedSettings.defaultFontSize,
       mergedSettings.devicePixelRatio,
       mergedSettings.lang,
+      mergedSettings.dateBaseLocale,
       mergedSettings.allowEdit,
       mergedSettings.hooks,
       mergedSettings.generateSheetId,

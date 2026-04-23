@@ -44,6 +44,7 @@ import ContentEditable from '../SheetOverlay/ContentEditable';
 import NameBox from './NameBox';
 import FormulaSearch from '../SheetOverlay/FormulaSearch';
 import FormulaHint from '../SheetOverlay/FormulaHint';
+import CellDatePicker from '../SheetOverlay/CellDatePicker';
 import usePrevious from '../../hooks/usePrevious';
 import { useFormulaEditorHistory } from '../../hooks/useFormulaEditorHistory';
 import { useRerenderOnFormulaCaret } from '../../hooks/useRerenderOnFormulaCaret';
@@ -169,6 +170,8 @@ const FxEditor: React.FC = () => {
           value = getInlineStringNoStyle(r, c, d);
         } else if (cell.f) {
           value = getCellValue(r, c, d, 'f');
+        } else if (cell.ct?.t === 'd') {
+          value = getCellValue(r, c, d, 'f');
         } else {
           value = valueShowEs(r, c, d);
         }
@@ -228,6 +231,8 @@ const FxEditor: React.FC = () => {
       if (isInlineStringCell(cell)) {
         value = getInlineStringNoStyle(rowIndex, colIndex, flowdata);
       } else if (cell.f) {
+        value = getCellValue(rowIndex, colIndex, flowdata, 'f');
+      } else if (cell.ct?.t === 'd') {
         value = getCellValue(rowIndex, colIndex, flowdata, 'f');
       } else {
         value = valueShowEs(rowIndex, colIndex, flowdata);
@@ -1124,10 +1129,12 @@ const FxEditor: React.FC = () => {
             onFocus={onFocus}
             onKeyDown={onKeyDown}
             onChange={onChange}
+            onContextMenu={(e) => e.stopPropagation()}
             // onBlur={() => setFocused(false)}
             tabIndex={0}
             allowEdit={allowEdit && !context.isFlvReadOnly}
           />
+          {!showSearchHint && <CellDatePicker variant="fx" />}
           {(context.functionCandidates.length > 0 ||
             context.functionHint ||
             context.defaultCandidates.length > 0 ||

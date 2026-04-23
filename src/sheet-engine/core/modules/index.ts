@@ -27,6 +27,17 @@ export { default as clipboard } from './clipboard';
 // cursor
 export { moveToEnd, getRangeRectsByCharacterOffset } from './cursor';
 
+// date base locale
+export {
+  getDateBaseLocale,
+  getCanonicalDateEditFormat,
+  getDateEditFormatForCell,
+  isUsDateBaseLocale,
+  normalizeDateBaseLocale,
+  shouldPreserveDateFormatForEdit,
+  setDateBaseLocale,
+} from './date-base-locale';
+
 // format
 export {
   update,
@@ -331,6 +342,7 @@ export { checkCellIsLocked } from './protection';
 
 // validation (used internally by text.ts, dataVerification.ts, sort.ts via barrel)
 export {
+  detectDateFormat,
   isdatatypemulti,
   diff,
   isdatetime,

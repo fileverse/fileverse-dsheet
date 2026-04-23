@@ -13,16 +13,22 @@ import {
 import { checkCF, getComputeMap } from "./ConditionFormat";
 import { getFailureText, validateCellData } from "./dataVerification";
 import {
+  datenum_local,
   formatScientificForComputedNumber,
   formatMForNumericCellAvoidingGsRules,
   genarate,
   genarateOrCurrencyPrefixed,
+  is_date,
   isCurrencyLikeNumberFormat,
   isSixteenPlusDigitIntegerString,
   refreshGeneralNumericDisplay,
   shouldUseScientificForComputedNumber,
   update,
 } from "./format";
+import {
+  getCanonicalDateEditFormat,
+  getDateEditFormatForCell,
+} from "./date-base-locale";
 import { clearCellError } from "../api";
 import {
   delFunctionGroup,
@@ -30,6 +36,7 @@ import {
   execFunctionGroup,
   functionHTMLGenerate,
   getcellrange,
+  isTodayNowPureArithmeticDateResult,
   iscelldata,
   suppressFormulaRangeSelectionForInitialEdit,
 } from "./formula";
@@ -39,7 +46,7 @@ import {
   isInlineStringCell,
   isInlineStringCT,
 } from "./inline-string";
-import { isRealNull, isRealNum, valueIsError } from "./validation";
+import { detectDateFormat, isRealNull, isRealNum, valueIsError } from "./validation";
 import { getCellTextInfo } from "./text";
 import { locale } from "../locale";
 import { spillSortResult } from "./sort";
@@ -292,7 +299,18 @@ export function getCellValue(
     if (attr === "f" && !_.isNil(retv)) {
       retv = functionHTMLGenerate(retv);
     } else if (attr === "f") {
-      retv = (d as Cell).v;
+      if (d?.ct?.t === "d" && !_.isNil((d as Cell).v)) {
+        const dateFormat = String(d?.ct?.fa || "");
+        const hasTime =
+          /\b(h|hh|H|HH|s|ss)\b/.test(dateFormat) ||
+          /AM\/PM/i.test(dateFormat);
+        retv = update(
+          getDateEditFormatForCell(dateFormat, hasTime),
+          (d as Cell).v as any,
+        );
+      } else {
+        retv = (d as Cell).v;
+      }
     } else if (d && d.ct && d.ct.t === "d") {
       retv = d.m;
     }
@@ -504,6 +522,9 @@ export function setCellValue(
         const formatted = processArray(cellRefs, d, flowdata);
         if (formatted) {
           cell.ct.fa = formatted;
+          if (is_date(formatted)) {
+            cell.ct.t = "d";
+          }
         }
       }
 
@@ -529,16 +550,49 @@ export function setCellValue(
           // cell.m = mask[0].toString();
         }
       }
+
+      if (
+        isTodayNowPureArithmeticDateResult(cell.f!, cell.v as number) &&
+        (cell.ct?.fa === "General" ||
+          cell.ct?.t === "g" ||
+          (cell.ct?.t === "n" && (!cell.ct?.fa || cell.ct?.fa === "General")))
+      ) {
+        const hasTime = /\bNOW\s*\(/i.test(cell.f!);
+        const fa = getCanonicalDateEditFormat(hasTime);
+        cell.ct = { fa, t: "d" };
+        const vRound = Math.round((cell.v as number) * 1000000000) / 1000000000;
+        cell.m = String(update(fa, vRound));
+      }
     } else if (!_.isNil(cell.ct) && cell.ct.fa === "@") {
       cell.m = vupdateStr;
       cell.v = vupdate;
     } else if (cell.ct != null && cell.ct.t === "d" && _.isString(vupdate)) {
       const mask = genarate(vupdate) as any;
-      if (mask[1].t !== "d" || mask[1].fa === cell.ct.fa) {
-        [cell.m, cell.ct, cell.v] = mask;
+      if (mask?.[1]?.t === "d") {
+        if (mask[1].fa === cell.ct.fa) {
+          [cell.m, cell.ct, cell.v] = mask;
+        } else {
+          [, , cell.v] = mask;
+          cell.m = update(cell.ct.fa!, cell.v);
+        }
       } else {
-        [, , cell.v] = mask;
-        cell.m = update(cell.ct.fa!, cell.v);
+        // Date cells edited via canonical base string with time should remain date cells.
+        // If generic generate() did not return a date, fallback to explicit date detection.
+        const df = detectDateFormat(vupdate);
+        if (df) {
+          const dateObj = new Date(
+            df.year,
+            df.month - 1,
+            df.day,
+            df.hours,
+            df.minutes,
+            df.seconds,
+          );
+          cell.v = datenum_local(dateObj);
+          cell.m = update(cell.ct.fa!, cell.v);
+        } else if (mask) {
+          [cell.m, cell.ct, cell.v] = mask;
+        }
       }
     } else if (
       !_.isNil(cell.ct) &&
@@ -1214,6 +1268,18 @@ export function updateCell(
       return;
     }
 
+    // Date edit mode uses a canonical editor value (from getCellValue(..., 'f')).
+    // If user just enters/leaves edit without changing it, do not rewrite display format.
+    const currentCell = _.isPlainObject(curv) ? (curv as Cell) : null;
+    if (
+      _.isString(value) &&
+      currentCell?.ct?.t === "d" &&
+      value === getCellValue(r, c, flowdata, "f")
+    ) {
+      cancelNormalSelected(ctx);
+      return;
+    }
+
     if (!isCurInline) {
       if (isRealNull(value) && !isPrevInline) {
         if (!curv || (isRealNull(curv.v) && !curv.spl && !curv.f)) {
@@ -1394,7 +1460,7 @@ export function updateCell(
             value.m = update(formatted, value.v);
             value.ct = {
               fa: formatted,
-              t: "n",
+              t: is_date(formatted) ? "d" : "n",
             };
           }
         }
@@ -2451,7 +2517,9 @@ function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
         const cleaned: Record<string, unknown> = {
           v: String(seg?.v ?? ""),
         };
-        // Keep hyperlink metadata as content, drop styling (bl/it/fs/fc/un/etc).
+        // Keep hyperlink metadata as content.
+        // For hyperlink runs, preserve link decoration (fc/un) so clear-format
+        // does not remove visible link style (blue + underline).
         const link = seg?.link as
           | { linkType?: string; linkAddress?: string }
           | undefined;
@@ -2460,6 +2528,9 @@ function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
             linkType: link.linkType,
             linkAddress: link.linkAddress,
           };
+          // Keep default hyperlink decoration after clear format.
+          cleaned.fc = "rgb(0, 0, 255)";
+          cleaned.un = 1;
         }
         return cleaned;
       }),

@@ -78,6 +78,70 @@ const simpleSheetName = "[A-Za-z0-9_\u00C0-\u02AF]+";
 const quotedSheetName = "'(?:(?!').|'')*'";
 const sheetNameRegexp = `(${simpleSheetName}|${quotedSheetName})!`;
 const rowColumnRegexp = `[$]?[A-Za-z]+[$]?[0-9]+`;
+
+function normalizeDateArithmeticForParser(expr: string): string {
+  if (!expr) return expr;
+  // Formula parser treats JS Date with "+" as string coercion in some paths.
+  // Normalize ONLY date-arithmetic cases to numeric serial arithmetic.
+  const base1904 = new Date(1900, 2, 1, 0, 0, 0);
+  const toExcelSerial = (date: Date) => {
+    let epoch = Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+    );
+    const dnthreshUtc = Date.UTC(1899, 11, 31, 0, 0, 0);
+    if (date >= base1904) epoch += 24 * 60 * 60 * 1000;
+    return (epoch - dnthreshUtc) / (24 * 60 * 60 * 1000);
+  };
+  const now = new Date();
+  const todaySerial = toExcelSerial(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0),
+  );
+  const nowSerial = toExcelSerial(now);
+
+  return expr
+    .replace(
+      /\b(TODAY|NOW)\(\)\s*([+\-])\s*(\d+(?:\.\d+)?)/gi,
+      (_m, fn, op, num) =>
+        `${String(fn).toUpperCase() === "NOW" ? nowSerial : todaySerial} ${op} ${num}`,
+    )
+    .replace(
+      /(\d+(?:\.\d+)?)\s*([+\-])\s*\b(TODAY|NOW)\(\)/gi,
+      (_m, num, op, fn) =>
+        `${num} ${op} ${String(fn).toUpperCase() === "NOW" ? nowSerial : todaySerial}`,
+    );
+}
+
+/** True when the formula is only numeric ops on TODAY()/NOW() (incl. unary +/−); used to display serials as dates. */
+export function isTodayNowPureArithmeticDateResult(
+  formula: string,
+  value: number,
+): boolean {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return false;
+  }
+  // Generous cap for serial range; still avoids labelling large sums as dates.
+  if (value > 1e7) {
+    return false;
+  }
+  const body = formula.replace(/^\s*=\s*/i, "").toUpperCase();
+  if (!/\bTODAY\s*\(/.test(body) && !/\bNOW\s*\(/.test(body)) {
+    return false;
+  }
+  let s = body
+    .replace(/\bTODAY\s*\(\s*\)/g, "X")
+    .replace(/\bNOW\s*\(\s*\)/g, "X")
+    .replace(/\d+\.?\d*/g, "0");
+  s = s.replace(/\s+/g, "");
+  if (!s.includes("X") || !/^[0X+\-*/().]+$/.test(s)) {
+    return false;
+  }
+  return true;
+}
 const rowColumnWithSheetName = `(?:${sheetNameRegexp})?(${rowColumnRegexp})`;
 const LABEL_EXTRACT_REGEXP = new RegExp(
   `^${rowColumnWithSheetName}(?:[:]${rowColumnWithSheetName})?$`
@@ -1309,17 +1373,12 @@ export function execfunction(
   */
 
   ctx.formulaCache.parser.context = ctx;
-  const parserExpression = txt.substring(1);
+  const parserExpression = normalizeDateArithmeticForParser(txt.substring(1));
   const parserOptions = {
     sheetId: id || ctx.currentSheetId,
     row: r,
     column: c,
   };
-  console.log("[formula-debug] parse input", {
-    expr: parserExpression,
-    options: parserOptions,
-    sourceCell: `${r},${c}`,
-  });
   const parsedResponse = ctx.formulaCache.parser.parse(
     parserExpression,
     parserOptions
@@ -1327,12 +1386,6 @@ export function execfunction(
 
   const { error: formulaError } = parsedResponse;
   let { result } = parsedResponse;
-  console.log("[formula-debug] parse output", {
-    sourceCell: `${r},${c}`,
-    expr: parserExpression,
-    error: formulaError ? String(formulaError) : null,
-    result: formulaDebugStable(result),
-  });
 
   // https://stackoverflow.com/a/643827/8200626
   // https://github.com/ruilisi/fortune-sheet/issues/551

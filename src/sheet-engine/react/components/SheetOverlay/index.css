@@ -370,6 +370,7 @@
   z-index: 15;
   display: flex;
   flex-direction: column;
+  outline: 2px solid #f2f217;
 }
 
 .luckysheet-input-box-inner {
@@ -631,9 +632,7 @@
   top: 0;
 }
 
-.luckysheet-postil-show-active
-  .luckysheet-postil-dialog-move
-  .luckysheet-postil-dialog-move-item {
+.luckysheet-postil-show-active .luckysheet-postil-dialog-move .luckysheet-postil-dialog-move-item {
   border-color: #0188fb;
 }
 

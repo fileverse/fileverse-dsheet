@@ -883,6 +883,12 @@ export const useXLSXImport = ({
                       }
                       // Fix date cells: luckyexcel leaves ct.t unset and v as a string
                       const fa = cell.v.ct?.fa;
+                      const normalizedFa =
+                        typeof fa === 'string' ? fa.trim().toLowerCase() : '';
+                      const isGeneralLikeFormat =
+                        normalizedFa === 'general' || cell.v.ct?.t === 'g';
+                      const isTextLikeFormat =
+                        normalizedFa === '@' || cell.v.ct?.t === 's';
                       if (fa && !isDateCache.has(fa)) {
                         isDateCache.set(fa, SSF.is_date(fa));
                       }
@@ -905,15 +911,24 @@ export const useXLSXImport = ({
                       } else if (
                         !cell.v.f &&
                         typeof cell.v.v === 'string' &&
-                        cell.v.ct?.t !== 's'
+                        !isTextLikeFormat &&
+                        !isGeneralLikeFormat
                       ) {
-                        const numV = parseFloat(cell.v.v as string);
-                        if (isFinite(numV)) {
+                        const rawStringValue = (cell.v.v as string).trim();
+                        const isStrictNumericString =
+                          /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/.test(
+                            rawStringValue,
+                          );
+                        if (isStrictNumericString) {
+                          const numV = Number(rawStringValue);
+                          if (!isFinite(numV)) {
+                            continue;
+                          }
                           cell.v.v = numV;
                           if (cell.v.ht == null) {
                             cell.v.ht = 2;
                           }
-                          if (!fa || fa === 'General') {
+                          if (!fa) {
                             cell.v.m = String(numV);
                           } else {
                             try {

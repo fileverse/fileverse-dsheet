@@ -355,11 +355,19 @@ const buildCellFromTd = (
       cell.ct = { fa: "@", t: "s" };
     } else {
       const generated = genarate(normalizedText);
-      if (generated?.[1]?.t === "n") {
-        const [, , v] = generated;
-        cell.v = v;
-        cell.m = normalizedText;
-        cell.ct = { fa: "General", t: "g" };
+      if (generated?.[1]) {
+        const [m, ct, v] = generated;
+        if (ct?.t === "n") {
+          cell.v = v;
+          cell.m = normalizedText;
+          cell.ct = { fa: "General", t: "g" };
+        } else {
+          // Keep generated date/time (and other explicit) cell typing for HTML paste,
+          // matching plain-text paste behavior.
+          cell.v = v;
+          cell.m = m != null ? String(m) : normalizedText;
+          cell.ct = ct;
+        }
       } else if (isRealNum(normalizedText)) {
         cell.v = parseFloat(normalizedText);
         cell.m = normalizedText;
