@@ -121,6 +121,7 @@ type LinkPreviewData = {
   title: string;
   urlText: string;
   faviconUrl?: string;
+  faviconCandidates?: string[];
   imageUrl?: string;
   description?: string;
 };
@@ -167,6 +168,26 @@ async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
     return fallbackPreview(address);
   }
   const fallback = fallbackPreview(address);
+  let host = '';
+  try {
+    host = new URL(previewable).hostname;
+  } catch {
+    host = '';
+  }
+  const normalizeMetaUrl = (raw: string): string => {
+    const v = String(raw || '').trim();
+    if (!v) return '';
+    if (/^https?:\/\//i.test(v)) return v;
+    if (v.startsWith('//')) return `https:${v}`;
+    // Common favicon provider-relative values returned by metadata services.
+    if (v.startsWith('favicons?')) return `https://www.google.com/s2/${v}`;
+    if (v.startsWith('faviconV2?')) return `https://t2.gstatic.com/${v}`;
+    try {
+      return new URL(v, previewable).toString();
+    } catch {
+      return '';
+    }
+  };
   try {
     const typedUrl = String(address ?? '').trim();
     const encoded = encodeURIComponent(previewable);
@@ -175,6 +196,8 @@ async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
       ...(runtimeOrigin ? [`${runtimeOrigin}/api/metadata/${encoded}`] : []),
       `/api/metadata/${encoded}`,
     ];
+    let best: LinkPreviewData | null = null;
+    let bestScore = -1;
 
     for (const endpoint of endpointCandidates) {
       const resp = await fetch(endpoint);
@@ -190,25 +213,62 @@ async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
       const metadata = body?.metadata ?? {};
       const pageTitle = String(metadata.title || '').trim();
       const description = String(metadata.description || '').trim();
-      const imageUrl = String(metadata.image || '').trim();
-      const logoUrl = String(metadata.logo || '').trim();
-      const faviconUrl = String(metadata.favicon || '').trim();
+      const imageUrl = normalizeMetaUrl(String(metadata.image || '').trim());
+      const logoUrl = normalizeMetaUrl(String(metadata.logo || '').trim());
+      const faviconUrl = normalizeMetaUrl(String(metadata.favicon || '').trim());
       const link = String(metadata.link || '').trim();
       if (!pageTitle && !description && !imageUrl && !logoUrl && !faviconUrl && !link) {
         continue;
       }
-      return {
+      const candidateList = [
+        faviconUrl,
+        logoUrl,
+        fallback.faviconUrl || '',
+        host
+          ? `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(
+            `http://${host}`,
+          )}&size=64`
+          : '',
+        host ? `https://${host}/favicon.ico` : '',
+      ].filter((u, i, arr) => !!u && arr.indexOf(u) === i);
+      const candidate: LinkPreviewData = {
         title: pageTitle || typedUrl || fallback.title,
         urlText: typedUrl || link || fallback.urlText,
-        faviconUrl: logoUrl || faviconUrl || fallback.faviconUrl || '',
+        faviconUrl: candidateList[0] || '',
+        faviconCandidates: candidateList,
         imageUrl,
         description,
       };
+      const score =
+        (candidate.faviconUrl ? 8 : 0) +
+        (candidate.imageUrl ? 4 : 0) +
+        (candidate.title ? 2 : 0) +
+        (candidate.description ? 1 : 0);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
     }
-    return fallback;
+    return best ?? fallback;
   } catch {
     return fallback;
   }
+}
+
+function handleFaviconImgError(
+  e: React.SyntheticEvent<HTMLImageElement>,
+  meta?: LinkPreviewData,
+) {
+  const img = e.currentTarget;
+  const candidates = (meta?.faviconCandidates || []).filter(Boolean);
+  const curIdx = Number(img.dataset.faviconIdx || '0');
+  const nextIdx = curIdx + 1;
+  if (nextIdx < candidates.length) {
+    img.dataset.faviconIdx = String(nextIdx);
+    img.src = candidates[nextIdx];
+    return;
+  }
+  img.style.display = 'none';
 }
 
 export const LinkEditCard: React.FC<LinkCardProps> = ({
@@ -235,6 +295,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   const [previewByKey, setPreviewByKey] = useState<Record<string, LinkPreviewData>>(
     {},
   );
+  const inflightPreviewKeysRef = useRef<Set<string>>(new Set());
   const { insertLink, linkTypeList } = locale(context);
   const isLinkAddressValid = isLinkValid(context, linkType, linkAddress);
 
@@ -271,16 +332,22 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     targets.forEach((item) => {
       const key = getPreviewKey(item.linkType, item.linkAddress);
       if (previewByKey[key]) return;
+      if (inflightPreviewKeysRef.current.has(key)) return;
+      inflightPreviewKeysRef.current.add(key);
       fetchLinkPreview(item.linkAddress).then((meta) => {
+        inflightPreviewKeysRef.current.delete(key);
         if (cancelled) return;
         setPreviewByKey((prev) => {
           if (prev[key]) return prev;
           return { ...prev, [key]: meta };
         });
+      }).catch(() => {
+        inflightPreviewKeysRef.current.delete(key);
       });
     });
     return () => {
       cancelled = true;
+      inflightPreviewKeysRef.current.clear();
     };
   }, [isEditing, linksToShow, getPreviewKey, previewByKey]);
 
@@ -550,13 +617,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                     const isSheetLink = item.linkType === 'sheet';
                     return (
                       <div
-                        className={`fortune-link-card__preview-line${
-                          emailLike
-                            ? ' fortune-link-card__preview-line--email'
-                            : isSheetLink
-                              ? ' fortune-link-card__preview-line--sheet'
-                              : ''
-                        }`}
+                        className={`fortune-link-card__preview-line${emailLike
+                          ? ' fortune-link-card__preview-line--email'
+                          : isSheetLink
+                            ? ' fortune-link-card__preview-line--sheet'
+                            : ''
+                          }`}
                       >
                         {isSheetLink ? (
                           <LucideIcon
@@ -573,6 +639,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                             src={meta.faviconUrl}
                             alt=""
                             className="fortune-link-card__favicon"
+                            data-favicon-idx="0"
+                            onError={(e) => handleFaviconImgError(e, meta)}
                           />
                         ) : (
                           <LucideIcon
@@ -692,13 +760,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                   const isSheetLink = linkType === 'sheet';
                   return (
                     <div
-                      className={`fortune-link-card__preview-line${
-                        emailLike
-                          ? ' fortune-link-card__preview-line--email'
-                          : isSheetLink
-                            ? ' fortune-link-card__preview-line--sheet'
-                            : ''
-                      }`}
+                      className={`fortune-link-card__preview-line${emailLike
+                        ? ' fortune-link-card__preview-line--email'
+                        : isSheetLink
+                          ? ' fortune-link-card__preview-line--sheet'
+                          : ''
+                        }`}
                     >
                       {isSheetLink ? (
                         <LucideIcon
@@ -715,6 +782,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                           src={singleMeta.faviconUrl}
                           alt=""
                           className="fortune-link-card__favicon"
+                          data-favicon-idx="0"
+                          onError={(e) => handleFaviconImgError(e, singleMeta)}
                         />
                       ) : (
                         <LucideIcon
@@ -733,13 +802,13 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                         {linkType === 'webpage' &&
                           (singleMeta?.urlText ||
                             (!emailLike && (originAddress || linkAddress))) && (
-                          <span
-                            className="fortune-link-card__url-label"
-                            title={singleMeta?.urlText || originAddress || linkAddress}
-                          >
-                            {singleMeta?.urlText || (originAddress || linkAddress)}
-                          </span>
-                        )}
+                            <span
+                              className="fortune-link-card__url-label"
+                              title={singleMeta?.urlText || originAddress || linkAddress}
+                            >
+                              {singleMeta?.urlText || (originAddress || linkAddress)}
+                            </span>
+                          )}
                       </div>
                     </div>
                   );
