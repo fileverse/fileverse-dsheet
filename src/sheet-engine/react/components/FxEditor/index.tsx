@@ -59,6 +59,8 @@ import {
   setCursorPosition,
   buildFormulaSuggestionText,
   shouldShowFormulaFunctionList,
+  isStrictFormulaEditorText,
+  isFormulaCompleteAtCaret,
 } from '../SheetOverlay/helper';
 import { isFormulaSegmentBoundaryKey } from '../SheetOverlay/formula-segment-boundary';
 
@@ -95,10 +97,9 @@ const FxEditor: React.FC = () => {
       : null;
   const lockedFormulaSearchTop =
     formulaSearchActiveCellKey &&
-    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
       ? formulaSearchTopLockRef.current.top
       : null;
-  const prevFirstSelection = usePrevious(firstSelection);
   const prevCellUpdate = usePrevious<any[]>(context.luckysheetCellUpdate);
   const prevSheetId = usePrevious(context.currentSheetId);
   const recentText = useRef('');
@@ -148,13 +149,6 @@ const FxEditor: React.FC = () => {
     // 当选中行列是处于隐藏状态的话则不允许编辑
     setIsHidenRC(isShowHidenCR(context));
     if (context.luckysheetCellUpdate.length > 0) {
-      return;
-    }
-    if (
-      _.isEqual(prevFirstSelection, firstSelection) &&
-      context.currentSheetId === prevSheetId
-    ) {
-      // data change by a collabrative update should not trigger this effect
       return;
     }
     const d = getFlowdata(context);
@@ -288,7 +282,7 @@ const FxEditor: React.FC = () => {
         setFormulaEditorOwner(draftCtx, 'fx');
         const last =
           draftCtx.luckysheet_select_save![
-            draftCtx.luckysheet_select_save!.length - 1
+          draftCtx.luckysheet_select_save!.length - 1
           ];
 
         const row_index = last.row_focus;
@@ -525,8 +519,8 @@ const FxEditor: React.FC = () => {
             createRangeHightlight(
               draftCtx,
               refs.fxInput.current?.innerHTML ||
-                refs.cellInput.current?.innerHTML ||
-                '',
+              refs.cellInput.current?.innerHTML ||
+              '',
             );
             moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
           });
@@ -709,7 +703,7 @@ const FxEditor: React.FC = () => {
                 draftCtx.luckysheet_select_save = _.cloneDeep(selSnapshot);
                 const lastSel =
                   draftCtx.luckysheet_select_save[
-                    draftCtx.luckysheet_select_save.length - 1
+                  draftCtx.luckysheet_select_save.length - 1
                   ];
                 lastSel.row_focus = lastCellUpdate[0];
                 lastSel.column_focus = lastCellUpdate[1];
@@ -863,6 +857,21 @@ const FxEditor: React.FC = () => {
     setShowSearchHint(
       shouldShowFormulaFunctionList(refs.fxInput?.current ?? null),
     );
+
+    const isStrictFormula = isStrictFormulaEditorText(refs.fxInput.current);
+    if (!isStrictFormula) {
+      setContext((draftCtx) => {
+        if (draftCtx.functionCandidates.length > 0) {
+          draftCtx.functionCandidates = [];
+        }
+        if (draftCtx.defaultCandidates.length > 0) {
+          draftCtx.defaultCandidates = [];
+        }
+        if (draftCtx.functionHint) {
+          draftCtx.functionHint = '';
+        }
+      });
+    }
 
     const currentCommaCount = countCommasBeforeCursor(refs.fxInput?.current!);
     setCommaCount(currentCommaCount);
@@ -1094,12 +1103,22 @@ const FxEditor: React.FC = () => {
         </div>
         <div ref={inputContainerRef} className="fortune-fx-input-container">
           <ContentEditable
+            onMouseDown={() => {
+              // Ensure first click both opens edit mode and preserves the mouse caret.
+              if (context.luckysheetCellUpdate.length === 0) {
+                refs.globalCache.doNotUpdateCell = true;
+              }
+              setContext((draftCtx) => {
+                setFormulaEditorOwner(draftCtx, 'fx');
+              });
+            }}
             onMouseUp={() => {
               handleHideShowHint();
               setContext((draftCtx) => {
                 setFormulaEditorOwner(draftCtx, 'fx');
               });
               const editor = refs.fxInput?.current!;
+              setShowSearchHint(shouldShowFormulaFunctionList(editor));
               const currentCommaCount = countCommasBeforeCursor(editor);
               setCommaCount(currentCommaCount);
 
@@ -1171,14 +1190,17 @@ const FxEditor: React.FC = () => {
                 )}
 
                 <div className="fx-hint">
-                  {showFormulaHint && fn && !showSearchHint && (
-                    <FormulaHint
-                      handleShowFormulaHint={handleShowFormulaHint}
-                      showFormulaHint={showFormulaHint}
-                      commaCount={commaCount}
-                      functionName={functionName}
-                    />
-                  )}
+                  {showFormulaHint &&
+                    fn &&
+                    !showSearchHint &&
+                    !isFormulaCompleteAtCaret(refs.fxInput.current) && (
+                      <FormulaHint
+                        handleShowFormulaHint={handleShowFormulaHint}
+                        showFormulaHint={showFormulaHint}
+                        commaCount={commaCount}
+                        functionName={functionName}
+                      />
+                    )}
                   {!showFormulaHint && fn && !showSearchHint && (
                     <Tooltip
                       text="Turn on formula suggestions (F10)"

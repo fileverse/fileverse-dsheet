@@ -56,7 +56,6 @@ html::-webkit-scrollbar-button {
   align-items: center;
   width: 100%;
   position: relative;
-  z-index: 1;
   background-color: rgb(255, 255, 255);
 }
 

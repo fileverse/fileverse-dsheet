@@ -1,9 +1,9 @@
 import _ from "lodash";
-import { Context } from "../context";
-import { Sheet } from "../types";
+import { Context, getFlowdata } from '../context';
+import { Cell, Sheet } from '../types';
 import { getSheetIndex } from "../utils";
 import { getcellFormula } from "./cell";
-import { functionStrChange } from "./formula";
+import { execFunctionGroup, functionStrChange } from './formula';
 
 const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
   Object.entries(merge_new).forEach(([, v]) => {
@@ -168,6 +168,17 @@ const emitCellRangeToYdoc = (
   if (changes.length > 0) ctx.hooks.updateCellYdoc(changes);
 };
 
+const markCellRefError = (cell: Cell) => {
+  cell.v = '#REF!';
+  cell.m = '#REF!';
+  cell.error = { title: '#REF!', message: 'Reference is not valid.' };
+  if (cell.ct) {
+    cell.ct.t = 'e';
+  } else {
+    cell.ct = { fa: 'General', t: 'e' };
+  }
+};
+
 const rewriteFormulasByScanningSheet = (
   sheet: Sheet,
   calcChain: any[] | null | undefined,
@@ -194,7 +205,9 @@ const rewriteFormulasByScanningSheet = (
       const cell = row[c] as any;
       if (!cell?.f) continue;
       if (calcChainSet.has(`${r}_${c}`)) continue;
-      cell.f = `=${functionStrChange(cell.f, mode, rc, orient, stindex, step)}`;
+      const newF = `=${functionStrChange(cell.f, mode, rc, orient, stindex, step)}`;
+      cell.f = newF;
+      if (newF.includes('#REF!')) markCellRefError(cell);
     }
   }
 };
@@ -1689,6 +1702,8 @@ export function deleteRowCol(
 
           if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
             data![calc_r]![calc_c]!.f = functionStr;
+            if (functionStr.includes('#REF!'))
+              markCellRefError(data![calc_r]![calc_c]!);
           }
 
           if (calc_r > end) {
@@ -1709,6 +1724,8 @@ export function deleteRowCol(
 
         if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
           data![calc_r]![calc_c]!.f = functionStr;
+          if (functionStr === '=#REF!')
+            markCellRefError(data![calc_r]![calc_c]!);
         }
       } else if (type === "column" && SheetIndex === curOrder) {
         if (calc_c < start || calc_c > end) {
@@ -1723,6 +1740,8 @@ export function deleteRowCol(
 
           if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
             data![calc_r]![calc_c]!.f = functionStr;
+            if (functionStr.includes('#REF!'))
+              markCellRefError(data![calc_r]![calc_c]!);
           }
 
           if (calc_c > end) {
@@ -1743,6 +1762,8 @@ export function deleteRowCol(
 
         if (data![calc_r]?.[calc_c]?.f === calc_funcStr) {
           data![calc_r]![calc_c]!.f = functionStr;
+          if (functionStr === '=#REF!')
+            markCellRefError(data![calc_r]![calc_c]!);
         }
       }
     }
@@ -2440,19 +2461,22 @@ export function deleteRowCol(
 
   if (file.id === ctx.currentSheetId) {
     ctx.config = cfg;
-    // jfrefreshgrid_adRC(
-    //   d,
-    //   cfg,
-    //   "delRC",
-    //   { index: st, len: ed - st + 1, rc: type1 },
-    //   newCalcChain,
-    //   newFilterObj,
-    //   newCFarr,
-    //   newAFarr,
-    //   newFreezen,
-    //   newDataVerification,
-    //   newHyperlink
-    // );
+    // Structural edits rewrite formula strings (and may create/remove circular dependencies).
+    // Trigger a dependent-aware recalculation so:
+    // - values update
+    // - dependency graph is refreshed (used for #CIRC! detection/propagation)
+    const touchedFormulaCells: { r: number; c: number; i: string }[] =
+      (newCalcChain || []).map((calc: { r: number; c: number; id: string }) => ({
+        r: calc.r,
+        c: calc.c,
+        i: ctx.currentSheetId,
+      }));
+    if (touchedFormulaCells.length > 0) {
+      ctx.formulaCache.execFunctionExist = touchedFormulaCells;
+      // @ts-expect-error: full-sheet recalc passes null for origin_r/c/value/id
+      execFunctionGroup(ctx, null, null, null, null, getFlowdata(ctx));
+      ctx.formulaCache.execFunctionExist = undefined;
+    }
   } else {
   }
 }
