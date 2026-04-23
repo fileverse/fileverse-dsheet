@@ -36,7 +36,6 @@ export const errorMessagesFromValue: Record<string, string> = {
   [ERROR_VALUE]: 'Invalid value',
   [ERROR]: 'Unknown error',
   [CIRCULAR_REF_ERROR]: 'Circular dependency.',
-  [error.circ]: 'Circular dependency.',
 };
 
 export function detectErrorFromValue(input: string) {
