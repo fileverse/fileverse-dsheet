@@ -87,6 +87,70 @@ const LABEL_EXTRACT_REGEXP = new RegExp(
   `^${rowColumnWithSheetName}(?:[:]${rowColumnWithSheetName})?$`
 );
 
+function normalizeDateArithmeticForParser(expr: string): string {
+  if (!expr) return expr;
+  // Formula parser treats JS Date with "+" as string coercion in some paths.
+  // Normalize ONLY date-arithmetic cases to numeric serial arithmetic.
+  const base1904 = new Date(1900, 2, 1, 0, 0, 0);
+  const toExcelSerial = (date: Date) => {
+    let epoch = Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+    );
+    const dnthreshUtc = Date.UTC(1899, 11, 31, 0, 0, 0);
+    if (date >= base1904) epoch += 24 * 60 * 60 * 1000;
+    return (epoch - dnthreshUtc) / (24 * 60 * 60 * 1000);
+  };
+  const now = new Date();
+  const todaySerial = toExcelSerial(
+    new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0),
+  );
+  const nowSerial = toExcelSerial(now);
+
+  return expr
+    .replace(
+      /\b(TODAY|NOW)\(\)\s*([+\-])\s*(\d+(?:\.\d+)?)/gi,
+      (_m, fn, op, num) =>
+        `${String(fn).toUpperCase() === "NOW" ? nowSerial : todaySerial} ${op} ${num}`,
+    )
+    .replace(
+      /(\d+(?:\.\d+)?)\s*([+\-])\s*\b(TODAY|NOW)\(\)/gi,
+      (_m, num, op, fn) =>
+        `${num} ${op} ${String(fn).toUpperCase() === "NOW" ? nowSerial : todaySerial}`,
+    );
+}
+
+/** True when the formula is only numeric ops on TODAY()/NOW() (incl. unary +/−); used to display serials as dates. */
+export function isTodayNowPureArithmeticDateResult(
+  formula: string,
+  value: number,
+): boolean {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    return false;
+  }
+  // Generous cap for serial range; still avoids labelling large sums as dates.
+  if (value > 1e7) {
+    return false;
+  }
+  const body = formula.replace(/^\s*=\s*/i, "").toUpperCase();
+  if (!/\bTODAY\s*\(/.test(body) && !/\bNOW\s*\(/.test(body)) {
+    return false;
+  }
+  let s = body
+    .replace(/\bTODAY\s*\(\s*\)/g, "X")
+    .replace(/\bNOW\s*\(\s*\)/g, "X")
+    .replace(/\d+\.?\d*/g, "0");
+  s = s.replace(/\s+/g, "");
+  if (!s.includes("X") || !/^[0X+\-*/().]+$/.test(s)) {
+    return false;
+  }
+  return true;
+}
+
 const CIRCULAR_REF_ERROR = "#CIRC!";
 const CIRCULAR_REF_TITLE = "Circular Dependency";
 
@@ -280,14 +344,6 @@ export class FormulaCache {
           `${cellCoord.row.index}_${cellCoord.column.index}_${id}`
           ] || flowdata?.[cellCoord.row.index]?.[cellCoord.column.index];
         const v = that.tryGetCellAsNumber(cell);
-        console.log("[formula-debug] callCellValue -> parser", {
-          sheetId: id,
-          row: cellCoord.row.index,
-          col: cellCoord.column.index,
-          cellCtType: typeof cell?.ct,
-          cellVType: typeof cell?.v,
-          resolved: formulaDebugStable(v),
-        });
         done(v);
       }
     );
@@ -398,18 +454,6 @@ export class FormulaCache {
         }
 
         if (fragment) {
-          console.log("[formula-debug] callRangeValue -> parser", {
-            sheetId: id,
-            start: `${startCellCoord.row.index},${startCellCoord.column.index}`,
-            end: `${endCellCoord.row.index},${endCellCoord.column.index}`,
-            rangeShape: {
-              rows: fragment.length,
-              cols: Array.isArray(fragment[0]) ? fragment[0].length : 0,
-            },
-            firstValue: formulaDebugStable(fragment?.[0]?.[0]),
-            cryptoDenomination,
-            cryptoDecimal,
-          });
           done(fragment, cryptoDenomination, cryptoDecimal);
         }
       }
@@ -1468,9 +1512,10 @@ export function execfunction(
   ctx.formulaCache.activeDepCollection = { originKey, deps };
 
   ctx.formulaCache.parser.context = ctx;
+  const parserExpression = normalizeDateArithmeticForParser(txt.substring(1));
   let parsedResponse: { error: any; result: any };
   try {
-    parsedResponse = ctx.formulaCache.parser.parse(txt.substring(1), {
+    parsedResponse = ctx.formulaCache.parser.parse(parserExpression, {
       sheetId,
       row: r,
       column: c,

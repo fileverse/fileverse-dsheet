@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { SheetConfig } from './types';
 import { FormulaCache } from './modules';
 import { normalizeSelection } from './modules/selection';
-import { Hooks } from './settings';
+import { DateBaseLocale, Hooks } from './settings';
 import {
   Sheet,
   Selection,
@@ -234,6 +234,7 @@ export type Context = {
   luckysheet_cell_selected_extend_index: any[];
 
   lang: string | null; // language
+  dateBaseLocale: DateBaseLocale;
 
   chart_selection: any;
 
@@ -527,6 +528,7 @@ export function defaultContext(refs: RefValues): Context {
     luckysheet_cell_selected_extend_index: [],
 
     lang: null, // language
+    dateBaseLocale: 'uk',
     chart_selection: {},
 
     zoomRatio: 1,

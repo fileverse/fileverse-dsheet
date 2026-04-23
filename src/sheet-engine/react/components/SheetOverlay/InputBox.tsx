@@ -58,6 +58,7 @@ import WorkbookContext from '../../context';
 import ContentEditable from './ContentEditable';
 import FormulaSearch from './FormulaSearch';
 import FormulaHint from './FormulaHint';
+import CellDatePicker from './CellDatePicker';
 import usePrevious from '../../hooks/usePrevious';
 import { useFormulaEditorHistory } from '../../hooks/useFormulaEditorHistory';
 import { useRerenderOnFormulaCaret } from '../../hooks/useRerenderOnFormulaCaret';
@@ -443,6 +444,10 @@ const InputBox: React.FC = () => {
         firstSelectionActiveCell.row_focus!,
         firstSelectionActiveCell.column_focus!,
       );
+      const activeCell =
+        flowdata?.[firstSelectionActiveCell.row_focus!]?.[
+          firstSelectionActiveCell.column_focus!
+        ];
       // Hyperlink cells can carry blue/underline as cell-level style (especially after import).
       // In edit mode that decorates the entire input box; keep decoration on link spans only.
       const activeHyperlink = getCellHyperlink(
@@ -457,6 +462,15 @@ const InputBox: React.FC = () => {
           borderBottom: undefined,
           textDecoration: undefined,
         };
+      }
+      // Date cells are right-aligned by default in grid rendering. In edit mode,
+      // ensure we keep that alignment when no explicit alignment style exists.
+      if (
+        activeCell?.ct?.t === 'd' &&
+        (style as any)?.textAlign == null &&
+        !cellEditorIsFormula
+      ) {
+        style = { ...style, textAlign: 'right' };
       }
       if (cellEditorIsFormula) {
         style = { ...style, textAlign: 'left' };
@@ -540,6 +554,8 @@ const InputBox: React.FC = () => {
           setContext((ctx) => {
             createRangeHightlight(ctx, value);
           });
+        } else if (cell.ct?.t === 'd') {
+          value = getCellValue(row_index, col_index, flowdata, 'f');
         } else {
           value = valueShowEs(row_index, col_index, flowdata);
           if (Number(cell.qp) === 1) {
@@ -2544,6 +2560,7 @@ const InputBox: React.FC = () => {
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           onCopy={onCopy}
+          onContextMenu={(e) => e.stopPropagation()}
           allowEdit={edit ? !isHidenRC : edit}
         />
         {linkSelectionHighlightRects.length > 0 && (
@@ -2575,6 +2592,8 @@ const InputBox: React.FC = () => {
           </div>
         )}
       </div>
+
+      {!showSearchHint && <CellDatePicker />}
 
       {(context.functionCandidates.length > 0 ||
         context.functionHint ||

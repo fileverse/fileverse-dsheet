@@ -18,7 +18,7 @@ export type { Context } from './context';
 
 // settings
 export { defaultSettings } from './settings';
-export type { Settings, Hooks } from './settings';
+export type { Settings, Hooks, DateBaseLocale } from './settings';
 
 // events
 export {
@@ -75,6 +75,14 @@ export {
   // cursor
   moveToEnd,
   getRangeRectsByCharacterOffset,
+  // date base locale
+  getDateBaseLocale,
+  getCanonicalDateEditFormat,
+  getDateEditFormatForCell,
+  isUsDateBaseLocale,
+  normalizeDateBaseLocale,
+  shouldPreserveDateFormatForEdit,
+  setDateBaseLocale,
   // format
   update,
   is_date,
@@ -267,6 +275,7 @@ export {
   setCellError,
   clearCellError,
   // validation (internal)
+  detectDateFormat,
   isdatatypemulti,
   diff,
   isdatetime,

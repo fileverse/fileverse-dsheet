@@ -12,6 +12,7 @@ import {
   // @ts-ignore
 } from '@sheet-engine/formula-parser';
 import { Context } from '../context';
+import { isUsDateBaseLocale } from './date-base-locale';
 import { hasChinaword } from './text';
 
 export const error = {
@@ -127,6 +128,13 @@ const MONTH_NAMES_RE =
   'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec';
 const MONTH_ABBR_RE = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec';
 const MONTH_ABBR_SET = new Set(MONTH_ABBR_RE.split('|'));
+const WEEKDAY_NAMES_RE =
+  'monday|tuesday|wednesday|thursday|friday|saturday|sunday';
+const WEEKDAY_ABBR_RE = 'mon|tue|wed|thu|fri|sat|sun';
+
+function parseTwoDigitYear(twoDigitYear: string): number {
+  return 2000 + Number(twoDigitYear);
+}
 
 function isValidDateParts(year: number, month: number, day: number): boolean {
   if (year < 1900) return false;
@@ -142,9 +150,10 @@ function isValidDateParts(year: number, month: number, day: number): boolean {
 }
 
 export function detectDateFormat(str: string): DateFormatInfo | null {
-  console.log("detectDateFormat", str);
   if (!str || str.toString().length < 5) return null;
   const s = str.toString().trim();
+  const currentYear = new Date().getFullYear();
+  const prefersUsDateOrder = isUsDateBaseLocale();
   let m: RegExpExecArray | null;
 
   // ISO 8601: 2026-02-25T14:30:00 or 2026-02-25T14:30
@@ -237,7 +246,7 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
     }
   }
 
-  // MM/dd/yyyy h:mm AM/PM: 02/25/2026 2:30 PM
+  // Slash-separated with 4-digit year + AM/PM (base-order aware)
   m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2})\s?(AM|PM)$/i.exec(s);
   if (m) {
     const p1 = +m[1];
@@ -246,94 +255,79 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
     const h = +m[4];
     const mi = +m[5];
     const ampm = m[6].toUpperCase();
-    if (p1 <= 12 && isValidDateParts(y, p1, p2)) {
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
       let actualH = h;
       if (ampm === 'PM' && h !== 12) actualH = h + 12;
       if (ampm === 'AM' && h === 12) actualH = 0;
       return {
         year: y,
-        month: p1,
-        day: p2,
+        month: mo,
+        day: d,
         hours: actualH,
         minutes: mi,
         seconds: 0,
-        formatType: 'MM/dd/yyyy h:mm AM/PM',
+        formatType: prefersUsDateOrder
+          ? (m[1].length === 1 ? 'M/d/yyyy h:mm AM/PM' : 'MM/dd/yyyy h:mm AM/PM')
+          : (m[1].length === 1 ? 'd/M/yyyy h:mm AM/PM' : 'dd/MM/yyyy h:mm AM/PM'),
       };
     }
   }
 
-  // Slash-separated with 4-digit year last: 25/02/2026, 02/25/2026, 2/25/2026
+  // Slash-separated with 4-digit year last (base-order aware)
   m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
   if (m) {
     const p1 = +m[1];
     const p2 = +m[2];
     const y = +m[3];
-    if (p1 > 12 && isValidDateParts(y, p2, p1)) {
-      // dd/MM/yyyy
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
       return {
         year: y,
-        month: p2,
-        day: p1,
+        month: mo,
+        day: d,
         hours: 0,
         minutes: 0,
         seconds: 0,
-        formatType: 'dd/MM/yyyy',
-      };
-    }
-    if (p2 > 12 && p1 <= 12 && isValidDateParts(y, p1, p2)) {
-      // MM/dd/yyyy or M/d/yyyy (single-digit month)
-      const formatType = m[1].length === 1 ? 'M/d/yyyy' : 'MM/dd/yyyy';
-      return {
-        year: y,
-        month: p1,
-        day: p2,
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-        formatType,
-      };
-    }
-    if (p1 <= 12 && p2 <= 31 && isValidDateParts(y, p1, p2)) {
-      // Ambiguous — default to MM/dd/yyyy
-      const formatType = m[1].length === 1 ? 'M/d/yyyy' : 'MM/dd/yyyy';
-      return {
-        year: y,
-        month: p1,
-        day: p2,
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-        formatType,
+        formatType: prefersUsDateOrder
+          ? (m[1].length === 1 ? 'M/d/yyyy' : 'MM/dd/yyyy')
+          : (m[1].length === 1 ? 'd/M/yyyy' : 'dd/MM/yyyy'),
       };
     }
   }
 
-  // Slash-separated with 2-digit year: MM/dd/yy (e.g. 02/25/26)
-  m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(s);
+  // Slash-separated with 2-digit year (base-order aware)
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{2})$/.exec(s);
   if (m) {
     const p1 = +m[1];
     const p2 = +m[2];
-    const y = 2000 + +m[3];
-    if (p1 <= 12 && p2 <= 31 && isValidDateParts(y, p1, p2)) {
+    const y = parseTwoDigitYear(m[3]);
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
       return {
         year: y,
-        month: p1,
-        day: p2,
+        month: mo,
+        day: d,
         hours: 0,
         minutes: 0,
         seconds: 0,
-        formatType: 'MM/dd/yy',
+        formatType: prefersUsDateOrder
+          ? (m[1].length === 1 ? 'M/d/yy' : 'MM/dd/yy')
+          : (m[1].length === 1 ? 'd/M/yy' : 'dd/MM/yy'),
       };
     }
   }
 
-  // dd-MM-yyyy: 25-02-2026 (only when first part > 12 to avoid ambiguity)
+  // D-M-YYYY / DD-MM-YYYY (day-first)
   m = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(s);
   if (m) {
     const p1 = +m[1];
     const p2 = +m[2];
     const y = +m[3];
-    if (p1 > 12 && isValidDateParts(y, p2, p1)) {
+    if (p1 <= 31 && p2 <= 12 && isValidDateParts(y, p2, p1)) {
       return {
         year: y,
         month: p2,
@@ -341,7 +335,7 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         hours: 0,
         minutes: 0,
         seconds: 0,
-        formatType: 'dd-MM-yyyy',
+        formatType: m[1].length === 1 ? 'd-M-yyyy' : 'dd-MM-yyyy',
       };
     }
   }
@@ -424,6 +418,508 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: 0,
         seconds: 0,
         formatType: 'named-abbr-dashes',
+      };
+    }
+  }
+
+  // D-Mon-YYYY: 5-Feb-2026
+  m = new RegExp(`^(\\d{1,2})-(${MONTH_ABBR_RE})-(\\d{4})$`, 'i').exec(s);
+  if (m) {
+    const d = +m[1];
+    const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
+    const y = +m[3];
+    if (mo && isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'd-mmm-yyyy',
+      };
+    }
+  }
+
+  // D-Mon-YY: 5-Feb-26
+  m = new RegExp(`^(\\d{1,2})-(${MONTH_ABBR_RE})-(\\d{2})$`, 'i').exec(s);
+  if (m) {
+    const d = +m[1];
+    const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
+    const y = parseTwoDigitYear(m[3]);
+    if (mo && isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'd-mmm-yy',
+      };
+    }
+  }
+
+  // D-M-YY / DD-MM-YY (day-first)
+  m = /^(\d{1,2})-(\d{1,2})-(\d{2})$/.exec(s);
+  if (m) {
+    const d = +m[1];
+    const mo = +m[2];
+    const y = parseTwoDigitYear(m[3]);
+    if (d <= 31 && mo <= 12 && isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: m[1].length === 1 ? 'd-M-yy' : 'dd-MM-yy',
+      };
+    }
+  }
+
+  // M D YYYY / MM DD YYYY
+  m = /^(\d{1,2})\s+(\d{1,2})\s+(\d{4})$/.exec(s);
+  if (m) {
+    const mo = +m[1];
+    const d = +m[2];
+    const y = +m[3];
+    if (isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: m[1].length === 1 ? 'M d yyyy' : 'MM dd yyyy',
+      };
+    }
+  }
+
+  // YYYY Month D: 2026 February 5 / 2026 Feb 5
+  m = new RegExp(`^(\\d{4})\\s+(${MONTH_NAMES_RE})\\s+(\\d{1,2})$`, 'i').exec(s);
+  if (m) {
+    const y = +m[1];
+    const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
+    const d = +m[3];
+    if (mo && isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'yyyy mmmm d',
+      };
+    }
+  }
+
+  // Month YYYY / Mon YYYY
+  m = new RegExp(`^(${MONTH_NAMES_RE})\\s+(\\d{4})$`, 'i').exec(s);
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const y = +m[2];
+    if (mo && isValidDateParts(y, mo, 1)) {
+      const isAbbr = MONTH_ABBR_SET.has(m[1].toLowerCase());
+      return {
+        year: y,
+        month: mo,
+        day: 1,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: isAbbr ? 'mmm yyyy' : 'mmmm yyyy',
+      };
+    }
+  }
+
+  // Month D / Mon D (assume current year)
+  m = new RegExp(`^(${MONTH_NAMES_RE})\\s+(\\d{1,2})$`, 'i').exec(s);
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const d = +m[2];
+    if (mo && isValidDateParts(currentYear, mo, d)) {
+      const isAbbr = MONTH_ABBR_SET.has(m[1].toLowerCase());
+      return {
+        year: currentYear,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: isAbbr ? 'mmm d' : 'mmmm d',
+      };
+    }
+  }
+
+  // Mon-YY / Mon YY
+  m = new RegExp(`^(${MONTH_ABBR_RE})[-\\s](\\d{2})$`, 'i').exec(s);
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const y = parseTwoDigitYear(m[2]);
+    if (mo && isValidDateParts(y, mo, 1)) {
+      return {
+        year: y,
+        month: mo,
+        day: 1,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'mmm-yy',
+      };
+    }
+  }
+
+  // M/YYYY or MM/YYYY
+  m = /^(\d{1,2})\/(\d{4})$/.exec(s);
+  if (m) {
+    const mo = +m[1];
+    const y = +m[2];
+    if (isValidDateParts(y, mo, 1)) {
+      return {
+        year: y,
+        month: mo,
+        day: 1,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: m[1].length === 1 ? 'M/yyyy' : 'MM/yyyy',
+      };
+    }
+  }
+
+  // M-YYYY or MM-YYYY
+  m = /^(\d{1,2})-(\d{4})$/.exec(s);
+  if (m) {
+    const mo = +m[1];
+    const y = +m[2];
+    if (isValidDateParts(y, mo, 1)) {
+      return {
+        year: y,
+        month: mo,
+        day: 1,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: m[1].length === 1 ? 'M-yyyy' : 'MM-yyyy',
+      };
+    }
+  }
+
+  // YYYY-M or YYYY-MM
+  m = /^(\d{4})-(\d{1,2})$/.exec(s);
+  if (m) {
+    const y = +m[1];
+    const mo = +m[2];
+    if (isValidDateParts(y, mo, 1)) {
+      return {
+        year: y,
+        month: mo,
+        day: 1,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: m[2].length === 1 ? 'yyyy-M' : 'yyyy-MM',
+      };
+    }
+  }
+
+  // Slash-separated with 4-digit year + h:mm:ss AM/PM (base-order aware)
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})\s?(AM|PM)$/i.exec(
+    s,
+  );
+  if (m) {
+    const p1 = +m[1];
+    const p2 = +m[2];
+    const y = +m[3];
+    const h = +m[4];
+    const mi = +m[5];
+    const sec = +m[6];
+    const ampm = m[7].toUpperCase();
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
+      let actualH = h;
+      if (ampm === 'PM' && h !== 12) actualH = h + 12;
+      if (ampm === 'AM' && h === 12) actualH = 0;
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: actualH,
+        minutes: mi,
+        seconds: sec,
+        formatType: prefersUsDateOrder
+          ? (m[1].length === 1 ? 'M/d/yyyy h:mm:ss AM/PM' : 'MM/dd/yyyy h:mm:ss AM/PM')
+          : (m[1].length === 1 ? 'd/M/yyyy h:mm:ss AM/PM' : 'dd/MM/yyyy h:mm:ss AM/PM'),
+      };
+    }
+  }
+
+  // Mon D, YYYY h:mm AM/PM
+  m = new RegExp(
+    `^(${MONTH_ABBR_RE})\\s+(\\d{1,2}),\\s*(\\d{4})\\s+(\\d{1,2}):(\\d{2})\\s?(AM|PM)$`,
+    'i',
+  ).exec(s);
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const d = +m[2];
+    const y = +m[3];
+    const h = +m[4];
+    const mi = +m[5];
+    const ampm = m[6].toUpperCase();
+    if (mo && isValidDateParts(y, mo, d)) {
+      let actualH = h;
+      if (ampm === 'PM' && h !== 12) actualH = h + 12;
+      if (ampm === 'AM' && h === 12) actualH = 0;
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: actualH,
+        minutes: mi,
+        seconds: 0,
+        formatType: 'mmm d, yyyy h:mm AM/PM',
+      };
+    }
+  }
+
+  // D-Mon-YYYY h:mm AM/PM
+  m = new RegExp(
+    `^(\\d{1,2})-(${MONTH_ABBR_RE})-(\\d{4})\\s+(\\d{1,2}):(\\d{2})\\s?(AM|PM)$`,
+    'i',
+  ).exec(s);
+  if (m) {
+    const d = +m[1];
+    const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
+    const y = +m[3];
+    const h = +m[4];
+    const mi = +m[5];
+    const ampm = m[6].toUpperCase();
+    if (mo && isValidDateParts(y, mo, d)) {
+      let actualH = h;
+      if (ampm === 'PM' && h !== 12) actualH = h + 12;
+      if (ampm === 'AM' && h === 12) actualH = 0;
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: actualH,
+        minutes: mi,
+        seconds: 0,
+        formatType: 'd-mmm-yyyy h:mm AM/PM',
+      };
+    }
+  }
+
+  // Slash-separated with 4-digit year + HH:mm (base-order aware)
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{2}):(\d{2})$/.exec(s);
+  if (m) {
+    const p1 = +m[1];
+    const p2 = +m[2];
+    const y = +m[3];
+    const h = +m[4];
+    const mi = +m[5];
+    if (h > 23) return null;
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: h,
+        minutes: mi,
+        seconds: 0,
+        formatType: prefersUsDateOrder
+          ? (m[1].length === 1 ? 'M/d/yyyy HH:mm' : 'MM/dd/yyyy HH:mm')
+          : (m[1].length === 1 ? 'd/M/yyyy HH:mm' : 'dd/MM/yyyy HH:mm'),
+      };
+    }
+  }
+
+  // Slash-separated with 4-digit year + H:mm:ss/HH:mm:ss (base-order aware)
+  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})$/.exec(s);
+  if (m) {
+    const p1 = +m[1];
+    const p2 = +m[2];
+    const y = +m[3];
+    const h = +m[4];
+    const mi = +m[5];
+    const sec = +m[6];
+    if (h > 23) return null;
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: h,
+        minutes: mi,
+        seconds: sec,
+        formatType: prefersUsDateOrder
+          ? (m[1].length === 1 ? 'M/d/yyyy HH:mm:ss' : 'MM/dd/yyyy HH:mm:ss')
+          : (m[1].length === 1 ? 'd/M/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'),
+      };
+    }
+  }
+
+  // Day, Month D, YYYY | Day, Mon D, YYYY
+  m = new RegExp(
+    `^(?:${WEEKDAY_NAMES_RE}),\\s+(${MONTH_NAMES_RE})\\s+(\\d{1,2}),\\s*(\\d{4})$`,
+    'i',
+  ).exec(s);
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const d = +m[2];
+    const y = +m[3];
+    if (mo && isValidDateParts(y, mo, d)) {
+      const isAbbr = MONTH_ABBR_SET.has(m[1].toLowerCase());
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: isAbbr ? 'day, mmm d, yyyy' : 'day, mmmm d, yyyy',
+      };
+    }
+  }
+
+  // Day, D Month YYYY | Day, D Mon YYYY
+  m = new RegExp(
+    `^(?:${WEEKDAY_NAMES_RE}),\\s+(\\d{1,2})\\s+(${MONTH_NAMES_RE})\\s+(\\d{4})$`,
+    'i',
+  ).exec(s);
+  if (m) {
+    const d = +m[1];
+    const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
+    const y = +m[3];
+    if (mo && isValidDateParts(y, mo, d)) {
+      const isAbbr = MONTH_ABBR_SET.has(m[2].toLowerCase());
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: isAbbr ? 'day, d mmm yyyy' : 'day, d mmmm yyyy',
+      };
+    }
+  }
+
+  // Day, slash date (base-order aware)
+  m = new RegExp(`^(?:${WEEKDAY_NAMES_RE}),\\s+(\\d{2})\\/(\\d{2})\\/(\\d{4})$`, 'i').exec(
+    s,
+  );
+  if (m) {
+    const p1 = +m[1];
+    const p2 = +m[2];
+    const y = +m[3];
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: prefersUsDateOrder
+          ? 'day, MM/dd/yyyy'
+          : 'day, dd/MM/yyyy',
+      };
+    }
+  }
+
+  // Dy, Mon D, YYYY | Dy Mon D, YYYY
+  m = new RegExp(
+    `^(?:${WEEKDAY_ABBR_RE}),?\\s+(${MONTH_ABBR_RE})\\s+(\\d{1,2}),\\s*(\\d{4})$`,
+    'i',
+  ).exec(s);
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const d = +m[2];
+    const y = +m[3];
+    if (mo && isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'dy, mmm d, yyyy',
+      };
+    }
+  }
+
+  // Dy, Mon D
+  m = new RegExp(`^(?:${WEEKDAY_ABBR_RE}),\\s+(${MONTH_ABBR_RE})\\s+(\\d{1,2})$`, 'i').exec(
+    s,
+  );
+  if (m) {
+    const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
+    const d = +m[2];
+    if (mo && isValidDateParts(currentYear, mo, d)) {
+      return {
+        year: currentYear,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'dy, mmm d',
+      };
+    }
+  }
+
+  // Dy, D Mon YYYY
+  m = new RegExp(`^(?:${WEEKDAY_ABBR_RE}),\\s+(\\d{1,2})\\s+(${MONTH_ABBR_RE})\\s+(\\d{4})$`, 'i')
+    .exec(s);
+  if (m) {
+    const d = +m[1];
+    const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
+    const y = +m[3];
+    if (mo && isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: 'dy, d mmm yyyy',
+      };
+    }
+  }
+
+  // Dy slash date (base-order aware)
+  m = new RegExp(`^(?:${WEEKDAY_ABBR_RE})\\s+(\\d{2})\\/(\\d{2})\\/(\\d{4})$`, 'i').exec(s);
+  if (m) {
+    const p1 = +m[1];
+    const p2 = +m[2];
+    const y = +m[3];
+    const mo = prefersUsDateOrder ? p1 : p2;
+    const d = prefersUsDateOrder ? p2 : p1;
+    if (isValidDateParts(y, mo, d)) {
+      return {
+        year: y,
+        month: mo,
+        day: d,
+        hours: 0,
+        minutes: 0,
+        seconds: 0,
+        formatType: prefersUsDateOrder
+          ? 'dy MM/dd/yyyy'
+          : 'dy dd/MM/yyyy',
       };
     }
   }

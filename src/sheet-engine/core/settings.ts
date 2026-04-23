@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import React from 'react';
 import { Sheet, Selection, CellMatrix, Cell } from './types';
 
+export type DateBaseLocale = 'uk' | 'us';
+
 type SheetChangePath = {
   sheetId: string;
   path: string[]; // ['name'], ['config', 'merge'], ['celldata']
@@ -181,12 +183,12 @@ export type Settings = {
   sheetTabContextMenu?: string[];
   filterContextMenu?: string[];
   getCommentCellUI?:
-    | ((
-        row: number,
-        column: number,
-        dragHandler: CommentUIDragFn,
-      ) => React.ReactNode)
-    | null;
+  | ((
+    row: number,
+    column: number,
+    dragHandler: CommentUIDragFn,
+  ) => React.ReactNode)
+  | null;
   generateSheetId?: () => string;
   hooks?: Hooks;
   customToolbarItems?: {
@@ -202,6 +204,7 @@ export type Settings = {
   onSheetCountChange?: (count: number) => void;
   isAuthorized?: boolean;
   isFlvReadOnly?: boolean;
+  dateBaseLocale?: DateBaseLocale;
 };
 
 export const defaultSettings: Required<Settings> = {
@@ -352,8 +355,9 @@ export const defaultSettings: Required<Settings> = {
   customToolbarItems: [],
   currency: '$',
   getCommentCellUI: null,
-  onDuneChartEmbed: () => {},
-  onSheetCountChange: () => {},
+  onDuneChartEmbed: () => { },
+  onSheetCountChange: () => { },
   isAuthorized: false,
   isFlvReadOnly: false,
+  dateBaseLocale: 'uk',
 };

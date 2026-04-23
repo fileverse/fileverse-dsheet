@@ -508,6 +508,38 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           value = data[h - minh][c - minc];
         }
 
+        // Normalize pasted object/table values as dates too (HTML paste can bypass
+        // the plain-text date path). This keeps direct paste behavior aligned with
+        // typing/InputBox detection.
+        if (typeof value === "string") {
+          const generated = genarate(value);
+          if (generated?.[1]?.t === "d") {
+            const [m, ct, v] = generated;
+            value = {
+              v,
+              m: m != null ? String(m) : value,
+              ct,
+              tb: "1",
+            };
+          }
+        } else if (
+          value &&
+          typeof value === "object" &&
+          !isObject(value.v) &&
+          typeof value.v === "string"
+        ) {
+          const generated = genarate(value.v);
+          if (generated?.[1]?.t === "d") {
+            const [m, ct, v] = generated;
+            value = {
+              ...value,
+              v,
+              m: m != null ? String(m) : value.v,
+              ct,
+            };
+          }
+        }
+
         x[c] = value;
 
         if (value != null && x?.[c]?.mc) {
@@ -739,6 +771,11 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           !isUrl && !isMultilineValue && isRealNum(value)
             ? normalizeDecimalStringOnPaste(normalizedValueStr)
             : normalizedValueStr;
+        const generatedDateValue =
+          !isUrl && !isMultilineValue
+            ? genarate(normalizedValueStr)
+            : null;
+        const isGeneratedDate = generatedDateValue?.[1]?.t === "d";
 
         if (!isUrl && !isMultilineValue && isRealNum(value)) {
           // 如果单元格设置了纯文本格式，那么就不要转成数值类型了，防止数值过大自动转成科学计数法
@@ -752,6 +789,11 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         if (originCell) {
           if (!isUrl && isMultilineValue) {
             applyMultilineTextToCell(originCell, normalizedValueStr);
+          } else if (isGeneratedDate) {
+            const [genM, genCt, genV] = generatedDateValue!;
+            originCell.v = genV;
+            originCell.m = genM ?? normalizedValueStr;
+            originCell.ct = genCt;
           } else if (!isUrl) {
             const generated = genarate(normalizedNumericValueStr);
             if (generated) {
@@ -835,6 +877,11 @@ function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
             };
           } else if (isMultilineValue) {
             applyMultilineTextToCell(cell, normalizedValueStr);
+          } else if (isGeneratedDate) {
+            const [genM, genCt, genV] = generatedDateValue!;
+            cell.v = genV;
+            cell.m = genM != null ? String(genM) : normalizedValueStr;
+            cell.ct = genCt;
           } else {
             // check if hex value to handle hex address
             if (/^0x?[a-fA-F0-9]+$/.test(value)) {

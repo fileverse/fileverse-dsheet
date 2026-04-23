@@ -114,7 +114,13 @@ export function updateFormatCell(
         let value;
 
         if (_.isPlainObject(cell)) {
-          value = cell?.v || cell?.ct?.s?.[0]?.v;
+          // When switching a date cell to plain text, preserve user-visible date text
+          // instead of converting Excel serial (`v`) into the new format.
+          if (cell?.ct?.t === "d") {
+            value = cell?.m ?? cell?.v ?? cell?.ct?.s?.[0]?.v;
+          } else {
+            value = cell?.v ?? cell?.ct?.s?.[0]?.v;
+          }
         } else {
           value = cell;
         }
@@ -168,17 +174,19 @@ export function updateFormatCell(
         } else if (type === "d" && typeof value === "string") {
           // Convert date string to Excel serial number when switching to date format
           const dateInfo = detectDateFormat(value);
-          if (dateInfo) {
-            const dateObj = new Date(
-              dateInfo.year,
-              dateInfo.month - 1,
-              dateInfo.day,
-              dateInfo.hours,
-              dateInfo.minutes,
-              dateInfo.seconds
-            );
-            value = datenum_local(dateObj);
+          if (!dateInfo) {
+            // Invalid date input for date format: keep cell untouched.
+            continue;
           }
+          const dateObj = new Date(
+            dateInfo.year,
+            dateInfo.month - 1,
+            dateInfo.day,
+            dateInfo.hours,
+            dateInfo.minutes,
+            dateInfo.seconds
+          );
+          value = datenum_local(dateObj);
         }
 
         // Refine type for General format after confirming a value exists (requires isRealNum check)
@@ -1463,7 +1471,16 @@ export function handleClearFormat(ctx: Context) {
       for (let c = colSt; c <= colEd; c += 1) {
         const cell = flowdata[r][c];
         if (!cell) continue;
-        flowdata[r][c] = _.pick(cell, "v", "m", "mc", "f", "ct");
+        const nextCell = _.pick(cell, "v", "m", "mc", "f") as any;
+        // Preserve semantic cell type/number format metadata on clear-format.
+        // This keeps Date/Number/Text kind stable while removing visual styles.
+        if (cell.ct != null && _.isPlainObject(cell.ct)) {
+          nextCell.ct = _.cloneDeep(cell.ct);
+        }
+        if (cell.qp != null) {
+          nextCell.qp = cell.qp;
+        }
+        flowdata[r][c] = nextCell;
         ydocChanges.push({
           sheetId: ctx.currentSheetId,
           path: ["celldata"],

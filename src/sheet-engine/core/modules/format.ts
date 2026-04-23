@@ -1,6 +1,7 @@
 import numeral from 'numeral';
 import _ from 'lodash';
 import { isRealNum, valueIsError, detectDateFormat } from './validation';
+import { getDateBaseLocale } from './date-base-locale';
 // @ts-ignore
 import SSF from './ssf';
 import { Cell, CellMatrix } from '../types';
@@ -343,35 +344,84 @@ export function genarate(value: string | number | boolean) {
         df.seconds,
       );
       v = datenum_local(dateObj);
-      console.log("df", df, value);
-      console.log("v", v, dateObj);
       ct.t = 'd';
 
       const map: Record<string, string> = {
         'yyyy-MM-dd': 'yyyy-MM-dd',
         'yyyy-MM-dd HH:mm': 'yyyy-MM-dd HH:mm',
         'yyyy-MM-ddTHH:mm': 'yyyy-MM-dd HH:mm',
+        'yyyy-MM': 'yyyy-mm',
+        'yyyy mmmm d': 'yyyy mmmm d',
         'yyyy/MM/dd': 'yyyy/MM/dd',
         'yyyy/MM/dd HH:mm': 'yyyy/MM/dd HH:mm',
         'yyyy.MM.dd': 'yyyy.MM.dd',
         'MM/dd/yyyy h:mm AM/PM': 'MM/dd/yyyy h:mm AM/PM',
+        'MM/dd/yyyy h:mm:ss AM/PM': 'MM/dd/yyyy h:mm:ss AM/PM',
+        'dd/MM/yyyy h:mm AM/PM': 'dd/MM/yyyy h:mm AM/PM',
+        'd/M/yyyy h:mm AM/PM': 'd/M/yyyy h:mm AM/PM',
+        'dd/MM/yyyy h:mm:ss AM/PM': 'dd/MM/yyyy h:mm:ss AM/PM',
         'MM/dd/yyyy': 'MM/dd/yyyy',
+        'M/d/yyyy HH:mm:ss': 'm/d/yyyy hh:mm:ss',
+        'MM/dd/yyyy HH:mm:ss': 'MM/dd/yyyy hh:mm:ss',
+        'd/M/yyyy HH:mm:ss': 'd/M/yyyy hh:mm:ss',
+        'dd/MM/yyyy HH:mm:ss': 'dd/MM/yyyy hh:mm:ss',
         'M/d/yyyy': 'M/d/yyyy',
+        'M/d/yy': 'm/d/yy',
+        'd/M/yyyy': 'd/M/yyyy',
+        'd/M/yy': 'd/M/yy',
+        'M/d/yyyy HH:mm': 'M/d/yyyy hh:mm',
+        'MM/dd/yyyy HH:mm': 'MM/dd/yyyy hh:mm',
+        'd/M/yyyy HH:mm': 'd/M/yyyy hh:mm',
+        'dd/MM/yyyy HH:mm': 'dd/MM/yyyy hh:mm',
         'MM/dd/yy': 'MM/dd/yy',
+        'dd/MM/yy': 'dd/MM/yy',
         'dd/MM/yyyy': 'dd/MM/yyyy',
+        'd-M-yyyy': 'd-m-yyyy',
         'dd-MM-yyyy': 'dd-MM-yyyy',
         'dd.MM.yyyy': 'dd.MM.yyyy',
+        'M-d-yyyy': 'm-d-yyyy',
+        'MM-dd-yyyy': 'mm-dd-yyyy',
+        'd-M-yy': 'd-m-yy',
+        'dd-MM-yy': 'dd-mm-yy',
+        'M-d-yy': 'm-d-yy',
+        'MM-dd-yy': 'mm-dd-yy',
+        'M d yyyy': 'm d yyyy',
+        'MM dd yyyy': 'mm dd yyyy',
+        'MM/yyyy': 'mm/yyyy',
+        'M/yyyy': 'm/yyyy',
+        'MM-yyyy': 'mm-yyyy',
+        'M-yyyy': 'm-yyyy',
+        'yyyy-M': 'yyyy-m',
+        'mmmm yyyy': 'mmmm yyyy',
+        'mmm yyyy': 'mmm yyyy',
+        'mmmm d': 'mmmm d',
+        'mmm d': 'mmm d',
+        'd-mmm-yyyy': 'd-mmm-yyyy',
+        'd-mmm-yy': 'd-mmm-yy',
         'named-mdy-full': 'mmmm d, yyyy',
         'named-mdy-abbr': 'mmm d, yyyy',
         'named-dmy-full': 'd mmmm yyyy',
         'named-dmy-abbr': 'd mmm yyyy',
         'named-abbr-dashes': 'mmm-d-yyyy',
+        'mmm d, yyyy h:mm AM/PM': 'mmm d, yyyy h:mm AM/PM',
+        'd-mmm-yyyy h:mm AM/PM': 'd-mmm-yyyy h:mm AM/PM',
+        'day, mmmm d, yyyy': 'dddd, mmmm d, yyyy',
+        'day, mmm d, yyyy': 'dddd, mmm d, yyyy',
+        'day, d mmmm yyyy': 'dddd, d mmmm yyyy',
+        'day, d mmm yyyy': 'dddd, d mmm yyyy',
+        'day, dd/MM/yyyy': 'dddd, dd/mm/yyyy',
+        'day, MM/dd/yyyy': 'dddd, mm/dd/yyyy',
+        'dy, mmm d, yyyy': 'ddd, mmm d, yyyy',
+        'dy, mmm d': 'ddd, mmm d',
+        'dy, d mmm yyyy': 'ddd, d mmm yyyy',
+        'dy dd/MM/yyyy': 'ddd dd/mm/yyyy',
+        'dy MM/dd/yyyy': 'ddd mm/dd/yyyy',
       };
 
-      ct.fa = map[df.formatType] || 'dd/MM/yyyy';
-      console.log("ct.fa", ct.fa, v);
+      ct.fa =
+        map[df.formatType] ||
+        (getDateBaseLocale() === 'us' ? 'MM/dd/yyyy' : 'dd/MM/yyyy');
       m = SSF.format(ct.fa, v);
-      console.log("m", m);
     } else {
       m = String(value);
       ct.fa = 'General';
