@@ -295,6 +295,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   const [previewByKey, setPreviewByKey] = useState<Record<string, LinkPreviewData>>(
     {},
   );
+  const inflightPreviewKeysRef = useRef<Set<string>>(new Set());
   const { insertLink, linkTypeList } = locale(context);
   const isLinkAddressValid = isLinkValid(context, linkType, linkAddress);
 
@@ -331,16 +332,22 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     targets.forEach((item) => {
       const key = getPreviewKey(item.linkType, item.linkAddress);
       if (previewByKey[key]) return;
+      if (inflightPreviewKeysRef.current.has(key)) return;
+      inflightPreviewKeysRef.current.add(key);
       fetchLinkPreview(item.linkAddress).then((meta) => {
+        inflightPreviewKeysRef.current.delete(key);
         if (cancelled) return;
         setPreviewByKey((prev) => {
           if (prev[key]) return prev;
           return { ...prev, [key]: meta };
         });
+      }).catch(() => {
+        inflightPreviewKeysRef.current.delete(key);
       });
     });
     return () => {
       cancelled = true;
+      inflightPreviewKeysRef.current.clear();
     };
   }, [isEditing, linksToShow, getPreviewKey, previewByKey]);
 
@@ -610,13 +617,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                     const isSheetLink = item.linkType === 'sheet';
                     return (
                       <div
-                        className={`fortune-link-card__preview-line${
-                          emailLike
-                            ? ' fortune-link-card__preview-line--email'
-                            : isSheetLink
-                              ? ' fortune-link-card__preview-line--sheet'
-                              : ''
-                        }`}
+                        className={`fortune-link-card__preview-line${emailLike
+                          ? ' fortune-link-card__preview-line--email'
+                          : isSheetLink
+                            ? ' fortune-link-card__preview-line--sheet'
+                            : ''
+                          }`}
                       >
                         {isSheetLink ? (
                           <LucideIcon
@@ -754,13 +760,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                   const isSheetLink = linkType === 'sheet';
                   return (
                     <div
-                      className={`fortune-link-card__preview-line${
-                        emailLike
-                          ? ' fortune-link-card__preview-line--email'
-                          : isSheetLink
-                            ? ' fortune-link-card__preview-line--sheet'
-                            : ''
-                      }`}
+                      className={`fortune-link-card__preview-line${emailLike
+                        ? ' fortune-link-card__preview-line--email'
+                        : isSheetLink
+                          ? ' fortune-link-card__preview-line--sheet'
+                          : ''
+                        }`}
                     >
                       {isSheetLink ? (
                         <LucideIcon
@@ -797,13 +802,13 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                         {linkType === 'webpage' &&
                           (singleMeta?.urlText ||
                             (!emailLike && (originAddress || linkAddress))) && (
-                          <span
-                            className="fortune-link-card__url-label"
-                            title={singleMeta?.urlText || originAddress || linkAddress}
-                          >
-                            {singleMeta?.urlText || (originAddress || linkAddress)}
-                          </span>
-                        )}
+                            <span
+                              className="fortune-link-card__url-label"
+                              title={singleMeta?.urlText || originAddress || linkAddress}
+                            >
+                              {singleMeta?.urlText || (originAddress || linkAddress)}
+                            </span>
+                          )}
                       </div>
                     </div>
                   );
