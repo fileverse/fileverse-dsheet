@@ -787,6 +787,21 @@ export const useXLSXImport = ({
                   sheet.config.rowlen = filtered;
                 }
 
+                if (sheet.config?.customHeight) {
+                  const keep = new Set<string>(
+                    Object.keys((sheet.config.rowlen as any) || {}),
+                  );
+                  const next: Record<string, number> = {};
+                  Object.entries(sheet.config.customHeight).forEach(
+                    ([row, flag]) => {
+                      if (keep.has(row) && Number(flag) === 1) {
+                        next[row] = 1;
+                      }
+                    },
+                  );
+                  sheet.config.customHeight = next;
+                }
+
                 // Attach images — convert fractional col/row to pixels using
                 // FortuneSheet's actual column/row dimensions so positions match.
                 if (imagesBySheet[sheetIndex]) {

@@ -342,6 +342,14 @@ export function updateFormatCell(
         if (!_.isNil(ctx.config.rowhidden) && !_.isNil(ctx.config.rowhidden[r])) {
           continue;
         }
+        // Applying text wrap should always expand the row to show all content,
+        // even on imported sheets where luckyexcel sets customHeight=1 for rows
+        // that the user never manually resized.
+        if (foucsStatus === '2') {
+          const sheetCfg = ctx.luckysheetfile?.[sheetIndex]?.config;
+          if (sheetCfg?.customHeight?.[r]) delete sheetCfg.customHeight[r];
+          if (ctx.config?.customHeight?.[r]) delete ctx.config.customHeight[r];
+        }
         recalcAutoRowHeightForRow(ctx, r, d, canvas);
       }
     }
