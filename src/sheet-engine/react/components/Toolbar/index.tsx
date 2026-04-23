@@ -84,6 +84,7 @@ import {
   getFiatSymbol,
 } from '../../utils/convertCellsToCrypto';
 import { updateCellsDecimalFormat } from '../../utils/updateCellsDecimalFormat';
+import { FunctionList } from './FunctionList/FunctionListButton';
 
 export const getLucideIcon = (title: string) => {
   switch (title) {
@@ -1537,62 +1538,7 @@ const Toolbar: React.FC<{
             { text: formula.max, value: 'MAX' },
             { text: formula.min, value: 'MIN' },
           ];
-          return (
-            <Combo
-              iconId="formula-sum"
-              key={name}
-              tooltip={toolbar.autoSum}
-              showArrow={false}
-              onClick={() =>
-                setContext((ctx) => {
-                  handleSum(
-                    ctx,
-                    refs.cellInput.current!,
-                    refs.fxInput.current,
-                    refs.globalCache!,
-                  );
-                })
-              }
-            >
-              {(setOpen) => (
-                <Select>
-                  {itemData.map(({ value, text }) => (
-                    <Option
-                      key={value}
-                      onClick={() => {
-                        setContext((ctx) => {
-                          autoSelectionFormula(
-                            ctx,
-                            refs.cellInput.current!,
-                            refs.fxInput.current,
-                            value,
-                            refs.globalCache,
-                          );
-                        });
-                        setOpen(false);
-                      }}
-                    >
-                      <div className="fortune-toolbar-menu-line">
-                        <div>{text}</div>
-                        <div className="fortune-toolbar-subtext">{value}</div>
-                      </div>
-                    </Option>
-                  ))}
-                  <MenuDivider />
-                  <Option
-                    key="formula"
-                    onClick={() => {
-                      const button = document.getElementById('function-button');
-                      if (button) {
-                        button.click();
-                      }
-                      setOpen(false);
-                    }}
-                  >{`${formula.find}...`}</Option>
-                </Select>
-              )}
-            </Combo>
-          );
+          return <FunctionList />;
         }
         if (name === 'merge-cell') {
           const itemdata = [

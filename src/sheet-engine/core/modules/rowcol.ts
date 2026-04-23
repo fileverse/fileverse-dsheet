@@ -309,26 +309,26 @@ export function insertRowCol(
   const snapRowDv =
     usePerRowTemplates && file.dataVerification != null
       ? [firstTemplateRow!].map((sr) => {
-          const m: Record<number, any> = {};
-          _.forEach(file.dataVerification, (v, key) => {
-            const r = Number(key.split("_")[0]);
-            const c = Number(key.split("_")[1]);
-            if (r === sr) m[c] = _.cloneDeep(v);
-          });
-          return m;
-        })
+        const m: Record<number, any> = {};
+        _.forEach(file.dataVerification, (v, key) => {
+          const r = Number(key.split("_")[0]);
+          const c = Number(key.split("_")[1]);
+          if (r === sr) m[c] = _.cloneDeep(v);
+        });
+        return m;
+      })
       : null;
   const snapColDv =
     usePerColTemplates && file.dataVerification != null
       ? [firstTemplateCol!].map((sc) => {
-          const m: Record<number, any> = {};
-          _.forEach(file.dataVerification, (v, key) => {
-            const r = Number(key.split("_")[0]);
-            const c = Number(key.split("_")[1]);
-            if (c === sc) m[r] = _.cloneDeep(v);
-          });
-          return m;
-        })
+        const m: Record<number, any> = {};
+        _.forEach(file.dataVerification, (v, key) => {
+          const r = Number(key.split("_")[0]);
+          const c = Number(key.split("_")[1]);
+          if (c === sc) m[r] = _.cloneDeep(v);
+        });
+        return m;
+      })
       : null;
 
   // 合并单元格配置变动
