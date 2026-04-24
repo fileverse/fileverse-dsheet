@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.29",
-    "@fileverse-dev/formulajs": "^4.4.51",
+    "@fileverse-dev/formulajs": "4.4.52",
     "@fileverse/ui": "^5.0.0",
     "@tippyjs/react": "^4.2.6",
     "classnames": "^2.5.1",
