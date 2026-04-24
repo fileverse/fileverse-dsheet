@@ -411,6 +411,8 @@ export const FunctionList = () => {
                 if (button) {
                   button.click();
                 }
+                setIsFunctionOpen(false);
+                setOpenSampleCategory(null);
               }}
             >
               <span className="text-body-sm truncate">Learn More</span>
