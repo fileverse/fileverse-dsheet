@@ -214,7 +214,7 @@
 }
 
 .fortune-cell-selected-move {
-  cursor: move;
+  cursor: grabbing;
   position: absolute;
   /* pointer-events: none; */
   z-index: 16;
@@ -270,7 +270,7 @@
 
 .luckysheet-cs-draghandle {
   position: absolute;
-  cursor: move;
+  cursor: grab;
   background-color: #fff;
   opacity: 0.01;
   z-index: 15;

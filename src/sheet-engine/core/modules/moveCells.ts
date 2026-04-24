@@ -1,7 +1,8 @@
 import _ from "lodash";
 import { getdatabyselection } from "./cell";
+import { recalcAutoRowHeightForRow } from "./cell";
 
-import { Context, getFlowdata } from "../context";
+import { Context, getFlowdata, updateContextWithSheetData } from "../context";
 import {
   colLocation,
   colLocationByIndex,
@@ -21,6 +22,30 @@ import { CFSplitRange } from "./ConditionFormat";
 import { functionMoveReference } from "./formula";
 
 const dragCellThreshold = 8;
+
+function recalcMovedRowsAutoHeight(
+  ctx: Context,
+  d: ReturnType<typeof getFlowdata>,
+  container: HTMLDivElement,
+  sourceRowStart: number,
+  sourceRowEnd: number,
+  targetRowStart: number,
+  targetRowEnd: number
+) {
+  if (!d) return;
+  const doc = container.ownerDocument || document;
+  const canvasEl =
+    (container.querySelector(".fortune-sheet-canvas") as HTMLCanvasElement | null) ||
+    (doc.querySelector(".fortune-sheet-canvas") as HTMLCanvasElement | null);
+  const canvas = canvasEl?.getContext("2d");
+  if (!canvas) return;
+  canvas.textBaseline = "top";
+
+  const rowIndexes = new Set<number>();
+  for (let r = sourceRowStart; r <= sourceRowEnd; r += 1) rowIndexes.add(r);
+  for (let r = targetRowStart; r <= targetRowEnd; r += 1) rowIndexes.add(r);
+  rowIndexes.forEach((r) => recalcAutoRowHeightForRow(ctx, r, d, canvas));
+}
 
 function getCellLocationByMouse(
   ctx: Context,
@@ -79,6 +104,7 @@ export function onCellsMoveStart(
 
   const ele = document.getElementById("fortune-cell-selected-move");
   if (ele == null) return;
+  ele.style.cursor = "grabbing";
   ele.style.left = `${col_pre}px`;
   ele.style.top = `${row_pre}px`;
   ele.style.width = `${col - col_pre - 1}px`;
@@ -194,7 +220,10 @@ export function onCellsMoveEnd(
   if (!ctx.luckysheet_cell_selected_move) return;
   ctx.luckysheet_cell_selected_move = false;
   const ele = document.getElementById("fortune-cell-selected-move");
-  if (ele != null) ele.style.display = "none";
+  if (ele != null) {
+    ele.style.cursor = "grabbing";
+    ele.style.display = "none";
+  }
   if (globalCache.dragCellStartPos != null) {
     globalCache.dragCellStartPos = undefined;
     return;
@@ -334,6 +363,42 @@ export function onCellsMoveEnd(
   // 删除原本位置的数据
   // const RowlChange = null;
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
+  const file: any = ctx.luckysheetfile[index];
+  // Data validation is stored under `dataVerification` in this codebase.
+  // Keep a fallback to legacy `dataValidation` to avoid dropping old in-memory state.
+  const sourceDataValidation = file.dataVerification ?? file.dataValidation ?? {};
+  const nextDataValidation = _.cloneDeep(sourceDataValidation);
+  const movedDataValidation: Record<string, any> = {};
+  const sourceCalcChain = file.calcChain ?? [];
+  const nextCalcChain: any[] = [];
+  const movedCalcChain: any[] = [];
+  const rowOffset = row_s - last.row[0];
+  const colOffset = col_s - last.column[0];
+  const isInSourceRange = (r: number, c: number) =>
+    r >= last.row[0] &&
+    r <= last.row[1] &&
+    c >= last.column[0] &&
+    c <= last.column[1];
+  const isInTargetRange = (r: number, c: number) =>
+    r >= row_s && r <= row_e && c >= col_s && c <= col_e;
+
+  for (let i = 0; i < sourceCalcChain.length; i += 1) {
+    const calc = sourceCalcChain[i];
+    if (calc == null || _.isNil(calc.r) || _.isNil(calc.c)) continue;
+    const calcR = Number(calc.r);
+    const calcC = Number(calc.c);
+
+    if (isInSourceRange(calcR, calcC)) {
+      const movedCalc = _.cloneDeep(calc);
+      movedCalc.r = calcR + rowOffset;
+      movedCalc.c = calcC + colOffset;
+      movedCalcChain.push(movedCalc);
+      continue;
+    }
+    if (isInTargetRange(calcR, calcC)) continue;
+    nextCalcChain.push(calc);
+  }
+  file.calcChain = nextCalcChain.concat(movedCalcChain);
   for (let r = last.row[0]; r <= last.row[1]; r += 1) {
     // if (r in cfg.rowlen) {
     //   RowlChange = true;
@@ -364,8 +429,23 @@ export function onCellsMoveEnd(
           getSheetIndex(ctx, ctx.currentSheetId) as number
         ].hyperlink?.[`${r}_${c}`];
       }
+
+      const targetR = r - last.row[0] + row_s;
+      const targetC = c - last.column[0] + col_s;
+      const sourceKey = `${r}_${c}`;
+      const targetKey = `${targetR}_${targetC}`;
+      const sourceDv = sourceDataValidation[sourceKey];
+      delete nextDataValidation[sourceKey];
+      delete nextDataValidation[targetKey];
+      if (sourceDv != null) {
+        movedDataValidation[targetKey] = _.cloneDeep(sourceDv);
+      }
     }
   }
+  _.forEach(movedDataValidation, (v, key) => {
+    nextDataValidation[key] = v;
+  });
+  file.dataVerification = nextDataValidation;
   // 边框
   if (cfg.borderInfo && cfg.borderInfo.length > 0) {
     const borderInfo = [];
@@ -512,24 +592,42 @@ export function onCellsMoveEnd(
   //   cfg = rowlenByRange(d, last.row[0], last.row[1], cfg);
   //   cfg = rowlenByRange(d, row_s, row_e, cfg);
   // }
-  // 条件格式
+  // 条件格式：
+  // 1) remove source coverage from original place
+  // 2) clear destination coverage (so moved cells overwrite destination CF)
+  // 3) append source-coverage mapped to destination
   const cdformat =
     ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId) as number]
       .luckysheet_conditionformat_save ?? [];
   if (cdformat != null && cdformat.length > 0) {
+    const sourceRange = { row: last.row, column: last.column };
+    const targetRange = { row: [row_s, row_e], column: [col_s, col_e] };
+
     for (let i = 0; i < cdformat.length; i += 1) {
-      const cdformat_cellrange = cdformat[i].cellrange;
-      let emptyRange: any = [];
-      for (let j = 0; j < cdformat_cellrange.length; j += 1) {
-        const range = CFSplitRange(
-          cdformat_cellrange[j],
-          { row: last.row, column: last.column },
-          { row: [row_s, row_e], column: [col_s, col_e] },
-          "allPart"
+      const ruleRanges = cdformat[i].cellrange ?? [];
+      let keptRanges: any[] = [];
+      let movedRanges: any[] = [];
+
+      for (let j = 0; j < ruleRanges.length; j += 1) {
+        const current = ruleRanges[j];
+        movedRanges = movedRanges.concat(
+          CFSplitRange(current, sourceRange, targetRange, "operatePart")
         );
-        emptyRange = emptyRange.concat(range);
+
+        const sourceRest = CFSplitRange(
+          current,
+          sourceRange,
+          targetRange,
+          "restPart"
+        );
+        for (let k = 0; k < sourceRest.length; k += 1) {
+          const rest = sourceRest[k];
+          keptRanges = keptRanges.concat(
+            CFSplitRange(rest, targetRange, targetRange, "restPart")
+          );
+        }
       }
-      cdformat[i].cellrange = emptyRange;
+      cdformat[i].cellrange = keptRanges.concat(movedRanges);
     }
   }
 
@@ -623,6 +721,17 @@ export function onCellsMoveEnd(
   if (refCellChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
     ctx.hooks.updateCellYdoc(refCellChanges);
   }
+
+  recalcMovedRowsAutoHeight(
+    ctx,
+    d,
+    container,
+    range[0].row[0],
+    range[0].row[1],
+    range[1].row[0],
+    range[1].row[1]
+  );
+  updateContextWithSheetData(ctx, d);
 
   // const allParam = {
   //   cfg,
