@@ -131,7 +131,7 @@ function App() {
         onChange={handleSheetChange}
         sheetEditorRef={sheetEditorRef}
         enableIndexeddbSync={true}
-        isAuthorized={false}
+        isAuthorized={true}
         isNewSheet={isNewSheet}
       />
     </div >
