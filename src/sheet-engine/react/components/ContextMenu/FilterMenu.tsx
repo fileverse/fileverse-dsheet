@@ -1,5 +1,5 @@
 import {
-  clearFilter,
+  clearFilterForColumn,
   locale,
   getFilterColumnValues,
   getFilterColumnColors,
@@ -694,8 +694,10 @@ const FilterMenu: React.FC = () => {
             variant="ghost"
             style={{ minWidth: '80px' }}
             onClick={() => {
+              if (col == null) return;
               setContext((draftCtx) => {
-                clearFilter(draftCtx);
+                clearFilterForColumn(draftCtx, col, startCol);
+                draftCtx.filterContextMenu = undefined;
               });
             }}
             tabIndex={0}

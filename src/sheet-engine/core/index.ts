@@ -230,6 +230,7 @@ export {
   // filter
   createFilterOptions,
   clearFilter,
+  clearFilterForColumn,
   createFilter,
   getFilterColumnValues,
   getFilterColumnColors,

@@ -270,6 +270,7 @@ export {
 export {
   createFilterOptions,
   clearFilter,
+  clearFilterForColumn,
   createFilter,
   getFilterColumnValues,
   getFilterColumnColors,

@@ -118,9 +118,9 @@ export function createFilterOptions(
   ctx: Context,
   luckysheet_filter_save:
     | {
-        row: number[];
-        column: number[];
-      }
+      row: number[];
+      column: number[];
+    }
     | undefined,
   sheetId: string | undefined,
   filterObj?: any,
@@ -202,6 +202,50 @@ export function clearFilter(ctx: Context) {
     ctx.luckysheetfile[sheetIndex].filter_select = undefined;
     ctx.luckysheetfile[sheetIndex].config = _.assign({}, ctx.config);
   }
+}
+
+export function clearFilterForColumn(
+  ctx: Context,
+  cindex: number,
+  startCol: number,
+) {
+  const allowEdit = isAllowEdit(ctx);
+  if (!allowEdit) return;
+
+  const key = `${cindex - startCol}`;
+  const hiddenRowsThisCol = ctx.filter?.[key]?.rowhidden || {};
+
+  // Remove only this column's filter config.
+  delete ctx.filter[key];
+
+  // Preserve non-filter row hidden state, but drop any rows hidden by this column,
+  // then re-apply hidden rows contributed by the remaining column filters.
+  const otherHiddenRows = _.reduce(
+    ctx.filter,
+    (pre, curr) => _.assign(pre, curr?.rowhidden || {}),
+    {},
+  );
+  const baseRowHidden = _.omit(
+    ctx.config?.rowhidden || {},
+    _.keys(hiddenRowsThisCol),
+  );
+  const rowhiddenAll = _.assign({}, baseRowHidden, otherHiddenRows);
+
+  const cfg = _.assign({}, ctx.config);
+  cfg.rowhidden = rowhiddenAll;
+  ctx.config = cfg;
+
+  const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
+  if (sheetIndex == null) return;
+
+  const file = ctx.luckysheetfile[sheetIndex];
+  if (file.filter == null) file.filter = {};
+  delete file.filter[key];
+  if (_.isEmpty(file.filter)) {
+    file.filter = undefined;
+  }
+
+  file.config = _.assign({}, ctx.config);
 }
 
 export function createFilter(ctx: Context) {
