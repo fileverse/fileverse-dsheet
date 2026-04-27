@@ -7,6 +7,8 @@ import {
   rowLocationByIndex,
   updateContextWithSheetData,
   api,
+  execFunctionGroup,
+  groupValuesRefresh,
   remapFormulaReferencesByMap,
   type HyperlinkEntry,
 } from '@sheet-engine/core';
@@ -18,6 +20,9 @@ export const useRowDragAndDrop = (
 ) => {
   const DOUBLE_MS = 300;
   const START_DRAG_THRESHOLD_PX = 6;
+  const INSERTION_LINE_HEIGHT_PX = 2;
+  /** Inset for row ghost/indicator vs. cell area width (kept in sync). */
+  const GHOST_CELL_AREA_WIDTH_INSET_PX = 1;
   const clickRef = useRef({ lastTime: 0, lastRow: -1 });
   const { context, setContext, refs } = useContext(WorkbookContext);
   const selectedRowHeight = useRef(0);
@@ -37,16 +42,17 @@ export const useRowDragAndDrop = (
     prevWebkitUserSelect: '' as string,
     lastNativeEvent: null as MouseEvent | null,
     ghostHeightPx: 24,
+    ghostCursorOffsetY: 0,
   });
 
   const removeDragLine = () => {
     const { lineEl, ghostEl } = dragRef.current;
     try {
       if (lineEl?.parentElement) lineEl.parentElement.removeChild(lineEl);
-    } catch {}
+    } catch { }
     try {
       if (ghostEl?.parentElement) ghostEl.parentElement.removeChild(ghostEl);
-    } catch {}
+    } catch { }
     dragRef.current.lineEl = null;
     dragRef.current.ghostEl = null;
     dragRef.current.active = false;
@@ -114,32 +120,114 @@ export const useRowDragAndDrop = (
     const lineTopPx = yWorkbook > rowMidPx ? rowBottomPx : rowTopPx;
     return { insertionIndex, lineTopPx, mouseYInWorkbook };
   };
-  const createInsertionLine = (host: HTMLElement) => {
-    const el = document.createElement('div');
-    el.style.position = 'absolute';
-    el.style.left = '0px';
-    el.style.right = '0px';
-    el.style.height = '2px';
-    el.style.background = '#EFC703';
-    el.style.zIndex = '9999';
-    el.style.pointerEvents = 'none';
-    host.appendChild(el);
-    return el;
+
+  const getHoveredRowIndexFromPageY = (pageY: number) => {
+    const workbookEl = containerRef.current;
+    if (!workbookEl) return -1;
+    const wbRect = workbookEl.getBoundingClientRect();
+    const mouseYInWorkbook = pageY - wbRect.top - window.scrollY;
+    const localYInWorkbook =
+      mouseYInWorkbook +
+      (containerRef?.current?.scrollTop ?? context.scrollTop);
+    const freeze = refs.globalCache.freezen?.[context.currentSheetId];
+    const { y: yWorkbook } = fixPositionOnFrozenCells(
+      freeze,
+      0,
+      localYInWorkbook,
+      0,
+      mouseYInWorkbook,
+    );
+    const [, , hoveredRowIndex] = rowLocation(yWorkbook, context.visibledatarow);
+    return hoveredRowIndex;
   };
-  const createGhost = (host: HTMLElement) => {
+
+  const isCursorInsideSelectedRows = (pageY: number) => {
+    const hoveredRowIndex = getHoveredRowIndexFromPageY(pageY);
+    const selectedRowRange = context.luckysheet_select_save?.[0]?.row;
+    const start = selectedRowRange?.[0];
+    const end = selectedRowRange?.[1];
+    if (
+      hoveredRowIndex < 0 ||
+      start == null ||
+      end == null
+    ) {
+      return false;
+    }
+    return hoveredRowIndex >= start && hoveredRowIndex <= end;
+  };
+
+  const getSelectedTopBorderPx = () => {
+    const selectedRowRange = context.luckysheet_select_save?.[0]?.row;
+    const start = selectedRowRange?.[0];
+    if (start == null || start < 0) return 0;
+    const [topPx] = rowLocationByIndex(start, context.visibledatarow);
+    return topPx;
+  };
+  /** Renders in `document.body`+`fixed` so the bar matches ghost width over the grid. */
+  const createInsertionLine = () => {
     const el = document.createElement('div');
     el.style.position = 'fixed';
-    el.style.left = '58px';
-    el.style.width = `${window.innerWidth}px`;
+    el.style.height = `${INSERTION_LINE_HEIGHT_PX}px`;
+    el.style.width = '0px';
+    el.style.left = '0px';
+    el.style.top = '0px';
+    el.style.background = '#5F6368';
+    el.style.zIndex = '9999';
+    el.style.pointerEvents = 'none';
+    document.body.appendChild(el);
+    return el;
+  };
+
+  const layoutInsertionLineInViewport = (
+    line: HTMLDivElement,
+    lineTopPx: number,
+    host: HTMLElement,
+  ) => {
+    const hr = host.getBoundingClientRect();
+    const st = host.scrollTop ?? 0;
+    const lineT = hr.top + (lineTopPx - st);
+    if (line.parentNode !== document.body) {
+      document.body.appendChild(line);
+    }
+    line.style.position = 'fixed';
+    line.style.height = `${INSERTION_LINE_HEIGHT_PX}px`;
+    line.style.right = 'auto';
+    line.style.bottom = 'auto';
+    const cellArea = refs.cellArea?.current;
+    if (cellArea) {
+      const r = cellArea.getBoundingClientRect();
+      // Keep indicator aligned to the original row-header start X, not ghost start X.
+      const w = Math.max(
+        0,
+        r.right - hr.left - GHOST_CELL_AREA_WIDTH_INSET_PX,
+      );
+      line.style.top = `${lineT}px`;
+      line.style.left = `${hr.left}px`;
+      line.style.width = `${w}px`;
+    } else {
+      line.style.top = `${lineT}px`;
+      line.style.left = `${hr.left}px`;
+      line.style.width = `${Math.max(
+        0,
+        window.innerWidth - hr.left - GHOST_CELL_AREA_WIDTH_INSET_PX,
+      )}px`;
+    }
+  };
+
+  /** Row ghost must use `body`+`fixed`+cell-area bounds — row header is a sibling
+   *  of the canvas, so a wide ghost in the header is painted under the grid. */
+  const createGhost = () => {
+    const el = document.createElement('div');
+    el.style.position = 'fixed';
     el.style.boxSizing = 'border-box';
     el.style.padding = '6px 8px';
-    el.style.background = 'rgba(239,199,3,0.10)';
-    el.style.border = '1px solid #EFC703';
-    el.style.borderRadius = '6px';
-    el.style.zIndex = '10000';
+    el.style.background = 'rgba(95,99,104,0.18)';
+    el.style.zIndex = '20000';
     el.style.pointerEvents = 'none';
     el.style.display = 'flex';
+    el.style.flexDirection = 'row';
     el.style.alignItems = 'center';
+    el.style.justifyContent = 'flex-start';
     el.style.fontSize = '12px';
     el.style.fontWeight = '500';
 
@@ -170,9 +258,27 @@ export const useRowDragAndDrop = (
 
     el.style.height = `${ghostHeightPx}px`;
     el.textContent = ghostLabel;
-    host.appendChild(el);
+    document.body.appendChild(el);
     return { el, ghostHeightPx };
   };
+
+  const layoutGhostInViewport = (
+    ghost: HTMLDivElement,
+    ghostTopV: number,
+  ) => {
+    const cellArea = refs.cellArea?.current;
+    if (cellArea) {
+      const r = cellArea.getBoundingClientRect();
+      const w = Math.max(0, r.width - GHOST_CELL_AREA_WIDTH_INSET_PX);
+      ghost.style.left = `${r.left}px`;
+      ghost.style.width = `${w}px`;
+    } else {
+      ghost.style.left = '0px';
+      ghost.style.width = `${Math.max(0, window.innerWidth - GHOST_CELL_AREA_WIDTH_INSET_PX)}px`;
+    }
+    ghost.style.top = `${ghostTopV}px`;
+  };
+
   const isDragActivated = (host: HTMLElement, pixelDeltaY: number) => {
     if (dragRef.current.active) return true;
     if (pixelDeltaY < START_DRAG_THRESHOLD_PX) return false;
@@ -188,10 +294,24 @@ export const useRowDragAndDrop = (
     (document.body.style as any).webkitUserSelect = 'none';
 
     // visuals
-    dragRef.current.lineEl = createInsertionLine(host);
-    const { el, ghostHeightPx } = createGhost(host);
+    dragRef.current.lineEl = createInsertionLine();
+    const { el, ghostHeightPx } = createGhost();
     dragRef.current.ghostEl = el;
     dragRef.current.ghostHeightPx = ghostHeightPx;
+    const selectedTopPx = getSelectedTopBorderPx();
+    const hr = host.getBoundingClientRect();
+    const st = host.scrollTop ?? 0;
+    const selectedTopV = hr.top + (selectedTopPx - st);
+    const startCursorV = dragRef.current.startY - window.scrollY;
+    dragRef.current.ghostCursorOffsetY = startCursorV - selectedTopV;
+    if (dragRef.current.lineEl) {
+      const { lineTopPx } = computeInsertionFromPageY(dragRef.current.startY);
+      layoutInsertionLineInViewport(
+        dragRef.current.lineEl,
+        lineTopPx,
+        host,
+      );
+    }
 
     return true;
   };
@@ -207,25 +327,26 @@ export const useRowDragAndDrop = (
     if (!isDragActivated(host, dragOffset)) return;
 
     const { lineTopPx } = computeInsertionFromPageY(ev.pageY);
-    // const ghostPosOffset = dragRef.current.startY > ev.pageY ? 25 : 25;
-    const rows = context.luckysheet_select_save?.[0]?.row;
-    const selectedRowLength =
-      rows && rows[1] != null && rows[0] != null ? rows[1] - rows[0] + 1 : 0;
-    const off = 3 - selectedRowLength;
-    const bottomOff = (off + 1) * 25;
-    const topRowOff = selectedRowLength - 4;
-    const topOff = topRowOff * 25;
-    const ghostFinalPos =
-      dragRef.current.startY > ev.pageY
-        ? lineTopPx - topOff
-        : lineTopPx + bottomOff;
+    const cursorInsideSelection = isCursorInsideSelectedRows(ev.pageY);
 
     if (dragRef.current.lineEl) {
-      dragRef.current.lineEl.style.top = `${lineTopPx}px`;
+      const indicatorTopPx = cursorInsideSelection
+        ? getSelectedTopBorderPx()
+        : lineTopPx;
+      layoutInsertionLineInViewport(
+        dragRef.current.lineEl,
+        indicatorTopPx,
+        host,
+      );
     }
 
     if (dragRef.current.ghostEl) {
-      dragRef.current.ghostEl.style.top = `${ghostFinalPos}px`;
+      const cursorV = ev.pageY - window.scrollY;
+      const ghostTopV = cursorV - dragRef.current.ghostCursorOffsetY;
+      layoutGhostInViewport(
+        dragRef.current.ghostEl,
+        ghostTopV,
+      );
     }
   };
 
@@ -238,9 +359,10 @@ export const useRowDragAndDrop = (
       document.body.style.userSelect = dragRef.current.prevUserSelect || '';
       (document.body.style as any).webkitUserSelect =
         dragRef.current.prevWebkitUserSelect || '';
-    } catch {}
+    } catch { }
 
-    if (dragRef.current.active) {
+    const cursorInsideSelection = isCursorInsideSelectedRows(ev.pageY);
+    if (dragRef.current.active && !cursorInsideSelection) {
       const { insertionIndex: finalInsertionIndex } = computeInsertionFromPageY(
         ev.pageY,
       );
@@ -260,47 +382,46 @@ export const useRowDragAndDrop = (
           const rows = _sheet.data;
           if (sourceIndex < 0 || sourceIndex >= rows.length) return;
 
-          // remove-then-insert adjustment
-          let targetIndex = finalInsertionIndex;
-          if (targetIndex > sourceIndex) targetIndex -= 1;
-
           const selectedRowRange =
             context.luckysheet_select_save?.[0]?.row || [];
-          const selectedSourceRow: number[] = [];
-          for (
-            let i = selectedRowRange?.[0];
-            i <= selectedRowRange?.[1];
-            i += 1
+          const selectedStart = selectedRowRange?.[0];
+          const selectedEnd = selectedRowRange?.[1];
+          if (
+            selectedStart == null ||
+            selectedEnd == null ||
+            selectedStart < 0 ||
+            selectedEnd < selectedStart
           ) {
-            selectedSourceRow.push(i);
+            return;
           }
-
-          const tempSelectedTargetRow: number[] = [];
-          selectedSourceRow.forEach((_, index) => {
-            if (sourceIndex < targetIndex) {
-              tempSelectedTargetRow.push(targetIndex - index);
-            } else {
-              tempSelectedTargetRow.push(targetIndex + index);
-            }
-          });
-          const selectedTargetRow = [...tempSelectedTargetRow]?.sort(
-            (a, b) => a - b,
+          const moveCount = selectedEnd - selectedStart + 1;
+          const selectedSourceRow: number[] = Array.from(
+            { length: moveCount },
+            (_, i) => selectedStart + i,
           );
+
+          // Compute insertion point after removing selected block.
+          let targetIndex = finalInsertionIndex;
+          if (targetIndex > selectedEnd + 1) {
+            targetIndex -= moveCount;
+          }
+          if (targetIndex < 0) targetIndex = 0;
+          if (targetIndex > rows.length - moveCount) targetIndex = rows.length - moveCount;
+
+          const selectedTargetRow: number[] = Array.from(
+            { length: moveCount },
+            (_, i) => targetIndex + i,
+          );
+          const affectedRowStart = Math.min(selectedStart, targetIndex);
+          const affectedRowEnd =
+            Math.max(selectedStart, targetIndex) + moveCount - 1;
 
           selectedSourceRowRef.current = selectedSourceRow;
           selectedTargetRowRef.current = selectedTargetRow;
 
-          selectedSourceRow.forEach(() => {
-            let adjustedSourceIndex = sourceIndex;
-            if (targetIndex < sourceIndex) {
-              adjustedSourceIndex =
-                sourceIndex + (selectedSourceRow.length - 1);
-            }
-            const [rowData] = rows.splice(adjustedSourceIndex, 1);
-            if (targetIndex < 0) targetIndex = 0;
-            if (targetIndex > rows.length) targetIndex = rows.length;
-            rows.splice(targetIndex, 0, rowData);
-          });
+          // Move selected row block in one splice pair, preserving relative order.
+          const movedRows = rows.splice(selectedStart, moveCount);
+          rows.splice(targetIndex, 0, ...movedRows);
 
           _sheet.data = rows;
           updateContextWithSheetData(draft, _sheet.data);
@@ -308,8 +429,8 @@ export const useRowDragAndDrop = (
           const d = getFlowdata(draft);
           const rowMap: Record<number, number> = (() => {
             const order = Array.from({ length: rows.length }, (_, i) => i);
-            const sourceStart = selectedSourceRow[0] ?? sourceIndex;
-            const count = selectedSourceRow.length;
+            const sourceStart = selectedStart;
+            const count = moveCount;
             if (count <= 0) return {};
             const moved = order.splice(sourceStart, count);
             let insertAt = targetIndex;
@@ -322,6 +443,166 @@ export const useRowDragAndDrop = (
             });
             return map;
           })();
+
+          // Keep row height metadata in sync with moved row data.
+          if (_sheet.config) {
+            const remapIndexMap = <T,>(
+              mapObj?: Record<string, T> | Record<number, T>,
+            ) => {
+              if (!mapObj) return mapObj;
+              const next: Record<number, T> = {};
+              Object.keys(mapObj).forEach((k) => {
+                const oldIdx = parseInt(k, 10);
+                if (!Number.isFinite(oldIdx)) return;
+                const newIdx =
+                  rowMap[oldIdx] != null ? rowMap[oldIdx] : oldIdx;
+                next[newIdx] = (mapObj as any)[k];
+              });
+              return next;
+            };
+            _sheet.config.rowlen = remapIndexMap(_sheet.config.rowlen);
+            _sheet.config.customHeight = remapIndexMap(_sheet.config.customHeight);
+            // calcRowColSize reads from ctx.config; keep it in sync with sheet config.
+            draft.config.rowlen = _sheet.config.rowlen;
+            draft.config.customHeight = _sheet.config.customHeight;
+          }
+
+          // Keep conditional formatting ranges aligned with moved rows.
+          if (Array.isArray(_sheet.luckysheet_conditionformat_save)) {
+            const remapConditionalFormatByRowMap = (
+              rules: any[],
+            ): any[] => {
+              const toNumberRange = (v: any): [number, number] | null => {
+                if (!Array.isArray(v) || v.length !== 2) return null;
+                const a = Number(v[0]);
+                const b = Number(v[1]);
+                if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+                return a <= b ? [a, b] : [b, a];
+              };
+              const compressSorted = (arr: number[]) => {
+                const segments: Array<[number, number]> = [];
+                if (arr.length === 0) return segments;
+                let start = arr[0];
+                let prev = arr[0];
+                for (let i = 1; i < arr.length; i += 1) {
+                  const cur = arr[i];
+                  if (cur === prev || cur === prev + 1) {
+                    prev = cur;
+                    continue;
+                  }
+                  segments.push([start, prev]);
+                  start = cur;
+                  prev = cur;
+                }
+                segments.push([start, prev]);
+                return segments;
+              };
+
+              return rules.map((rule) => {
+                const ranges = Array.isArray(rule?.cellrange)
+                  ? rule.cellrange
+                  : [];
+                const remappedRanges: any[] = [];
+                ranges.forEach((range: any) => {
+                  const rowR = toNumberRange(range?.row);
+                  const colR = toNumberRange(range?.column);
+                  if (!rowR || !colR) return;
+                  const [r1, r2] = rowR;
+                  const [c1, c2] = colR;
+                  if (r2 < affectedRowStart || r1 > affectedRowEnd) {
+                    remappedRanges.push({ row: [r1, r2], column: [c1, c2] });
+                    return;
+                  }
+                  const mappedRows: number[] = [];
+                  for (let r = r1; r <= r2; r += 1) {
+                    mappedRows.push(rowMap[r] != null ? rowMap[r] : r);
+                  }
+                  mappedRows.sort((a, b) => a - b);
+                  const segments = compressSorted(mappedRows);
+                  segments.forEach(([s, e]) => {
+                    remappedRanges.push({
+                      row: [s, e],
+                      column: [c1, c2],
+                    });
+                  });
+                });
+                return {
+                  ...rule,
+                  cellrange: remappedRanges,
+                };
+              });
+            };
+            _sheet.luckysheet_conditionformat_save = remapConditionalFormatByRowMap(
+              _sheet.luckysheet_conditionformat_save,
+            );
+          }
+
+          // Keep alternate-format ranges aligned with moved rows.
+          if (Array.isArray(_sheet.luckysheet_alternateformat_save)) {
+            const remapAlternateFormatByRowMap = (rules: any[]): any[] => {
+              const toNumberRange = (v: any): [number, number] | null => {
+                if (!Array.isArray(v) || v.length !== 2) return null;
+                const a = Number(v[0]);
+                const b = Number(v[1]);
+                if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+                return a <= b ? [a, b] : [b, a];
+              };
+              const compressSorted = (arr: number[]) => {
+                const segments: Array<[number, number]> = [];
+                if (arr.length === 0) return segments;
+                let start = arr[0];
+                let prev = arr[0];
+                for (let i = 1; i < arr.length; i += 1) {
+                  const cur = arr[i];
+                  if (cur === prev || cur === prev + 1) {
+                    prev = cur;
+                    continue;
+                  }
+                  segments.push([start, prev]);
+                  start = cur;
+                  prev = cur;
+                }
+                segments.push([start, prev]);
+                return segments;
+              };
+
+              const remappedRules: any[] = [];
+              rules.forEach((rule) => {
+                const rowR = toNumberRange(rule?.cellrange?.row);
+                const colR = toNumberRange(rule?.cellrange?.column);
+                if (!rowR || !colR) {
+                  remappedRules.push(rule);
+                  return;
+                }
+                const [r1, r2] = rowR;
+                const [c1, c2] = colR;
+                if (r2 < affectedRowStart || r1 > affectedRowEnd) {
+                  remappedRules.push(rule);
+                  return;
+                }
+                const mappedRows: number[] = [];
+                for (let r = r1; r <= r2; r += 1) {
+                  mappedRows.push(rowMap[r] != null ? rowMap[r] : r);
+                }
+                mappedRows.sort((a, b) => a - b);
+                const segments = compressSorted(mappedRows);
+                segments.forEach(([s, e]) => {
+                  remappedRules.push({
+                    ...rule,
+                    cellrange: {
+                      ...(rule.cellrange || {}),
+                      row: [s, e],
+                      column: [c1, c2],
+                    },
+                  });
+                });
+              });
+              return remappedRules;
+            };
+            _sheet.luckysheet_alternateformat_save = remapAlternateFormatByRowMap(
+              _sheet.luckysheet_alternateformat_save,
+            );
+          }
 
           d?.forEach((row) => {
             row.forEach((cell) => {
@@ -341,6 +622,17 @@ export const useRowDragAndDrop = (
 
           if (_sheet.dataVerification) {
             const newDataVerification: any = {};
+            const maybeRemapDvText = (text: any) => {
+              if (typeof text !== 'string') return text;
+              // Fast path: skip strings that can't contain A1 refs.
+              if (!/[A-Za-z]+\d/.test(text)) return text;
+              return remapFormulaReferencesByMap(
+                text,
+                _sheet.name || '',
+                _sheet.name || '',
+                { rowMap },
+              );
+            };
             Object.keys(_sheet.dataVerification).forEach((item) => {
               const itemData = _sheet.dataVerification?.[item];
               const colRow = item.split('_');
@@ -348,7 +640,13 @@ export const useRowDragAndDrop = (
               const presentRow = parseInt(colRow[0], 10);
               const updatedRow =
                 rowMap[presentRow] != null ? rowMap[presentRow] : presentRow;
-              newDataVerification[`${updatedRow}_${colRow[1]}`] = itemData;
+              const nextItem = itemData ? { ...itemData } : itemData;
+              if (nextItem) {
+                nextItem.value1 = maybeRemapDvText(nextItem.value1);
+                nextItem.value2 = maybeRemapDvText(nextItem.value2);
+                nextItem.rangeTxt = maybeRemapDvText(nextItem.rangeTxt);
+              }
+              newDataVerification[`${updatedRow}_${colRow[1]}`] = nextItem;
             });
             _sheet.dataVerification = newDataVerification;
           }
@@ -372,16 +670,84 @@ export const useRowDragAndDrop = (
             _sheet.hyperlink = newHyperlink;
           }
 
-          _sheet.calcChain?.forEach((item) => {
-            item.r = rowMap[item.r] != null ? rowMap[item.r] : item.r;
-          });
+          // Keep per-cell hyperlink marker metadata aligned with remapped hyperlink keys.
+          const numColsAfterMove = rows[0]?.length ?? 0;
+          for (
+            let r = affectedRowStart;
+            r <= affectedRowEnd && r < rows.length;
+            r += 1
+          ) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < numColsAfterMove; c += 1) {
+              const cell = row[c];
+              if (!cell) continue;
+              const hasHyperlink = !!_sheet.hyperlink?.[`${r}_${c}`];
+              if (hasHyperlink) {
+                cell.hl = { r, c, id: context.currentSheetId };
+              } else if (cell.hl) {
+                delete cell.hl;
+              }
+            }
+          }
+
+          // Comments are stored on cell.ps and move with row/column data.
+          // Reset visible comment overlays so positions are recomputed lazily.
+          draft.commentBoxes = [];
+          draft.hoveredCommentBox = undefined;
+          draft.editingCommentBox = undefined;
+
+          // Rebuild calc chain from actual formula cells so recalc always
+          // includes every formula after structural drag.
+          const rebuiltCalcChain: { r: number; c: number; id: string }[] = [];
+          for (let r = 0; r < rows.length; r += 1) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c += 1) {
+              if (row[c]?.f) {
+                rebuiltCalcChain.push({ r, c, id: context.currentSheetId });
+              }
+            }
+          }
+          _sheet.calcChain = rebuiltCalcChain as any;
+
+          // Structural drag rewrites many formula refs; refresh dependency graph
+          // to avoid stale edges causing false circular-dependency errors.
+          const touchedFormulaCells: { r: number; c: number; i: string }[] = [];
+          for (let r = 0; r < rows.length; r += 1) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c += 1) {
+              if (row[c]?.f) {
+                touchedFormulaCells.push({ r, c, i: context.currentSheetId });
+              }
+            }
+          }
+          if (touchedFormulaCells.length > 0) {
+            draft.formulaCache.depsByCell = new Map();
+            draft.formulaCache.revDepsByCell = new Map();
+            draft.formulaCache.execFunctionExist = touchedFormulaCells as any;
+            (execFunctionGroup as any)(
+              draft,
+              null,
+              null,
+              null,
+              null,
+              getFlowdata(draft),
+              true,
+            );
+            groupValuesRefresh(draft);
+            draft.formulaCache.execFunctionExist = undefined;
+          }
+
           // @ts-expect-error
           window?.updateDataBlockCalcFunctionAfterRowDrag?.(
-            sourceIndex,
+            selectedStart,
             targetIndex,
             'row',
             context.currentSheetId,
           );
+
           // Notify Yjs for every cell in the disturbed range (moved row + all rows in between)
           const cellChanges: {
             sheetId: string;
@@ -390,9 +756,6 @@ export const useRowDragAndDrop = (
             value: any;
             type?: 'update' | 'delete';
           }[] = [];
-          const affectedRowStart = Math.min(sourceIndex, targetIndex);
-          const affectedRowEnd =
-            Math.max(sourceIndex, targetIndex) + selectedSourceRow.length - 1;
           const numCols = d?.[0]?.length ?? 0;
           for (let r = affectedRowStart; r <= affectedRowEnd; r += 1) {
             const row = rows[r];
@@ -411,6 +774,7 @@ export const useRowDragAndDrop = (
             draft.hooks.updateCellYdoc(cellChanges);
           }
           const colLen = d?.[0]?.length || 0;
+          const colEnd = Math.max(0, colLen - 1);
           api.setSelection(
             draft,
             [
@@ -419,7 +783,7 @@ export const useRowDragAndDrop = (
                   selectedTargetRow[0],
                   selectedTargetRow[selectedTargetRow.length - 1],
                 ],
-                column: [0, colLen],
+                column: [0, colEnd],
               },
             ],
             {
