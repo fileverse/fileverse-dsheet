@@ -8,6 +8,8 @@ import {
   updateContextWithSheetData,
   api,
   indexToColumnChar,
+  execFunctionGroup,
+  groupValuesRefresh,
   remapFormulaReferencesByMap,
   type HyperlinkEntry,
 } from '@sheet-engine/core';
@@ -23,6 +25,9 @@ export const useColumnDragAndDrop = (
 ) => {
   const DOUBLE_CLICK_MS = 300;
   const START_DRAG_THRESHOLD_PX = 6;
+  const INSERTION_LINE_WIDTH_PX = 2;
+  /** Inset for column ghost/indicator vs. cell area height (kept in sync). */
+  const GHOST_CELL_AREA_HEIGHT_INSET_PX = 11;
   const clickRef = useRef({ lastTime: 0, lastCol: -1 });
   const { context, setContext, refs } = useContext(WorkbookContext);
   const selectedColWidth = useRef(0);
@@ -42,16 +47,17 @@ export const useColumnDragAndDrop = (
     prevWebkitUserSelect: '' as string,
     lastNativeEvent: null as MouseEvent | null,
     ghostWidthPx: 60,
+    ghostCursorOffsetX: 0,
   });
 
   const removeDragLine = () => {
     const { lineEl, ghostEl } = dragRef.current;
     try {
       if (lineEl?.parentElement) lineEl.parentElement.removeChild(lineEl);
-    } catch {}
+    } catch { }
     try {
       if (ghostEl?.parentElement) ghostEl.parentElement.removeChild(ghostEl);
-    } catch {}
+    } catch { }
     dragRef.current.lineEl = null;
     dragRef.current.ghostEl = null;
     dragRef.current.active = false;
@@ -122,30 +128,102 @@ export const useColumnDragAndDrop = (
     return { insertionIndex, lineLeftPx, mouseXInWorkbook };
   };
 
-  const createInsertionLine = (host: HTMLElement) => {
+  const getHoveredColIndexFromPageX = (pageX: number) => {
+    const workbookEl = containerRef.current;
+    if (!workbookEl) return -1;
+    const wbRect = workbookEl.getBoundingClientRect();
+    const mouseXInWorkbook = pageX - wbRect.left - window.scrollX;
+    const localXInWorkbook =
+      mouseXInWorkbook +
+      (containerRef?.current?.scrollLeft ?? context.scrollLeft);
+    const freeze = refs.globalCache.freezen?.[context.currentSheetId];
+    const { x: xWorkbook } = fixPositionOnFrozenCells(
+      freeze,
+      localXInWorkbook,
+      0,
+      mouseXInWorkbook,
+      0,
+    );
+    const [, , hoveredColIndex] = colLocation(xWorkbook, context.visibledatacolumn);
+    return hoveredColIndex;
+  };
+
+  const isCursorInsideSelectedColumns = (pageX: number) => {
+    const hoveredColIndex = getHoveredColIndexFromPageX(pageX);
+    const selectedColRange = context.luckysheet_select_save?.[0]?.column;
+    const start = selectedColRange?.[0];
+    const end = selectedColRange?.[1];
+    if (
+      hoveredColIndex < 0 ||
+      start == null ||
+      end == null
+    ) {
+      return false;
+    }
+    return hoveredColIndex >= start && hoveredColIndex <= end;
+  };
+
+  const getSelectedLeftBorderPx = () => {
+    const selectedColRange = context.luckysheet_select_save?.[0]?.column;
+    const start = selectedColRange?.[0];
+    if (start == null || start < 0) return 0;
+    const [leftPx] = colLocationByIndex(start, context.visibledatacolumn);
+    return leftPx;
+  };
+
+  /** Renders in `document.body`+`fixed` so the bar matches ghost height over the grid. */
+  const createInsertionLine = () => {
     const el = document.createElement('div');
-    el.style.position = 'absolute';
+    el.style.position = 'fixed';
+    el.style.width = `${INSERTION_LINE_WIDTH_PX}px`;
+    el.style.height = '0px';
+    el.style.left = '0px';
     el.style.top = '0px';
-    el.style.bottom = '0px';
-    el.style.width = '2px';
-    el.style.background = '#EFC703';
+    el.style.background = '#5F6368';
     el.style.zIndex = '9999';
     el.style.pointerEvents = 'none';
-    host.appendChild(el);
+    document.body.appendChild(el);
     return el;
   };
 
-  const createGhost = (host: HTMLElement) => {
+  const layoutInsertionLineInViewport = (
+    line: HTMLDivElement,
+    lineLeftPx: number,
+    host: HTMLElement,
+  ) => {
+    const hr = host.getBoundingClientRect();
+    const sc = host.scrollLeft ?? 0;
+    const lineV = hr.left + (lineLeftPx - sc);
+    if (line.parentNode !== document.body) {
+      document.body.appendChild(line);
+    }
+    line.style.position = 'fixed';
+    line.style.width = `${INSERTION_LINE_WIDTH_PX}px`;
+    line.style.bottom = 'auto';
+    line.style.right = 'auto';
+    const cellArea = refs.cellArea?.current;
+    if (cellArea) {
+      const r = cellArea.getBoundingClientRect();
+      const h = Math.max(0, r.height - GHOST_CELL_AREA_HEIGHT_INSET_PX);
+      line.style.left = `${lineV}px`;
+      line.style.top = `${hr.top}px`;
+      line.style.height = `${h}px`;
+    } else {
+      line.style.left = `${lineV}px`;
+      line.style.top = `${hr.top}px`;
+      line.style.height = `${Math.max(0, window.innerHeight - GHOST_CELL_AREA_HEIGHT_INSET_PX)}px`;
+    }
+  };
+
+  /** Full-height column ghost: must be under `body`+`fixed` — if it stays in the
+   *  column header, `fortune-cell-area` (canvas) paints on top and hides overflow. */
+  const createGhost = () => {
     const el = document.createElement('div');
     el.style.position = 'fixed';
-    el.style.top = '134px';
-    el.style.height = `${window.innerHeight}px`;
     el.style.boxSizing = 'border-box';
     el.style.padding = '6px 8px';
-    el.style.background = 'rgba(239,199,3,0.10)';
-    el.style.border = '1px solid #EFC703';
-    el.style.borderRadius = '6px';
-    el.style.zIndex = '10000';
+    el.style.background = 'rgba(95,99,104,0.18)';
+    el.style.zIndex = '20000';
     el.style.pointerEvents = 'none';
     el.style.display = 'flex';
     el.style.alignItems = 'start';
@@ -183,8 +261,25 @@ export const useColumnDragAndDrop = (
 
     el.style.width = `${ghostWidthPx}px`;
     el.textContent = ghostLabel;
-    host.appendChild(el);
+    document.body.appendChild(el);
     return { el, ghostWidthPx };
+  };
+
+  const layoutGhostInViewport = (
+    ghost: HTMLDivElement,
+    ghostLeftV: number,
+  ) => {
+    const cellArea = refs.cellArea?.current;
+    if (cellArea) {
+      const r = cellArea.getBoundingClientRect();
+      const h = Math.max(0, r.height - GHOST_CELL_AREA_HEIGHT_INSET_PX);
+      ghost.style.top = `${r.top}px`;
+      ghost.style.height = `${h}px`;
+    } else {
+      ghost.style.top = '0px';
+      ghost.style.height = `${Math.max(0, window.innerHeight - GHOST_CELL_AREA_HEIGHT_INSET_PX)}px`;
+    }
+    ghost.style.left = `${ghostLeftV}px`;
   };
 
   const isDragActivated = (host: HTMLElement, pixelDeltaX: number) => {
@@ -202,10 +297,24 @@ export const useColumnDragAndDrop = (
     (document.body.style as any).webkitUserSelect = 'none';
 
     // visuals
-    dragRef.current.lineEl = createInsertionLine(host);
-    const { el, ghostWidthPx } = createGhost(host);
+    dragRef.current.lineEl = createInsertionLine();
+    const { el, ghostWidthPx } = createGhost();
     dragRef.current.ghostEl = el;
     dragRef.current.ghostWidthPx = ghostWidthPx;
+    const selectedLeftPx = getSelectedLeftBorderPx();
+    const hr = host.getBoundingClientRect();
+    const sc = host.scrollLeft ?? 0;
+    const selectedLeftV = hr.left + (selectedLeftPx - sc);
+    const startCursorV = dragRef.current.startX - window.scrollX;
+    dragRef.current.ghostCursorOffsetX = startCursorV - selectedLeftV;
+    if (dragRef.current.lineEl) {
+      const { lineLeftPx } = computeInsertionFromPageX(dragRef.current.startX);
+      layoutInsertionLineInViewport(
+        dragRef.current.lineEl,
+        lineLeftPx,
+        host,
+      );
+    }
 
     return true;
   };
@@ -221,18 +330,26 @@ export const useColumnDragAndDrop = (
     if (!isDragActivated(host, dragOffset)) return;
 
     const { lineLeftPx } = computeInsertionFromPageX(ev.pageX);
-    const ghostPosOffset = 60;
-    const ghostFinalPos =
-      dragRef.current.startX > ev.pageX
-        ? lineLeftPx + ghostPosOffset
-        : lineLeftPx - (selectedColWidth.current - ghostPosOffset);
+    const cursorInsideSelection = isCursorInsideSelectedColumns(ev.pageX);
 
     if (dragRef.current.lineEl) {
-      dragRef.current.lineEl.style.left = `${lineLeftPx}px`;
+      const indicatorLeftPx = cursorInsideSelection
+        ? getSelectedLeftBorderPx()
+        : lineLeftPx;
+      layoutInsertionLineInViewport(
+        dragRef.current.lineEl,
+        indicatorLeftPx,
+        host,
+      );
     }
 
     if (dragRef.current.ghostEl) {
-      dragRef.current.ghostEl.style.left = `${ghostFinalPos}px`;
+      const cursorV = ev.pageX - window.scrollX;
+      const ghostLeftV = cursorV - dragRef.current.ghostCursorOffsetX;
+      layoutGhostInViewport(
+        dragRef.current.ghostEl,
+        ghostLeftV,
+      );
     }
   };
 
@@ -245,9 +362,10 @@ export const useColumnDragAndDrop = (
       document.body.style.userSelect = dragRef.current.prevUserSelect || '';
       (document.body.style as any).webkitUserSelect =
         dragRef.current.prevWebkitUserSelect || '';
-    } catch {}
+    } catch { }
 
-    if (dragRef.current.active) {
+    const cursorInsideSelection = isCursorInsideSelectedColumns(ev.pageX);
+    if (dragRef.current.active && !cursorInsideSelection) {
       const { insertionIndex: finalInsertionIndex } = computeInsertionFromPageX(
         ev.pageX,
       );
@@ -270,53 +388,50 @@ export const useColumnDragAndDrop = (
           const numCols = rows[0]?.length ?? 0;
           if (sourceIndex < 0 || sourceIndex >= numCols) return;
 
-          // remove-then-insert adjustment
-          let targetIndex = finalInsertionIndex;
-          if (targetIndex > sourceIndex) targetIndex -= 1;
-
           const selectedColRange =
             context.luckysheet_select_save?.[0]?.column || [];
-          const selectedSourceCol: number[] = [];
-          for (
-            let i = selectedColRange?.[0];
-            i <= selectedColRange?.[1];
-            i += 1
+          const selectedStart = selectedColRange?.[0];
+          const selectedEnd = selectedColRange?.[1];
+          if (
+            selectedStart == null ||
+            selectedEnd == null ||
+            selectedStart < 0 ||
+            selectedEnd < selectedStart
           ) {
-            selectedSourceCol.push(i);
+            return;
           }
-
-          const tempSelectedTargetCol: number[] = [];
-          selectedSourceCol.forEach((_, index) => {
-            if (sourceIndex < targetIndex) {
-              tempSelectedTargetCol.push(targetIndex - index);
-            } else {
-              tempSelectedTargetCol.push(targetIndex + index);
-            }
-          });
-          const selectedTargetCol = [...tempSelectedTargetCol]?.sort(
-            (a, b) => a - b,
+          const moveCount = selectedEnd - selectedStart + 1;
+          const selectedSourceCol: number[] = Array.from(
+            { length: moveCount },
+            (_, i) => selectedStart + i,
           );
+
+          // Compute insertion point after removing selected block.
+          let targetIndex = finalInsertionIndex;
+          if (targetIndex > selectedEnd + 1) {
+            targetIndex -= moveCount;
+          }
+          if (targetIndex < 0) targetIndex = 0;
+          if (targetIndex > numCols - moveCount) targetIndex = numCols - moveCount;
+
+          const selectedTargetCol: number[] = Array.from(
+            { length: moveCount },
+            (_, i) => targetIndex + i,
+          );
+          const affectedColStart = Math.min(selectedStart, targetIndex);
+          const affectedColEnd =
+            Math.max(selectedStart, targetIndex) + moveCount - 1;
 
           selectedSourceColRef.current = selectedSourceCol;
           selectedTargetColRef.current = selectedTargetCol;
 
-          // Move column data in each row
-          selectedSourceCol.forEach(() => {
-            let adjustedSourceIndex = sourceIndex;
-            if (targetIndex < sourceIndex) {
-              adjustedSourceIndex =
-                sourceIndex + (selectedSourceCol.length - 1);
-            }
-            for (let j = 0; j < rows.length; j += 1) {
-              const row = rows[j];
-              if (!row || adjustedSourceIndex >= row.length) continue;
-
-              const [cellData] = row.splice(adjustedSourceIndex, 1);
-              if (targetIndex < 0) targetIndex = 0;
-              if (targetIndex > row.length) targetIndex = row.length;
-              row.splice(targetIndex, 0, cellData);
-            }
-          });
+          // Move selected column block in each row, preserving relative order.
+          for (let j = 0; j < rows.length; j += 1) {
+            const row = rows[j];
+            if (!row || selectedStart >= row.length) continue;
+            const moved = row.splice(selectedStart, moveCount);
+            row.splice(targetIndex, 0, ...moved);
+          }
 
           _sheet.data = rows;
           updateContextWithSheetData(draft, _sheet.data);
@@ -326,8 +441,8 @@ export const useColumnDragAndDrop = (
           const colMap: Record<number, number> = (() => {
             const totalCols = rows[0]?.length ?? 0;
             const order = Array.from({ length: totalCols }, (_, i) => i);
-            const sourceStart = selectedSourceCol[0] ?? sourceIndex;
-            const count = selectedSourceCol.length;
+            const sourceStart = selectedStart;
+            const count = moveCount;
             if (count <= 0) return {};
             const moved = order.splice(sourceStart, count);
             let insertAt = targetIndex;
@@ -340,6 +455,166 @@ export const useColumnDragAndDrop = (
             });
             return map;
           })();
+
+          // Keep column width metadata in sync with moved column data.
+          if (_sheet.config) {
+            const remapIndexMap = <T,>(
+              mapObj?: Record<string, T> | Record<number, T>,
+            ) => {
+              if (!mapObj) return mapObj;
+              const next: Record<number, T> = {};
+              Object.keys(mapObj).forEach((k) => {
+                const oldIdx = parseInt(k, 10);
+                if (!Number.isFinite(oldIdx)) return;
+                const newIdx =
+                  colMap[oldIdx] != null ? colMap[oldIdx] : oldIdx;
+                next[newIdx] = (mapObj as any)[k];
+              });
+              return next;
+            };
+            _sheet.config.columnlen = remapIndexMap(_sheet.config.columnlen);
+            _sheet.config.customWidth = remapIndexMap(_sheet.config.customWidth);
+            // calcRowColSize reads from ctx.config; keep it in sync with sheet config.
+            draft.config.columnlen = _sheet.config.columnlen;
+            draft.config.customWidth = _sheet.config.customWidth;
+          }
+
+          // Keep conditional formatting ranges aligned with moved columns.
+          if (Array.isArray(_sheet.luckysheet_conditionformat_save)) {
+            const remapConditionalFormatByColMap = (
+              rules: any[],
+            ): any[] => {
+              const toNumberRange = (v: any): [number, number] | null => {
+                if (!Array.isArray(v) || v.length !== 2) return null;
+                const a = Number(v[0]);
+                const b = Number(v[1]);
+                if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+                return a <= b ? [a, b] : [b, a];
+              };
+              const compressSorted = (arr: number[]) => {
+                const segments: Array<[number, number]> = [];
+                if (arr.length === 0) return segments;
+                let start = arr[0];
+                let prev = arr[0];
+                for (let i = 1; i < arr.length; i += 1) {
+                  const cur = arr[i];
+                  if (cur === prev || cur === prev + 1) {
+                    prev = cur;
+                    continue;
+                  }
+                  segments.push([start, prev]);
+                  start = cur;
+                  prev = cur;
+                }
+                segments.push([start, prev]);
+                return segments;
+              };
+
+              return rules.map((rule) => {
+                const ranges = Array.isArray(rule?.cellrange)
+                  ? rule.cellrange
+                  : [];
+                const remappedRanges: any[] = [];
+                ranges.forEach((range: any) => {
+                  const rowR = toNumberRange(range?.row);
+                  const colR = toNumberRange(range?.column);
+                  if (!rowR || !colR) return;
+                  const [r1, r2] = rowR;
+                  const [c1, c2] = colR;
+                  if (c2 < affectedColStart || c1 > affectedColEnd) {
+                    remappedRanges.push({ row: [r1, r2], column: [c1, c2] });
+                    return;
+                  }
+                  const mappedCols: number[] = [];
+                  for (let c = c1; c <= c2; c += 1) {
+                    mappedCols.push(colMap[c] != null ? colMap[c] : c);
+                  }
+                  mappedCols.sort((a, b) => a - b);
+                  const segments = compressSorted(mappedCols);
+                  segments.forEach(([s, e]) => {
+                    remappedRanges.push({
+                      row: [r1, r2],
+                      column: [s, e],
+                    });
+                  });
+                });
+                return {
+                  ...rule,
+                  cellrange: remappedRanges,
+                };
+              });
+            };
+            _sheet.luckysheet_conditionformat_save = remapConditionalFormatByColMap(
+              _sheet.luckysheet_conditionformat_save,
+            );
+          }
+
+          // Keep alternate-format ranges aligned with moved columns.
+          if (Array.isArray(_sheet.luckysheet_alternateformat_save)) {
+            const remapAlternateFormatByColMap = (rules: any[]): any[] => {
+              const toNumberRange = (v: any): [number, number] | null => {
+                if (!Array.isArray(v) || v.length !== 2) return null;
+                const a = Number(v[0]);
+                const b = Number(v[1]);
+                if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+                return a <= b ? [a, b] : [b, a];
+              };
+              const compressSorted = (arr: number[]) => {
+                const segments: Array<[number, number]> = [];
+                if (arr.length === 0) return segments;
+                let start = arr[0];
+                let prev = arr[0];
+                for (let i = 1; i < arr.length; i += 1) {
+                  const cur = arr[i];
+                  if (cur === prev || cur === prev + 1) {
+                    prev = cur;
+                    continue;
+                  }
+                  segments.push([start, prev]);
+                  start = cur;
+                  prev = cur;
+                }
+                segments.push([start, prev]);
+                return segments;
+              };
+
+              const remappedRules: any[] = [];
+              rules.forEach((rule) => {
+                const rowR = toNumberRange(rule?.cellrange?.row);
+                const colR = toNumberRange(rule?.cellrange?.column);
+                if (!rowR || !colR) {
+                  remappedRules.push(rule);
+                  return;
+                }
+                const [r1, r2] = rowR;
+                const [c1, c2] = colR;
+                if (c2 < affectedColStart || c1 > affectedColEnd) {
+                  remappedRules.push(rule);
+                  return;
+                }
+                const mappedCols: number[] = [];
+                for (let c = c1; c <= c2; c += 1) {
+                  mappedCols.push(colMap[c] != null ? colMap[c] : c);
+                }
+                mappedCols.sort((a, b) => a - b);
+                const segments = compressSorted(mappedCols);
+                segments.forEach(([s, e]) => {
+                  remappedRules.push({
+                    ...rule,
+                    cellrange: {
+                      ...(rule.cellrange || {}),
+                      row: [r1, r2],
+                      column: [s, e],
+                    },
+                  });
+                });
+              });
+              return remappedRules;
+            };
+            _sheet.luckysheet_alternateformat_save = remapAlternateFormatByColMap(
+              _sheet.luckysheet_alternateformat_save,
+            );
+          }
 
           d?.forEach((row) => {
             row.forEach((cell) => {
@@ -360,6 +635,17 @@ export const useColumnDragAndDrop = (
           // update dataVerification
           if (_sheet.dataVerification) {
             const newDataVerification: any = {};
+            const maybeRemapDvText = (text: any) => {
+              if (typeof text !== 'string') return text;
+              // Fast path: skip strings that can't contain A1 refs.
+              if (!/[A-Za-z]+\d/.test(text)) return text;
+              return remapFormulaReferencesByMap(
+                text,
+                _sheet.name || '',
+                _sheet.name || '',
+                { colMap },
+              );
+            };
             Object.keys(_sheet.dataVerification).forEach((item) => {
               const itemData = _sheet.dataVerification?.[item];
               const colRow = item.split('_');
@@ -367,7 +653,13 @@ export const useColumnDragAndDrop = (
               const presentcol = parseInt(colRow[1], 10);
               const updatedCol =
                 colMap[presentcol] != null ? colMap[presentcol] : presentcol;
-              newDataVerification[`${colRow[0]}_${updatedCol}`] = itemData;
+              const nextItem = itemData ? { ...itemData } : itemData;
+              if (nextItem) {
+                nextItem.value1 = maybeRemapDvText(nextItem.value1);
+                nextItem.value2 = maybeRemapDvText(nextItem.value2);
+                nextItem.rangeTxt = maybeRemapDvText(nextItem.rangeTxt);
+              }
+              newDataVerification[`${colRow[0]}_${updatedCol}`] = nextItem;
             });
             _sheet.dataVerification = newDataVerification;
           }
@@ -391,10 +683,75 @@ export const useColumnDragAndDrop = (
             _sheet.hyperlink = newHyperlink;
           }
 
-          // update calc chain
-          _sheet.calcChain?.forEach((item) => {
-            item.c = colMap[item.c] != null ? colMap[item.c] : item.c;
-          });
+          // Keep per-cell hyperlink marker metadata aligned with remapped hyperlink keys.
+          const numColsAfterMove = rows[0]?.length ?? 0;
+          for (let r = 0; r < rows.length; r += 1) {
+            const row = rows[r];
+            if (!row) continue;
+            for (
+              let c = affectedColStart;
+              c <= affectedColEnd && c < numColsAfterMove;
+              c += 1
+            ) {
+              const cell = row[c];
+              if (!cell) continue;
+              const hasHyperlink = !!_sheet.hyperlink?.[`${r}_${c}`];
+              if (hasHyperlink) {
+                cell.hl = { r, c, id: context.currentSheetId };
+              } else if (cell.hl) {
+                delete cell.hl;
+              }
+            }
+          }
+
+          // Comments are stored on cell.ps and move with row/column data.
+          // Reset visible comment overlays so positions are recomputed lazily.
+          draft.commentBoxes = [];
+          draft.hoveredCommentBox = undefined;
+          draft.editingCommentBox = undefined;
+
+          // Rebuild calc chain from actual formula cells so recalc always
+          // includes every formula after structural drag.
+          const rebuiltCalcChain: { r: number; c: number; id: string }[] = [];
+          for (let r = 0; r < rows.length; r += 1) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c += 1) {
+              if (row[c]?.f) {
+                rebuiltCalcChain.push({ r, c, id: context.currentSheetId });
+              }
+            }
+          }
+          _sheet.calcChain = rebuiltCalcChain as any;
+
+          // Structural drag rewrites many formula refs; refresh dependency graph
+          // to avoid stale edges causing false circular-dependency errors.
+          const touchedFormulaCells: { r: number; c: number; i: string }[] = [];
+          for (let r = 0; r < rows.length; r += 1) {
+            const row = rows[r];
+            if (!row) continue;
+            for (let c = 0; c < row.length; c += 1) {
+              if (row[c]?.f) {
+                touchedFormulaCells.push({ r, c, i: context.currentSheetId });
+              }
+            }
+          }
+          if (touchedFormulaCells.length > 0) {
+            draft.formulaCache.depsByCell = new Map();
+            draft.formulaCache.revDepsByCell = new Map();
+            draft.formulaCache.execFunctionExist = touchedFormulaCells as any;
+            (execFunctionGroup as any)(
+              draft,
+              null,
+              null,
+              null,
+              null,
+              getFlowdata(draft),
+              true,
+            );
+            groupValuesRefresh(draft);
+            draft.formulaCache.execFunctionExist = undefined;
+          }
 
           // update data block
           // @ts-expect-error
@@ -403,9 +760,10 @@ export const useColumnDragAndDrop = (
             selectedTargetCol,
             'column',
             context.currentSheetId,
-            sourceIndex,
+            selectedStart,
             targetIndex,
           );
+
           // Notify Yjs for every cell in the disturbed range (moved column + all columns in between)
           const cellChanges: {
             sheetId: string;
@@ -414,9 +772,6 @@ export const useColumnDragAndDrop = (
             value: any;
             type?: 'update' | 'delete';
           }[] = [];
-          const affectedColStart = Math.min(sourceIndex, targetIndex);
-          const affectedColEnd =
-            Math.max(sourceIndex, targetIndex) + selectedSourceCol.length - 1;
           const numRows = rows.length;
           for (let r = 0; r < numRows; r += 1) {
             const row = rows[r];
@@ -435,11 +790,12 @@ export const useColumnDragAndDrop = (
             draft.hooks.updateCellYdoc(cellChanges);
           }
           const rowLen = d?.length || 0;
+          const rowEnd = Math.max(0, rowLen - 1);
           api.setSelection(
             draft,
             [
               {
-                row: [0, rowLen],
+                row: [0, rowEnd],
                 column: [
                   selectedTargetCol?.[0],
                   selectedTargetCol?.[selectedTargetCol.length - 1],

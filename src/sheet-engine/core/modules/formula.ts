@@ -1449,7 +1449,6 @@ export function execfunction(
   } catch (e) {
     const err = e;
     // err错误提示处理
-    console.log(e, fp);
     result = [error.n, err];
   }
 
@@ -1505,7 +1504,6 @@ export function execfunction(
   window.luckysheetCurrentIndex = null;
   window.luckysheetCurrentFunction = null;
   */
-
   const sheetId = id || ctx.currentSheetId;
   const originKey = `${sheetId}:${r}:${c}`;
   const deps = new Set<string>();
@@ -1554,6 +1552,8 @@ export function execfunction(
       title: CIRCULAR_REF_TITLE,
       message: "Circular dependency.",
     });
+  } else {
+    clearCellError(ctx, r, c);
   }
 
   // Propagate upstream circular dependency errors to dependents.
@@ -1564,11 +1564,13 @@ export function execfunction(
       if (depKey === originKey) continue;
       const parsedKey = parseCellKey(depKey);
       if (!parsedKey) continue;
-      const flowdata = getFlowdata(ctx, parsedKey.sheetId);
+      // Use current-pass computed cache only. Falling back to flowdata here can
+      // re-propagate stale "#CIRC!" from prior states during structural recalcs.
       const cell =
         ctx?.formulaCache.execFunctionGlobalData?.[
         `${parsedKey.r}_${parsedKey.c}_${parsedKey.sheetId}`
-        ] || flowdata?.[parsedKey.r]?.[parsedKey.c];
+        ];
+      if (_.isNil(cell)) continue;
       const raw = cell?.v ?? cell?.m;
       if (raw === CIRCULAR_REF_ERROR) {
         parsedResponse.error = CIRCULAR_REF_ERROR;
@@ -1787,9 +1789,9 @@ export function execFunctionGroup(
   //   window.luckysheet_getSpecialReference = luckysheet_getSpecialReference;
   // }
 
-  if (_.isNil(ctx.formulaCache.execFunctionGlobalData)) {
-    ctx.formulaCache.execFunctionGlobalData = {};
-  }
+  // Start each group execution with a fresh pass-local cache so circular
+  // propagation only reads values produced in the current recalculation pass.
+  ctx.formulaCache.execFunctionGlobalData = {};
   // let luckysheetfile = getluckysheetfile();
   // let dynamicArray_compute = luckysheetfile[getSheetIndex(ctx.currentSheetId)_.isNil(]["dynamicArray_compute"]) ? {} : luckysheetfile[getSheetIndex(ctx.currentSheetId)]["dynamicArray_compute"];
 
@@ -3625,7 +3627,7 @@ export function handleFormulaInput(
       }
     }
   } catch (_error) {
-    console.log(_error);
+    // no-op
   }
 }
 
