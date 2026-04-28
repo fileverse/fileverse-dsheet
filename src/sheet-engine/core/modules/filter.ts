@@ -9,6 +9,7 @@ import { isRealNull } from './validation';
 import { normalizedAttr } from './cell';
 import { sortDataRange } from './sort';
 import { checkCF, getComputeMap } from './ConditionFormat';
+import { ensureManualHiddenInitialized, rebuildRowHiddenUnion } from './rowVisibility';
 
 // 筛选配置状态
 export function labelFilterOptionState(
@@ -186,17 +187,14 @@ export function createFilterOptions(
 export function clearFilter(ctx: Context) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
+  // Manual hides live in `rowhidden_manual`; `rowhidden` is rebuilt as union.
+  ensureManualHiddenInitialized(ctx);
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
-  const hiddenRows = _.reduce(
-    ctx.filter,
-    (pre, curr) => _.assign(pre, curr?.rowhidden || {}),
-    {},
-  );
-  ctx.config.rowhidden = _.omit(ctx.config.rowhidden, _.keys(hiddenRows));
   ctx.luckysheet_filter_save = undefined;
   ctx.filterOptions = undefined;
   ctx.filterContextMenu = undefined;
   ctx.filter = {};
+  rebuildRowHiddenUnion(ctx);
   if (sheetIndex != null) {
     ctx.luckysheetfile[sheetIndex].filter = undefined;
     ctx.luckysheetfile[sheetIndex].filter_select = undefined;
@@ -211,29 +209,15 @@ export function clearFilterForColumn(
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
+  ensureManualHiddenInitialized(ctx);
 
   const key = `${cindex - startCol}`;
-  const hiddenRowsThisCol = ctx.filter?.[key]?.rowhidden || {};
 
   // Remove only this column's filter config.
   delete ctx.filter[key];
 
-  // Preserve non-filter row hidden state, but drop any rows hidden by this column,
-  // then re-apply hidden rows contributed by the remaining column filters.
-  const otherHiddenRows = _.reduce(
-    ctx.filter,
-    (pre, curr) => _.assign(pre, curr?.rowhidden || {}),
-    {},
-  );
-  const baseRowHidden = _.omit(
-    ctx.config?.rowhidden || {},
-    _.keys(hiddenRowsThisCol),
-  );
-  const rowhiddenAll = _.assign({}, baseRowHidden, otherHiddenRows);
-
-  const cfg = _.assign({}, ctx.config);
-  cfg.rowhidden = rowhiddenAll;
-  ctx.config = cfg;
+  // Rebuild render-time union from manual + remaining filter-hidden rows.
+  rebuildRowHiddenUnion(ctx);
 
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) return;
@@ -652,8 +636,8 @@ export function saveFilter(
   st_c: number,
   ed_c: number,
 ) {
-  const { otherHiddenRows } = getFilterHiddenRows(ctx, cindex, st_c);
-  const rowHiddenAll = _.assign(otherHiddenRows, hiddenRows);
+  // Filters only contribute via `ctx.filter[*].rowhidden`; `rowhidden` is rebuilt as union.
+  ensureManualHiddenInitialized(ctx);
 
   labelFilterOptionState(
     ctx,
@@ -667,17 +651,17 @@ export function saveFilter(
     ed_c,
     true,
   );
-
-  const cfg = _.assign({}, ctx.config);
-  cfg.rowhidden = rowHiddenAll;
-
-  // config
-  ctx.config = cfg;
+  // Rebuild render-time union from manual + all filter-hidden rows.
+  rebuildRowHiddenUnion(ctx);
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) {
     return;
   }
-  ctx.luckysheetfile[sheetIndex].config = cfg;
+  ctx.luckysheetfile[sheetIndex].config = _.assign(
+    {},
+    ctx.luckysheetfile[sheetIndex].config,
+    ctx.config,
+  );
 
   // server.saveParam("cg", Store.currentSheetIndex, cfg.rowhidden, {
   //   k: "rowhidden",

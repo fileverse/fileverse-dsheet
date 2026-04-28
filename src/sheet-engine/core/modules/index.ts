@@ -110,6 +110,14 @@ export {
   hideCRCount,
 } from './rowcol';
 
+// row visibility (manual vs filter provenance)
+export {
+  getFilterHiddenRowsUnionFromFilterMap,
+  getFilterHiddenRowsUnion,
+  ensureManualHiddenInitialized,
+  rebuildRowHiddenUnion,
+} from './rowVisibility';
+
 // selection
 export {
   scrollToHighlightCell,

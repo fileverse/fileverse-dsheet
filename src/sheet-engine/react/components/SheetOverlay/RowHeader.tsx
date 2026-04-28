@@ -13,6 +13,7 @@ import {
   fixPositionOnFrozenCells,
   getFlowdata,
   api,
+  getFilterHiddenRowsUnion,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import React, {
@@ -28,6 +29,7 @@ import { useRowDragAndDrop } from './drag_and_drop/row-helpers';
 
 type HoverLoc = { row: number; row_pre: number; row_index: number };
 type SelectedLoc = { row: number; row_pre: number; r1: number; r2: number };
+type HiddenPointer = { row: string; top: number };
 
 const RowHeader: React.FC = () => {
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
@@ -44,6 +46,26 @@ const RowHeader: React.FC = () => {
 
   const sheetIndex = getSheetIndex(context, context.currentSheetId);
   const sheet = sheetIndex == null ? null : context.luckysheetfile[sheetIndex];
+
+  // Manual-hidden rows only: do not show "unhide" pointers for filter-hidden rows.
+  const manualRowHidden = useMemo(() => {
+    if (sheetIndex == null) return null;
+    const cfg = context.luckysheetfile[sheetIndex]?.config || context.config;
+    if (cfg?.rowhidden_manual != null) return cfg.rowhidden_manual;
+    const union = (cfg?.rowhidden || {}) as Record<string, number>;
+    const filterActive =
+      !_.isNil(context.luckysheet_filter_save) && !_.isEmpty(context.filter);
+    if (!filterActive) return union;
+    const filterUnion = getFilterHiddenRowsUnion(context);
+    return _.omit(union, _.keys(filterUnion));
+  }, [
+    sheetIndex,
+    context.currentSheetId,
+    context.config,
+    context.luckysheetfile,
+    context.luckysheet_filter_save,
+    context.filter,
+  ]);
 
   const freezeHandleTop = useMemo(() => {
     if (
@@ -106,7 +128,7 @@ const RowHeader: React.FC = () => {
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-      // @ts-expect-error
+      // @ts-expect-error: `e.target` is not strongly typed as an SVGElement here.
       if ((e.button === 0 && e.target.tagName === 'use') || e.button === 2) {
         const { nativeEvent } = e;
         setContext((draft) => {
@@ -149,7 +171,7 @@ const RowHeader: React.FC = () => {
       if (
         !allRowSel ||
         (allRowSel && sel && clickedRowIndex < sel?.[0].row[0]) ||
-        // @ts-ignore
+        // @ts-expect-error: `sel?.[0].row` may be missing in some selection shapes.
         clickedRowIndex > sel?.[0].row[1]
       ) {
         const { nativeEvent } = e;
@@ -266,13 +288,13 @@ const RowHeader: React.FC = () => {
     setSelectedLocation(selects);
   }, [context.luckysheet_select_save, context.visibledatarow]);
 
-  const [hiddenPointers, setHiddenPointers] = useState([]);
+  const [hiddenPointers, setHiddenPointers] = useState<HiddenPointer[]>([]);
 
   useEffect(() => {
     if (sheetIndex == null) return;
 
-    const tempPointers: any = [];
-    const rowhidden = context.luckysheetfile[sheetIndex]?.config?.rowhidden;
+    const tempPointers: HiddenPointer[] = [];
+    const rowhidden = manualRowHidden;
 
     if (rowhidden) {
       Object.keys(rowhidden).forEach((key) => {
@@ -283,26 +305,26 @@ const RowHeader: React.FC = () => {
     } else {
       setHiddenPointers([]);
     }
-  }, [context.visibledatarow, sheetIndex]);
+  }, [context.visibledatarow, sheetIndex, manualRowHidden]);
 
   const showRow = (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    item: any,
+    item: HiddenPointer,
   ) => {
     if (sheetIndex == null) return;
 
-    let startRow = item.row;
-    let endRow = item.row;
-    const startPoint = item.row;
+    let startRow = Number(item.row);
+    let endRow = Number(item.row);
+    const startPoint = Number(item.row);
 
-    const rowhiddenData = context.luckysheetfile[sheetIndex]?.config?.rowhidden;
+    const rowhiddenData = manualRowHidden;
     let cod = true;
     let tempStartPoint = startPoint;
 
     while (cod) {
       tempStartPoint = Number(tempStartPoint) - 1;
       // eslint-disable-next-line no-prototype-builtins
-      if (rowhiddenData?.hasOwnProperty(tempStartPoint)) {
+      if (rowhiddenData?.hasOwnProperty(String(tempStartPoint))) {
         startRow = tempStartPoint;
       } else {
         cod = false;
@@ -315,7 +337,7 @@ const RowHeader: React.FC = () => {
     while (cod) {
       tempStartPoint = Number(tempStartPoint) + 1;
       // eslint-disable-next-line no-prototype-builtins
-      if (rowhiddenData?.hasOwnProperty(tempStartPoint)) {
+      if (rowhiddenData?.hasOwnProperty(String(tempStartPoint))) {
         endRow = tempStartPoint;
       } else {
         cod = false;
@@ -362,7 +384,7 @@ const RowHeader: React.FC = () => {
     containerRef.current!.scrollTop = context.scrollTop;
   }, [context.scrollTop]);
 
-  const getCursor = (rowIndex: any) => {
+  const getCursor = (rowIndex: number) => {
     if (mouseDown) return 'grabbing';
     const sel = api.getSelection(context);
     const lastSelectedCol = sel?.[0].column?.[1];
@@ -394,9 +416,10 @@ const RowHeader: React.FC = () => {
       onMouseLeave={onMouseLeave}
       onContextMenu={onContextMenu}
     >
-      {hiddenPointers.map((item: any) => {
+      {hiddenPointers.map((item) => {
         return (
           <div
+            key={item.row}
             className="flex flex-col gap-4 cursor-pointer align-center hide-btn-row"
             style={{
               top: `${item.top - 15}px`,
@@ -477,7 +500,7 @@ const RowHeader: React.FC = () => {
               top: row_pre,
               height: row - row_pre - 1,
               display: 'block',
-              mixBlendMode: 'multiply' as any,
+              mixBlendMode: 'multiply' as const,
             },
             fixRowStyleOverflowInFreeze(
               context,

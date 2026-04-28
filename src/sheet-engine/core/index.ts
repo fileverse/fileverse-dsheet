@@ -129,6 +129,11 @@ export {
   hideSelected,
   showSelected,
   isShowHidenCR,
+  // row visibility (manual vs filter provenance)
+  getFilterHiddenRowsUnionFromFilterMap,
+  getFilterHiddenRowsUnion,
+  ensureManualHiddenInitialized,
+  rebuildRowHiddenUnion,
   // selection
   scrollToHighlightCell,
   selectTitlesMap,
