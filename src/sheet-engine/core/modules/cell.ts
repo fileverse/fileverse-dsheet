@@ -297,7 +297,29 @@ export function getCellValue(
     retv = d[attr];
 
     if (attr === "f" && !_.isNil(retv)) {
-      retv = functionHTMLGenerate(retv);
+      const dCell = d as Cell;
+      let fForDisplay = String(retv);
+      const seg0v = dCell?.ct?.s?.[0]?.v;
+      if (
+        typeof seg0v === "string" &&
+        /[\r\n]/.test(seg0v) &&
+        fForDisplay.startsWith("=")
+      ) {
+        const norm = (s: string) =>
+          s
+            .replace(/\u00a0/g, " ")
+            .replace(/\u200b/g, "")
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .replace(/\n/g, "");
+        const mirror = seg0v
+          .replace(/\u00a0/g, " ")
+          .replace(/\u200b/g, "");
+        if (norm(mirror) === norm(fForDisplay)) {
+          fForDisplay = mirror;
+        }
+      }
+      retv = functionHTMLGenerate(fForDisplay);
     } else if (attr === "f") {
       if (d?.ct?.t === "d" && !_.isNil((d as Cell).v)) {
         const dateFormat = String(d?.ct?.fa || "");
@@ -377,7 +399,10 @@ export function setCellValue(
       }
 
       if (!_.isNil(v.ct)) {
-        cell.ct = v.ct;
+        // Merge so formula mirror `ct.s` does not wipe format (`fa`/`t`) needed to compute `m`.
+        cell.ct = _.isNil(cell.ct)
+          ? v.ct
+          : { ...cell.ct, ...v.ct };
       }
       // Preserve horizontal alignment from value object (e.g. when editing, keep number/currency right-aligned)
       if (!_.isNil(v.ht)) {
@@ -393,6 +418,10 @@ export function setCellValue(
   } else {
     vupdate = v;
   }
+  const incomingFormulaInlineSegments =
+    _.isPlainObject(v) && Array.isArray((v as Cell)?.ct?.s)
+      ? (v as Cell).ct!.s
+      : null;
   let commaPresent = false;
   if (vupdate && typeof vupdate === "string" && vupdate.includes(",")) {
     commaPresent = vupdate.includes(",");
@@ -791,6 +820,38 @@ export function setCellValue(
   //   }
   // }
 
+  // Safety net: formula commits should always end with a display value `m`.
+  // Some mixed multiline/auto-close paths can carry `f`+`v` forward while `m`
+  // is still empty; derive it here without touching existing non-empty `m`.
+  if (
+    !_.isNil((cell as Cell).f) &&
+    isRealNull((cell as Cell).m) &&
+    !isRealNull((cell as Cell).v)
+  ) {
+    if (cell?.ct?.t === "d" && cell?.ct?.fa) {
+      (cell as Cell).m = update(cell.ct.fa, (cell as Cell).v);
+    } else if (typeof (cell as Cell).v === "number") {
+      refreshGeneralNumericDisplay(cell as Cell);
+    } else if (typeof (cell as Cell).v === "boolean") {
+      (cell as Cell).m = (cell as Cell).v ? "TRUE" : "FALSE";
+    } else {
+      (cell as Cell).m = String((cell as Cell).v);
+    }
+  }
+
+  // Only persist formula mirror `ct.s` from the incoming `v` (multiline). Do not
+  // reattach a stale `ct.s` from the pre-update cell, or single-line stays span-like.
+  if (!_.isNil((cell as Cell).f)) {
+    if (incomingFormulaInlineSegments) {
+      if (!cell.ct) {
+        cell.ct = { fa: "General", t: "g" };
+      }
+      cell.ct.s = incomingFormulaInlineSegments;
+    } else if (cell?.ct) {
+      delete (cell as Cell).ct!.s;
+    }
+  }
+
   d[r][c] = cell;
   // if (ctx?.hooks?.afterUpdateCell) {
   //   ctx.hooks.afterUpdateCell(r, c, oldValue, d[r][c] ?? null);
@@ -1121,11 +1182,61 @@ export function updateCell(
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
 
-    let inputText = $input?.innerText;
+    const rawInputText = $input?.innerText;
+    const normalizedFormulaInputText = (rawInputText || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/\u200b/g, "")
+      .trimStart();
+    const normalizeFormulaExecText = (s: string) =>
+      s.replace(/\u00a0/g, " ").replace(/\u200b/g, "");
+    const normalizeInlineStringLineBreaks = (s: string) =>
+      s.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r\n");
+    /** Keep `fa`/`t` whenever we attach formula mirror `ct.s` so setCellValue can compute `m`. */
+    const ensureFormulaCtFormatForMirror = (cellLike: Cell) => {
+      if (!cellLike.ct) cellLike.ct = {};
+      if (
+        cellLike.f &&
+        Array.isArray(cellLike.ct.s) &&
+        cellLike.ct.s.length > 0
+      ) {
+        if (cellLike.ct.fa == null || cellLike.ct.fa === "") {
+          cellLike.ct.fa = "General";
+        }
+        if (cellLike.ct.t == null || cellLike.ct.t === "") {
+          cellLike.ct.t = "g";
+        }
+      }
+    };
+    let autoClosedFormulaSuffix = "";
+    const getFormulaInlineStringSnapshot = (
+      fallbackFormula: string | undefined,
+      suffix = autoClosedFormulaSuffix
+    ): string => {
+      const raw = rawInputText ?? "";
+      if (raw.length > 0) {
+        return normalizeInlineStringLineBreaks(
+          normalizeFormulaExecText(raw) + suffix
+        );
+      }
+      return normalizeInlineStringLineBreaks(
+        normalizeFormulaExecText(fallbackFormula ?? "")
+      );
+    };
+    let inputText = rawInputText;
     if (inputText?.startsWith("=")) {
-      inputText = inputText?.replace(/[\r\n]/g, "");
+      inputText = normalizeFormulaExecText(inputText).replace(/[\r\n]/g, "");
     }
     const inputHtml = $input?.innerHTML;
+    const hasFormulaLineBreakInHtml =
+      !!inputHtml &&
+      (/<br\s*\/?>/i.test(inputHtml) || /[\r\n]/.test(inputHtml));
+    const hasFormulaLineBreakInRawText =
+      !!rawInputText && /[\r\n]/.test(rawInputText);
+    const shouldPersistFormulaEditHtml =
+      !!inputHtml &&
+      !!rawInputText &&
+      normalizedFormulaInputText.startsWith("=") &&
+      (hasFormulaLineBreakInHtml || hasFormulaLineBreakInRawText);
 
     const flowdata = getFlowdata(ctx);
     if (!flowdata) return;
@@ -1229,6 +1340,7 @@ export function updateCell(
 
       delete curv.fs;
       delete curv.f;
+      delete curv._formulaEditHtml;
       delete curv.v;
       delete curv.m;
       curv.fs = fontSize;
@@ -1244,16 +1356,38 @@ export function updateCell(
 
     // API, we get value from user
     value = value || inputText;
+    if (_.isString(value) && value.startsWith("=")) {
+      value = normalizeFormulaExecText(value);
+    }
     if (_.isString(value) && value.startsWith("=") && value.length > 1) {
-      value = closeUnclosedParenthesesInFormula(value);
+      const closedValue = closeUnclosedParenthesesInFormula(value);
+      if (
+        shouldPersistFormulaEditHtml &&
+        (rawInputText ?? "").startsWith("=") &&
+        closedValue.length > value.length
+      ) {
+        autoClosedFormulaSuffix = closedValue.slice(value.length);
+      }
+      value = closedValue;
     } else if (
       _.isPlainObject(value) &&
       _.isString((value as Cell).f) &&
       (value as Cell).f!.startsWith("=") &&
       (value as Cell).f!.length > 1
     ) {
-      (value as Cell).f = closeUnclosedParenthesesInFormula((value as Cell).f!);
+      const originalFormula = (value as Cell).f!;
+      const closedFormula = closeUnclosedParenthesesInFormula(originalFormula);
+      if (
+        shouldPersistFormulaEditHtml &&
+        (rawInputText ?? "").startsWith("=") &&
+        closedFormula.length > originalFormula.length
+      ) {
+        autoClosedFormulaSuffix = closedFormula.slice(originalFormula.length);
+      }
+      (value as Cell).f = closedFormula;
     }
+    const shouldPersistFormulaHtmlSnapshot =
+      shouldPersistFormulaEditHtml && autoClosedFormulaSuffix.length === 0;
     const shouldClearError = oldValue?.f
       ? oldValue.f !== value
       : oldValue?.v !== value;
@@ -1313,6 +1447,7 @@ export function updateCell(
         if (curv.f) {
           // 如果原来是公式，而更新的数据不是公式，则把公式删除
           delete curv.f;
+          delete curv._formulaEditHtml;
           delete curv.spl; // 删除单元格的sparklines的配置串
         }
       }
@@ -1336,6 +1471,25 @@ export function updateCell(
           isRunExecFunction = false;
           curv = _.cloneDeep(d?.[r]?.[c] || {});
           [, curv.v, curv.f] = v;
+          if (!curv.ct) {
+            curv.ct = {};
+          }
+          if (shouldPersistFormulaEditHtml) {
+            curv.ct.s = [
+              {
+                v: getFormulaInlineStringSnapshot(curv.f),
+                fs: curv.fs || 10,
+              },
+            ];
+            ensureFormulaCtFormatForMirror(curv);
+          } else {
+            delete curv.ct.s;
+          }
+          if (shouldPersistFormulaHtmlSnapshot) {
+            curv._formulaEditHtml = inputHtml;
+          } else {
+            delete curv._formulaEditHtml;
+          }
 
           // 打进单元格的sparklines的配置串， 报错需要单独处理。
           if (v.length === 4 && v[3].type === "sparklines") {
@@ -1376,6 +1530,25 @@ export function updateCell(
 
             curv = _.cloneDeep(d?.[r]?.[c] || {});
             [, curv.v, curv.f] = v;
+            if (!curv.ct) {
+              curv.ct = {};
+            }
+            if (shouldPersistFormulaEditHtml) {
+              curv.ct.s = [
+                {
+                  v: getFormulaInlineStringSnapshot(curv.f),
+                  fs: curv.fs || 10,
+                },
+              ];
+              ensureFormulaCtFormatForMirror(curv);
+            } else {
+              delete curv.ct.s;
+            }
+            if (shouldPersistFormulaHtmlSnapshot) {
+              curv._formulaEditHtml = inputHtml;
+            } else {
+              delete curv._formulaEditHtml;
+            }
 
             // 打进单元格的sparklines的配置串， 报错需要单独处理。
             if (v.length === 4 && v[3].type === "sparklines") {
@@ -1408,6 +1581,7 @@ export function updateCell(
           curv.v = value;
 
           delete curv.f;
+          delete curv._formulaEditHtml;
           delete curv.spl;
 
           // FLV crypto denomination --START--
@@ -1451,6 +1625,18 @@ export function updateCell(
           v: v[1],
           f: v[2],
         };
+        value.ct = value.ct || {};
+        if (shouldPersistFormulaEditHtml) {
+          value.ct.s = [
+            {
+              v: getFormulaInlineStringSnapshot(value.f),
+              fs: (value as Cell).fs || 10,
+            },
+          ];
+          ensureFormulaCtFormatForMirror(value as Cell);
+        } else {
+          delete (value as Cell).ct?.s;
+        }
 
         if (/^[\d.,]+$/.test(value.v)) {
           const args = getContentInParentheses(value?.f)?.split(",");
@@ -1459,6 +1645,7 @@ export function updateCell(
           if (formatted) {
             value.m = update(formatted, value.v);
             value.ct = {
+              ...value.ct,
               fa: formatted,
               t: is_date(formatted) ? "d" : "n",
             };
@@ -1504,6 +1691,18 @@ export function updateCell(
 
           // update attribute v
           [, value.v, value.f] = v;
+          value.ct = value.ct || {};
+          if (shouldPersistFormulaEditHtml) {
+            value.ct.s = [
+              {
+                v: getFormulaInlineStringSnapshot(value.f),
+                fs: (value as Cell).fs || 10,
+              },
+            ];
+            ensureFormulaCtFormatForMirror(value as Cell);
+          } else {
+            delete (value as Cell).ct?.s;
+          }
 
           // 打进单元格的sparklines的配置串， 报错需要单独处理。
           if (v.length === 4 && v[3].type === "sparklines") {

@@ -380,6 +380,14 @@ const InputBox: React.FC = () => {
     useState<{ left: number; top: number; width: number; height: number }[]>(
       [],
     );
+  const normalizeFormulaGateText = useCallback(
+    (s: string) => s.replace(/\u00a0/g, ' ').replace(/\u200b/g, ''),
+    [],
+  );
+  const startsWithFormula = useCallback(
+    (s: string) => normalizeFormulaGateText(s).trimStart().startsWith('='),
+    [normalizeFormulaGateText],
+  );
 
   const ensureNotEmpty = () => {
     const el = inputRef.current;
@@ -413,8 +421,13 @@ const InputBox: React.FC = () => {
   const handleFormulaSearchTopComputed = useCallback(
     (computedTop: number) => {
       if (!formulaSearchActiveCellKey) return;
-      if (formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey)
+      const prev = formulaSearchTopLockRef.current;
+      if (
+        prev?.cellKey === formulaSearchActiveCellKey &&
+        Math.abs(prev.top - computedTop) < 1
+      ) {
         return;
+      }
       formulaSearchTopLockRef.current = {
         cellKey: formulaSearchActiveCellKey,
         top: computedTop,
@@ -446,7 +459,7 @@ const InputBox: React.FC = () => {
       );
       const activeCell =
         flowdata?.[firstSelectionActiveCell.row_focus!]?.[
-          firstSelectionActiveCell.column_focus!
+        firstSelectionActiveCell.column_focus!
         ];
       // Hyperlink cells can carry blue/underline as cell-level style (especially after import).
       // In edit mode that decorates the entire input box; keep decoration on link spans only.
@@ -535,6 +548,21 @@ const InputBox: React.FC = () => {
       }
       const flowdata = getFlowdata(context);
       const cell = flowdata?.[row_index]?.[col_index];
+      // `ct.s` is persisted multiline text for storage/export; editor chrome uses
+      // `_formulaEditHtml` (span classes) or canonical `f` + escape + range highlight.
+      const formulaEditHtml =
+        cell?.f && typeof cell?._formulaEditHtml === 'string'
+          ? cell._formulaEditHtml
+          : '';
+      const mirrorSegV = cell?.ct?.s?.[0]?.v;
+      const ctMirrorMultiline =
+        !!cell?.f && typeof mirrorSegV === 'string' && /[\r\n]/.test(mirrorSegV);
+      const formulaEditHtmlMissingBr =
+        typeof formulaEditHtml === 'string' &&
+        formulaEditHtml.length > 0 &&
+        !/<br\s*\/?>/i.test(formulaEditHtml);
+      const preferFormulaHtmlFromMirror =
+        ctMirrorMultiline && formulaEditHtmlMissingBr;
       const inlineCellHasLinkRuns =
         cell?.ct?.t === 'inlineStr' &&
         Array.isArray(cell.ct.s) &&
@@ -550,7 +578,7 @@ const InputBox: React.FC = () => {
         if (isInlineStringCell(cell)) {
           value = getInlineStringHTML(row_index, col_index, flowdata);
         } else if (cell.f) {
-          value = getCellValue(row_index, col_index, flowdata, 'f');
+          value = getCellValue(row_index, col_index, flowdata!, 'f');
           setContext((ctx) => {
             createRangeHightlight(ctx, value);
           });
@@ -566,7 +594,15 @@ const InputBox: React.FC = () => {
       refs.globalCache.overwriteCell = false;
       let wroteEditorFromStoredCell = false;
       let wroteSingleHydratedLinkSpan = false;
-      if (!refs.globalCache.ignoreWriteCell && inputRef.current && value) {
+      if (
+        !refs.globalCache.ignoreWriteCell &&
+        inputRef.current &&
+        formulaEditHtml &&
+        !preferFormulaHtmlFromMirror
+      ) {
+        inputRef.current.innerHTML = formulaEditHtml;
+        wroteEditorFromStoredCell = true;
+      } else if (!refs.globalCache.ignoreWriteCell && inputRef.current && value) {
         if (
           cellHyperlink?.linkType &&
           cellHyperlink?.linkAddress &&
@@ -590,7 +626,7 @@ const InputBox: React.FC = () => {
         !overwrite
       ) {
         // @ts-ignore
-        const valueD = getCellValue(row_index, col_index, flowdata, 'f');
+        const valueD = getCellValue(row_index, col_index, flowdata!, 'f');
         inputRef.current.innerText = valueD;
         wroteEditorFromStoredCell = true;
       }
@@ -754,12 +790,12 @@ const InputBox: React.FC = () => {
       return;
     }
 
-    const inputText = refs.cellInput.current.innerText?.trim() || '';
-    if (!inputText.startsWith('=')) {
+    const inputText = refs.cellInput.current.innerText ?? '';
+    if (!startsWithFormula(inputText)) {
       formulaAnchorCellRef.current = null;
       suppressAnchorSelectionSyncRef.current = null;
     }
-  }, [context.luckysheetCellUpdate, refs.cellInput]);
+  }, [context.luckysheetCellUpdate, refs.cellInput, startsWithFormula]);
 
   // Clear stale formula range visuals/state when editing target cell changes.
   // This prevents previous formula range highlights from leaking into a new
@@ -845,9 +881,10 @@ const InputBox: React.FC = () => {
         formulaName,
       );
       const safeText = escapeScriptTag(text);
-      const html = safeText.startsWith('=')
-        ? functionHTMLGenerate(safeText)
-        : escapeHTMLTag(safeText);
+      const normalizedSafeText = normalizeFormulaGateText(safeText);
+      const html = startsWithFormula(normalizedSafeText)
+        ? functionHTMLGenerate(normalizedSafeText)
+        : escapeHTMLTag(normalizedSafeText);
 
       textEditor.innerHTML = html;
       if (fxEditor) {
@@ -866,7 +903,7 @@ const InputBox: React.FC = () => {
         draftCtx.functionHint = (formulaName || '').toUpperCase();
       });
     },
-    [setContext],
+    [normalizeFormulaGateText, setContext, startsWithFormula],
   );
 
   const clearSearchItemActiveClass = useCallback(() => {
@@ -1236,10 +1273,11 @@ const InputBox: React.FC = () => {
           });
         });
       }
-      const currentInputText = inputRef.current?.innerText?.trim() || '';
+      const currentInputText = inputRef.current?.innerText || '';
+      const currentInputIsFormula = startsWithFormula(currentInputText);
 
       if (
-        (e.key === '=' || currentInputText.startsWith('=')) &&
+        (e.key === '=' || currentInputIsFormula) &&
         context.luckysheetCellUpdate.length === 2 &&
         formulaAnchorCellRef.current == null
       ) {
@@ -1254,7 +1292,7 @@ const InputBox: React.FC = () => {
         ];
       }
 
-      if (e.key === '(' && currentInputText.startsWith('=')) {
+      if (e.key === '(' && currentInputIsFormula) {
         // When the user types "(" we are at/near a reference insertion point.
         // Clear dirtiness so keyboard/mouse referencing can continue.
         setContext((draftCtx) => {
@@ -1265,7 +1303,7 @@ const InputBox: React.FC = () => {
       if (
         isFormulaSegmentBoundaryKey(e.key) &&
         context.luckysheetCellUpdate.length > 0 &&
-        currentInputText.startsWith('=') &&
+        currentInputIsFormula &&
         formulaAnchorCellRef.current
       ) {
         // Comma / operators: segment done; clear range overlay and return to anchor.
@@ -1441,7 +1479,7 @@ const InputBox: React.FC = () => {
               // markRangeSelectionDirty clears formulaRangeHighlight; rebuild from the
               // live editor so argument highlights return after handleFormulaInput ran.
               const el = refs.cellInput.current;
-              if (el && el.innerText.trim().startsWith('=')) {
+              if (el && startsWithFormula(el.innerText ?? '')) {
                 createRangeHightlight(draftCtx, el.innerHTML);
                 rangeHightlightselected(draftCtx, el);
               }
@@ -1892,8 +1930,7 @@ const InputBox: React.FC = () => {
         const cellEl = refs.cellInput.current;
         if (
           cellEl &&
-          (cellEl.innerText?.trim().startsWith('=') ||
-            cellEl.textContent?.trim().startsWith('='))
+          startsWithFormula(cellEl.innerText ?? cellEl.textContent ?? '')
         ) {
           setContext((draftCtx) => {
             if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
@@ -1954,8 +1991,7 @@ const InputBox: React.FC = () => {
           const cellEl = refs.cellInput.current;
           if (
             cellEl &&
-            (cellEl.innerText?.trim().startsWith('=') ||
-              cellEl.textContent?.trim().startsWith('='))
+            startsWithFormula(cellEl.innerText ?? cellEl.textContent ?? '')
           ) {
             rangeHightlightselected(draftCtx, cellEl);
           }
@@ -2370,8 +2406,8 @@ const InputBox: React.FC = () => {
       if (draftCtx.luckysheetCellUpdate.length === 0) return;
       if (getFormulaEditorOwner(draftCtx) !== 'cell') return;
       if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
-      const t = el.innerText?.trim() ?? '';
-      if (!t.startsWith('=')) return;
+      const t = el.innerText ?? '';
+      if (!startsWithFormula(t)) return;
       if (
         draftCtx.formulaCache.rangestart ||
         draftCtx.formulaCache.rangedrag_column_start ||
@@ -2394,11 +2430,12 @@ const InputBox: React.FC = () => {
 
   // Helper function to extract function name from input text
   const getFunctionNameFromInput = useCallback(() => {
-    const inputText = inputRef?.current?.innerText || '';
-    if (!inputText.startsWith('=')) return null;
+    const inputText = normalizeFormulaGateText(inputRef?.current?.innerText || '');
+    const formulaText = inputText.trimStart();
+    if (!startsWithFormula(formulaText)) return null;
 
     // Try to find function name pattern: =FUNCTIONNAME(
-    const functionMatch = inputText.match(/^=([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
+    const functionMatch = formulaText.match(/^=([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
     if (functionMatch) {
       return functionMatch[1].toUpperCase();
     }
@@ -2430,6 +2467,12 @@ const InputBox: React.FC = () => {
   const showCellFormulaChrome =
     context.luckysheetCellUpdate.length > 0 &&
     getFormulaEditorOwner(context) === 'cell';
+
+  useEffect(() => {
+    if (!showCellFormulaChrome) return;
+    const text = (inputRef.current?.innerText || '').replace(/\u200b/g, '');
+    if (!/=|\(|[A-Za-z]/.test(text)) return;
+  }, [showCellFormulaChrome, showSearchHint, functionName, fn, context.functionHint, context]);
 
   const inputBoxBaseSelection =
     isInputBoxActive && firstSelectionActiveCell

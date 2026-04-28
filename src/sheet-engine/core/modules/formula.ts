@@ -46,6 +46,9 @@ const operatorjson: Record<string, number> = {};
 for (let i = 0; i < operatorArr.length; i += 1) {
   operatorjson[operatorArr[i].toString()] = 1;
 }
+const ZWSP = "\u200b";
+const normalizeFormulaBoundaryText = (s: string) =>
+  (s || "").replace(/\u00a0/g, " ").replace(/\u200b/g, "");
 function formulaDebugPreview(value: any) {
   if (Array.isArray(value)) {
     return {
@@ -289,6 +292,10 @@ export class FormulaCache {
   formulaEditorOwner?: "cell" | "fx" | null;
 
   functionRangeIndex?: number[];
+
+  // Global logical character offset of caret in formula text (treats <br> as 1 char).
+  // Resilient to span-boundary changes between pre-render and post-render DOM.
+  functionRangeGlobalOffset?: number | null;
 
   functionlistMap: any;
 
@@ -2584,6 +2591,19 @@ export function moveCursorToEnd(editableDiv: HTMLDivElement | null | undefined) 
   }
 }
 
+function getLogicalNodeLength(node: Node | null | undefined): number {
+  if (!node) return 0;
+  if (node.nodeType === Node.TEXT_NODE) return node.nodeValue?.length || 0;
+  if (node.nodeType !== Node.ELEMENT_NODE) return 0;
+  const el = node as HTMLElement;
+  if (el.tagName.toLowerCase() === "br") return 1;
+  let len = 0;
+  el.childNodes.forEach((child) => {
+    len += getLogicalNodeLength(child);
+  });
+  return len;
+}
+
 export function setCaretPosition(
   ctx: Context,
   textDom: HTMLElement,
@@ -2606,7 +2626,65 @@ export function setCaretPosition(
       el.innerHTML = textContent;
     }
 
-    range.setStart(el.childNodes[children], pos);
+    const child = el.childNodes[children];
+    if (!child) {
+      range.setStart(el, Math.min(pos, el.childNodes.length));
+    } else if (
+      child.nodeType === Node.ELEMENT_NODE &&
+      (child as Element).nodeName.toLowerCase() === "br"
+    ) {
+      // `pos` is logical char offset in span text, but <span><br>TEXT</span>
+      // has two child nodes where element offsets are node-index based.
+      // Map logical offsets explicitly:
+      // - 0: before <br>
+      // - 1: right after <br> (start of second line)
+      // - >=2: inside following text node at offset (pos - 1)
+      const textAfterBr = el.childNodes[children + 1];
+      if (pos <= 0) {
+        range.setStart(el, 0);
+      } else if (
+        textAfterBr &&
+        textAfterBr.nodeType === Node.TEXT_NODE
+      ) {
+        if (pos === 1) {
+          range.setStart(el, 1);
+        } else {
+          const textLen = textAfterBr.nodeValue?.length || 0;
+          range.setStart(textAfterBr, Math.min(Math.max(pos - 1, 0), textLen));
+        }
+      } else {
+        // When span is only `<br>` (empty second line), browser may render
+        // caret at previous-line end for element offsets. Insert a transient
+        // zero-width text anchor so caret visually stays on the empty line.
+        let trailingTextNode: Node | null = null;
+        if (
+          el.childNodes.length === 1 &&
+          el.firstChild &&
+          el.firstChild.nodeType === Node.ELEMENT_NODE &&
+          (el.firstChild as HTMLElement).tagName.toLowerCase() === "br"
+        ) {
+          trailingTextNode = document.createTextNode("\u200b");
+          el.appendChild(trailingTextNode);
+        }
+        if (trailingTextNode && trailingTextNode.nodeType === Node.TEXT_NODE) {
+          range.setStart(trailingTextNode, 0);
+        } else {
+          range.setStart(el, Math.min(1, el.childNodes.length));
+        }
+      }
+    } else {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const textLen = child.nodeValue?.length || 0;
+        range.setStart(child, Math.min(Math.max(pos, 0), textLen));
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        range.setStart(
+          child,
+          Math.min(Math.max(pos, 0), child.childNodes.length)
+        );
+      } else {
+        range.setStart(el, Math.min(Math.max(pos, 0), el.childNodes.length));
+      }
+    }
     range.collapse(true);
     sel?.removeAllRanges();
     sel?.addRange(range);
@@ -2629,8 +2707,47 @@ function functionRange(
     // ie11 10 9 ff safari
     const currSelection = window.getSelection();
     if (!currSelection) return;
-    const fri = findrangeindex(ctx, v, vp);
-
+    const spans = obj.querySelectorAll("span");
+    const globalOffset = ctx.formulaCache.functionRangeGlobalOffset;
+    let fri: [number, number] | null = null;
+    if (
+      typeof globalOffset === "number" &&
+      Number.isFinite(globalOffset) &&
+      spans.length > 0
+    ) {
+      // Walk post-render top-level children, decrementing the global char offset.
+      // Lands in the span containing the caret regardless of span re-splits.
+      let remaining = Math.max(0, globalOffset);
+      let spanIdx = 0;
+      for (let i = 0; i < obj.childNodes.length; i += 1) {
+        const n = obj.childNodes[i];
+        const len = getLogicalNodeLength(n);
+        const isSpan =
+          n.nodeType === Node.ELEMENT_NODE &&
+          (n as HTMLElement).tagName.toLowerCase() === "span";
+        if (isSpan) {
+          if (remaining <= len) {
+            fri = [spanIdx, remaining];
+            break;
+          }
+          spanIdx += 1;
+        } else if (remaining <= len && spanIdx < spans.length) {
+          // Caret falls within an inter-span node (e.g. top-level <br> or text);
+          // anchor it at the start of the next span.
+          fri = [spanIdx, 0];
+          break;
+        }
+        remaining -= len;
+      }
+      if (!fri) {
+        const lastIdx = spans.length - 1;
+        fri = [lastIdx, getLogicalNodeLength(spans[lastIdx])];
+      }
+    } else {
+      // Legacy diff-based fallback (no global offset captured).
+      const computed = findrangeindex(ctx, v, vp);
+      fri = _.isNil(computed) ? null : (computed as [number, number]);
+    }
     if (_.isNil(fri)) {
       currSelection.selectAllChildren(obj);
       currSelection.collapseToEnd();
@@ -2908,7 +3025,7 @@ export function rangeHightlightselected(ctx: Context, $editor: HTMLDivElement) {
   // ) {
   if (!currSelection) return;
 
-  const currText = _.trim(currSelection.textContent || "");
+  const currText = _.trim((currSelection.textContent || "").replace(/\u200b/g, ""));
 
   if (currText === "=") {
     const { functionlist } = locale(ctx);
@@ -2956,6 +3073,68 @@ function functionHTML(txt: string) {
     squote: 0,
     dquote: 0,
     braces: 0,
+  };
+
+  const appendStrTail = (acc: string, dquote: number) => {
+    if (acc.length === 0) {
+      return;
+    }
+    // Keep whitespace (including \n which becomes <br>) OUTSIDE the wrapping
+    // span. Otherwise <br> ends up inside a span as its first child, and
+    // setCaretPosition's br-handling places the caret one char into the
+    // following text (e.g. between "F" and "3" of F3:I3, or before "P" on a
+    // new line). Strings (dquote) preserve content as-is.
+    let leadingWS = "";
+    let trailingWS = "";
+    if (dquote === 0) {
+      leadingWS = acc.match(/^\s+/)?.[0] || "";
+      trailingWS = acc.match(/\s+$/)?.[0] || "";
+      acc = acc.slice(leadingWS.length, acc.length - trailingWS.length);
+      function_str += leadingWS;
+      if (acc.length === 0) {
+        function_str += trailingWS;
+        return;
+      }
+    }
+    if (iscelldata(_.trim(acc))) {
+      const rangeIndex =
+        rangeIndexes.length > functionHTMLIndex
+          ? rangeIndexes[functionHTMLIndex]
+          : functionHTMLIndex;
+      function_str += `<span class="fortune-formula-functionrange-cell" rangeindex="${rangeIndex}" dir="auto" style="color:${colors[rangeIndex]};">${acc}</span>`;
+      functionHTMLIndex += 1;
+    } else if (dquote > 0) {
+      function_str += `${acc}</span>`;
+    } else if (acc.indexOf("</span>") === -1 && acc.length > 0) {
+      const regx = /{.*?}/;
+
+      if (regx.test(_.trim(acc))) {
+        const arraytxt = regx.exec(acc)![0];
+        const arraystart = acc.search(regx);
+        let alltxt = "";
+
+        if (arraystart > 0) {
+          alltxt += `<span dir="auto" class="luckysheet-formula-text-color">${acc.substr(
+            0,
+            arraystart
+          )}</span>`;
+        }
+
+        alltxt += `<span dir="auto" style="color:#959a05" class="luckysheet-formula-text-array">${arraytxt}</span>`;
+
+        if (arraystart + arraytxt.length < acc.length) {
+          alltxt += `<span dir="auto" class="luckysheet-formula-text-color">${acc.substr(
+            arraystart + arraytxt.length,
+            acc.length
+          )}</span>`;
+        }
+
+        function_str += alltxt;
+      } else {
+        function_str += `<span dir="auto" class="luckysheet-formula-text-color">${acc}</span>`;
+      }
+    }
+    if (trailingWS) function_str += trailingWS;
   };
 
   while (i < funcstack.length) {
@@ -3118,45 +3297,7 @@ function functionHTML(txt: string) {
     }
 
     if (i === funcstack.length - 1) {
-      // function_str += str;
-      if (iscelldata(_.trim(str))) {
-        const rangeIndex =
-          rangeIndexes.length > functionHTMLIndex
-            ? rangeIndexes[functionHTMLIndex]
-            : functionHTMLIndex;
-        function_str += `<span class="fortune-formula-functionrange-cell" rangeindex="${rangeIndex}" dir="auto" style="color:${colors[rangeIndex]};">${str}</span>`;
-        functionHTMLIndex += 1;
-      } else if (matchConfig.dquote > 0) {
-        function_str += `${str}</span>`;
-      } else if (str.indexOf("</span>") === -1 && str.length > 0) {
-        const regx = /{.*?}/;
-
-        if (regx.test(_.trim(str))) {
-          const arraytxt = regx.exec(str)![0];
-          const arraystart = str.search(regx);
-          let alltxt = "";
-
-          if (arraystart > 0) {
-            alltxt += `<span dir="auto" class="luckysheet-formula-text-color">${str.substr(
-              0,
-              arraystart
-            )}</span>`;
-          }
-
-          alltxt += `<span dir="auto" style="color:#959a05" class="luckysheet-formula-text-array">${arraytxt}</span>`;
-
-          if (arraystart + arraytxt.length < str.length) {
-            alltxt += `<span dir="auto" class="luckysheet-formula-text-color">${str.substr(
-              arraystart + arraytxt.length,
-              str.length
-            )}</span>`;
-          }
-
-          function_str += alltxt;
-        } else {
-          function_str += `<span dir="auto" class="luckysheet-formula-text-color">${str}</span>`;
-        }
-      }
+      appendStrTail(str, matchConfig.dquote);
     }
 
     i += 1;
@@ -3170,11 +3311,16 @@ export function functionHTMLGenerate(txt: string) {
     return txt;
   }
 
+  // Normalize newlines so functionHTML sees \n; mirror storage may use \r\n.
+  txt = txt.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   functionHTMLIndex = 0;
 
-  return `<span dir="auto" class="luckysheet-formula-text-color">=</span>${functionHTML(
-    txt
-  )}`;
+  const inner = functionHTML(txt);
+  let html = `<span dir="auto" class="luckysheet-formula-text-color">=</span>${inner}`;
+  if (html.includes("\n")) {
+    html = html.replace(/\n/g, "<br>");
+  }
+  return html;
 }
 
 function getRangeIndexes($editor: HTMLDivElement) {
@@ -3189,6 +3335,53 @@ function getRangeIndexes($editor: HTMLDivElement) {
       }
     });
   return res;
+}
+
+// Compute the caret's global logical character offset within the formula editor,
+// counting `<br>` as 1 char. Resilient to span re-splits between pre/post-render.
+function getEditorGlobalCaretOffset(
+  editor: HTMLDivElement,
+  selection: globalThis.Selection
+): number | null {
+  if (!selection.anchorNode || selection.rangeCount === 0) return null;
+  if (!editor.contains(selection.anchorNode)) return null;
+
+  let offset = 0;
+  let found = false;
+  const visit = (node: Node): boolean => {
+    if (node === selection.anchorNode) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        offset += selection.anchorOffset;
+      } else {
+        const childIdx = Math.min(
+          selection.anchorOffset,
+          node.childNodes.length
+        );
+        for (let i = 0; i < childIdx; i += 1) {
+          offset += getLogicalNodeLength(node.childNodes[i]);
+        }
+      }
+      found = true;
+      return true;
+    }
+    if (node.nodeType === Node.TEXT_NODE) {
+      offset += node.nodeValue?.length || 0;
+      return false;
+    }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const el = node as HTMLElement;
+      if (el.tagName.toLowerCase() === "br") {
+        offset += 1;
+        return false;
+      }
+      for (let i = 0; i < el.childNodes.length; i += 1) {
+        if (visit(el.childNodes[i])) return true;
+      }
+    }
+    return false;
+  };
+  visit(editor);
+  return found ? offset : null;
 }
 
 export function getLastFormulaRangeIndex(
@@ -3279,7 +3472,13 @@ function getCurrentFormulaSlotTextBeforeCaret(
   editor: HTMLElement,
   caretOffset: number
 ) {
-  const textBefore = editor.innerText.slice(0, caretOffset);
+  // Use textContent (no `\n` for <br>) to match `caretOffset` which is computed
+  // from `Range.toString().length`. innerText injects `\n` per <br> and would
+  // shift indices in multi-line formulas. Also strip `\u200b` (caret-render
+  // helper on empty multi-line rows) so it doesn't pollute slot detection.
+  const textBefore = normalizeFormulaBoundaryText(
+    editor.textContent || ""
+  ).slice(0, caretOffset);
   const parts = textBefore.split(/[=,(+\-*/&<>]/);
   return _.trim(parts[parts.length - 1] || "");
 }
@@ -3313,8 +3512,11 @@ function isCaretInsideIncompleteTruncatedRangeSyntax(
   editor: HTMLElement,
   caretOffset: number
 ): boolean {
-  const textBefore = editor.innerText.slice(0, caretOffset);
-  const textAfter = editor.innerText.slice(caretOffset);
+  // textContent matches `caretOffset` space (Range.toString length, no <br>=>\n).
+  // Strip `\u200b` so the empty-line caret-render helper doesn't shift indices.
+  const tc = normalizeFormulaBoundaryText(editor.textContent || "");
+  const textBefore = tc.slice(0, caretOffset);
+  const textAfter = tc.slice(caretOffset);
   const tokenSplit = /[=,()+\-*/&<>%^]/;
   const leftToken = (textBefore.split(tokenSplit).pop() || "").trim();
   const rightToken = (textAfter.split(tokenSplit)[0] || "").trim();
@@ -3362,7 +3564,7 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
     return false;
   }
 
-  const inputText = editor.innerText.trim();
+  const inputText = normalizeFormulaBoundaryText(editor.innerText).trim();
   if (!inputText.startsWith("=")) {
     return false;
   }
@@ -3379,7 +3581,12 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
   const preCaretRange = document.createRange();
   preCaretRange.selectNodeContents(editor);
   preCaretRange.setEnd(caretRange.endContainer, caretRange.endOffset);
-  const caretOffset = preCaretRange.toString().length;
+  // Normalize so `\u200b` (empty-line caret-render helper) is not counted as
+  // a real character; keeps `caretOffset` aligned with the normalized text
+  // used for slicing below.
+  const caretOffset = normalizeFormulaBoundaryText(
+    preCaretRange.toString()
+  ).length;
   const slotTextBeforeCaret = getCurrentFormulaSlotTextBeforeCaret(
     editor,
     caretOffset
@@ -3396,14 +3603,17 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
     return false;
   }
 
-  const textAfter = editor.innerText.slice(caretOffset);
+  // Use textContent (matches `caretOffset` from Range.toString().length).
+  // innerText would shift these indices by 1 per <br> in multi-line formulas.
+  const fullText = normalizeFormulaBoundaryText(editor.textContent || "");
+  const textAfter = fullText.slice(caretOffset);
   const remaining = textAfter.replace(/^\s+/, "");
   if (remaining.length === 0) {
     const atCaret = getFormulaRangeIndexAtCaret(editor as HTMLDivElement);
     if (atCaret !== null) {
       return true;
     }
-    const textBefore = editor.innerText.slice(0, caretOffset).trimEnd();
+    const textBefore = fullText.slice(0, caretOffset).trimEnd();
     const lastCh = textBefore.slice(-1);
     if (!lastCh) {
       return false;
@@ -3420,9 +3630,9 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
   }
 
   const first = remaining[0];
-  return (
-    first === "," || first === ")" || first === "&" || first in operatorjson
-  );
+  const result =
+    first === "," || first === ")" || first === "&" || first in operatorjson;
+  return result;
 }
 
 function hasCommaOrAnotherRefAfterRangeCell(cell: HTMLElement): boolean {
@@ -3548,8 +3758,33 @@ export function handleFormulaInput(
     //   return;
     // }
     let value1: string;
-    const value1txt = preText ?? $editor.innerText;
-    let value = $editor.innerText;
+    const readEditorText = (root: HTMLElement): string => {
+      const readNode = (node: Node): string => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return (node.nodeValue || "").replace(/\u200b/g, "");
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return "";
+        const el = node as HTMLElement;
+        if (el.tagName.toLowerCase() === "br") return "\n";
+        let out = "";
+        el.childNodes.forEach((child) => {
+          out += readNode(child);
+        });
+        return out;
+      };
+      let text = "";
+      root.childNodes.forEach((node) => {
+        text += readNode(node);
+      });
+      return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    };
+    const value1txt = preText ?? readEditorText($editor);
+    let value = readEditorText($editor);
+    if (kcode === 8 || kcode === 46) {
+      // contenteditable can materialize an extra trailing line-break placeholder
+      // (<br><br>) when deleting the last visible char on the last line.
+      value = value.replace(/\n{2,}$/, "\n");
+    }
     value = escapeScriptTag(value);
     if (
       value.length > 0 &&
@@ -3586,11 +3821,16 @@ export function handleFormulaInput(
             currSelection.anchorOffset,
           ];
         }
+        // Robust to span re-splits across re-renders: track caret as a
+        // global logical char offset, restored against post-render DOM.
+        ctx.formulaCache.functionRangeGlobalOffset =
+          getEditorGlobalCaretOffset($editor, currSelection);
       } else {
         // Internet Explorer before version 9
         // @ts-ignore
         const textRange = document.selection.createRange();
         ctx.formulaCache.functionRangeIndex = textRange;
+        ctx.formulaCache.functionRangeGlobalOffset = null;
       }
 
       $editor.innerHTML = value;
@@ -3989,17 +4229,24 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
     anchor?.parentNode?.nodeName.toLowerCase() === "span" &&
     anchorOffset !== 0
   ) {
-    let txt = _.trim(anchor.textContent ?? "");
+    let txt = _.trim(normalizeFormulaBoundaryText(anchor.textContent ?? ""));
     let lasttxt = "";
 
     if (txt.length === 0 && anchor.parentNode.previousSibling) {
-      const ahr = anchor.parentNode.previousSibling;
-      txt = _.trim(ahr.textContent || "");
+      // Walk past any `<br>` (or other empty) siblings — common on empty
+      // multi-line continuation rows where the caret span only holds `\u200b`.
+      let ahr: Node | null = anchor.parentNode.previousSibling;
+      while (
+        ahr &&
+        _.trim(normalizeFormulaBoundaryText(ahr.textContent || "")).length === 0
+      ) {
+        ahr = ahr.previousSibling;
+      }
+      txt = _.trim(normalizeFormulaBoundaryText(ahr?.textContent || ""));
       lasttxt = txt.slice(-1);
     } else {
       lasttxt = anchorOffset > 0 ? txt.charAt(anchorOffset - 1) : "";
     }
-
     if (
       (istooltip && (lasttxt === "(" || lasttxt === ",")) ||
       (!istooltip &&
@@ -4007,7 +4254,8 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
           lasttxt === "," ||
           lasttxt === "=" ||
           lasttxt in operatorjson ||
-          lasttxt === "&"))
+          lasttxt === "&" ||
+          lasttxt === ZWSP))
     ) {
       ctx.formulaCache.rangeSetValueTo = anchor.parentNode;
       return allowRangeInsertionAtCaret();
@@ -4029,11 +4277,13 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
     }
 
     const spans = editorEl.querySelectorAll("span");
-    let txt = _.trim(_.last(spans)?.innerText);
+    let txt = _.trim(normalizeFormulaBoundaryText(_.last(spans)?.innerText || ""));
     let refSpan: Element | undefined = _.last(spans);
 
     if (txt.length === 0 && spans.length > 1) {
-      txt = _.trim(spans[spans.length - 2].innerText);
+      txt = _.trim(
+        normalizeFormulaBoundaryText(spans[spans.length - 2].innerText)
+      );
       refSpan = spans[spans.length - 2];
     }
 
@@ -4046,7 +4296,8 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
           lasttxt === "," ||
           lasttxt === "=" ||
           lasttxt in operatorjson ||
-          lasttxt === "&"))
+          lasttxt === "&" ||
+          lasttxt === ZWSP))
     ) {
       ctx.formulaCache.rangeSetValueTo = refSpan;
       return allowRangeInsertionAtCaret();
@@ -4066,7 +4317,9 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
       return false;
     }
     if (anchor.previousSibling) {
-      const txt = _.trim(anchor.previousSibling.textContent);
+      const txt = _.trim(
+        normalizeFormulaBoundaryText(anchor.previousSibling.textContent || "")
+      );
       const lasttxt = txt.slice(-1);
 
       if (
@@ -4076,7 +4329,8 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
             lasttxt === "," ||
             lasttxt === "=" ||
             lasttxt in operatorjson ||
-            lasttxt === "&"))
+            lasttxt === "&" ||
+            lasttxt === ZWSP))
       ) {
         ctx.formulaCache.rangeSetValueTo = anchor.previousSibling;
         return allowRangeInsertionAtCaret();
@@ -4107,7 +4361,6 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
       return true;
     }
   }
-
   return false;
 }
 
@@ -4117,16 +4370,16 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
 export function isFormulaReferenceInputMode(ctx: Context): boolean {
   const editor = getActiveFormulaEditorElement(ctx);
   const inputText = (editor?.innerText || "").trim();
-
-  const refFlowActive =
+  const hasActiveRangeDrag =
     !!ctx.formulaCache.rangestart ||
     !!ctx.formulaCache.rangedrag_column_start ||
-    !!ctx.formulaCache.rangedrag_row_start ||
-    ctx.formulaCache.rangeSelectionActive === true;
+    !!ctx.formulaCache.rangedrag_row_start;
+  const caretAtValidInsertionPoint =
+    !!editor && isCaretAtValidFormulaRangeInsertionPoint(editor);
 
-  if (refFlowActive) {
-    return true;
-  }
+  const refFlowActive =
+    hasActiveRangeDrag ||
+    ctx.formulaCache.rangeSelectionActive === true;
 
   if (!inputText.startsWith("=")) {
     return false;
@@ -4139,17 +4392,22 @@ export function isFormulaReferenceInputMode(ctx: Context): boolean {
     return false;
   }
 
-  // Priority: valid caret entry point should reopen reference mode first.
-  // Dirty state blocks only when caret is NOT at a valid insertion slot.
-  if (editor && isCaretAtValidFormulaRangeInsertionPoint(editor)) {
-    if (ctx.formulaCache.rangeSelectionActive === false) {
-      ctx.formulaCache.rangeSelectionActive = null;
-    }
-    return true;
-  }
-
+  // Dirty/manual-edit mode is sticky for the current edit session: do not
+  // auto-recover range mode just because caret reaches a syntactically valid slot.
   if (ctx.formulaCache.rangeSelectionActive === false) {
     return false;
+  }
+
+  // During active mouse drag/resize keep range mode on; for non-drag keyboard
+  // states, still require caret to be at a valid insertion point.
+  if (refFlowActive) {
+    if (hasActiveRangeDrag) return true;
+    return caretAtValidInsertionPoint;
+  }
+
+  // Priority: valid caret entry point should reopen reference mode first.
+  if (caretAtValidInsertionPoint) {
+    return true;
   }
 
   return israngeseleciton(ctx);
@@ -4168,6 +4426,9 @@ export function maybeRecoverDirtyRangeSelection(ctx: Context): boolean {
   const inputText = (editor.innerText || "").trim();
 
   const atCaretRangeIndex = getFormulaRangeIndexAtCaret(editor);
+  const validInsertion = isCaretAtValidFormulaRangeInsertionPoint(editor);
+  const israngesel = israngeseleciton(ctx);
+  const startsEq = inputText.startsWith("=");
 
   // Recover when the caret is back in a fresh, syntactically valid insertion
   // slot (e.g. `=`, between `=,`, after `,`, or after `(`), even if other
@@ -4175,10 +4436,10 @@ export function maybeRecoverDirtyRangeSelection(ctx: Context): boolean {
   // Do NOT recover while the caret is still inside a dirty managed range token
   // (e.g. `=A2:A` after deleting the trailing `5` from `=A2:A5`).
   if (
-    inputText.startsWith("=") &&
+    startsEq &&
     atCaretRangeIndex === null &&
-    isCaretAtValidFormulaRangeInsertionPoint(editor) &&
-    israngeseleciton(ctx)
+    validInsertion &&
+    israngesel
   ) {
     ctx.formulaCache.rangeSelectionActive = null;
     return true;
@@ -4531,8 +4792,13 @@ export function rangeSetValue(
     setCaretPosition(ctx, spanToReplace, 0, range.length, $editor);
     //   }
   } else {
-    const function_str = `<span class="fortune-formula-functionrange-cell" rangeindex="${functionHTMLIndex}" dir="auto" style="color:${colors[functionHTMLIndex]};">${range}</span>`;
-    const newEle = parseElement(function_str);
+    const existingRangeIndexes = getRangeIndexes($editor);
+    const nextRangeIndex =
+      existingRangeIndexes.length > 0
+        ? Math.max(...existingRangeIndexes) + 1
+        : functionHTMLIndex;
+    const function_str = `<span class="fortune-formula-functionrange-cell" rangeindex="${nextRangeIndex}" dir="auto" style="color:${colors[nextRangeIndex]};">${range}</span>`;
+    const newEle = parseElement(function_str) as HTMLSpanElement;
     let refEle = ctx.formulaCache.rangeSetValueTo;
     if (refEle && !refEle.parentNode) {
       israngeseleciton(ctx);
@@ -4558,17 +4824,15 @@ export function rangeSetValue(
     } else {
       $editor.appendChild(newEle);
     }
-    ctx.formulaCache.rangechangeindex = functionHTMLIndex;
-    const span = $editor.querySelector(
-      `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`
-    ) as HTMLSpanElement | null;
+    ctx.formulaCache.rangechangeindex = nextRangeIndex;
+    functionHTMLIndex = Math.max(functionHTMLIndex, nextRangeIndex + 1);
+    const span = newEle?.parentNode ? newEle : null;
     if (span) {
       setCaretPosition(ctx, span, 0, range.length, $editor);
     } else {
       // Best-effort: avoid crashing on unexpected DOM; keep editor content updated.
       moveCursorToEnd($editor);
     }
-    functionHTMLIndex += 1;
   }
 
   if ($copyTo) $copyTo.innerHTML = $editor.innerHTML;

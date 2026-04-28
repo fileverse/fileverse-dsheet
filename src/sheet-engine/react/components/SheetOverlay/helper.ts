@@ -229,7 +229,7 @@ export function isStrictFormulaEditorText(editor: HTMLDivElement | null): boolea
   if (!editor) return false;
   const raw = editor.innerText ?? '';
   const text = normalizeEditorTextForFormula(raw);
-  return text[0] === '=';
+  return text.trimStart()[0] === '=';
 }
 
 /** Same rule as InputBox/Fx onChange: show function list while typing a name after `=`. */
@@ -239,16 +239,36 @@ export function shouldShowFormulaFunctionList(
   if (!editor) return false;
   const { text, beforeCaret } = getNormalizedTextAndCaret(editor);
   if (!text) return false;
+  const formulaText = text.trimStart();
 
   // Strict rule: treat as a formula only if '=' is the very first character.
-  if (text[0] !== '=') return false;
+  if (formulaText[0] !== '=') {
+    return false;
+  }
 
   // Delay dropdown: do not open until the user typed some non-space after '='.
-  if (text.slice(1).trim().length === 0) return false;
+  if (formulaText.slice(1).trim().length === 0) {
+    return false;
+  }
 
   // Caret-aware: show suggestions while typing a function identifier near caret.
-  const tokenMatch = beforeCaret.match(/[A-Za-z_][A-Za-z0-9_]*$/);
-  if (!tokenMatch) return false;
+  let tokenMatch = beforeCaret.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+  if (!tokenMatch) {
+    // Fallback for first-keystroke-after-newline caret lag:
+    // in some contentEditable transitions, `text` already includes the typed
+    // letter while `beforeCaret` still points just before it.
+    const trailingTokenMatch = text.match(/[A-Za-z_][A-Za-z0-9_]*$/);
+    if (
+      trailingTokenMatch &&
+      text.length >= beforeCaret.length &&
+      text.startsWith(beforeCaret)
+    ) {
+      tokenMatch = trailingTokenMatch;
+    }
+  }
+  if (!tokenMatch) {
+    return false;
+  }
   const token = tokenMatch[0];
   const tokenStart = beforeCaret.length - token.length;
 
@@ -256,10 +276,14 @@ export function shouldShowFormulaFunctionList(
   // common separators inside a formula.
   const charBefore = tokenStart > 0 ? beforeCaret[tokenStart - 1] : '';
   const okBoundary = tokenStart === 1 || /[\s=(,+\-*/&^<>]/.test(charBefore);
-  if (!okBoundary) return false;
+  if (!okBoundary) {
+    return false;
+  }
 
   // Ensure the token is not before '='.
-  if (tokenStart <= 0) return false;
+  if (tokenStart <= 0) {
+    return false;
+  }
 
   return true;
 }
@@ -275,10 +299,11 @@ export function isFormulaCompleteAtCaret(
 ): boolean {
   if (!editor) return false;
   const { text, caret } = getNormalizedTextAndCaret(editor);
-  if (!text || text[0] !== '=') return false;
+  const formulaText = text.trimStart();
+  if (!formulaText || formulaText[0] !== '=') return false;
   if (caret !== text.length) return false;
 
-  const body = text.slice(1);
+  const body = formulaText.slice(1);
   let depth = 0;
   let sawOpenParen = false;
   for (let i = 0; i < body.length; i += 1) {
