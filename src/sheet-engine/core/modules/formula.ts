@@ -3888,6 +3888,107 @@ function isfreezonFuc(txt: string) {
   return ret;
 }
 
+function cycleSingleA1RefLock(ref: string): string | null {
+  const m = ref.match(/^((?:'(?:[^']|'')*'|[^!]+)!)?(\$?)([A-Za-z]+)(\$?)(\d+)$/);
+  if (!m) return null;
+  const [, sheetPrefix = "", colAbsRaw, col, rowAbsRaw, row] = m;
+  const colAbs = colAbsRaw === "$";
+  const rowAbs = rowAbsRaw === "$";
+  // Cycle order:
+  // A1 -> $A$1 -> A$1 -> $A1 -> A1
+  let nextColAbs = false;
+  let nextRowAbs = false;
+  if (!colAbs && !rowAbs) {
+    nextColAbs = true;
+    nextRowAbs = true;
+  } else if (colAbs && rowAbs) {
+    nextColAbs = false;
+    nextRowAbs = true;
+  } else if (!colAbs && rowAbs) {
+    nextColAbs = true;
+    nextRowAbs = false;
+  } else {
+    nextColAbs = false;
+    nextRowAbs = false;
+  }
+  return `${sheetPrefix}${nextColAbs ? "$" : ""}${col.toUpperCase()}${nextRowAbs ? "$" : ""
+    }${row}`;
+}
+
+function cycleReferenceLockToken(refText: string): string | null {
+  const txt = refText.trim();
+  if (txt.length === 0) return null;
+  if (txt.includes(":")) {
+    const [left, right, ...rest] = txt.split(":");
+    if (rest.length > 0 || !left || !right) return null;
+    const leftNext = cycleSingleA1RefLock(left);
+    const rightNext = cycleSingleA1RefLock(right);
+    if (!leftNext || !rightNext) return null;
+    return `${leftNext}:${rightNext}`;
+  }
+  return cycleSingleA1RefLock(txt);
+}
+
+export function toggleFormulaAbsoluteReferenceAtCaret(
+  ctx: Context,
+  $copyTo: HTMLDivElement | null | undefined,
+  $editor: HTMLDivElement | null | undefined
+): boolean {
+  if (!$editor) return false;
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || !sel.anchorNode) return false;
+  if (!$editor.contains(sel.anchorNode)) return false;
+
+  const anchorEl =
+    sel.anchorNode.nodeType === Node.ELEMENT_NODE
+      ? (sel.anchorNode as HTMLElement)
+      : sel.anchorNode.parentElement;
+  if (!anchorEl) return false;
+
+  const toRangeSpan = (n: Node | null | undefined): HTMLSpanElement | null => {
+    if (!n || n.nodeType !== Node.ELEMENT_NODE) return null;
+    const el = n as HTMLElement;
+    return el.matches("span.fortune-formula-functionrange-cell")
+      ? (el as HTMLSpanElement)
+      : null;
+  };
+
+  let targetSpan = anchorEl.closest(
+    "span.fortune-formula-functionrange-cell"
+  ) as HTMLSpanElement | null;
+
+  // Boundary caret support: if caret is between siblings at editor level,
+  // resolve to adjacent range span (typically previous sibling).
+  if (!targetSpan && sel.anchorNode === $editor) {
+    const offset = Math.min(sel.anchorOffset, $editor.childNodes.length);
+    const prev = offset > 0 ? $editor.childNodes[offset - 1] : null;
+    const next =
+      offset < $editor.childNodes.length ? $editor.childNodes[offset] : null;
+    targetSpan = toRangeSpan(prev) || toRangeSpan(next);
+  }
+
+  // Another boundary form: text node directly under editor between spans.
+  if (!targetSpan && sel.anchorNode.nodeType === Node.TEXT_NODE) {
+    const tn = sel.anchorNode as Text;
+    if (tn.parentElement === $editor) {
+      targetSpan = toRangeSpan(tn.previousSibling) || toRangeSpan(tn.nextSibling);
+    }
+  }
+
+  if (!targetSpan || !$editor.contains(targetSpan)) return false;
+
+  const oldText = targetSpan.textContent || "";
+  const cycled = cycleReferenceLockToken(oldText);
+  if (!cycled || cycled === oldText) return false;
+
+  const offsetInToken = cycled.length;
+
+  targetSpan.textContent = cycled;
+  setCaretPosition(ctx, targetSpan, 0, offsetInToken, $editor);
+  handleFormulaInput(ctx, $copyTo, $editor, 115);
+  return true;
+}
+
 function functionStrChange_range(
   txt: string,
   type: string,

@@ -14,6 +14,7 @@ import {
   setFormulaEditorOwner,
   getFormulaEditorOwner,
   suppressFormulaRangeSelectionForInitialEdit,
+  toggleFormulaAbsoluteReferenceAtCaret,
 } from "../modules/formula";
 import { isInlineStringCell } from "../modules/inline-string";
 import {
@@ -1072,11 +1073,28 @@ export async function handleGlobalKeyDown(
   const ignoredKeys = new Set(
     isFxInput
       ? fxPassArrowsToSheet
-        ? ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
-        : ["Enter", "Tab", "ArrowLeft", "ArrowRight"]
-      : ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+        ? [
+          "Enter",
+          "Tab",
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+          "F4",
+        ]
+        : ["Enter", "Tab", "ArrowLeft", "ArrowRight", "F4"]
+      : [
+        "Enter",
+        "Tab",
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "F4",
+      ]
   );
   const restCod = !ignoredKeys.has(kstr);
+  const isF4Key = kstr === "F4" || e.code === "F4" || kcode === 115;
 
   const passFindReplaceThroughEdit =
     (e.ctrlKey || e.metaKey) && (e.code === 'KeyF' || e.code === 'KeyH');
@@ -1215,8 +1233,11 @@ export async function handleGlobalKeyDown(
     clearTypeOverPending(cache);
     ctx.luckysheetCellUpdate = [row_index, col_index];
     e.preventDefault();
-  } else if (kstr === "F4" && ctx.luckysheetCellUpdate.length > 0) {
-    // TODO formula.setfreezonFuc(event);
+  } else if (isF4Key && ctx.luckysheetCellUpdate.length > 0) {
+    const owner = getFormulaEditorOwner(ctx);
+    const editor = owner === "fx" && fxInput ? fxInput : cellInput;
+    const copyTo = owner === "fx" ? cellInput : fxInput;
+    toggleFormulaAbsoluteReferenceAtCaret(ctx, copyTo, editor);
     e.preventDefault();
   } else if (kstr === "Escape" && ctx.luckysheetCellUpdate.length > 0) {
     cache.enteredEditByTyping = false;
