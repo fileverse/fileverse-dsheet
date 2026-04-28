@@ -2596,7 +2596,7 @@ const InputBox: React.FC = () => {
             transformOrigin: 'left top',
             width: `${100 / context.zoomRatio}%`,
             height: `${100 / context.zoomRatio}%`,
-            color: 'black',
+            color: 'inherit',
           }}
           aria-autocomplete="list"
           onChange={onChange}
