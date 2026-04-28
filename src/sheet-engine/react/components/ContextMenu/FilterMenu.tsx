@@ -192,6 +192,48 @@ const FilterMenu: React.FC = () => {
   const hiddenRows = useRef<number[]>([]);
   const [showValues, setShowValues] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
+  const normalizeValueText = useCallback((v: unknown) => {
+    return String(v ?? '').toLocaleLowerCase();
+  }, []);
+  const showValuesTextSet = useMemo(() => {
+    return new Set(showValues.map((v) => normalizeValueText(v)));
+  }, [normalizeValueText, showValues]);
+  const groupedValues = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        normalizedText: string;
+        text: string;
+        keys: string[];
+        rows: number[];
+        value: string;
+        mask: string;
+      }
+    >();
+
+    for (const v of data.values) {
+      const normalizedText = normalizeValueText(v.text);
+      const existing = groups.get(normalizedText);
+      if (!existing) {
+        groups.set(normalizedText, {
+          normalizedText,
+          text: v.text,
+          keys: [v.key],
+          rows: [...v.rows],
+          value: v.value,
+          mask: v.mask,
+        });
+      } else {
+        existing.keys.push(v.key);
+        existing.rows.push(...v.rows);
+      }
+    }
+
+    return Array.from(groups.values()).map((g) => ({
+      ...g,
+      rows: _.uniq(g.rows),
+    }));
+  }, [data.values, normalizeValueText]);
   const [subMenuPos, setSubMenuPos] = useState<{
     left?: number;
     top: number;
@@ -578,6 +620,7 @@ const FilterMenu: React.FC = () => {
                       placeholder={filter.filterValueByTip}
                       id="luckysheet-\${menuid}-byvalue-input"
                       value={searchText}
+                      className="!pl-10"
                       onChange={(e) => {
                         setSearchText(e.target.value);
                         searchValues(e.target.value);
@@ -624,7 +667,9 @@ const FilterMenu: React.FC = () => {
                         value: '',
                         mask: '',
                         rows: data.values
-                          .filter((v) => showValues.includes(v.text))
+                          .filter((v) =>
+                            showValuesTextSet.has(normalizeValueText(v.text)),
+                          )
                           .flatMap((v) => v.rows),
                       }}
                       isChecked={() => {
@@ -648,37 +693,42 @@ const FilterMenu: React.FC = () => {
                       }}
                       isItemVisible={() => true}
                     />
-                    {data.values.map((v) => (
+                    {groupedValues.map((g) => (
                       <SelectItem
-                        key={v.key}
-                        item={v}
-                        isChecked={(key: string) =>
-                          !_.includes(valuesUncheck, key)
+                        key={g.normalizedText}
+                        item={{
+                          key: g.normalizedText,
+                          text: g.text,
+                          value: g.value,
+                          mask: g.mask,
+                          rows: g.rows,
+                        }}
+                        isChecked={() =>
+                          _.every(g.keys, (k) => !_.includes(valuesUncheck, k))
                         }
-                        onChange={(item: FilterValue, checked: boolean) => {
+                        onChange={(_item, checked) => {
                           const rows = hiddenRows.current;
+
                           if (checked) {
-                            // If checking an item, remove it from uncheck arrays and hidden rows
-                            hiddenRows.current = _.without(rows, ...item.rows);
+                            hiddenRows.current = _.without(rows, ...g.rows);
                             setValuesUncheck(
                               produce((draft) => {
-                                _.pull(draft, item.key);
+                                _.pull(draft, ...g.keys);
                               }),
                             );
                           } else {
-                            // If unchecking an item, add it to uncheck arrays and hidden rows
-                            hiddenRows.current = _.concat(rows, item.rows);
+                            hiddenRows.current = _.uniq(_.concat(rows, g.rows));
                             setValuesUncheck(
                               produce((draft) => {
-                                draft.push(item.key);
+                                draft.push(...g.keys);
                               }),
                             );
                           }
                         }}
-                        isItemVisible={(item) => {
+                        isItemVisible={() => {
                           return showValues.length === data.flattenValues.length
                             ? true
-                            : _.includes(showValues, item.text);
+                            : showValuesTextSet.has(g.normalizedText);
                         }}
                       />
                     ))}

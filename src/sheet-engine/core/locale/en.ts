@@ -11376,8 +11376,8 @@ export default {
   filter: {
     filter: 'Create filter',
 
-    sortByAsc: 'Ascending',
-    sortByDesc: 'Descending',
+    sortByAsc: 'Sort A to Z',
+    sortByDesc: 'Sort Z to A',
     filterByColor: 'Filter by color',
     filterByCondition: 'Filter by condition',
     filterByValues: 'Filter by values',
