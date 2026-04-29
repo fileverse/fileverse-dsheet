@@ -791,11 +791,6 @@ const SearchReplace: React.FC<{
                   />
                   <span>{findAndReplace.linkTextbox}</span>
                 </div>
-                {checkMode.regCheck && checkMode.formulaCheck && (
-                  <div className="text-body-sm color-fg-muted">
-                    {findAndReplace.regexFormulaReplaceWarning}
-                  </div>
-                )}
               </div>
             </div>
             <div

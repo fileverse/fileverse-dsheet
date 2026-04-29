@@ -11621,7 +11621,7 @@ export default {
 
     regexTextbox: 'Search using regular expression',
     regexFormulaReplaceWarning:
-      'Regex replacement does not apply to formulas. Formulas use plain text replacement.',
+      'Regex replacement can apply to formulas when “Search within formulae” is enabled. Use with care—this can break formulas.',
     wholeTextbox: 'Match entire cell content',
     distinguishTextbox: 'Match case',
     formulaTextbox: 'Search within formulae',
@@ -11636,10 +11636,10 @@ export default {
     rangeSelectOnSheetTitle: 'Select range on sheet',
     selectDataRangeTitle: 'Select a data range',
     replaceAllWithSkippedTip:
-      'Replaced ${n} matches. ${skipped} matches in formula cells were skipped.',
+      'Replaced ${n} matches. ${skipped} matches in formula cells were skipped (enable “Search within formulae” to include formulas).',
     replaceAllSuccessInfotext: "Replaced ${n} of '${find}' with '${replace}'",
     replaceAllSuccessWithSkippedInfotext:
-      "Replaced ${n} of '${find}' with '${replace}'. ${skipped} matches in formula cells were skipped.",
+      "Replaced ${n} of '${find}' with '${replace}'. ${skipped} matches in formula cells were skipped (enable “Search within formulae” to include formulas).",
 
     allReplaceBtn: 'Replace all',
     replaceBtn: 'Replace',

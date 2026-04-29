@@ -98,6 +98,24 @@ function normalizeForCaseMatch(s: string, caseSensitive: boolean): string {
   return caseSensitive ? s : s.toLowerCase();
 }
 
+function compileFindReplaceRegExp(
+  searchText: string,
+  {
+    regCheck,
+    caseCheck,
+    global,
+  }: { regCheck: boolean; caseCheck: boolean; global: boolean },
+): RegExp | null {
+  const flags = `${global ? 'g' : ''}${caseCheck ? '' : 'i'}`;
+  const pattern = regCheck ? searchText : getRegExpStr(searchText);
+  try {
+    return new RegExp(pattern, flags);
+  } catch {
+    // Invalid regex => treat as no matches / no-op (per product decision)
+    return null;
+  }
+}
+
 function formulaTextMatches(
   searchText: string,
   formulaText: string,
@@ -221,6 +239,14 @@ export function getSearchIndexArr(
   hyperlinkMap?: HyperlinkMap,
   hiddenConfig?: SearchHiddenConfig,
 ) {
+  const compiledReg =
+    !wordCheck && regCheck
+      ? compileFindReplaceRegExp(searchText, {
+          regCheck: true,
+          caseCheck: !!caseCheck,
+          global: false,
+        })
+      : null;
   const arr: { r: number; c: number }[] = [];
   const seen: Record<string, boolean> = {};
 
@@ -270,16 +296,13 @@ export function getSearchIndexArr(
               (hasLink && lsearch === linkText.toLowerCase());
           }
         } else if (regCheck) {
-          let reg: RegExp;
-          if (caseCheck) {
-            reg = new RegExp(getRegExpStr(searchText), 'g');
-          } else {
-            reg = new RegExp(getRegExpStr(searchText), 'ig');
+          const reg = compiledReg;
+          if (reg) {
+            matched =
+              (hasDisplay && valStr.search(reg) !== -1) ||
+              (hasFormula && formulaText.search(reg) !== -1) ||
+              (hasLink && linkText.search(reg) !== -1);
           }
-          matched =
-            (hasDisplay && reg.test(valStr)) ||
-            (hasFormula && reg.test(formulaText)) ||
-            (hasLink && reg.test(linkText));
         } else {
           if (caseCheck) {
             matched =
@@ -553,11 +576,11 @@ export function searchNext(
     const { r: curR, c: curC } =
       ctx.currentSheetId === curSheetId
         ? resolveFindNextCursor(ctx, [
-          {
-            row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
-            column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
-          },
-        ])
+            {
+              row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
+              column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
+            },
+          ])
         : { r: -1, c: -1 };
 
     const idxInCur = hitIndexOfCell(curHits, curR, curC);
@@ -1010,12 +1033,11 @@ export function replace(
       ]);
     }
   } else {
-    let reg;
-    if (checkModes.caseCheck) {
-      reg = new RegExp(getRegExpStr(searchText), 'g');
-    } else {
-      reg = new RegExp(getRegExpStr(searchText), 'ig');
-    }
+    const reg = compileFindReplaceRegExp(searchText, {
+      regCheck: !!checkModes.regCheck,
+      caseCheck: !!checkModes.caseCheck,
+      global: true,
+    });
 
     r = searchIndexArr[count].r;
     c = searchIndexArr[count].c;
@@ -1023,13 +1045,25 @@ export function replace(
       if (!checkModes.formulaCheck) return null;
       const cell = d?.[r]?.[c] as Cell | null | undefined;
       const formulaText = String(cell?.f ?? '');
-      if (!formulaTextMatches(searchText, formulaText, checkModes)) return null;
-      const nextFormula = replaceLiteralAll(
-        formulaText,
-        searchText,
-        replaceText,
-        !!checkModes.caseCheck,
-      );
+      if (checkModes.regCheck) {
+        const matchReg = compileFindReplaceRegExp(searchText, {
+          regCheck: true,
+          caseCheck: !!checkModes.caseCheck,
+          global: false,
+        });
+        if (!matchReg || formulaText.search(matchReg) === -1) return null;
+      } else if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+        return null;
+      }
+      const nextFormula =
+        checkModes.regCheck && reg
+          ? formulaText.replace(reg, replaceText)
+          : replaceLiteralAll(
+              formulaText,
+              searchText,
+              replaceText,
+              !!checkModes.caseCheck,
+            );
       if (looksLikeFormula(nextFormula)) {
         applyFormulaText(ctx, r, c, d, nextFormula);
       } else {
@@ -1053,6 +1087,7 @@ export function replace(
       return null;
     }
 
+    if (!reg) return null;
     const v = valueShowEs(r, c, d).toString().replace(reg, replaceText);
 
     setCellValue(ctx, r, c, d, v);
@@ -1180,11 +1215,14 @@ export function replaceAll(
       replaceCount += 1;
     }
   } else {
-    let reg;
-    if (checkModes.caseCheck) {
-      reg = new RegExp(getRegExpStr(searchText), 'g');
-    } else {
-      reg = new RegExp(getRegExpStr(searchText), 'ig');
+    const reg = compileFindReplaceRegExp(searchText, {
+      regCheck: !!checkModes.regCheck,
+      caseCheck: !!checkModes.caseCheck,
+      global: true,
+    });
+    if (!reg) {
+      // invalid regex => treat as no matches / no-op
+      return { ok: false, message: findAndReplace.noReplceTip };
     }
 
     for (let i = 0; i < searchIndexArr.length; i += 1) {
@@ -1197,16 +1235,28 @@ export function replaceAll(
         }
         const cell = d?.[r]?.[c] as Cell | null | undefined;
         const formulaText = String(cell?.f ?? '');
-        if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+        if (checkModes.regCheck) {
+          const matchReg = compileFindReplaceRegExp(searchText, {
+            regCheck: true,
+            caseCheck: !!checkModes.caseCheck,
+            global: false,
+          });
+          if (!matchReg || formulaText.search(matchReg) === -1) {
+            skippedCount += 1;
+            continue;
+          }
+        } else if (!formulaTextMatches(searchText, formulaText, checkModes)) {
           skippedCount += 1;
           continue;
         }
-        const nextFormula = replaceLiteralAll(
-          formulaText,
-          searchText,
-          replaceText,
-          !!checkModes.caseCheck,
-        );
+        const nextFormula = checkModes.regCheck
+          ? formulaText.replace(reg, replaceText)
+          : replaceLiteralAll(
+              formulaText,
+              searchText,
+              replaceText,
+              !!checkModes.caseCheck,
+            );
         if (looksLikeFormula(nextFormula)) {
           applyFormulaText(ctx, r, c, d, nextFormula);
         } else {
@@ -1327,10 +1377,12 @@ function replaceAllOnSheetInto(
       replaceCount += 1;
     }
   } else {
-    const reg = new RegExp(
-      getRegExpStr(searchText),
-      checkModes.caseCheck ? 'g' : 'ig',
-    );
+    const reg = compileFindReplaceRegExp(searchText, {
+      regCheck: !!checkModes.regCheck,
+      caseCheck: !!checkModes.caseCheck,
+      global: true,
+    });
+    if (!reg) return { replaced: 0, skipped: 0 };
     for (let i = 0; i < searchIndexArr.length; i += 1) {
       const { r, c } = searchIndexArr[i];
       if (isFormulaCell(d, r, c)) {
@@ -1340,16 +1392,28 @@ function replaceAllOnSheetInto(
         }
         const cell = d?.[r]?.[c] as Cell | null | undefined;
         const formulaText = String(cell?.f ?? '');
-        if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+        if (checkModes.regCheck) {
+          const matchReg = compileFindReplaceRegExp(searchText, {
+            regCheck: true,
+            caseCheck: !!checkModes.caseCheck,
+            global: false,
+          });
+          if (!matchReg || formulaText.search(matchReg) === -1) {
+            skippedCount += 1;
+            continue;
+          }
+        } else if (!formulaTextMatches(searchText, formulaText, checkModes)) {
           skippedCount += 1;
           continue;
         }
-        const nextFormula = replaceLiteralAll(
-          formulaText,
-          searchText,
-          replaceText,
-          !!checkModes.caseCheck,
-        );
+        const nextFormula = checkModes.regCheck
+          ? formulaText.replace(reg, replaceText)
+          : replaceLiteralAll(
+              formulaText,
+              searchText,
+              replaceText,
+              !!checkModes.caseCheck,
+            );
         if (looksLikeFormula(nextFormula)) {
           applyFormulaText(ctx, r, c, d, nextFormula);
         } else {
