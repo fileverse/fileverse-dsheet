@@ -198,6 +198,13 @@ export function clearFilter(ctx: Context) {
     ctx.luckysheetfile[sheetIndex].filter_select = undefined;
     ctx.luckysheetfile[sheetIndex].config = _.assign({}, ctx.config);
   }
+  ctx.viewerFilterVisible = true;
+}
+
+export function toggleViewerFilter(ctx: Context) {
+  if (_.isEmpty(ctx.filter) || _.isNil(ctx.luckysheet_filter_save)) return;
+  ctx.viewerFilterVisible = !ctx.viewerFilterVisible;
+  rebuildRowHiddenUnion(ctx);
 }
 
 export function clearFilterForColumn(
@@ -302,6 +309,7 @@ export function createFilter(ctx: Context) {
     {},
     filterSave?.[0] || ctx.luckysheet_select_save?.[0],
   );
+  ctx.viewerFilterVisible = true;
 
   createFilterOptions(ctx, ctx.luckysheet_filter_save, undefined, {}, true);
 
@@ -650,6 +658,7 @@ export function saveFilter(
     true,
   );
   // Rebuild render-time union from manual + all filter-hidden rows.
+  ctx.viewerFilterVisible = true;
   rebuildRowHiddenUnion(ctx);
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) {

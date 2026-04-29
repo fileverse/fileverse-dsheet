@@ -279,6 +279,7 @@ export {
   createFilterOptions,
   clearFilter,
   clearFilterForColumn,
+  toggleViewerFilter,
   createFilter,
   getFilterColumnValues,
   getFilterColumnColors,

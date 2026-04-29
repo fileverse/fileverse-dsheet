@@ -35,6 +35,7 @@ import {
   handleScreenShot,
   createFilter,
   clearFilter,
+  toggleViewerFilter,
   applyLocation,
   insertDuneChart,
   getFormulaEditorOwner,
@@ -1913,11 +1914,16 @@ const Toolbar: React.FC<{
           );
         }
         if (name === 'filter') {
-          const isFilterActive =
+          const hasFilterConfigured =
             !_.isEmpty(context.luckysheet_filter_save) ||
             context.filterOptions != null;
+          const isReadOnlyViewer =
+            context.allowEdit === false || context.isFlvReadOnly;
+          const isFilterActive = isReadOnlyViewer
+            ? hasFilterConfigured && context.viewerFilterVisible !== false
+            : hasFilterConfigured;
           const tooltip = toolbar.sortAndFilter;
-          const disabled = context.allowEdit === false;
+          const disabled = isReadOnlyViewer ? !hasFilterConfigured : false;
           return (
             <Tooltip text={tooltip} position="bottom">
               <div
@@ -1930,6 +1936,10 @@ const Toolbar: React.FC<{
                 onClick={() => {
                   if (disabled) return;
                   setContext((draftCtx) => {
+                    if (isReadOnlyViewer) {
+                      toggleViewerFilter(draftCtx);
+                      return;
+                    }
                     if (isFilterActive) {
                       clearFilter(draftCtx);
                       return;

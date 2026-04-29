@@ -19,7 +19,8 @@ export function getFilterHiddenRowsUnion(ctx: Context): Record<string, number> {
 
 /**
  * Migration/initialization helper:
- * - If `rowhidden_manual` exists, keep it.\n+ * - Otherwise, derive it from existing `rowhidden` by subtracting active filter-hidden rows
+ * - If `rowhidden_manual` exists, keep it.
+ * - Otherwise, derive it from existing `rowhidden` by subtracting active filter-hidden rows
  *   (if a filter is active), else treat all `rowhidden` as manual.
  */
 export function ensureManualHiddenInitialized(ctx: Context) {
@@ -40,7 +41,9 @@ export function ensureManualHiddenInitialized(ctx: Context) {
     !_.isNil(ctx.luckysheet_filter_save) &&
     !_.isEmpty(ctx.filter);
   const filterUnion = filterActive ? getFilterHiddenRowsUnion(ctx) : {};
-  const manual = filterActive ? _.omit(union, _.keys(filterUnion)) : { ...union };
+  const manual = filterActive
+    ? _.omit(union, _.keys(filterUnion))
+    : { ...union };
 
   cfg.rowhidden_manual = manual;
   sheet.config = cfg;
@@ -59,7 +62,9 @@ export function rebuildRowHiddenUnion(ctx: Context) {
 
   const manual = (ctx.config.rowhidden_manual || {}) as Record<string, number>;
   const filterUnion = getFilterHiddenRowsUnion(ctx);
-  const union = _.assign({}, manual, filterUnion);
+  const viewerFilterVisible = ctx.viewerFilterVisible !== false;
+  const effectiveFilterUnion = viewerFilterVisible ? filterUnion : {};
+  const union = _.assign({}, manual, effectiveFilterUnion);
 
   // Optional explicitness: persist the filter-hidden union separately.
   ctx.config.rowhidden_filter = filterUnion;
@@ -74,22 +79,19 @@ export function rebuildRowHiddenUnion(ctx: Context) {
     typeof process !== 'undefined' &&
     process.env?.NODE_ENV !== 'production'
   ) {
-    const expected = _.assign({}, manual, filterUnion);
+    const rowhidden = (ctx.config.rowhidden || {}) as Record<string, number>;
+    const expected = _.assign({}, manual, effectiveFilterUnion);
     const same =
-      _.size(expected) === _.size(ctx.config.rowhidden) &&
-      _.every(expected, (v, k) => (ctx.config.rowhidden as any)[k] === v);
+      _.size(expected) === _.size(rowhidden) &&
+      _.every(expected, (v, k) => rowhidden[k] === v);
     if (!same) {
       // eslint-disable-next-line no-console
-      console.warn(
-        '[rowVisibility] ctx.config.rowhidden diverged from union',
-        {
-          manual: _.size(manual),
-          filter: _.size(filterUnion),
-          union: _.size(expected),
-          actual: _.size(ctx.config.rowhidden),
-        },
-      );
+      console.warn('[rowVisibility] ctx.config.rowhidden diverged from union', {
+        manual: _.size(manual),
+        filter: _.size(filterUnion),
+        union: _.size(expected),
+        actual: _.size(rowhidden),
+      });
     }
   }
 }
-
