@@ -130,8 +130,6 @@ export function createFilterOptions(
   // $(`#luckysheet-filter-selected-sheet${ctx.currentSheetIndex}`).remove();
   // $(`#luckysheet-filter-options-sheet${ctx.currentSheetIndex}`).remove();
 
-  const allowEdit = isAllowEdit(ctx);
-  if (!allowEdit) return;
   if (sheetId != null && sheetId !== ctx.currentSheetId) return;
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) return;

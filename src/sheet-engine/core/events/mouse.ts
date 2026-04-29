@@ -5398,6 +5398,7 @@ export function handleColSizeHandleMouseDown(
   workbookContainer: HTMLDivElement,
   cellArea: HTMLDivElement
 ) {
+  if (ctx.isFlvReadOnly) return;
   // //有批注在编辑时
   removeEditingComment(ctx, globalCache);
 
@@ -5456,6 +5457,7 @@ export function handleColSizeHandleDoubleClick(
   e: MouseEvent,
   headerContainer: HTMLDivElement
 ) {
+  if (ctx.isFlvReadOnly) return;
   const { scrollLeft } = ctx;
 
   const mouseX =
@@ -5521,6 +5523,7 @@ export function handleRowSizeHandleMouseDown(
   workbookContainer: HTMLDivElement,
   cellArea: HTMLDivElement
 ) {
+  if (ctx.isFlvReadOnly) return;
   // 有批注在编辑时
   removeEditingComment(ctx, globalCache);
 
@@ -5587,6 +5590,7 @@ export function handleColFreezeHandleMouseDown(
   workbookContainer: HTMLDivElement,
   cellArea: HTMLDivElement
 ) {
+  if (ctx.isFlvReadOnly) return;
   // 有批注在编辑时
   removeEditingComment(ctx, globalCache);
   cancelActiveImgItem(ctx, globalCache);
@@ -5640,6 +5644,7 @@ export function handleRowFreezeHandleMouseDown(
   workbookContainer: HTMLDivElement,
   cellArea: HTMLDivElement
 ) {
+  if (ctx.isFlvReadOnly) return;
   // 有批注在编辑时
   removeEditingComment(ctx, globalCache);
   cancelActiveImgItem(ctx, globalCache);

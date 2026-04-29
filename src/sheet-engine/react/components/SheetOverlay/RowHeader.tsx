@@ -142,7 +142,7 @@ const RowHeader: React.FC = () => {
           );
         });
       }
-      if (e.button !== 0 || context.isFlvReadOnly) return; // left button only
+      if (e.button !== 0) return; // left button only
       const targetEl = e.target as HTMLElement;
       if (
         targetEl.closest('.fortune-rows-change-size') ||
@@ -174,6 +174,21 @@ const RowHeader: React.FC = () => {
         // @ts-expect-error: `sel?.[0].row` may be missing in some selection shapes.
         clickedRowIndex > sel?.[0].row[1]
       ) {
+        const { nativeEvent } = e;
+        setContext((draft) => {
+          handleRowHeaderMouseDown(
+            draft,
+            refs.globalCache,
+            nativeEvent,
+            containerRef.current!,
+            refs.cellInput.current!,
+            refs.fxInput.current!,
+          );
+        });
+        return;
+      }
+
+      if (context.isFlvReadOnly) {
         const { nativeEvent } = e;
         setContext((draft) => {
           handleRowHeaderMouseDown(
