@@ -3,7 +3,7 @@ import { Context, getFlowdata } from '../context';
 import { CellMatrix, Sheet } from '../types';
 import { getSheetIndex } from '../utils';
 import { getCellValue, getRangeByTxt } from './cell';
-import { genarate } from './format';
+import { datenum_local, genarate, is_date } from './format';
 import { execfunction, functionCopy } from './formula';
 import { checkProtectionFormatCells } from './protection';
 import { isRealNull, isNumericCellType } from './validation';
@@ -154,6 +154,312 @@ function compareBetween(cellValue: any, value1: any, value2: any): boolean {
   );
 }
 
+function conditionFormatDateSerial(raw: unknown): number | null {
+  if (raw == null || String(raw).trim() === '') return null;
+  const g = genarate(String(raw).trim());
+  if (!g || g[2] == null) return null;
+  const n = Number(g[2]);
+  return Number.isNaN(n) ? null : n;
+}
+
+/** Default text format recorded alongside preset / value for CF date rules. */
+export const CF_DATE_DEFAULT_FORMAT = 'DD/MM/YYYY';
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function startOfLocalTodayDate(): Date {
+  const n = new Date();
+  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+
+function addCalendarDays(d: Date, days: number): Date {
+  const x = new Date(d.getTime());
+  x.setDate(x.getDate() + days);
+  return x;
+}
+
+function formatLocalDateDdMmYyyy(d: Date): string {
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function legacyIsoYmdToDdMmYyyy(iso: string): string {
+  const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return iso;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const day = Number(m[3]);
+  return `${pad2(day)}/${pad2(mo)}/${y}`;
+}
+
+function serialToLocalCalendarDateApprox(serial: number): Date {
+  const z = Math.floor(serial);
+  const dnthreshUtc = Date.UTC(1899, 11, 31, 0, 0, 0);
+  const ms = z * 86400000 + dnthreshUtc;
+  const u = new Date(ms);
+  return new Date(u.getUTCFullYear(), u.getUTCMonth(), u.getUTCDate());
+}
+
+/** Parse strict DD/MM/YYYY to Excel serial (local calendar day). */
+export function parseDdMmYyyyToSerial(s: string): number | null {
+  const t = s.trim();
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const dd = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10) - 1;
+  const yyyy = parseInt(m[3], 10);
+  if (mm < 0 || mm > 11 || dd < 1 || dd > 31) return null;
+  const d = new Date(yyyy, mm, dd);
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm || d.getDate() !== dd) {
+    return null;
+  }
+  return datenum_local(d, 0);
+}
+
+/** Visible / editable plain text for date CF parsing (inlineStr + m + literal string `v`). */
+function getCfDatePlainTextFromCell(cell: any): string {
+  if (!cell) return '';
+  if (cell.ct?.t === 'inlineStr' && Array.isArray(cell.ct?.s)) {
+    return cell.ct.s
+      .map((seg: any) => (seg?.v != null ? String(seg.v) : ''))
+      .join('')
+      .trim();
+  }
+  if (cell.m != null && String(cell.m).trim() !== '') {
+    return String(cell.m).trim();
+  }
+  if (
+    cell.v != null &&
+    typeof cell.v === 'string' &&
+    !String(cell.v).startsWith('=')
+  ) {
+    return String(cell.v).trim();
+  }
+  return '';
+}
+
+/**
+ * Calendar day serial for date conditional-format rules.
+ * Uses `ct.t === 'd'` when set, DD/MM/YYYY text (matches CF saved format), genarate-parsable strings,
+ * and numeric cells with date number-format — not only `ct.t === 'd'` (typed dates can stay text/General).
+ */
+function resolveCellDaySerialForDateCf(cell: any): number | null {
+  if (!cell) return null;
+  const vRaw = cell.v;
+
+  if (cell.ct?.t === 'd' && typeof vRaw === 'number' && Number.isFinite(vRaw)) {
+    return Math.floor(vRaw);
+  }
+
+  const text = getCfDatePlainTextFromCell(cell);
+  if (text && !text.startsWith('=')) {
+    const ddmm = parseDdMmYyyyToSerial(text);
+    if (ddmm != null) return Math.floor(ddmm);
+    const g = conditionFormatDateSerial(text);
+    if (g != null) return Math.floor(g);
+  }
+
+  if (
+    typeof vRaw === 'number' &&
+    Number.isFinite(vRaw) &&
+    cell.ct?.fa &&
+    is_date(cell.ct.fa)
+  ) {
+    return Math.floor(vRaw);
+  }
+
+  return null;
+}
+
+function getLocalTodaySerial(): number {
+  return Math.floor(datenum_local(startOfLocalTodayDate(), 0));
+}
+
+/** Human-readable snapshot for the given preset (evaluation still uses preset id at compute time). */
+export function formatCfDatePresetSnapshot(preset: string): string {
+  const t = startOfLocalTodayDate();
+  switch (preset) {
+    case 'today':
+      return formatLocalDateDdMmYyyy(t);
+    case 'tomorrow':
+      return formatLocalDateDdMmYyyy(addCalendarDays(t, 1));
+    case 'yesterday':
+      return formatLocalDateDdMmYyyy(addCalendarDays(t, -1));
+    case 'pastWeek':
+    case 'pastMonth':
+    case 'pastYear':
+      return formatLocalDateDdMmYyyy(t);
+    case 'exact':
+      return '';
+    default:
+      return formatLocalDateDdMmYyyy(t);
+  }
+}
+
+export function parseCfDateConditionForUi(cv: any[] | undefined): {
+  preset: string;
+  snapshotOrExact: string;
+  format: string;
+} {
+  const fmt = CF_DATE_DEFAULT_FORMAT;
+  if (!cv || cv.length === 0) {
+    return {
+      preset: 'today',
+      snapshotOrExact: formatCfDatePresetSnapshot('today'),
+      format: fmt,
+    };
+  }
+  const v0 = String(cv[0] ?? '');
+  if (v0.startsWith('preset:')) {
+    const p = v0.slice(7) || 'today';
+    return {
+      preset: p,
+      snapshotOrExact: String(cv[1] ?? ''),
+      format: String(cv[2] ?? fmt) || fmt,
+    };
+  }
+  const leg = v0.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(leg)) {
+    return {
+      preset: 'exact',
+      snapshotOrExact: legacyIsoYmdToDdMmYyyy(leg),
+      format: fmt,
+    };
+  }
+  const serial = conditionFormatDateSerial(leg);
+  if (serial != null) {
+    return {
+      preset: 'exact',
+      snapshotOrExact: formatLocalDateDdMmYyyy(
+        serialToLocalCalendarDateApprox(serial),
+      ),
+      format: fmt,
+    };
+  }
+  return { preset: 'exact', snapshotOrExact: leg, format: fmt };
+}
+
+function matchesCfDateIsOrBefore(
+  cellVal: number,
+  conditionName: 'dateIs' | 'dateBefore',
+  cva: any[],
+): boolean {
+  if (!cva?.length) return false;
+  const v0 = String(cva[0] ?? '');
+  const cellDay = Math.floor(cellVal);
+
+  if (!v0.startsWith('preset:')) {
+    const ref = conditionFormatDateSerial(v0);
+    if (ref == null) return false;
+    const refDay = Math.floor(ref);
+    if (conditionName === 'dateIs') return cellDay === refDay;
+    return cellDay < refDay;
+  }
+
+  const preset = v0.slice(7);
+  const exactStr = String(cva[1] ?? '');
+
+  if (preset === 'exact') {
+    const ref = parseDdMmYyyyToSerial(exactStr);
+    if (ref == null) return false;
+    const refDay = Math.floor(ref);
+    if (conditionName === 'dateIs') return cellDay === refDay;
+    return cellDay < refDay;
+  }
+
+  const todayS = getLocalTodaySerial();
+  if (
+    preset === 'pastWeek' ||
+    preset === 'pastMonth' ||
+    preset === 'pastYear'
+  ) {
+    let span = 6;
+    if (preset === 'pastMonth') span = 29;
+    if (preset === 'pastYear') span = 364;
+    const lo = todayS - span;
+    const hi = todayS;
+    if (conditionName === 'dateIs') {
+      return cellDay >= lo && cellDay <= hi;
+    }
+    return cellDay < lo;
+  }
+
+  let refDay: number;
+  if (preset === 'today') refDay = todayS;
+  else if (preset === 'tomorrow') refDay = todayS + 1;
+  else if (preset === 'yesterday') refDay = todayS - 1;
+  else return false;
+
+  if (conditionName === 'dateIs') return cellDay === refDay;
+  return cellDay < refDay;
+}
+
+const CF_DATE_AFTER_PRESETS = new Set([
+  'today',
+  'tomorrow',
+  'yesterday',
+  'exact',
+]);
+
+function matchesCfDateAfter(cellVal: number, cva: any[]): boolean {
+  if (!cva?.length) return false;
+  const v0 = String(cva[0] ?? '');
+  const cellDay = Math.floor(cellVal);
+
+  if (!v0.startsWith('preset:')) {
+    const ref = conditionFormatDateSerial(v0);
+    if (ref == null) return false;
+    return cellDay > Math.floor(ref);
+  }
+
+  const preset = v0.slice(7);
+  const exactStr = String(cva[1] ?? '');
+
+  if (preset === 'exact') {
+    const ref = parseDdMmYyyyToSerial(exactStr);
+    if (ref == null) return false;
+    return cellDay > Math.floor(ref);
+  }
+
+  if (!CF_DATE_AFTER_PRESETS.has(preset)) {
+    return false;
+  }
+
+  const todayS = getLocalTodaySerial();
+  let refDay: number;
+  if (preset === 'today') refDay = todayS;
+  else if (preset === 'tomorrow') refDay = todayS + 1;
+  else if (preset === 'yesterday') refDay = todayS - 1;
+  else return false;
+
+  return cellDay > refDay;
+}
+
+function collectPresetDateConditionValue(rules: any): string[] | null {
+  const conditionName = rules.rulesType;
+  if (conditionName === 'dateAfter') {
+    let preset = rules.datePreset || 'today';
+    if (!CF_DATE_AFTER_PRESETS.has(preset)) preset = 'today';
+    const fmt = rules.dateFormat || CF_DATE_DEFAULT_FORMAT;
+    let snap = String(rules.dateValue ?? '').trim();
+    if (preset !== 'exact') {
+      snap = snap || formatCfDatePresetSnapshot(preset);
+    }
+    return [`preset:${preset}`, snap, fmt];
+  }
+  if (conditionName !== 'dateIs' && conditionName !== 'dateBefore') {
+    return null;
+  }
+  const preset = rules.datePreset || 'today';
+  const fmt = rules.dateFormat || CF_DATE_DEFAULT_FORMAT;
+  let snap = String(rules.dateValue ?? '').trim();
+  if (preset !== 'exact') {
+    snap = snap || formatCfDatePresetSnapshot(preset);
+  }
+  return [`preset:${preset}`, snap, fmt];
+}
+
 // 得到历史的规则
 export function getHistoryRules(fileH: Sheet[]) {
   const historyRules = [];
@@ -207,7 +513,12 @@ export function setConditionRules(
     conditionName === 'lessThan' ||
     conditionName === 'lessThanOrEqual' ||
     conditionName === 'equal' ||
-    conditionName === 'textContains'
+    conditionName === 'notEqual' ||
+    conditionName === 'textContains' ||
+    conditionName === 'textDoesNotContain' ||
+    conditionName === 'textStartsWith' ||
+    conditionName === 'textEndsWith' ||
+    conditionName === 'textExactly'
   ) {
     let v = rules.rulesValue;
     const rangeArr = getRangeByTxt(ctx, v);
@@ -240,7 +551,7 @@ export function setConditionRules(
       }
       conditionValue.push(v);
     }
-  } else if (conditionName === 'between') {
+  } else if (conditionName === 'between' || conditionName === 'notBetween') {
     let v1 = rules.betweenValue.value1;
     let v2 = rules.betweenValue.value2;
 
@@ -303,6 +614,37 @@ export function setConditionRules(
       } else {
         conditionValue.push(v2);
       }
+    }
+  } else if (conditionName === 'dateIs' || conditionName === 'dateBefore') {
+    const preset = rules.datePreset || 'today';
+    if (preset === 'exact') {
+      const ex = String(rules.dateValue ?? '').trim();
+      if (parseDdMmYyyyToSerial(ex) == null) {
+        ctx.warnDialog =
+          conditionformat.pleaseEnterDateDdMmYyyy ||
+          conditionformat.pleaseSelectADate;
+        return;
+      }
+    }
+    const parts = collectPresetDateConditionValue(rules);
+    if (parts) {
+      conditionValue.push(parts[0], parts[1], parts[2]);
+    }
+  } else if (conditionName === 'dateAfter') {
+    let preset = rules.datePreset || 'today';
+    if (!CF_DATE_AFTER_PRESETS.has(preset)) preset = 'today';
+    if (preset === 'exact') {
+      const ex = String(rules.dateValue ?? '').trim();
+      if (parseDdMmYyyyToSerial(ex) == null) {
+        ctx.warnDialog =
+          conditionformat.pleaseEnterDateDdMmYyyy ||
+          conditionformat.pleaseSelectADate;
+        return;
+      }
+    }
+    const parts = collectPresetDateConditionValue(rules);
+    if (parts) {
+      conditionValue.push(parts[0], parts[1], parts[2]);
     }
   } else if (conditionName === 'occurrenceDate') {
     const v = rules.dateValue;
@@ -388,6 +730,8 @@ export function setConditionRules(
     textColor: rules.textColor || { check: true, color: '#000000' },
     cellColor: rules.cellColor || { check: true, color: '#000000' },
     betweenValue: rules.betweenValue || { value1: '', value2: '' },
+    datePreset: rules.datePreset || 'today',
+    dateFormat: rules.dateFormat || CF_DATE_DEFAULT_FORMAT,
     dateValue: rules.dateValue || '',
     repeatValue: rules.repeatValue || '0',
     projectValue: rules.projectValue || '10',
@@ -826,7 +1170,12 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
             conditionName === 'lessThan' ||
             conditionName === 'lessThanOrEqual' ||
             conditionName === 'equal' ||
-            conditionName === 'textContains'
+            conditionName === 'notEqual' ||
+            conditionName === 'textContains' ||
+            conditionName === 'textDoesNotContain' ||
+            conditionName === 'textStartsWith' ||
+            conditionName === 'textEndsWith' ||
+            conditionName === 'textExactly'
           ) {
             // 循环应用范围计算
             for (
@@ -926,8 +1275,29 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     };
                   }
                 } else if (
-                  conditionName === 'equal' &&
+                  (conditionName === 'equal' || conditionName === 'textExactly') &&
                   cell.v.toString() === conditionValue0
+                ) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
+                  }
+                } else if (
+                  conditionName === 'notEqual' &&
+                  cell.v.toString() !== conditionValue0.toString()
                 ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
@@ -949,6 +1319,69 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 } else if (
                   conditionName === 'textContains' &&
                   cell.v.toString().indexOf(conditionValue0) !== -1
+                ) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
+                  }
+                } else if (
+                  conditionName === 'textDoesNotContain' &&
+                  cell.v.toString().indexOf(conditionValue0) === -1
+                ) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
+                  }
+                } else if (
+                  conditionName === 'textStartsWith' &&
+                  cell.v.toString().startsWith(conditionValue0)
+                ) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
+                  }
+                } else if (
+                  conditionName === 'textEndsWith' &&
+                  cell.v.toString().endsWith(conditionValue0)
                 ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
@@ -1006,7 +1439,45 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === 'between') {
+          } else if (conditionName === 'notEmpty') {
+            for (
+              let r = cellrange[s].row[0];
+              r <= cellrange[s].row[1];
+              r += 1
+            ) {
+              for (
+                let c = cellrange[s].column[0];
+                c <= cellrange[s].column[1];
+                c += 1
+              ) {
+                const cell = _.isNil(d[r]) || _.isNil(d[r][c]) ? null : d[r][c];
+                const isEmpty =
+                  _.isNil(cell) || _.isNil(cell.v) || isRealNull(cell.v);
+                if (!isEmpty) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
+                  }
+                }
+              }
+            }
+          } else if (
+            conditionName === 'between' ||
+            conditionName === 'notBetween'
+          ) {
             // UPDATED BETWEEN COMPARISON WITH STRING SUPPORT
             // 循环应用范围计算
             for (
@@ -1028,7 +1499,15 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   continue;
                 }
                 // 符合条件 - Updated to use the new compareBetween function
-                if (compareBetween(cell.v, conditionValue0, conditionValue1)) {
+                const inBetween = compareBetween(
+                  cell.v,
+                  conditionValue0,
+                  conditionValue1,
+                );
+                if (
+                  (conditionName === 'between' && inBetween) ||
+                  (conditionName === 'notBetween' && !inBetween)
+                ) {
                   if (`${r}_${c}` in computeMap) {
                     computeMap[`${r}_${c}`].textColor = textColor;
                     computeMap[`${r}_${c}`].cellColor = cellColor;
@@ -1101,6 +1580,92 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                         strikethrough,
                       };
                     }
+                  }
+                }
+              }
+            }
+          } else if (conditionName === 'dateIs' || conditionName === 'dateBefore') {
+            const cva = ruleArr[i].conditionValue;
+            for (
+              let r = cellrange[s].row[0];
+              r <= cellrange[s].row[1];
+              r += 1
+            ) {
+              for (
+                let c = cellrange[s].column[0];
+                c <= cellrange[s].column[1];
+                c += 1
+              ) {
+                if (_.isNil(d[r]) || _.isNil(d[r][c])) {
+                  continue;
+                }
+                const cellDay = resolveCellDaySerialForDateCf(d[r][c]);
+                if (cellDay == null) {
+                  continue;
+                }
+                const matches = matchesCfDateIsOrBefore(
+                  cellDay,
+                  conditionName,
+                  cva,
+                );
+                if (matches) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
+                  }
+                }
+              }
+            }
+          } else if (conditionName === 'dateAfter') {
+            const cva = ruleArr[i].conditionValue;
+            for (
+              let r = cellrange[s].row[0];
+              r <= cellrange[s].row[1];
+              r += 1
+            ) {
+              for (
+                let c = cellrange[s].column[0];
+                c <= cellrange[s].column[1];
+                c += 1
+              ) {
+                if (_.isNil(d[r]) || _.isNil(d[r][c])) {
+                  continue;
+                }
+                const cellDay = resolveCellDaySerialForDateCf(d[r][c]);
+                if (cellDay == null) {
+                  continue;
+                }
+                const matches = matchesCfDateAfter(cellDay, cva);
+                if (matches) {
+                  if (`${r}_${c}` in computeMap) {
+                    computeMap[`${r}_${c}`].textColor = textColor;
+                    computeMap[`${r}_${c}`].cellColor = cellColor;
+                    computeMap[`${r}_${c}`].bold = bold;
+                    computeMap[`${r}_${c}`].italic = italic;
+                    computeMap[`${r}_${c}`].underline = underline;
+                    computeMap[`${r}_${c}`].strikethrough = strikethrough;
+                  } else {
+                    computeMap[`${r}_${c}`] = {
+                      textColor,
+                      cellColor,
+                      bold,
+                      italic,
+                      underline,
+                      strikethrough,
+                    };
                   }
                 }
               }
@@ -1438,6 +2003,49 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
   return computeMap;
 }
 
+function hasLivePreviewCondition(cr: any): boolean {
+  if (!cr) return false;
+  const cn = cr.rulesType;
+  if (cn === 'dateIs' || cn === 'dateBefore') {
+    const p = cr.datePreset || 'today';
+    if (p === 'exact') {
+      return String(cr.dateValue ?? '').trim() !== '';
+    }
+    return true;
+  }
+  if (cn === 'dateAfter') {
+    const p = cr.datePreset || 'today';
+    if (p === 'exact') {
+      return String(cr.dateValue ?? '').trim() !== '';
+    }
+    return CF_DATE_AFTER_PRESETS.has(p);
+  }
+  if (cn === 'occurrenceDate') {
+    return String(cr.dateValue ?? '').trim() !== '';
+  }
+  if (cn === 'between' || cn === 'notBetween') {
+    return (
+      String(cr.betweenValue?.value1 ?? '').trim() !== '' &&
+      String(cr.betweenValue?.value2 ?? '').trim() !== ''
+    );
+  }
+  return String(cr.rulesValue ?? '').trim() !== '';
+}
+
+function buildLivePreviewConditionValue(cr: any): any[] {
+  if (!cr) return [''];
+  const pd = collectPresetDateConditionValue(cr);
+  if (pd) return pd;
+  const cn = cr.rulesType;
+  if (cn === 'occurrenceDate') {
+    return [cr.dateValue || ''];
+  }
+  if ((cn === 'between' || cn === 'notBetween') && cr.betweenValue) {
+    return [cr.betweenValue.value1, cr.betweenValue.value2];
+  }
+  return [cr.rulesValue || ''];
+}
+
 export function getComputeMap(ctx: Context) {
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   const ruleArr = ctx.luckysheetfile[index]?.luckysheet_conditionformat_save
@@ -1446,10 +2054,8 @@ export function getComputeMap(ctx: Context) {
   const { data } = ctx.luckysheetfile[index];
   if (_.isNil(data)) return null;
   const editKey = ctx.luckysheetfile[index].conditionRules?.editKey;
-  if (
-    ctx.luckysheet_select_save &&
-    ctx.luckysheetfile[index].conditionRules?.rulesValue !== ''
-  ) {
+  const sheetCr = ctx.luckysheetfile[index].conditionRules;
+  if (ctx.luckysheet_select_save && hasLivePreviewCondition(sheetCr)) {
     if (editKey !== null && editKey !== undefined) {
       ruleArr.splice(Number(editKey), 1);
     }
@@ -1467,7 +2073,7 @@ export function getComputeMap(ctx: Context) {
       },
       conditionName: ctx.luckysheetfile[index].conditionRules?.rulesType,
       conditionRange: [],
-      conditionValue: [ctx.luckysheetfile[index].conditionRules?.rulesValue],
+      conditionValue: buildLivePreviewConditionValue(sheetCr),
     });
   }
 

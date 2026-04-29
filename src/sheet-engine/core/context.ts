@@ -445,6 +445,8 @@ export function defaultContext(refs: RefValues): Context {
         strikethrough: false,
       },
       betweenValue: { value1: '', value2: '' },
+      datePreset: 'today',
+      dateFormat: 'DD/MM/YYYY',
       dateValue: '',
       repeatValue: '0',
       projectValue: '10',

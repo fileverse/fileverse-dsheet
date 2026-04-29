@@ -307,7 +307,13 @@ export {
 } from './dataVerification';
 
 // ConditionFormat
-export { setConditionRules } from './ConditionFormat';
+export {
+  setConditionRules,
+  CF_DATE_DEFAULT_FORMAT,
+  parseCfDateConditionForUi,
+  formatCfDatePresetSnapshot,
+  parseDdMmYyyyToSerial,
+} from './ConditionFormat';
 
 // mobile
 export { handleOverlayTouchStart, handleOverlayTouchEnd } from './mobile';

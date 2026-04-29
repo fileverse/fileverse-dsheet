@@ -644,6 +644,7 @@ export const useXLSXImport = ({
                 description: 'Table styles will not be applied',
                 variant: 'warning',
                 showCloseButton: true,
+                duration: 40 * 1000,
               });
             }
 

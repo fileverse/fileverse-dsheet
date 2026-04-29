@@ -257,7 +257,6 @@ export const defaultSettings: Required<Settings> = {
     'text-rotation',
     '|',
     'freeze',
-    'conditionFormat',
     'filter',
     'link',
     'image',
