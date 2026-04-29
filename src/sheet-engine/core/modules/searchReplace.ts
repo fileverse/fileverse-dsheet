@@ -2,10 +2,17 @@ import _ from 'lodash';
 
 import { Context, getFlowdata } from '../context';
 import { locale } from '../locale';
-import { CellMatrix, Selection, SearchResult, GlobalCache } from '../types';
+import {
+  Cell,
+  CellMatrix,
+  Selection,
+  SearchResult,
+  GlobalCache,
+} from '../types';
 import { chatatABC, getRegExpStr, getSheetIndex, isAllowEdit } from '../utils';
 import { setCellValue, getRangeByTxt } from './cell';
 import { valueShowEs } from './format';
+import { execfunction } from './formula';
 import { normalizeSelection, scrollToHighlightCell } from './selection';
 import { changeSheet } from './sheet';
 
@@ -81,8 +88,80 @@ export function getFindRangeOnCurrentSheet(
 }
 
 function isFormulaCell(flowdata: CellMatrix, r: number, c: number) {
-  const cell = flowdata?.[r]?.[c] as any;
+  const cell = flowdata?.[r]?.[c] as Cell | null | undefined;
   return !!cell?.f;
+}
+
+function normalizeForCaseMatch(s: string, caseSensitive: boolean): string {
+  return caseSensitive ? s : s.toLowerCase();
+}
+
+function formulaTextMatches(
+  searchText: string,
+  formulaText: string,
+  {
+    wordCheck = false,
+    caseCheck = false,
+  }: Pick<CheckModes, 'wordCheck' | 'caseCheck'>,
+): boolean {
+  const s = normalizeForCaseMatch(searchText, !!caseCheck);
+  const f = normalizeForCaseMatch(formulaText, !!caseCheck);
+  if (wordCheck) return s === f;
+  return f.indexOf(s) !== -1;
+}
+
+function replaceLiteralAll(
+  haystack: string,
+  needle: string,
+  replacement: string,
+  caseSensitive: boolean,
+): string {
+  if (!needle) return haystack;
+  if (caseSensitive) return haystack.split(needle).join(replacement);
+
+  const lowerHaystack = haystack.toLowerCase();
+  const lowerNeedle = needle.toLowerCase();
+  const out: string[] = [];
+
+  let from = 0;
+  while (from < haystack.length) {
+    const idx = lowerHaystack.indexOf(lowerNeedle, from);
+    if (idx === -1) break;
+    out.push(haystack.slice(from, idx), replacement);
+    from = idx + needle.length;
+  }
+  out.push(haystack.slice(from));
+  return out.join('');
+}
+
+function looksLikeFormula(s: string): boolean {
+  const t = String(s ?? '').trim();
+  return t.startsWith('=') && t.length > 1;
+}
+
+function applyFormulaText(
+  ctx: Context,
+  r: number,
+  c: number,
+  d: CellMatrix,
+  formulaText: string,
+): void {
+  const computed = execfunction(
+    ctx,
+    formulaText,
+    r,
+    c,
+    undefined,
+    undefined,
+    true,
+  );
+  const cell = (d?.[r]?.[c] ?? {}) as Cell;
+  d[r][c] = cell;
+
+  cell.f = computed[2];
+  cell.v = computed[1] as Cell['v'];
+  // Ensure displayed string stays in sync for renderers that rely on `m`.
+  cell.m = valueShowEs(r, c, d).toString();
 }
 
 export type HyperlinkMap = Record<
@@ -153,12 +232,12 @@ export function getSearchIndexArr(
       if (hiddenConfig && hiddenConfig.rowhidden?.[r] != null) continue;
       for (let c = c1; c <= c2; c += 1) {
         if (hiddenConfig && hiddenConfig.colhidden?.[c] != null) continue;
-        const cell = flowdata[r][c] as any;
+        const cell = flowdata[r][c] as Cell | null | undefined;
 
         if (cell == null) continue;
 
         let value = valueShowEs(r, c, flowdata);
-        if (value === 0) value = (value as any).toString();
+        if (value === 0) value = value.toString();
         const valStr = value != null && value !== '' ? value.toString() : '';
 
         const formulaText: string = formulaCheck ? (cell?.f ?? '') : '';
@@ -472,11 +551,11 @@ export function searchNext(
     const { r: curR, c: curC } =
       ctx.currentSheetId === curSheetId
         ? resolveFindNextCursor(ctx, [
-          {
-            row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
-            column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
-          },
-        ])
+            {
+              row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
+              column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
+            },
+          ])
         : { r: -1, c: -1 };
 
     const idxInCur = hitIndexOfCell(curHits, curR, curC);
@@ -763,8 +842,7 @@ export function searchAll(
       sheetName:
         ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId) || 0]?.name,
       sheetId: ctx.currentSheetId,
-      cellPosition: `${chatatABC(searchIndexArr[i].c)}${searchIndexArr[i].r + 1
-        }`,
+      cellPosition: `${chatatABC(searchIndexArr[i].c)}${searchIndexArr[i].r + 1}`,
       value: value_ShowEs,
     });
   }
@@ -887,6 +965,31 @@ export function replace(
     r = searchIndexArr[count].r;
     c = searchIndexArr[count].c;
     if (isFormulaCell(d, r, c)) {
+      if (!checkModes.formulaCheck) return null;
+      const cell = d?.[r]?.[c] as Cell | null | undefined;
+      const formulaText = String(cell?.f ?? '');
+      if (!formulaTextMatches(searchText, formulaText, checkModes)) return null;
+      const nextFormula = replaceText;
+      if (looksLikeFormula(nextFormula)) {
+        applyFormulaText(ctx, r, c, d, nextFormula);
+      } else {
+        setCellValue(ctx, r, c, d, nextFormula);
+      }
+      if (ctx?.hooks?.updateCellYdoc) {
+        ctx.hooks.updateCellYdoc([
+          {
+            sheetId: ctx.currentSheetId,
+            path: ['celldata'],
+            value: { r, c, v: d?.[r]?.[c] ?? null },
+            key: `${r}_${c}`,
+            type: 'update',
+          },
+        ]);
+      }
+      ctx.luckysheet_select_save = normalizeSelection(ctx, [
+        { row: [r, r], column: [c, c] },
+      ]);
+      scrollToHighlightCell(ctx, r, c);
       return null;
     }
 
@@ -915,6 +1018,36 @@ export function replace(
     r = searchIndexArr[count].r;
     c = searchIndexArr[count].c;
     if (isFormulaCell(d, r, c)) {
+      if (!checkModes.formulaCheck) return null;
+      const cell = d?.[r]?.[c] as Cell | null | undefined;
+      const formulaText = String(cell?.f ?? '');
+      if (!formulaTextMatches(searchText, formulaText, checkModes)) return null;
+      const nextFormula = replaceLiteralAll(
+        formulaText,
+        searchText,
+        replaceText,
+        !!checkModes.caseCheck,
+      );
+      if (looksLikeFormula(nextFormula)) {
+        applyFormulaText(ctx, r, c, d, nextFormula);
+      } else {
+        setCellValue(ctx, r, c, d, nextFormula);
+      }
+      if (ctx?.hooks?.updateCellYdoc) {
+        ctx.hooks.updateCellYdoc([
+          {
+            sheetId: ctx.currentSheetId,
+            path: ['celldata'],
+            value: { r, c, v: d?.[r]?.[c] ?? null },
+            key: `${r}_${c}`,
+            type: 'update',
+          },
+        ]);
+      }
+      ctx.luckysheet_select_save = normalizeSelection(ctx, [
+        { row: [r, r], column: [c, c] },
+      ]);
+      scrollToHighlightCell(ctx, r, c);
       return null;
     }
 
@@ -985,7 +1118,7 @@ export function replaceAll(
     sheetId: string;
     path: string[];
     key?: string;
-    value: any;
+    value: unknown;
     type?: 'update' | 'delete';
   }[] = [];
   let replaceCount = 0;
@@ -998,7 +1131,33 @@ export function replaceAll(
       const { r } = searchIndexArr[i];
       const { c } = searchIndexArr[i];
       if (isFormulaCell(d, r, c)) {
-        skippedCount += 1;
+        if (!checkModes.formulaCheck) {
+          skippedCount += 1;
+          continue;
+        }
+        const cell = d?.[r]?.[c] as Cell | null | undefined;
+        const formulaText = String(cell?.f ?? '');
+        if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+          skippedCount += 1;
+          continue;
+        }
+        const nextFormula = replaceText;
+        if (looksLikeFormula(nextFormula)) {
+          applyFormulaText(ctx, r, c, d, nextFormula);
+        } else {
+          setCellValue(ctx, r, c, d, nextFormula);
+        }
+        if (ctx?.hooks?.updateCellYdoc) {
+          cellChanges.push({
+            sheetId: ctx.currentSheetId,
+            path: ['celldata'],
+            value: { r, c, v: d?.[r]?.[c] ?? null },
+            key: `${r}_${c}`,
+            type: 'update',
+          });
+        }
+        replacedCells.push({ row: [r, r], column: [c, c] });
+        replaceCount += 1;
         continue;
       }
 
@@ -1030,7 +1189,38 @@ export function replaceAll(
       const { r } = searchIndexArr[i];
       const { c } = searchIndexArr[i];
       if (isFormulaCell(d, r, c)) {
-        skippedCount += 1;
+        if (!checkModes.formulaCheck) {
+          skippedCount += 1;
+          continue;
+        }
+        const cell = d?.[r]?.[c] as Cell | null | undefined;
+        const formulaText = String(cell?.f ?? '');
+        if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+          skippedCount += 1;
+          continue;
+        }
+        const nextFormula = replaceLiteralAll(
+          formulaText,
+          searchText,
+          replaceText,
+          !!checkModes.caseCheck,
+        );
+        if (looksLikeFormula(nextFormula)) {
+          applyFormulaText(ctx, r, c, d, nextFormula);
+        } else {
+          setCellValue(ctx, r, c, d, nextFormula);
+        }
+        if (ctx?.hooks?.updateCellYdoc) {
+          cellChanges.push({
+            sheetId: ctx.currentSheetId,
+            path: ['celldata'],
+            value: { r, c, v: d?.[r]?.[c] ?? null },
+            key: `${r}_${c}`,
+            type: 'update',
+          });
+        }
+        replacedCells.push({ row: [r, r], column: [c, c] });
+        replaceCount += 1;
         continue;
       }
 
@@ -1154,11 +1344,11 @@ export function getSearchIndexArrAsync(
 
         for (let c = seg.c1; c <= seg.c2; c += 1) {
           if (hiddenConfig?.colhidden?.[c] != null) continue;
-          const cell = flowdata[currentR][c] as any;
+          const cell = flowdata[currentR][c] as Cell | null | undefined;
           if (cell == null) continue;
 
           let value = valueShowEs(currentR, c, flowdata);
-          if (value === 0) value = (value as any).toString();
+          if (value === 0) value = value.toString();
           const valStr = value != null && value !== '' ? value.toString() : '';
           const formulaText = formulaCheck ? (cell?.f ?? '') : '';
           const linkText =

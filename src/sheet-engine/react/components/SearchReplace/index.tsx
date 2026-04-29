@@ -773,6 +773,11 @@ const SearchReplace: React.FC<{
                   />
                   <span>{findAndReplace.linkTextbox}</span>
                 </div>
+                {checkMode.regCheck && checkMode.formulaCheck && (
+                  <div className="text-body-sm color-fg-muted">
+                    {findAndReplace.regexFormulaReplaceWarning}
+                  </div>
+                )}
               </div>
             </div>
             <div
@@ -993,15 +998,14 @@ const SearchReplace: React.FC<{
                             if (v.sheetId !== draftCtx.currentSheetId) {
                               const toIdx = getSheetIndex(draftCtx, v.sheetId);
                               if (toIdx != null) {
-                                draftCtx.luckysheetfile[toIdx].luckysheet_select_save =
-                                  [
-                                    {
-                                      row: [v.r, v.r],
-                                      column: [v.c, v.c],
-                                      row_focus: v.r,
-                                      column_focus: v.c,
-                                    },
-                                  ];
+                                draftCtx.luckysheetfile[toIdx].luckysheet_select_save = [
+                                  {
+                                    row: [v.r, v.r],
+                                    column: [v.c, v.c],
+                                    row_focus: v.r,
+                                    column_focus: v.c,
+                                  },
+                                ];
                               }
                               changeSheet(draftCtx, v.sheetId);
                             }

@@ -11620,6 +11620,8 @@ export default {
     replaceTextbox: 'Replace with',
 
     regexTextbox: 'Search using regular expression',
+    regexFormulaReplaceWarning:
+      'Regex replacement does not apply to formulas. Formulas use plain text replacement.',
     wholeTextbox: 'Match entire cell content',
     distinguishTextbox: 'Match case',
     formulaTextbox: 'Search within formulae',
