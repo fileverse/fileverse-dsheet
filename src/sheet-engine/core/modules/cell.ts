@@ -633,9 +633,29 @@ export function setCellValue(
         ctx.getRefs?.()?.globalCache?.enteredEditByTyping === true;
       const isInPlaceEditSession =
         ctx.luckysheetCellUpdate.length > 0 && !enteredEditByTyping;
+      const shouldDropPercentFormatForDirectText =
+        enteredEditByTyping &&
+        fa.includes("%") &&
+        !vupdateStr.includes("%") &&
+        !isRealNum(vupdate);
       const shouldOverwritePercentFormat =
         isInPlaceEditSession && fa.includes("%") && !vupdateStr.includes("%");
-      if (shouldOverwritePercentFormat) {
+      if (shouldDropPercentFormatForDirectText) {
+        const gen = genarate(vupdate as any);
+        if (gen) {
+          const [m, ct, vv] = gen;
+          cell.m = m == null ? "" : String(m);
+          cell.ct = ct as Cell["ct"];
+          cell.v = vv as Cell["v"];
+          // Return to default alignment resolution for the new inferred type.
+          delete cell.ht;
+        } else {
+          cell.m = vupdateStr;
+          cell.v = vupdate;
+          cell.ct = { fa: "General", t: "s" };
+          delete cell.ht;
+        }
+      } else if (shouldOverwritePercentFormat) {
         // Percent behaves as a literal suffix in editor input:
         // if user edits value without "%", drop percent format.
         if (

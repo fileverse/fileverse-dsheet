@@ -1397,7 +1397,10 @@ export async function handleGlobalKeyDown(
           cellInput.focus();
           const initial = getTypeOverInitialContent(e);
           if (initial !== undefined) {
-            const seededText = isPercentFormattedCell
+            const shouldSeedPercentSuffix =
+              isPercentFormattedCell &&
+              /^([0-9]|[.+-])$/.test(initial);
+            const seededText = shouldSeedPercentSuffix
               ? `${initial}%`
               : initial;
             cellInput.textContent = seededText;
@@ -1414,7 +1417,11 @@ export async function handleGlobalKeyDown(
           // Only adjust the in-cell editor: moveToEnd() calls focus() and would steal
           // focus to the formula bar if applied to fxInput.
           queueMicrotask(() => {
-            if (initial !== undefined && isPercentFormattedCell) {
+            const shouldSeedPercentSuffix =
+              initial !== undefined &&
+              isPercentFormattedCell &&
+              /^([0-9]|[.+-])$/.test(initial);
+            if (shouldSeedPercentSuffix) {
               const textNode = cellInput.firstChild;
               const caretOffset = Math.max(
                 0,
