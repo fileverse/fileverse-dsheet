@@ -6,7 +6,7 @@ import {
   SearchResult,
   normalizeSelection,
   replace,
-  replaceAll,
+  replaceAllScoped,
   scrollToHighlightCell,
   getSearchIndexArr,
   getFlowdata,
@@ -16,8 +16,10 @@ import {
   getFindRangeOnCurrentSheet,
   parseRangeText,
   replaceHtml,
+  type CellMatrix,
   type FindSearchScope,
   type HyperlinkMap,
+  type ReplaceScope,
   type Selection,
 } from '@sheet-engine/core';
 import {
@@ -56,6 +58,21 @@ const ROW_HEIGHT = 36;
 const VISIBLE_ROWS = 10;
 
 const LARGE_REPLACE_THRESHOLD = 100;
+
+function fullSheetRangeForData(
+  flowdata: CellMatrix | undefined,
+  sheetRow?: number,
+  sheetColumn?: number,
+): { row: number[]; column: number[] }[] | null {
+  const rowCountFromData = flowdata?.length ?? 0;
+  const colCountFromData = flowdata?.[0]?.length ?? 0;
+  const rowCount =
+    rowCountFromData > 0 ? rowCountFromData : Math.max(0, sheetRow ?? 0);
+  const colCount =
+    colCountFromData > 0 ? colCountFromData : Math.max(0, sheetColumn ?? 0);
+  if (rowCount <= 0 || colCount <= 0) return null;
+  return [{ row: [0, rowCount - 1], column: [0, colCount - 1] }];
+}
 
 const SearchReplace: React.FC<{
   getContainer: () => HTMLDivElement;
@@ -98,6 +115,8 @@ const SearchReplace: React.FC<{
     linkCheck: false,
   });
   const [searchScope, setSearchScope] = useState<FindSearchScope>('allSheets');
+  const replaceScope: ReplaceScope =
+    searchScope === 'allSheets' ? 'allSheets' : 'thisSheet';
   const [rangeText, setRangeText] = useState('');
   const [rangeError, setRangeError] = useState<string | null>(null);
 
@@ -406,15 +425,14 @@ const SearchReplace: React.FC<{
 
   /** Execute a do-replace wrapped in a confirmation for large counts (Fix 15) */
   const doReplaceAll = useCallback(() => {
-    const scopedRange = getScopedRange();
     setContext((draftCtx) => {
       setSelectedCell(undefined);
-      const result = replaceAll(
+      const result = replaceAllScoped(
         draftCtx,
         searchText,
         replaceText,
         checkMode,
-        scopedRange,
+        replaceScope,
       );
       if (!result.ok) {
         setInlineInfo(result.message);
@@ -442,7 +460,7 @@ const SearchReplace: React.FC<{
         );
       }
     });
-  }, [checkMode, getScopedRange, replaceText, searchText, setContext]);
+  }, [checkMode, replaceScope, replaceText, searchText, setContext]);
 
   const runFindNext = useCallback(
     (direction: 'next' | 'prev') => {
@@ -843,18 +861,13 @@ const SearchReplace: React.FC<{
                 className="min-w-fit"
                 onClick={() => {
                   if (!validateRangeInput()) return;
-                  const scopedRange = getScopedRange();
                   setContext((draftCtx) => {
-                    if (searchScope === 'specificRange') {
-                      draftCtx.searchRangeScopeEmphasis = true;
-                    }
                     setSelectedCell(undefined);
                     const alertMsg = replace(
                       draftCtx,
                       searchText,
                       replaceText,
                       checkMode,
-                      scopedRange,
                     );
                     setInlineInfo(null);
                     if (alertMsg != null) {
@@ -877,21 +890,33 @@ const SearchReplace: React.FC<{
                 className="min-w-fit"
                 onClick={() => {
                   if (!validateRangeInput()) return;
-                  if (searchScope === 'specificRange') {
-                    setContext((draftCtx) => {
-                      draftCtx.searchRangeScopeEmphasis = true;
-                    });
-                  }
-                  // Fix 15: Confirm before replacing a large number of cells
-                  const flowdata = getFlowdata(context);
-                  if (flowdata) {
-                    const scopedRange = getScopedRange();
-                    const range = scopedRange
-                      ? [scopedRange]
-                      : getFindRangeOnCurrentSheet(flowdata);
-                    if (range == null) {
+                  let matchCount = 0;
+                  if (replaceScope === 'allSheets') {
+                    for (const sheet of context.luckysheetfile) {
+                      const data = sheet.data;
+                      if (!data) continue;
+                      const range = fullSheetRangeForData(
+                        data,
+                        sheet.row,
+                        sheet.column,
+                      );
+                      if (range == null) continue;
+                      matchCount += getSearchIndexArr(
+                        searchText,
+                        range,
+                        data,
+                        checkMode,
+                        sheet.hyperlink as HyperlinkMap | undefined,
+                      ).length;
+                    }
+                  } else {
+                    const flowdata = getFlowdata(context);
+                    if (!flowdata) {
+                      doReplaceAll();
                       return;
                     }
+                    const range = getFindRangeOnCurrentSheet(flowdata);
+                    if (range == null) return;
                     const sheetIdx = getSheetIndex(
                       context,
                       context.currentSheetId,
@@ -901,13 +926,16 @@ const SearchReplace: React.FC<{
                         ? context.luckysheetfile[sheetIdx]?.hyperlink
                         : undefined
                     ) as HyperlinkMap | undefined;
-                    const matchCount = getSearchIndexArr(
+                    matchCount = getSearchIndexArr(
                       searchText,
                       range,
                       flowdata,
                       checkMode,
                       hyperlinkMap,
                     ).length;
+                  }
+
+                  if (matchCount > 0) {
                     if (matchCount >= LARGE_REPLACE_THRESHOLD) {
                       const msg = `Replace ${matchCount} cells?`;
                       showAlert(msg, 'yesno', doReplaceAll);
@@ -998,14 +1026,16 @@ const SearchReplace: React.FC<{
                             if (v.sheetId !== draftCtx.currentSheetId) {
                               const toIdx = getSheetIndex(draftCtx, v.sheetId);
                               if (toIdx != null) {
-                                draftCtx.luckysheetfile[toIdx].luckysheet_select_save = [
-                                  {
-                                    row: [v.r, v.r],
-                                    column: [v.c, v.c],
-                                    row_focus: v.r,
-                                    column_focus: v.c,
-                                  },
-                                ];
+                                draftCtx.luckysheetfile[
+                                  toIdx
+                                ].luckysheet_select_save = [
+                                    {
+                                      row: [v.r, v.r],
+                                      column: [v.c, v.c],
+                                      row_focus: v.r,
+                                      column_focus: v.c,
+                                    },
+                                  ];
                               }
                               changeSheet(draftCtx, v.sheetId);
                             }

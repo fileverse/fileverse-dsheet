@@ -19,6 +19,8 @@ import { changeSheet } from './sheet';
 /** Where find/replace scans on the current sheet (workbook-wide only applies to find-all). */
 export type FindSearchScope = 'allSheets' | 'thisSheet' | 'specificRange';
 
+export type ReplaceScope = 'allSheets' | 'thisSheet';
+
 function fullSheetRangeForData(
   flowdata: CellMatrix | undefined,
   sheetRow?: number,
@@ -551,11 +553,11 @@ export function searchNext(
     const { r: curR, c: curC } =
       ctx.currentSheetId === curSheetId
         ? resolveFindNextCursor(ctx, [
-            {
-              row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
-              column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
-            },
-          ])
+          {
+            row: [0, Math.max(0, (flowdata?.length ?? 1) - 1)],
+            column: [0, Math.max(0, (flowdata?.[0]?.length ?? 1) - 1)],
+          },
+        ])
         : { r: -1, c: -1 };
 
     const idxInCur = hitIndexOfCell(curHits, curR, curC);
@@ -1251,6 +1253,200 @@ export function replaceAll(
   }
 
   return { ok: true, replaced: replaceCount, skipped: skippedCount };
+}
+
+function replaceAllOnSheetInto(
+  ctx: Context,
+  sheetId: string,
+  sheetFlowdata: CellMatrix,
+  searchText: string,
+  replaceText: string,
+  checkModes: CheckModes,
+  searchRange: { row: number[]; column: number[] }[],
+  cellChanges: {
+    sheetId: string;
+    path: string[];
+    key?: string;
+    value: unknown;
+    type?: 'update' | 'delete';
+  }[],
+  hyperlinkMap?: HyperlinkMap,
+): { replaced: number; skipped: number } {
+  const searchIndexArr = getSearchIndexArr(
+    searchText,
+    searchRange,
+    sheetFlowdata,
+    checkModes,
+    hyperlinkMap,
+  );
+  if (searchIndexArr.length === 0) return { replaced: 0, skipped: 0 };
+
+  const d = sheetFlowdata;
+  let replaceCount = 0;
+  let skippedCount = 0;
+
+  if (checkModes.wordCheck) {
+    for (let i = 0; i < searchIndexArr.length; i += 1) {
+      const { r, c } = searchIndexArr[i];
+      if (isFormulaCell(d, r, c)) {
+        if (!checkModes.formulaCheck) {
+          skippedCount += 1;
+          continue;
+        }
+        const cell = d?.[r]?.[c] as Cell | null | undefined;
+        const formulaText = String(cell?.f ?? '');
+        if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+          skippedCount += 1;
+          continue;
+        }
+        const nextFormula = replaceText;
+        if (looksLikeFormula(nextFormula)) {
+          applyFormulaText(ctx, r, c, d, nextFormula);
+        } else {
+          setCellValue(ctx, r, c, d, nextFormula);
+        }
+        cellChanges.push({
+          sheetId,
+          path: ['celldata'],
+          value: { r, c, v: d?.[r]?.[c] ?? null },
+          key: `${r}_${c}`,
+          type: 'update',
+        });
+        replaceCount += 1;
+        continue;
+      }
+
+      setCellValue(ctx, r, c, d, replaceText);
+      cellChanges.push({
+        sheetId,
+        path: ['celldata'],
+        value: { r, c, v: d?.[r]?.[c] ?? null },
+        key: `${r}_${c}`,
+        type: 'update',
+      });
+      replaceCount += 1;
+    }
+  } else {
+    const reg = new RegExp(
+      getRegExpStr(searchText),
+      checkModes.caseCheck ? 'g' : 'ig',
+    );
+    for (let i = 0; i < searchIndexArr.length; i += 1) {
+      const { r, c } = searchIndexArr[i];
+      if (isFormulaCell(d, r, c)) {
+        if (!checkModes.formulaCheck) {
+          skippedCount += 1;
+          continue;
+        }
+        const cell = d?.[r]?.[c] as Cell | null | undefined;
+        const formulaText = String(cell?.f ?? '');
+        if (!formulaTextMatches(searchText, formulaText, checkModes)) {
+          skippedCount += 1;
+          continue;
+        }
+        const nextFormula = replaceLiteralAll(
+          formulaText,
+          searchText,
+          replaceText,
+          !!checkModes.caseCheck,
+        );
+        if (looksLikeFormula(nextFormula)) {
+          applyFormulaText(ctx, r, c, d, nextFormula);
+        } else {
+          setCellValue(ctx, r, c, d, nextFormula);
+        }
+        cellChanges.push({
+          sheetId,
+          path: ['celldata'],
+          value: { r, c, v: d?.[r]?.[c] ?? null },
+          key: `${r}_${c}`,
+          type: 'update',
+        });
+        replaceCount += 1;
+        continue;
+      }
+
+      const v = valueShowEs(r, c, d).toString().replace(reg, replaceText);
+      setCellValue(ctx, r, c, d, v);
+      cellChanges.push({
+        sheetId,
+        path: ['celldata'],
+        value: { r, c, v: d?.[r]?.[c] ?? null },
+        key: `${r}_${c}`,
+        type: 'update',
+      });
+      replaceCount += 1;
+    }
+  }
+
+  return { replaced: replaceCount, skipped: skippedCount };
+}
+
+export function replaceAllScoped(
+  ctx: Context,
+  searchText: string,
+  replaceText: string,
+  checkModes: CheckModes,
+  scope: ReplaceScope = 'thisSheet',
+): ReplaceAllResult {
+  const { findAndReplace } = locale(ctx);
+  const allowEdit = isAllowEdit(ctx);
+  if (!allowEdit) return { ok: false, message: findAndReplace.modeTip };
+  if (searchText === '' || searchText == null) {
+    return { ok: false, message: findAndReplace.searchInputTip };
+  }
+
+  if (scope === 'thisSheet') {
+    return replaceAll(ctx, searchText, replaceText, checkModes);
+  }
+
+  const originalSheetId = ctx.currentSheetId;
+  const cellChanges: {
+    sheetId: string;
+    path: string[];
+    key?: string;
+    value: unknown;
+    type?: 'update' | 'delete';
+  }[] = [];
+  let replaced = 0;
+  let skipped = 0;
+
+  for (const sheet of ctx.luckysheetfile) {
+    const sheetId = sheet.id ?? '';
+    const sheetData = sheet.data as CellMatrix | undefined;
+    if (!sheetId || !sheetData) continue;
+
+    const range = fullSheetRangeForData(sheetData, sheet.row, sheet.column);
+    if (range == null) continue;
+
+    // Ensure formula evaluation and any sheet-scoped helpers behave correctly.
+    ctx.currentSheetId = sheetId;
+    const res = replaceAllOnSheetInto(
+      ctx,
+      sheetId,
+      sheetData,
+      searchText,
+      replaceText,
+      checkModes,
+      range,
+      cellChanges,
+      sheet.hyperlink as HyperlinkMap | undefined,
+    );
+    replaced += res.replaced;
+    skipped += res.skipped;
+  }
+
+  ctx.currentSheetId = originalSheetId;
+
+  if (replaced === 0 && skipped === 0) {
+    return { ok: false, message: findAndReplace.noReplceTip };
+  }
+
+  if (cellChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
+    ctx.hooks.updateCellYdoc(cellChanges);
+  }
+
+  return { ok: true, replaced, skipped };
 }
 
 // ---------------------------------------------------------------------------
