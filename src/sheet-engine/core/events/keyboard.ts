@@ -15,6 +15,7 @@ import {
   getFormulaEditorOwner,
   suppressFormulaRangeSelectionForInitialEdit,
   toggleFormulaAbsoluteReferenceAtCaret,
+  getFormulaRangeIndexAtCaret,
 } from "../modules/formula";
 import { isInlineStringCell } from "../modules/inline-string";
 import {
@@ -75,6 +76,16 @@ function shouldBlockFormulaRangeKeyboardNavigation(ctx: Context): boolean {
   if (!editor) return false;
   const t = (editor.innerText || "").trim();
   if (!t.startsWith("=")) return false;
+  // When a range was just inserted via keyboard/mouse and the caret remains on
+  // that managed range span, allow continued arrow navigation to extend/move it
+  // (e.g. `=A2` → arrow → `=A3` / `=A2:A3`). Mirrors main's behavior where
+  // `rangeSelectionActive === true` short-circuited bare-cell-only checks.
+  if (
+    ctx.formulaCache.rangeSelectionActive === true &&
+    getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+  ) {
+    return false;
+  }
   return !isCaretAtValidFormulaRangeInsertionPoint(editor);
 }
 

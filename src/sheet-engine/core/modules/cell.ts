@@ -385,6 +385,11 @@ export function setCellValue(
       } else if ("f" in cell) {
         delete cell.f;
       }
+      if (!_.isNil(v.m)) {
+        cell.m = v.m;
+      } else if ("m" in v && "m" in cell) {
+        delete cell.m;
+      }
 
       // if (!_.isNil(v.spl)) {
       //   cell.spl = v.spl;
@@ -843,19 +848,19 @@ export function setCellValue(
   // Safety net: formula commits should always end with a display value `m`.
   // Some mixed multiline/auto-close paths can carry `f`+`v` forward while `m`
   // is still empty; derive it here without touching existing non-empty `m`.
-  if (
-    !_.isNil((cell as Cell).f) &&
-    isRealNull((cell as Cell).m) &&
-    !isRealNull((cell as Cell).v)
-  ) {
-    if (cell?.ct?.t === "d" && cell?.ct?.fa) {
-      (cell as Cell).m = update(cell.ct.fa, (cell as Cell).v);
-    } else if (typeof (cell as Cell).v === "number") {
+  if (!_.isNil((cell as Cell).f) && isRealNull((cell as Cell).m)) {
+    const formulaResult = (cell as Cell).v;
+    if (cell?.ct?.t === "d" && cell?.ct?.fa && !isRealNull(formulaResult)) {
+      (cell as Cell).m = update(cell.ct.fa, formulaResult);
+    } else if (typeof formulaResult === "number") {
       refreshGeneralNumericDisplay(cell as Cell);
-    } else if (typeof (cell as Cell).v === "boolean") {
-      (cell as Cell).m = (cell as Cell).v ? "TRUE" : "FALSE";
+    } else if (typeof formulaResult === "boolean") {
+      (cell as Cell).m = formulaResult ? "TRUE" : "FALSE";
+    } else if (isRealNull(formulaResult)) {
+      // Keep `m` present for formulas even when result is null/empty.
+      (cell as Cell).m = "";
     } else {
-      (cell as Cell).m = String((cell as Cell).v);
+      (cell as Cell).m = String(formulaResult);
     }
   }
 
