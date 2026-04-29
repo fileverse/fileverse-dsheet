@@ -132,10 +132,26 @@ const SearchReplace: React.FC<{
       draftCtx.findReplacePrefill = undefined;
       draftCtx.searchRangeScopeHighlight = null;
       draftCtx.searchRangeScopeEmphasis = false;
+      draftCtx.showFormulasFromFindReplace = false;
       draftCtx.findReplaceHiddenDuringRangePick = false;
       draftCtx.findReplaceRestoreVisibility = undefined;
     });
   }, [refs.globalCache, setContext]);
+
+  useEffect(() => {
+    const open = !!(context.showSearch || context.showReplace);
+    const enabled = open && !!checkMode.formulaCheck;
+    if (!!context.showFormulasFromFindReplace === enabled) return;
+    setContext((d) => {
+      d.showFormulasFromFindReplace = enabled;
+    });
+  }, [
+    context.showSearch,
+    context.showReplace,
+    context.showFormulasFromFindReplace,
+    checkMode.formulaCheck,
+    setContext,
+  ]);
 
   useEffect(() => {
     if (!(context.showSearch || context.showReplace)) return;

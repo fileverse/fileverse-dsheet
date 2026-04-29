@@ -276,6 +276,7 @@ const Sheet: React.FC<Props> = ({ sheet }) => {
     context.zoomRatio,
     context.devicePixelRatio,
     context.showGridLines,
+    context.showFormulasFromFindReplace,
     context.luckysheetTableContentHW,
     context.defaultFontSize,
     context.defaultcollen,
