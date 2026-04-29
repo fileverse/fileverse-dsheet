@@ -63,6 +63,7 @@ export type Context = {
   showReplace?: boolean;
   findReplaceHiddenDuringRangePick?: boolean;
   findReplaceRestoreVisibility?: { showSearch: boolean; showReplace: boolean };
+  showFormulasFromFindReplace?: boolean;
   showQuickSearch?: boolean;
   quickSearchFocusNonce?: number;
   findReplacePrefill?: string;
@@ -567,6 +568,7 @@ export function defaultContext(refs: RefValues): Context {
     showQuickSearch: false,
     quickSearchFocusNonce: 0,
     findReplacePrefill: undefined,
+    showFormulasFromFindReplace: false,
     quickSearchLoading: false,
     quickSearchHighlight: null,
     searchRangeScopeHighlight: null,

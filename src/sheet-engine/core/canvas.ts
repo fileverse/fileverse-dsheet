@@ -852,7 +852,10 @@ export class Canvas {
           value = getRealCellValue(r, c, flowdata);
         }
 
-        if (_.isNil(value) || value.toString().length === 0) {
+        const forceShowFormula =
+          this.sheetCtx.showFormulasFromFindReplace && (cell as any)?.f;
+
+        if (!forceShowFormula && (_.isNil(value) || value.toString().length === 0)) {
           this.nullCellRender(
             r,
             c,
@@ -891,7 +894,7 @@ export class Canvas {
           //   renderCtx
           // );
         } else {
-          if (`${r}_${c}` in dynamicArrayCompute) {
+          if (!forceShowFormula && `${r}_${c}` in dynamicArrayCompute) {
             // 动态数组公式
             value = dynamicArrayCompute[`${r}_${c}`].v;
           }
@@ -939,6 +942,11 @@ export class Canvas {
       const mergeMaindata = cell.mc;
       if (!mergeMaindata) continue;
 
+      const mergedMainCell = flowdata?.[mergeMaindata.r]?.[
+        mergeMaindata.c
+      ] as any;
+      const forceShowFormula =
+        this.sheetCtx.showFormulasFromFindReplace && mergedMainCell?.f;
       value = getRealCellValue(mergeMaindata.r, mergeMaindata.c, flowdata);
 
       r = mergeMaindata.r;
@@ -967,7 +975,7 @@ export class Canvas {
       endX =
         this.sheetCtx.visibledatacolumn[c + mainCell.mc.cs - 1] - scrollWidth;
 
-      if (_.isNil(value) || value.toString().length === 0) {
+      if (!forceShowFormula && (_.isNil(value) || value.toString().length === 0)) {
         this.nullCellRender(
           r,
           c,
@@ -1007,7 +1015,7 @@ export class Canvas {
         //   renderCtx
         // );
       } else {
-        if (`${r}_${c}` in dynamicArrayCompute) {
+        if (!forceShowFormula && `${r}_${c}` in dynamicArrayCompute) {
           // 动态数组公式
           value = dynamicArrayCompute[`${r}_${c}`].v;
         }
@@ -1888,6 +1896,24 @@ export class Canvas {
       return;
     }
     let cell = flowdata[r][c];
+    // Find/Replace "Search within formulae": temporarily paint raw formula text in-grid.
+    // Important: Canvas text layout uses `getCellTextInfo(cell, ...)`, so we must override
+    // the cell's displayed content (without mutating flowdata) rather than relying on `value`.
+    if (
+      this.sheetCtx.showFormulasFromFindReplace &&
+      cell &&
+      typeof cell === 'object' &&
+      (cell as any).f
+    ) {
+      const f = String((cell as any).f);
+      cell = {
+        ...(cell as any),
+        v: f,
+        m: f,
+        // Force plain string formatting so numeric/date formats don't affect formula text.
+        ct: { fa: '@', t: 's' },
+      } as any;
+    }
     const cellWidth = endX - startX - 2;
     const cellHeight = endY - startY - 2;
     const space_width = 2;
@@ -2626,7 +2652,21 @@ export class Canvas {
     if (!flowdata) {
       return;
     }
-    const cell = flowdata[r][c];
+    let cell = flowdata[r][c];
+    if (
+      this.sheetCtx.showFormulasFromFindReplace &&
+      cell &&
+      typeof cell === 'object' &&
+      (cell as any).f
+    ) {
+      const f = String((cell as any).f);
+      cell = {
+        ...(cell as any),
+        v: f,
+        m: f,
+        ct: { fa: '@', t: 's' },
+      } as any;
+    }
     const cellWidth = endX - startX - 2;
     const originCellWidth = sourceEndX - sourceStartX - 2;
     const cellHeight = endY - startY - 2;
