@@ -84,7 +84,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -166,8 +166,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
   const toolbarItems = isReadOnly
     ? allowComments
-      ? ['sort', 'filter', 'comment']
-      : ['sort', 'filter']
+      ? ['filter', 'sort', 'comment']
+      : ['filter', 'sort']
     : TOOL_BAR_ITEMS;
 
   const { handleOnChangePortalUpdate } = useEditor();
@@ -231,25 +231,25 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         customToolbarItems={
           !isReadOnly
             ? getCustomToolbarItems({
-                handleContentPortal: handleOnChangePortalUpdate,
-                setShowSmartContractModal,
-                getDocumentTitle,
-                updateDocumentTitle,
-                setExportDropdownOpen,
-                handleCSVUpload,
-                // @ts-ignore
-                handleXLSXUpload,
-                handleExportToXLSX,
-                handleExportToCSV,
-                handleExportToJSON,
-                sheetEditorRef,
-                ydocRef,
-                dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
-              })
+              handleContentPortal: handleOnChangePortalUpdate,
+              setShowSmartContractModal,
+              getDocumentTitle,
+              updateDocumentTitle,
+              setExportDropdownOpen,
+              handleCSVUpload,
+              // @ts-ignore
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
             : []
         }
         hooks={{
