@@ -4,6 +4,10 @@ import { deleteRowCol, insertRowCol } from '../modules';
 import { CommonOptions, getSheet } from './common';
 import { INVALID_PARAMS } from './errors';
 import { getSheetIndex } from '../utils';
+import {
+  ensureManualHiddenInitialized,
+  rebuildRowHiddenUnion,
+} from '../modules/rowVisibility';
 
 export function freeze(
   ctx: Context,
@@ -96,13 +100,14 @@ export function hideRowOrColumn(
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
 
   if (type === 'row') {
+    ensureManualHiddenInitialized(ctx);
     /* TODO: 工作表保护判断
     if (
       !checkProtectionAuthorityNormal(Store.currentSheetIndex, "formatRows")
     ) {
       return ;
     } */
-    const rowhidden = ctx.config.rowhidden ?? {};
+    const rowhidden = ctx.config.rowhidden_manual ?? {};
 
     rowColInfo.forEach((r) => {
       rowhidden[r] = 0;
@@ -119,7 +124,8 @@ export function hideRowOrColumn(
         Store.jfundo.length  = 0;
         Store.jfredo.push(redo);
     } */
-    ctx.config.rowhidden = rowhidden;
+    ctx.config.rowhidden_manual = rowhidden;
+    rebuildRowHiddenUnion(ctx);
     // const rowLen = ctx.luckysheetfile[index].data!.length;
     /**
      * 计算要隐藏的行是否是最后一列
@@ -154,13 +160,14 @@ export function showRowOrColumn(
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
 
   if (type === 'row') {
+    ensureManualHiddenInitialized(ctx);
     /* TODO: 工作表保护判断
     if (
       !checkProtectionAuthorityNormal(Store.currentSheetIndex, "formatRows")
     ) {
       return ;
     } */
-    const rowhidden = ctx.config.rowhidden ?? {};
+    const rowhidden = ctx.config.rowhidden_manual ?? {};
 
     rowColInfo.forEach((r) => {
       delete rowhidden[r];
@@ -177,7 +184,8 @@ export function showRowOrColumn(
         Store.jfundo.length  = 0;
         Store.jfredo.push(redo);
     } */
-    ctx.config.rowhidden = rowhidden;
+    ctx.config.rowhidden_manual = rowhidden;
+    rebuildRowHiddenUnion(ctx);
     // const rowLen = ctx.luckysheetfile[index].data!.length;
     /**
      * 计算要隐藏的行是否是最后一列

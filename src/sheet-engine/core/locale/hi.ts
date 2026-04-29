@@ -11398,6 +11398,12 @@ export default {
 
     sortRangeTitle: 'इससे रेंज सॉर्ट करें',
     sortRangeTitleTo: 'इस तक',
+    sortSheet: 'शीट सॉर्ट करें',
+    sortRange: 'रेंज सॉर्ट करें',
+    sortSheetByColumnAZ: 'कॉलम {col} द्वारा शीट सॉर्ट करें (A से Z)',
+    sortSheetByColumnZA: 'कॉलम {col} द्वारा शीट सॉर्ट करें (Z से A)',
+    sortRangeByColumnAZ: 'कॉलम {col} द्वारा रेंज सॉर्ट करें (A से Z)',
+    sortRangeByColumnZA: 'कॉलम {col} द्वारा रेंज सॉर्ट करें (Z से A)',
 
     noRangeError:
       'एकाधिक चयन क्षेत्रों पर यह कार्य नहीं किया जा सकता, कृपया एक रेंज चुनें और फिर से प्रयास करें',

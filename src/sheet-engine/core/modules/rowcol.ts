@@ -4,6 +4,11 @@ import { Cell, Sheet } from '../types';
 import { getSheetIndex } from "../utils";
 import { getcellFormula } from "./cell";
 import { execFunctionGroup, functionStrChange } from './formula';
+import {
+  ensureManualHiddenInitialized,
+  getFilterHiddenRowsUnionFromFilterMap,
+  rebuildRowHiddenUnion,
+} from './rowVisibility';
 
 const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
   Object.entries(merge_new).forEach(([, v]) => {
@@ -263,6 +268,19 @@ export function insertRowCol(
   if (!d) return;
 
   const cfg = file.config || {};
+  // Ensure manual-hidden provenance exists for this sheet config.
+  // If missing, derive as: (rowhidden - filterHidden) when a filter exists on this sheet.
+  const filterUnionExisting = getFilterHiddenRowsUnionFromFilterMap(
+    file.filter as any,
+  );
+  if (cfg.rowhidden_manual == null) {
+    cfg.rowhidden_manual = _.omit(
+      cfg.rowhidden || {},
+      _.keys(filterUnionExisting),
+    );
+  }
+  cfg.rowhidden_filter = filterUnionExisting;
+  cfg.rowhidden = _.assign({}, cfg.rowhidden_manual, filterUnionExisting);
 
   count = Math.floor(count);
 
@@ -610,18 +628,17 @@ export function insertRowCol(
     newFilterObj.filter_select = { row: [f_r1, f_r2], column: [f_c1, f_c2] };
   }
 
-  if (newFilterObj != null && newFilterObj.filter != null) {
-    if (cfg.rowhidden == null) {
-      cfg.rowhidden = {};
-    }
-
-    _.forEach(newFilterObj.filter, (v, k) => {
-      const f_rowhidden = newFilterObj.filter[k].rowhidden;
-      _.forEach(f_rowhidden, (v1, n) => {
-        cfg.rowhidden![n] = 0;
-      });
-    });
-  }
+  // Rebuild `cfg.rowhidden` as render-time union: manual ∪ filterHidden.
+  const filterHiddenAfterInsert =
+    newFilterObj?.filter != null
+      ? getFilterHiddenRowsUnionFromFilterMap(newFilterObj.filter)
+      : getFilterHiddenRowsUnionFromFilterMap(filter as any);
+  cfg.rowhidden_filter = filterHiddenAfterInsert;
+  cfg.rowhidden = _.assign(
+    {},
+    cfg.rowhidden_manual || {},
+    filterHiddenAfterInsert,
+  );
 
   // 条件格式配置变动
   const CFarr = file.luckysheet_conditionformat_save;
@@ -956,28 +973,37 @@ export function insertRowCol(
       }
     }
 
-    // 隐藏行配置变动
-    if (cfg.rowhidden != null) {
-      const rowhidden_new: any = {};
+    // 隐藏行配置变动（manual provenance only; `cfg.rowhidden` is rebuilt as union later）
+    const filterUnionBefore = getFilterHiddenRowsUnionFromFilterMap(
+      file.filter as any,
+    );
+    const manualBefore =
+      cfg.rowhidden_manual ??
+      _.omit(cfg.rowhidden || {}, _.keys(filterUnionBefore));
+    const rowhidden_manual_new: Record<string, number> = {};
+    _.forEach(manualBefore, (v, rstr) => {
+      const r = parseFloat(rstr);
 
-      _.forEach(cfg.rowhidden, (v, rstr) => {
-        const r = parseFloat(rstr);
-
-        if (r < index) {
-          rowhidden_new[r] = cfg.rowhidden![r];
-        } else if (r === index) {
-          if (direction === "lefttop") {
-            rowhidden_new[r + count] = cfg.rowhidden![r];
-          } else if (direction === "rightbottom") {
-            rowhidden_new[r] = cfg.rowhidden![r];
-          }
-        } else {
-          rowhidden_new[r + count] = cfg.rowhidden![r];
+      if (r < index) {
+        rowhidden_manual_new[r] = (manualBefore as any)[r];
+      } else if (r === index) {
+        if (direction === "lefttop") {
+          rowhidden_manual_new[r + count] = (manualBefore as any)[r];
+        } else if (direction === "rightbottom") {
+          rowhidden_manual_new[r] = (manualBefore as any)[r];
         }
-      });
-
-      cfg.rowhidden = rowhidden_new;
-    }
+      } else {
+        rowhidden_manual_new[r + count] = (manualBefore as any)[r];
+      }
+    });
+    cfg.rowhidden_manual = rowhidden_manual_new;
+    // Keep render-time union in sync after shifting manual rows.
+    const filterHiddenNow =
+      newFilterObj?.filter != null
+        ? getFilterHiddenRowsUnionFromFilterMap(newFilterObj.filter)
+        : getFilterHiddenRowsUnionFromFilterMap(filter as any);
+    cfg.rowhidden_filter = filterHiddenNow;
+    cfg.rowhidden = _.assign({}, cfg.rowhidden_manual, filterHiddenNow);
 
     // 空行模板（非合并单元格也要复制样式；不复制 v / m / f / ps / 超链接）
     const cellBorderConfig: any[] = [];
@@ -1535,6 +1561,8 @@ export function deleteRowCol(
     start: number;
     end: number;
     id?: string;
+    /** Internal: when true, do not re-split row ranges by visibility under filter. */
+    skipFilterVisibleOnly?: boolean;
   }
 ) {
   const { type } = op;
@@ -1560,6 +1588,15 @@ export function deleteRowCol(
   const file = ctx.luckysheetfile[curOrder];
   if (!file) return;
   const cfg = file.config || {};
+  // Ensure manual-hidden provenance exists for this sheet config.
+  const filterUnionExisting = getFilterHiddenRowsUnionFromFilterMap(
+    file.filter as any,
+  );
+  if (cfg.rowhidden_manual == null) {
+    cfg.rowhidden_manual = _.omit(cfg.rowhidden || {}, _.keys(filterUnionExisting));
+  }
+  cfg.rowhidden_filter = filterUnionExisting;
+  cfg.rowhidden = _.assign({}, cfg.rowhidden_manual, filterUnionExisting);
   if (type === "row") {
     for (let r = start; r <= end; r += 1) {
       if (cfg.rowReadOnly?.[r]) {
@@ -1604,6 +1641,51 @@ export function deleteRowCol(
   }
 
   if (start > end) {
+    return;
+  }
+
+  // Under an active filter, deleting a row range should delete only rows that are currently
+  // visible (i.e. not hidden by filter *or* manual hide). This matches Excel-like behavior.
+  if (
+    type === "row" &&
+    !op.skipFilterVisibleOnly &&
+    !_.isEmpty(file.filter_select) &&
+    !_.isEmpty(file.filter) &&
+    cfg.rowhidden != null
+  ) {
+    const visibleRows: number[] = [];
+    for (let r = start; r <= end; r += 1) {
+      if (cfg.rowhidden?.[r] != null) continue;
+      visibleRows.push(r);
+    }
+    if (visibleRows.length === 0) return;
+
+    // If the visible rows form multiple segments, delete segments bottom-up so indices stay stable.
+    const segments: { start: number; end: number }[] = [];
+    let segStart = visibleRows[0]!;
+    let prev = visibleRows[0]!;
+    for (let i = 1; i < visibleRows.length; i += 1) {
+      const cur = visibleRows[i]!;
+      if (cur === prev + 1) {
+        prev = cur;
+        continue;
+      }
+      segments.push({ start: segStart, end: prev });
+      segStart = cur;
+      prev = cur;
+    }
+    segments.push({ start: segStart, end: prev });
+
+    for (let i = segments.length - 1; i >= 0; i -= 1) {
+      const seg = segments[i]!;
+      deleteRowCol(ctx, {
+        type: "row",
+        start: seg.start,
+        end: seg.end,
+        id,
+        skipFilterVisibleOnly: true,
+      });
+    }
     return;
   }
 
@@ -1900,18 +1982,13 @@ export function deleteRowCol(
     }
   }
 
-  if (newFilterObj != null && newFilterObj.filter != null) {
-    if (cfg.rowhidden == null) {
-      cfg.rowhidden = {};
-    }
-
-    _.forEach(newFilterObj.filter, (v, k) => {
-      const f_rowhidden = newFilterObj.filter[k].rowhidden;
-      _.forEach(f_rowhidden, (v1, n) => {
-        cfg.rowhidden![n] = 0;
-      });
-    });
-  }
+  // Rebuild `cfg.rowhidden` as render-time union: manual ∪ filterHidden.
+  const filterHiddenAfterDelete =
+    newFilterObj?.filter != null
+      ? getFilterHiddenRowsUnionFromFilterMap(newFilterObj.filter)
+      : getFilterHiddenRowsUnionFromFilterMap(filter as any);
+  cfg.rowhidden_filter = filterHiddenAfterDelete;
+  cfg.rowhidden = _.assign({}, cfg.rowhidden_manual || {}, filterHiddenAfterDelete);
 
   // 条件格式配置变动
   const CFarr = file.luckysheet_conditionformat_save;
@@ -2150,20 +2227,24 @@ export function deleteRowCol(
     cfg.rowlen = rowlen_new;
     cfg.rowReadOnly = rowReadOnly_new;
 
-    // 隐藏行配置变动
-    if (cfg.rowhidden == null) {
-      cfg.rowhidden = {};
-    }
-
-    const rowhidden_new: any = {};
-    _.forEach(cfg.rowhidden, (v, rstr) => {
+    // 隐藏行配置变动（manual provenance only; `cfg.rowhidden` is rebuilt as union later）
+    const rowhidden_manual_new: Record<string, number> = {};
+    _.forEach(cfg.rowhidden_manual || {}, (v, rstr) => {
       const r = parseFloat(rstr);
       if (r < start) {
-        rowhidden_new[r] = cfg.rowhidden![r];
+        rowhidden_manual_new[r] = (cfg.rowhidden_manual as any)[r];
       } else if (r > end) {
-        rowhidden_new[r - slen] = cfg.rowhidden![r];
+        rowhidden_manual_new[r - slen] = (cfg.rowhidden_manual as any)[r];
       }
     });
+    cfg.rowhidden_manual = rowhidden_manual_new;
+    // Keep render-time union in sync after shifting manual rows.
+    const filterHiddenNow =
+      newFilterObj?.filter != null
+        ? getFilterHiddenRowsUnionFromFilterMap(newFilterObj.filter)
+        : getFilterHiddenRowsUnionFromFilterMap(filter as any);
+    cfg.rowhidden_filter = filterHiddenNow;
+    cfg.rowhidden = _.assign({}, cfg.rowhidden_manual, filterHiddenNow);
 
     // 自定义行高配置变动
     if (cfg.customHeight == null) {
@@ -2199,7 +2280,7 @@ export function deleteRowCol(
       cfg.customHeight = customHeight_new;
     }
 
-    cfg.rowhidden = rowhidden_new;
+    // `cfg.rowhidden` will be recomputed after filter adjustments.
 
     // 边框配置变动
     if (cfg.borderInfo && cfg.borderInfo.length > 0) {
@@ -2514,13 +2595,15 @@ export function hideSelected(ctx: Context, type: string) {
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   // 隐藏行
   if (type === "row") {
+    // Manual hide writes `rowhidden_manual`; `rowhidden` remains the render-time union.
+    ensureManualHiddenInitialized(ctx);
     /* TODO: 工作表保护判断
     if (
       !checkProtectionAuthorityNormal(Store.currentSheetIndex, "formatRows")
     ) {
       return ;
     } */
-    const rowhidden = ctx.config.rowhidden ?? {};
+    const rowhidden = ctx.config.rowhidden_manual ?? {};
     const r1 = ctx.luckysheet_select_save[0].row[0];
     const r2 = ctx.luckysheet_select_save[0].row[1];
     const rowhiddenNumber = r2;
@@ -2538,7 +2621,8 @@ export function hideSelected(ctx: Context, type: string) {
         Store.jfundo.length  = 0;
         Store.jfredo.push(redo);
     } */
-    ctx.config.rowhidden = rowhidden;
+    ctx.config.rowhidden_manual = rowhidden;
+    rebuildRowHiddenUnion(ctx);
     const rowLen = ctx.luckysheetfile[index].data!.length;
     /**
      * 计算要隐藏的行是否是最后一列
@@ -2593,13 +2677,15 @@ export function showSelected(ctx: Context, type: string) {
   const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
   // 取消隐藏行
   if (type === "row") {
-    const rowhidden = ctx.config.rowhidden ?? {};
+    ensureManualHiddenInitialized(ctx);
+    const rowhidden = ctx.config.rowhidden_manual ?? {};
     const r1 = ctx.luckysheet_select_save[0].row[0];
     const r2 = ctx.luckysheet_select_save[0].row[1];
     for (let r = r1; r <= r2; r += 1) {
       delete rowhidden[r];
     }
-    ctx.config.rowhidden = rowhidden;
+    ctx.config.rowhidden_manual = rowhidden;
+    rebuildRowHiddenUnion(ctx);
   } else if (type === "column") {
     // 取消隐藏列
     const colhidden = ctx.config.colhidden ?? {};

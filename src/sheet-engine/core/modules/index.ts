@@ -110,6 +110,14 @@ export {
   hideCRCount,
 } from './rowcol';
 
+// row visibility (manual vs filter provenance)
+export {
+  getFilterHiddenRowsUnionFromFilterMap,
+  getFilterHiddenRowsUnion,
+  ensureManualHiddenInitialized,
+  rebuildRowHiddenUnion,
+} from './rowVisibility';
+
 // selection
 export {
   scrollToHighlightCell,
@@ -217,7 +225,11 @@ export {
 export { mergeCells, mergeSelectionHasValues } from './merge';
 
 // sort
-export { sortSelection, spillSortResult } from './sort';
+export {
+  sortSelection,
+  sortSheetBySelectedColumn,
+  spillSortResult,
+} from './sort';
 
 // screenshot — handleScreenShot already exported from toolbar
 
@@ -270,6 +282,8 @@ export {
 export {
   createFilterOptions,
   clearFilter,
+  clearFilterForColumn,
+  toggleViewerFilter,
   createFilter,
   getFilterColumnValues,
   getFilterColumnColors,

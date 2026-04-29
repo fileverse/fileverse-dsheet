@@ -185,6 +185,7 @@ export type Context = {
   filterchage: boolean; // 筛选
   filterOptions?: FilterOptions;
   luckysheet_filter_save?: { row: number[]; column: number[] } | undefined;
+  viewerFilterVisible: boolean;
   filter: Record<
     string,
     {
@@ -489,6 +490,7 @@ export function defaultContext(refs: RefValues): Context {
     luckysheet_paste_iscut: false,
 
     filterchage: true, // 筛选
+    viewerFilterVisible: true,
     filter: {},
 
     luckysheet_sheet_move_status: false,

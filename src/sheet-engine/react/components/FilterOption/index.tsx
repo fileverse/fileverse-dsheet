@@ -3,6 +3,7 @@ import {
   fixColumnStyleOverflowInFreeze,
   fixRowStyleOverflowInFreeze,
   getSheetIndex,
+  isAllowEdit,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import React, { useCallback, useContext, useEffect } from 'react';
@@ -22,6 +23,7 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
   } = context;
   const sheetIndex = getSheetIndex(context, context.currentSheetId);
   const { filter_select, frozen } = context.luckysheetfile[sheetIndex!];
+  const isViewerReadOnly = context.isFlvReadOnly || !isAllowEdit(context);
 
   useEffect(() => {
     setContext((draftCtx) => {
@@ -159,16 +161,19 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
+              if (isViewerReadOnly) return;
               showFilterContextMenu(v_adjusted, i);
             }}
             onDoubleClick={(e) => e.stopPropagation()}
-            tabIndex={0}
+            tabIndex={isViewerReadOnly ? -1 : 0}
             key={i}
             style={_.assign(rowOverflowFreezeStyle, columnOverflowFreezeStyle, {
               left,
               top,
               height: undefined,
               width: undefined,
+              cursor: isViewerReadOnly ? ('default' as const) : undefined,
+              pointerEvents: isViewerReadOnly ? ('none' as const) : undefined,
             })}
             className={`luckysheet-filter-options ${
               filterParam == null ? '' : 'luckysheet-filter-options-active'

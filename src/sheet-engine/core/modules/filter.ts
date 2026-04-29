@@ -9,6 +9,7 @@ import { isRealNull } from './validation';
 import { normalizedAttr } from './cell';
 import { sortDataRange } from './sort';
 import { checkCF, getComputeMap } from './ConditionFormat';
+import { ensureManualHiddenInitialized, rebuildRowHiddenUnion } from './rowVisibility';
 
 // 筛选配置状态
 export function labelFilterOptionState(
@@ -118,9 +119,9 @@ export function createFilterOptions(
   ctx: Context,
   luckysheet_filter_save:
     | {
-        row: number[];
-        column: number[];
-      }
+      row: number[];
+      column: number[];
+    }
     | undefined,
   sheetId: string | undefined,
   filterObj?: any,
@@ -129,8 +130,6 @@ export function createFilterOptions(
   // $(`#luckysheet-filter-selected-sheet${ctx.currentSheetIndex}`).remove();
   // $(`#luckysheet-filter-options-sheet${ctx.currentSheetIndex}`).remove();
 
-  const allowEdit = isAllowEdit(ctx);
-  if (!allowEdit) return;
   if (sheetId != null && sheetId !== ctx.currentSheetId) return;
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) return;
@@ -186,22 +185,56 @@ export function createFilterOptions(
 export function clearFilter(ctx: Context) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
+  // Manual hides live in `rowhidden_manual`; `rowhidden` is rebuilt as union.
+  ensureManualHiddenInitialized(ctx);
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
-  const hiddenRows = _.reduce(
-    ctx.filter,
-    (pre, curr) => _.assign(pre, curr?.rowhidden || {}),
-    {},
-  );
-  ctx.config.rowhidden = _.omit(ctx.config.rowhidden, _.keys(hiddenRows));
   ctx.luckysheet_filter_save = undefined;
   ctx.filterOptions = undefined;
   ctx.filterContextMenu = undefined;
   ctx.filter = {};
+  rebuildRowHiddenUnion(ctx);
   if (sheetIndex != null) {
     ctx.luckysheetfile[sheetIndex].filter = undefined;
     ctx.luckysheetfile[sheetIndex].filter_select = undefined;
     ctx.luckysheetfile[sheetIndex].config = _.assign({}, ctx.config);
   }
+  ctx.viewerFilterVisible = true;
+}
+
+export function toggleViewerFilter(ctx: Context) {
+  if (_.isEmpty(ctx.filter) || _.isNil(ctx.luckysheet_filter_save)) return;
+  ctx.viewerFilterVisible = !ctx.viewerFilterVisible;
+  rebuildRowHiddenUnion(ctx);
+}
+
+export function clearFilterForColumn(
+  ctx: Context,
+  cindex: number,
+  startCol: number,
+) {
+  const allowEdit = isAllowEdit(ctx);
+  if (!allowEdit) return;
+  ensureManualHiddenInitialized(ctx);
+
+  const key = `${cindex - startCol}`;
+
+  // Remove only this column's filter config.
+  delete ctx.filter[key];
+
+  // Rebuild render-time union from manual + remaining filter-hidden rows.
+  rebuildRowHiddenUnion(ctx);
+
+  const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
+  if (sheetIndex == null) return;
+
+  const file = ctx.luckysheetfile[sheetIndex];
+  if (file.filter == null) file.filter = {};
+  delete file.filter[key];
+  if (_.isEmpty(file.filter)) {
+    file.filter = undefined;
+  }
+
+  file.config = _.assign({}, ctx.config);
 }
 
 export function createFilter(ctx: Context) {
@@ -276,6 +309,7 @@ export function createFilter(ctx: Context) {
     {},
     filterSave?.[0] || ctx.luckysheet_select_save?.[0],
   );
+  ctx.viewerFilterVisible = true;
 
   createFilterOptions(ctx, ctx.luckysheet_filter_save, undefined, {}, true);
 
@@ -608,8 +642,8 @@ export function saveFilter(
   st_c: number,
   ed_c: number,
 ) {
-  const { otherHiddenRows } = getFilterHiddenRows(ctx, cindex, st_c);
-  const rowHiddenAll = _.assign(otherHiddenRows, hiddenRows);
+  // Filters only contribute via `ctx.filter[*].rowhidden`; `rowhidden` is rebuilt as union.
+  ensureManualHiddenInitialized(ctx);
 
   labelFilterOptionState(
     ctx,
@@ -623,17 +657,18 @@ export function saveFilter(
     ed_c,
     true,
   );
-
-  const cfg = _.assign({}, ctx.config);
-  cfg.rowhidden = rowHiddenAll;
-
-  // config
-  ctx.config = cfg;
+  // Rebuild render-time union from manual + all filter-hidden rows.
+  ctx.viewerFilterVisible = true;
+  rebuildRowHiddenUnion(ctx);
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) {
     return;
   }
-  ctx.luckysheetfile[sheetIndex].config = cfg;
+  ctx.luckysheetfile[sheetIndex].config = _.assign(
+    {},
+    ctx.luckysheetfile[sheetIndex].config,
+    ctx.config,
+  );
 
   // server.saveParam("cg", Store.currentSheetIndex, cfg.rowhidden, {
   //   k: "rowhidden",

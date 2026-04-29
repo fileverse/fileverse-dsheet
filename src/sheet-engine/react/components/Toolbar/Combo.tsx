@@ -69,6 +69,7 @@ const Combo: React.FC<Props> = ({
         'merge-all',
         'format',
         'conditionFormat',
+        'sort',
         'filter',
         'comment',
         'image',
