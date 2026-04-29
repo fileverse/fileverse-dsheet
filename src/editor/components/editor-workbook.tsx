@@ -166,8 +166,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
   const toolbarItems = isReadOnly
     ? allowComments
-      ? ['filter', 'comment']
-      : ['filter']
+      ? ['sort', 'filter', 'comment']
+      : ['sort', 'filter']
     : TOOL_BAR_ITEMS;
 
   const { handleOnChangePortalUpdate } = useEditor();

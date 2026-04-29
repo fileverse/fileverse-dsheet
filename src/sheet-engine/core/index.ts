@@ -201,6 +201,7 @@ export {
   createDropCellRange,
   // sort
   sortSelection,
+  sortSheetBySelectedColumn,
   // searchReplace
   searchAll,
   searchNext,

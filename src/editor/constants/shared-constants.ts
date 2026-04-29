@@ -61,6 +61,7 @@ export const TOOL_BAR_ITEMS = [
   '|',
   'conditionFormat',
   'filter',
+  'sort',
   '|',
   'link',
   'comment',

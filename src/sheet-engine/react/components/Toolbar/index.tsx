@@ -29,7 +29,6 @@ import {
   insertImage,
   showImgChooser,
   updateFormat,
-  handleSort,
   handleHorizontalAlign,
   handleVerticalAlign,
   handleScreenShot,
@@ -41,7 +40,6 @@ import {
   getFormulaEditorOwner,
   Cell,
   api,
-  getSheetIndex,
   is_date,
   isHyperlinkCreationBlocked,
   isTypedCurrencyDisplayFormat,
@@ -86,6 +84,7 @@ import {
 } from '../../utils/convertCellsToCrypto';
 import { updateCellsDecimalFormat } from '../../utils/updateCellsDecimalFormat';
 import { FunctionList } from './FunctionList/FunctionListButton';
+import SortPopoverContent from './SortPopoverContent';
 
 export const getLucideIcon = (title: string) => {
   switch (title) {
@@ -145,6 +144,8 @@ export const getLucideIcon = (title: string) => {
       return 'PaintbrushVertical';
     case 'filter':
       return 'Filter';
+    case 'sort':
+      return 'ArrowDownUp';
     case 'link':
       return 'Link';
     case 'comment':
@@ -1909,6 +1910,25 @@ const Toolbar: React.FC<{
                     </Option>
                   ))}
                 </Select>
+              )}
+            </Combo>
+          );
+        }
+        if (name === 'sort') {
+          return (
+            <Combo
+              iconId="sort"
+              key={name}
+              tooltip={toolbar.sort}
+              showArrow={false}
+            >
+              {(setOpen) => (
+                <SortPopoverContent
+                  context={context}
+                  setContext={setContext}
+                  sortLocale={sort}
+                  setOpen={setOpen}
+                />
               )}
             </Combo>
           );

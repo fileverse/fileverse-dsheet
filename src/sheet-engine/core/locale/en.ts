@@ -11046,7 +11046,7 @@ export default {
     freeze: 'Freeze',
     sort: 'Sort',
     filter: 'Filter',
-    sortAndFilter: 'Sort and filter',
+    sortAndFilter: 'Filter',
     findAndReplace: 'Find and replace',
     'formula-sum': 'SUM',
     autoSum: 'Auto SUM',
@@ -11367,6 +11367,12 @@ export default {
 
     sortRangeTitle: 'Sort range from',
     sortRangeTitleTo: 'to',
+    sortSheet: 'Sort Sheet',
+    sortRange: 'Sort Range',
+    sortSheetByColumnAZ: 'Sort Sheet by Column {col} (A to Z)',
+    sortSheetByColumnZA: 'Sort Sheet by Column {col} (Z to A)',
+    sortRangeByColumnAZ: 'Sort Range by Column {col} (A to Z)',
+    sortRangeByColumnZA: 'Sort Range by Column {col} (Z to A)',
 
     noRangeError:
       'Cannot perform this operation on multiple selection areas, please select a single range and try again',

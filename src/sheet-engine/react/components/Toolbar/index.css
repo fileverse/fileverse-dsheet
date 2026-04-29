@@ -179,6 +179,17 @@
   max-height: 60vh;
 }
 
+.fortune-toolbar-sort-root {
+  overflow: visible;
+  max-height: none;
+}
+
+.fortune-toolbar-sort-submenu {
+  overflow: visible;
+  max-height: none;
+  z-index: 1005;
+}
+
 .fortune-toolbar-combo-button {
   font-size: 12px;
   padding-top: 4px;

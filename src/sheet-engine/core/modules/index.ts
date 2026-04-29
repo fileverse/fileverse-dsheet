@@ -225,7 +225,11 @@ export {
 export { mergeCells, mergeSelectionHasValues } from './merge';
 
 // sort
-export { sortSelection, spillSortResult } from './sort';
+export {
+  sortSelection,
+  sortSheetBySelectedColumn,
+  spillSortResult,
+} from './sort';
 
 // screenshot — handleScreenShot already exported from toolbar
 

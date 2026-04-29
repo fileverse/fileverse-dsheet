@@ -11390,6 +11390,12 @@ export default {
 
     sortRangeTitle: '排序範圍從',
     sortRangeTitleTo: '到',
+    sortSheet: '排序工作表',
+    sortRange: '排序範圍',
+    sortSheetByColumnAZ: '按欄 {col} 排序工作表 (A 到 Z)',
+    sortSheetByColumnZA: '按欄 {col} 排序工作表 (Z 到 A)',
+    sortRangeByColumnAZ: '按欄 {col} 排序範圍 (A 到 Z)',
+    sortRangeByColumnZA: '按欄 {col} 排序範圍 (Z 到 A)',
 
     noRangeError: '不能對多重選擇區域執行此操作,請選擇單個區域,然後再試',
     mergeError: '選區有合併儲存格,無法執行此操作！',

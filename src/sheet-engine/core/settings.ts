@@ -258,6 +258,7 @@ export const defaultSettings: Required<Settings> = {
     '|',
     'freeze',
     'conditionFormat',
+    'sort',
     'filter',
     'link',
     'image',
