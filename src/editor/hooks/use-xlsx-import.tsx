@@ -49,6 +49,17 @@ function isCheckboxPair(a: string, b: string): boolean {
 
 const POST_IMPORT_RECALC_MAX_FRAMES = 200;
 
+function richTextRunsToPlainText(ctS: unknown): string | null {
+  if (!Array.isArray(ctS) || ctS.length === 0) return null;
+  const text = ctS.map((seg) => String((seg as any)?.v ?? '')).join('');
+  const trimmed = text.trim();
+  return trimmed ? text : null;
+}
+
+function excelishBooleanText(v: boolean): 'TRUE' | 'FALSE' {
+  return v ? 'TRUE' : 'FALSE';
+}
+
 /**
  * XLSX stores cached formula results only; we normalize cells and then must run the in-app engine.
  */
@@ -141,8 +152,8 @@ function excelDataValidationToSheetEntry(
   const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
-        .replace(/^["']|["']$/g, '')
-        .replace(/["']/g, '')
+          .replace(/^["']|["']$/g, '')
+          .replace(/["']/g, '')
       : '';
   const parts = rawFormula
     .split(',')
@@ -501,12 +512,12 @@ export const useXLSXImport = ({
             number,
             {
               type:
-              | 'row'
-              | 'column'
-              | 'both'
-              | 'rangeRow'
-              | 'rangeColumn'
-              | 'rangeBoth';
+                | 'row'
+                | 'column'
+                | 'both'
+                | 'rangeRow'
+                | 'rangeColumn'
+                | 'rangeBoth';
               range: { row_focus: number; column_focus: number };
             }
           > = {};
@@ -842,9 +853,9 @@ export const useXLSXImport = ({
                 // Built during the celldata loop below; only allocated when merges exist
                 const celldataMap = sheet.config?.merge
                   ? new Map<
-                    string,
-                    { r: number; c: number; v: Record<string, unknown> }
-                  >()
+                      string,
+                      { r: number; c: number; v: Record<string, unknown> }
+                    >()
                   : null;
                 if (sheet.celldata) {
                   for (const cell of sheet.celldata) {
@@ -881,6 +892,8 @@ export const useXLSXImport = ({
                         if (hasHyperlink) {
                           // Hyperlink cells: avoid root-level fc/un inheritance.
                           const { fc: _fc, un: _un, ...rest } = styleFromExcel;
+                          void _fc;
+                          void _un;
                           Object.assign(cell.v, rest);
                         } else {
                           Object.assign(cell.v, styleFromExcel);
@@ -962,6 +975,49 @@ export const useXLSXImport = ({
                       ) {
                         if (cell.v.ht == null) {
                           cell.v.ht = 2;
+                        }
+                      }
+
+                      // Ensure non-empty imported cells always have a display mask `m`.
+                      // Filter-by-values uses `m` for display; when it is missing, values collapse to (Null).
+                      if (
+                        !cell.v.f &&
+                        (cell.v.m === undefined || cell.v.m === null) &&
+                        cell.v.ct?.t !== 'd'
+                      ) {
+                        const richText = richTextRunsToPlainText(cell.v.ct?.s);
+                        const rawV = cell.v.v;
+                        const isBlankLike =
+                          rawV == null || String(rawV).trim() === '';
+                        if (!isBlankLike) {
+                          // Prefer rich text if present (hyperlinks are typically stored in ct.s).
+                          if (richText != null) {
+                            cell.v.m = richText;
+                          } else if (typeof rawV === 'boolean') {
+                            cell.v.m = excelishBooleanText(rawV);
+                          } else if (
+                            typeof rawV === 'number' &&
+                            isFinite(rawV)
+                          ) {
+                            const fa2 = cell.v.ct?.fa;
+                            if (
+                              typeof fa2 === 'string' &&
+                              fa2 &&
+                              isDateCache.get(fa2) === false
+                            ) {
+                              try {
+                                cell.v.m = SSF.format(fa2, rawV);
+                              } catch {
+                                cell.v.m = String(rawV);
+                              }
+                            } else {
+                              cell.v.m = String(rawV);
+                            }
+                          } else if (typeof rawV === 'object') {
+                            // Unknown complex value; leave `m` unset to avoid misleading text.
+                          } else {
+                            cell.v.m = String(rawV);
+                          }
                         }
                       }
                     }
