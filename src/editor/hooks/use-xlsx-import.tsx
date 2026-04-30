@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
+import React, { useState } from 'react';
 import SSF from 'ssf';
 import { Workbook } from 'exceljs';
 import * as Y from 'yjs';
@@ -152,8 +152,8 @@ function excelDataValidationToSheetEntry(
   const rawFormula =
     Array.isArray(dv.formulae) && dv.formulae.length > 0
       ? String(dv.formulae[0])
-          .replace(/^["']|["']$/g, '')
-          .replace(/["']/g, '')
+        .replace(/^["']|["']$/g, '')
+        .replace(/["']/g, '')
       : '';
   const parts = rawFormula
     .split(',')
@@ -467,6 +467,8 @@ export const useXLSXImport = ({
   currentDataRef: React.MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
 }) => {
+  const [filterToastShown, setFilterToastShown] = useState(false);
+
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement> | undefined,
     fileArg: File,
@@ -512,12 +514,12 @@ export const useXLSXImport = ({
             number,
             {
               type:
-                | 'row'
-                | 'column'
-                | 'both'
-                | 'rangeRow'
-                | 'rangeColumn'
-                | 'rangeBoth';
+              | 'row'
+              | 'column'
+              | 'both'
+              | 'rangeRow'
+              | 'rangeColumn'
+              | 'rangeBoth';
               range: { row_focus: number; column_focus: number };
             }
           > = {};
@@ -713,6 +715,19 @@ export const useXLSXImport = ({
                 conditionFormatBySheet[idx] = sheetCf;
               }
             }
+
+            const autoFilter = (ws as any).autoFilter;
+            if (autoFilter) {
+              if (!filterToastShown) {
+                setFilterToastShown(true);
+                toast({
+                  title: 'Filters are not supported in imported files',
+                  variant: 'warning',
+                  showCloseButton: true,
+                  duration: 30 * 1000,
+                });
+              }
+            }
           }); // close workbook.eachSheet
 
           transformExcelToLucky(
@@ -854,9 +869,9 @@ export const useXLSXImport = ({
                 // Built during the celldata loop below; only allocated when merges exist
                 const celldataMap = sheet.config?.merge
                   ? new Map<
-                      string,
-                      { r: number; c: number; v: Record<string, unknown> }
-                    >()
+                    string,
+                    { r: number; c: number; v: Record<string, unknown> }
+                  >()
                   : null;
                 if (sheet.celldata) {
                   for (const cell of sheet.celldata) {

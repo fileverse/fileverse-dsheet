@@ -4,6 +4,7 @@ import { Workbook as ExcelJSWorkbook } from 'exceljs';
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
+import { toast } from '@fileverse/ui';
 import { applyBordersToWorksheet } from './xlsx-border-utils';
 import { addFortuneImagesToWorksheet } from './xlsx-image-utils';
 import { exportConditionalFormatting } from './xlsx-cf-export-utils';
@@ -17,6 +18,16 @@ import {
   concatInlineStrRunsText,
   getFirstHyperlinkEntry,
 } from './xlsx-hyperlink-inline';
+
+function sheetModelHasFilter(sheetModel: any): boolean {
+  const filter = sheetModel?.filter;
+  const filterSelect = sheetModel?.filter_select;
+  const hasFilterConfig = !!(filter && Object.keys(filter).length > 0);
+  const hasFilterSelection =
+    !!filterSelect &&
+    (Array.isArray(filterSelect.row) || Array.isArray(filterSelect.column));
+  return hasFilterConfig || hasFilterSelection;
+}
 
 const parseColorToHex = (color: string): string | null => {
   if (!color || typeof color !== 'string') return null;
@@ -78,6 +89,17 @@ export const handleExportToXLSX = async (
   if (!workbookRef.current || !ydocRef.current) return;
 
   try {
+    const ctx = workbookRef.current.getWorkbookContext?.();
+    const sheetModels: any[] | undefined = ctx?.luckysheetfile;
+    if (Array.isArray(sheetModels) && sheetModels.some(sheetModelHasFilter)) {
+      toast({
+        title: 'Filters are not supported in Export',
+        variant: 'warning',
+        showCloseButton: true,
+        duration: 30 * 1000,
+      });
+    }
+
     const ydoc = ydocRef.current;
     ydoc.getArray(dsheetId);
 
@@ -432,12 +454,12 @@ export const handleExportToXLSX = async (
           (typeof cell.text === 'string' && cell.text.length > 0
             ? cell.text
             : cell.value?.text ||
-              (Array.isArray(cell.value?.richText)
-                ? cell.value.richText
-                    .map((x: { text?: string }) => x.text || '')
-                    .join('')
-                : '') ||
-              '');
+            (Array.isArray(cell.value?.richText)
+              ? cell.value.richText
+                .map((x: { text?: string }) => x.text || '')
+                .join('')
+              : '') ||
+            '');
         cell.value = {
           text: currentText || firstLink.linkAddress,
           hyperlink: firstLink.linkAddress,
