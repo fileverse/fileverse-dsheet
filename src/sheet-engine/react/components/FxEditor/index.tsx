@@ -218,6 +218,19 @@ const FxEditor: React.FC = () => {
       return;
     }
     const cell = flowdata?.[rowIndex]?.[colIndex];
+    const formulaEditHtml =
+      cell?.f && typeof cell?._formulaEditHtml === 'string'
+        ? cell._formulaEditHtml
+        : '';
+    const mirrorSegV = cell?.ct?.s?.[0]?.v;
+    const ctMirrorMultiline =
+      !!cell?.f && typeof mirrorSegV === 'string' && /[\r\n]/.test(mirrorSegV);
+    const formulaEditHtmlMissingBr =
+      typeof formulaEditHtml === 'string' &&
+      formulaEditHtml.length > 0 &&
+      !/<br\s*\/?>/i.test(formulaEditHtml);
+    const preferFormulaHtmlFromMirror =
+      ctMirrorMultiline && formulaEditHtmlMissingBr;
     let value = '';
     const overwrite = refs.globalCache.overwriteCell;
 
@@ -234,7 +247,9 @@ const FxEditor: React.FC = () => {
     }
 
     refs.globalCache.overwriteCell = false;
-    if (!refs.globalCache.ignoreWriteCell && value) {
+    if (!refs.globalCache.ignoreWriteCell && formulaEditHtml && !preferFormulaHtmlFromMirror) {
+      fxInput.innerHTML = formulaEditHtml;
+    } else if (!refs.globalCache.ignoreWriteCell && value) {
       fxInput.innerHTML = escapeHTMLTag(escapeScriptTag(value));
     } else if (!refs.globalCache.ignoreWriteCell && !overwrite) {
       const valueD = getCellValue(rowIndex, colIndex, flowdata, 'f');
@@ -990,11 +1005,14 @@ const FxEditor: React.FC = () => {
 
   // Helper function to extract function name from input text
   const getFunctionNameFromInput = useCallback(() => {
-    const inputText = refs.fxInput?.current?.innerText || '';
-    if (!inputText.startsWith('=')) return null;
+    const inputText = (refs.fxInput?.current?.innerText || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\u200b/g, '');
+    const formulaText = inputText.trimStart();
+    if (!formulaText.startsWith('=')) return null;
 
     // Try to find function name pattern: =FUNCTIONNAME(
-    const functionMatch = inputText.match(/^=([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
+    const functionMatch = formulaText.match(/^=([A-Za-z_][A-Za-z0-9_]*)\s*\(/);
     if (functionMatch) {
       return functionMatch[1].toUpperCase();
     }

@@ -59,7 +59,6 @@ export const TOOL_BAR_ITEMS = [
   'number-increase',
   'format',
   '|',
-  'conditionFormat',
   'filter',
   'sort',
   '|',

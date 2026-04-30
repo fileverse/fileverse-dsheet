@@ -63,9 +63,13 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
   const [top, setTop] = useState(0);
 
   const calcuatePopUpPlacement = useCallback(() => {
-    if (lockedTop !== null) {
-      if (top !== lockedTop) {
-        setTop(lockedTop);
+    // Keep lock behavior for Fx bar only. In-cell editor can grow (multi-line),
+    // so the popup must reflow with live editor height.
+    const isFxMode = from === 'fx';
+    const effectiveLockedTop = isFxMode ? lockedTop : null;
+    if (effectiveLockedTop !== null) {
+      if (top !== effectiveLockedTop) {
+        setTop(effectiveLockedTop);
       }
       return;
     }
@@ -85,7 +89,12 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
     const inputBottom = inputBoxTop + firstSelection.height_move;
     const availableBelow = window.innerHeight - inputBottom;
     const hintAbove = hintHeight > availableBelow;
-    const selectionHeight = firstSelection?.height_move || 0;
+    const inputBoxInnerEl = document.querySelector(
+      '#luckysheet-input-box .luckysheet-input-box-inner',
+    ) as HTMLDivElement | null;
+    const selectionHeight = isFxMode
+      ? (firstSelection?.height_move ?? 0)
+      : (inputBoxInnerEl?.offsetHeight ?? firstSelection?.height_move ?? 0);
     const divOffset = hintRef.current?.offsetHeight || 0;
     let topV = hintAbove
       ? selectionHeight - (divOffset + 80)
@@ -100,6 +109,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
   }, [
     firstSelection?.height_move,
     firstSelection?.top,
+    from,
     lockedTop,
     onTopComputed,
     top,
@@ -115,6 +125,21 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
     context.defaultCandidates?.length,
     context.functionHint,
   ]);
+
+  useEffect(() => {
+    if (from === 'fx') return;
+    const inputBoxInnerEl = document.querySelector(
+      '#luckysheet-input-box .luckysheet-input-box-inner',
+    ) as HTMLDivElement | null;
+    if (!inputBoxInnerEl || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      calcuatePopUpPlacement();
+    });
+    observer.observe(inputBoxInnerEl);
+    return () => {
+      observer.disconnect();
+    };
+  }, [from, calcuatePopUpPlacement]);
 
   if (
     _.isEmpty(context.functionCandidates) &&

@@ -49,6 +49,8 @@ export type Cell = {
   m?: string | number;
   mc?: { r: number; c: number; rs?: number; cs?: number };
   f?: string;
+  /** Editor-only HTML snapshot for reopening multiline formulas as typed. */
+  _formulaEditHtml?: string;
   /** `dp`: fixed decimal places for display when `fa` is General (Auto); does not change `fa`/`t`. */
   ct?: { fa?: string; t?: string; tb?: string; s?: any; dp?: number };
   qp?: number;
@@ -155,6 +157,10 @@ export type ConditionRulesProps = {
     strikethrough: boolean;
   };
   betweenValue: { value1: string; value2: string };
+  /** Preset for dateIs / dateBefore / dateAfter (allowed values depend on rule type). */
+  datePreset: string;
+  /** Declared format for stored date text (e.g. DD/MM/YYYY). */
+  dateFormat: string;
   dateValue: string;
   repeatValue: string;
   projectValue: string;

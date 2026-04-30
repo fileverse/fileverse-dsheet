@@ -6,13 +6,16 @@ import {
   handleFormulaInput,
   isLegacyFormulaRangeMode,
   isFormulaReferenceInputMode,
+  isCaretAtValidFormulaRangeInsertionPoint,
   seedFormulaFuncSelectedRangeFromLastSelection,
   israngeseleciton,
-  maybeRecoverDirtyRangeSelection,
   markRangeSelectionDirty,
+  maybeRecoverDirtyRangeSelection,
   setFormulaEditorOwner,
   getFormulaEditorOwner,
   suppressFormulaRangeSelectionForInitialEdit,
+  toggleFormulaAbsoluteReferenceAtCaret,
+  getFormulaRangeIndexAtCaret,
 } from "../modules/formula";
 import { isInlineStringCell } from "../modules/inline-string";
 import {
@@ -47,6 +50,43 @@ import { moveToEnd } from "../modules/cursor";
 
 function clearTypeOverPending(cache: GlobalCache) {
   delete cache.pendingTypeOverCell;
+}
+
+function getActiveFormulaEditorForKeyboardGuard(): HTMLElement | null {
+  const active = document.activeElement as HTMLElement | null;
+  if (
+    active?.id === "luckysheet-rich-text-editor" ||
+    active?.id === "luckysheet-functionbox-cell"
+  ) {
+    return active;
+  }
+  return (
+    (document.getElementById("luckysheet-rich-text-editor") as HTMLElement | null) ||
+    (document.getElementById("luckysheet-functionbox-cell") as HTMLElement | null)
+  );
+}
+
+/**
+ * While editing a formula, keyboard range navigation must be blocked unless the
+ * caret is currently at a syntactically valid insertion slot.
+ */
+function shouldBlockFormulaRangeKeyboardNavigation(ctx: Context): boolean {
+  if (ctx.luckysheetCellUpdate.length === 0) return false;
+  const editor = getActiveFormulaEditorForKeyboardGuard();
+  if (!editor) return false;
+  const t = (editor.innerText || "").trim();
+  if (!t.startsWith("=")) return false;
+  // When a range was just inserted via keyboard/mouse and the caret remains on
+  // that managed range span, allow continued arrow navigation to extend/move it
+  // (e.g. `=A2` → arrow → `=A3` / `=A2:A3`). Mirrors main's behavior where
+  // `rangeSelectionActive === true` short-circuited bare-cell-only checks.
+  if (
+    ctx.formulaCache.rangeSelectionActive === true &&
+    getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+  ) {
+    return false;
+  }
+  return !isCaretAtValidFormulaRangeInsertionPoint(editor);
 }
 
 /** Immer tracks this; `FormulaCache` mutations alone do not re-render React. */
@@ -347,6 +387,16 @@ function handleControlPlusArrowKey(
   e: KeyboardEvent,
   shiftPressed: boolean
 ) {
+  if (shouldBlockFormulaRangeKeyboardNavigation(ctx)) {
+    return;
+  }
+
+  // If the user dirtied a managed range token but the caret is back at a
+  // valid insertion slot, un-sticky so jump-to-edge keeps working.
+  if (ctx.formulaCache.rangeSelectionActive === false) {
+    maybeRecoverDirtyRangeSelection(ctx);
+  }
+
   // Do not gate jump-to-edge on formula range "dirty" state — that flag is for
   // plain Arrow/Shift+Arrow while editing range tokens, and it was blocking
   // Cmd/Ctrl+Arrow and Cmd/Ctrl+Shift+Arrow entirely.
@@ -784,6 +834,10 @@ export function handleWithCtrlOrMetaKey(
 }
 
 function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
+  if (shouldBlockFormulaRangeKeyboardNavigation(ctx)) {
+    return;
+  }
+
   // For pre-existing formulas on first open, block keyboard range navigation
   // until the user manually edits formula text.
   if (ctx.formulaCache.keyboardRangeSelectionLock === true) {
@@ -791,12 +845,9 @@ function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
   }
 
   // If the user manually modified a keyboard/mouse-inserted range token,
-  // block further range navigation.
-  if (
-    ctx.formulaCache.rangeSelectionActive === false &&
-    !maybeRecoverDirtyRangeSelection(ctx)
-  ) {
-    return;
+  // try to recover when the caret is now at a valid insertion slot.
+  if (ctx.formulaCache.rangeSelectionActive === false) {
+    if (!maybeRecoverDirtyRangeSelection(ctx)) return;
   }
 
   const isFormulaMode = isLegacyFormulaRangeMode(ctx);
@@ -855,19 +906,21 @@ function handleShiftWithArrowKey(ctx: Context, e: KeyboardEvent) {
 }
 
 export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
+  if (shouldBlockFormulaRangeKeyboardNavigation(ctx)) {
+    return;
+  }
+
   // For pre-existing formulas on first open, block keyboard range navigation
   // until the user manually edits formula text.
   if (ctx.formulaCache.keyboardRangeSelectionLock === true) {
     return;
   }
 
-  // Prevent moving grid selection while the current reference range token
-  // was manually modified.
-  if (
-    ctx.formulaCache.rangeSelectionActive === false &&
-    !maybeRecoverDirtyRangeSelection(ctx)
-  ) {
-    return;
+  // If the user dirtied the range token but the caret is back at a clean,
+  // valid insertion slot, un-sticky the dirty flag so navigation can resume.
+  if (ctx.formulaCache.rangeSelectionActive === false) {
+    const recovered = maybeRecoverDirtyRangeSelection(ctx);
+    if (!recovered) return;
   }
   const isFormulaRefMode = isLegacyFormulaRangeMode(ctx);
   if (isFormulaRefMode) ctx.formulaCache.rangeSelectionActive = true;
@@ -1031,11 +1084,28 @@ export async function handleGlobalKeyDown(
   const ignoredKeys = new Set(
     isFxInput
       ? fxPassArrowsToSheet
-        ? ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
-        : ["Enter", "Tab", "ArrowLeft", "ArrowRight"]
-      : ["Enter", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+        ? [
+          "Enter",
+          "Tab",
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+          "F4",
+        ]
+        : ["Enter", "Tab", "ArrowLeft", "ArrowRight", "F4"]
+      : [
+        "Enter",
+        "Tab",
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "F4",
+      ]
   );
   const restCod = !ignoredKeys.has(kstr);
+  const isF4Key = kstr === "F4" || e.code === "F4" || kcode === 115;
 
   const passFindReplaceThroughEdit =
     (e.ctrlKey || e.metaKey) && (e.code === 'KeyF' || e.code === 'KeyH');
@@ -1174,8 +1244,11 @@ export async function handleGlobalKeyDown(
     clearTypeOverPending(cache);
     ctx.luckysheetCellUpdate = [row_index, col_index];
     e.preventDefault();
-  } else if (kstr === "F4" && ctx.luckysheetCellUpdate.length > 0) {
-    // TODO formula.setfreezonFuc(event);
+  } else if (isF4Key && ctx.luckysheetCellUpdate.length > 0) {
+    const owner = getFormulaEditorOwner(ctx);
+    const editor = owner === "fx" && fxInput ? fxInput : cellInput;
+    const copyTo = owner === "fx" ? cellInput : fxInput;
+    toggleFormulaAbsoluteReferenceAtCaret(ctx, copyTo, editor);
     e.preventDefault();
   } else if (kstr === "Escape" && ctx.luckysheetCellUpdate.length > 0) {
     cache.enteredEditByTyping = false;
@@ -1335,7 +1408,10 @@ export async function handleGlobalKeyDown(
           cellInput.focus();
           const initial = getTypeOverInitialContent(e);
           if (initial !== undefined) {
-            const seededText = isPercentFormattedCell
+            const shouldSeedPercentSuffix =
+              isPercentFormattedCell &&
+              /^([0-9]|[.+-])$/.test(initial);
+            const seededText = shouldSeedPercentSuffix
               ? `${initial}%`
               : initial;
             cellInput.textContent = seededText;
@@ -1352,7 +1428,11 @@ export async function handleGlobalKeyDown(
           // Only adjust the in-cell editor: moveToEnd() calls focus() and would steal
           // focus to the formula bar if applied to fxInput.
           queueMicrotask(() => {
-            if (initial !== undefined && isPercentFormattedCell) {
+            const shouldSeedPercentSuffix =
+              initial !== undefined &&
+              isPercentFormattedCell &&
+              /^([0-9]|[.+-])$/.test(initial);
+            if (shouldSeedPercentSuffix) {
               const textNode = cellInput.firstChild;
               const caretOffset = Math.max(
                 0,

@@ -61,6 +61,7 @@ export {
   updateCell,
   getRangetxt,
   getRangeByTxt,
+  isValidRangeText,
   getInlineStringHTML,
   applyLinkToSelection,
   getHyperlinksFromInlineSegments,
@@ -262,6 +263,10 @@ export {
   confirmMessage,
   // ConditionFormat
   setConditionRules,
+  CF_DATE_DEFAULT_FORMAT,
+  parseCfDateConditionForUi,
+  formatCfDatePresetSnapshot,
+  parseDdMmYyyyToSerial,
   // mobile
   handleOverlayTouchStart,
   handleOverlayTouchEnd,

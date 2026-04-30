@@ -791,6 +791,13 @@
   z-index: initial;
 }
 
+/* Conditional format rule list hover: same family as formula highlight, solid border, no dots */
+.fortune-cf-rule-hover-highlight .fortune-selection-copy-hc {
+  border-width: 2px;
+  border-style: solid;
+  z-index: initial;
+}
+
 .fortune-presence-username {
   position: absolute;
   padding-left: 6px;

@@ -73,7 +73,10 @@ export function adjustFormulaForPaste(
   // Track whether we created any invalid references
   let hadInvalid = false;
 
-  const cellRefRegex = /\b(\$?)([A-Z]+)(\$?)(\d+)\b/g;
+  // Parse one full A1 token (including optional $ on col/row).
+  // Do not use `\b...` here: with `$A$1`, word-boundary matching can start at
+  // `A$1` and accidentally drop the leading column `$`.
+  const cellRefRegex = /^(\$?)([A-Z]+)(\$?)(\d+)$/;
   // Match quoted strings or cell refs (A1, $A1, A$1, $A$1). Avoid matching sheet names (e.g. Sheet1 in "Sheet1!A1") by requiring ref not to be followed by "!"
   const stringOrCellRef = /"(?:\\.|[^"])*"|(\$?[A-Z]+\$?\d+)(?!\s*!)\b/g;
 
@@ -86,36 +89,28 @@ export function adjustFormulaForPaste(
       if (!cellRef) return m; // Inside quotes → DO NOT modify
 
       // Now process your cell reference normally:
-      return cellRef.replace(
-        cellRefRegex,
-        (
-          __: string,
-          absCol: string,
-          colLetters: string,
-          absRow: string,
-          rowNum: string
-        ) => {
-          let colIndex = columnLabelIndex(colLetters);
-          let rowIndex = parseInt(rowNum, 10);
+      const match = cellRef.match(cellRefRegex);
+      if (!match) return cellRef;
+      const [, absCol, colLetters, absRow, rowNum] = match;
+      let colIndex = columnLabelIndex(colLetters);
+      let rowIndex = parseInt(rowNum, 10);
 
-          if (!absCol) colIndex += colOffset;
-          if (!absRow) rowIndex += rowOffset;
+      if (!absCol) colIndex += colOffset;
+      if (!absRow) rowIndex += rowOffset;
 
-          // Build either a normal or visibly invalid reference
-          if (colIndex < 0 || rowIndex <= 0) {
-            hadInvalid = true;
-            const invalidCol =
-              colIndex < 0
-                ? `${absCol ? "$" : ""}${colLetters}${colIndex}`
-                : `${absCol ? "$" : ""}${indexToColumnLabel(colIndex)}`;
-            const invalidRow = rowIndex.toString();
-            return `${invalidCol}${invalidRow}`;
-          }
+      // Build either a normal or visibly invalid reference
+      if (colIndex < 0 || rowIndex <= 0) {
+        hadInvalid = true;
+        const invalidCol =
+          colIndex < 0
+            ? `${absCol ? "$" : ""}${colLetters}${colIndex}`
+            : `${absCol ? "$" : ""}${indexToColumnLabel(colIndex)}`;
+        const invalidRow = rowIndex.toString();
+        return `${invalidCol}${invalidRow}`;
+      }
 
-          const newCol = indexToColumnLabel(colIndex);
-          return `${absCol ? "$" : ""}${newCol}${absRow ? "$" : ""}${rowIndex}`;
-        }
-      );
+      const newCol = indexToColumnLabel(colIndex);
+      return `${absCol ? "$" : ""}${newCol}${absRow ? "$" : ""}${rowIndex}`;
     }
   );
 

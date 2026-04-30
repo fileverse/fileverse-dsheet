@@ -1,4 +1,4 @@
-import { locale } from '@sheet-engine/core';
+import { getFormulaEditorOwner, locale } from '@sheet-engine/core';
 import { Button, TextField, LucideIcon, Tooltip } from '@fileverse/ui';
 import React, {
   useCallback,
@@ -17,6 +17,7 @@ const FormulaHint = (props: any) => {
     props;
   const dragHasMoved = useRef(false);
   const { context } = useContext(WorkbookContext);
+  const isFxOwner = getFormulaEditorOwner(context) === 'fx';
   const firstSelection = context.luckysheet_select_save?.[0];
   const { formulaMore } = locale(context);
   // if (!context.functionHint) return null;
@@ -58,7 +59,14 @@ const FormulaHint = (props: any) => {
       return;
     }
 
-    const cellH = Number(firstSelection.height_move) || cellHeightPx;
+    const inputBoxInnerEl = document.querySelector(
+      '#luckysheet-input-box .luckysheet-input-box-inner',
+    ) as HTMLDivElement | null;
+    const cellH = isFxOwner
+      ? Number(firstSelection.height_move) || cellHeightPx
+      : (inputBoxInnerEl?.offsetHeight ??
+        Number(firstSelection.height_move) ??
+        cellHeightPx);
     const innerEl = hintRef.current;
     const popupHeight = Math.min(innerEl?.offsetHeight || 360, 360);
     const inputBox = document.getElementById('luckysheet-input-box');
@@ -86,7 +94,23 @@ const FormulaHint = (props: any) => {
     cellHeightPx,
     firstSelection?.height_move,
     firstSelection?.top,
+    isFxOwner,
   ]);
+
+  useEffect(() => {
+    if (isFxOwner) return;
+    const inputBoxInnerEl = document.querySelector(
+      '#luckysheet-input-box .luckysheet-input-box-inner',
+    ) as HTMLDivElement | null;
+    if (!inputBoxInnerEl || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      measureFormulaHintPlacement();
+    });
+    observer.observe(inputBoxInnerEl);
+    return () => {
+      observer.disconnect();
+    };
+  }, [isFxOwner, measureFormulaHintPlacement]);
 
   useLayoutEffect(() => {
     if (!fn) {
@@ -134,7 +158,9 @@ const FormulaHint = (props: any) => {
     return () => clearTimeout(t);
   }, [top]);
 
-  if (!fn) return null;
+  if (!fn) {
+    return null;
+  }
 
   const fnNameClass = fn.n
     ? String(fn.n)

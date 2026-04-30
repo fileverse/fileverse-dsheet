@@ -171,6 +171,19 @@ export type Context = {
     backgroundColor: string;
   } & Rect)[];
   formulaRangeSelect: ({ rangeIndex: number } & Rect) | undefined;
+  /**
+   * Apply-to ranges (0-based inclusive row/column) for transient sheet overlay when
+   * hovering a conditional-formatting rule in the list. Null when inactive.
+   */
+  conditionalFormatRuleHoverRanges: {
+    row: number[];
+    column: number[];
+  }[] | null;
+  /**
+   * True while the CF create/edit form is open — drives live sheet preview of the draft
+   * rule in `getComputeMap` (must be false on list or after close).
+   */
+  conditionFormatDraftActive: boolean;
   functionCandidates: any[];
   defaultCandidates: any[];
   functionHint: string | null | undefined;
@@ -447,6 +460,8 @@ export function defaultContext(refs: RefValues): Context {
         strikethrough: false,
       },
       betweenValue: { value1: '', value2: '' },
+      datePreset: 'today',
+      dateFormat: 'DD/MM/YYYY',
       dateValue: '',
       repeatValue: '0',
       projectValue: '10',
@@ -483,6 +498,8 @@ export function defaultContext(refs: RefValues): Context {
     luckysheet_selection_range: [],
     formulaRangeHighlight: [],
     formulaRangeSelect: undefined,
+    conditionalFormatRuleHoverRanges: null,
+    conditionFormatDraftActive: false,
     functionCandidates: [],
     defaultCandidates: [],
     functionHint: null,
