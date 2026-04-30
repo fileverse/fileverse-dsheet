@@ -273,6 +273,73 @@ export function sortSelection(
   sortDataRange(ctx, d, data, colIndex, isAsc, str, edr, c1, c2);
 }
 
+export function sortSheetBySelectedColumn(ctx: Context, isAsc: boolean) {
+  if (ctx.allowEdit === false) return;
+  const flowdata = getFlowdata(ctx);
+  if (!flowdata || flowdata.length === 0) return;
+
+  const selection = ctx.luckysheet_select_save?.[0];
+  const selectedColumn =
+    selection?.column_focus ?? selection?.column?.[0] ?? 0;
+
+  let str: number | null = null;
+  let edr: number | null = null;
+  let stc: number | null = null;
+  let edc: number | null = null;
+
+  for (let r = 0; r < flowdata.length; r += 1) {
+    const row = flowdata[r];
+    if (!row) continue;
+    for (let c = 0; c < row.length; c += 1) {
+      const cell = row[c];
+      if (cell == null) continue;
+      const hasContent =
+        !isRealNull(cell?.v) ||
+        !isRealNull(cell?.m) ||
+        !isRealNull(cell?.f) ||
+        cell?.mc != null;
+      if (!hasContent) continue;
+      if (str == null || r < str) str = r;
+      if (edr == null || r > edr) edr = r;
+      if (stc == null || c < stc) stc = c;
+      if (edc == null || c > edc) edc = c;
+    }
+  }
+
+  if (str == null || edr == null || stc == null || edc == null) return;
+  if (selectedColumn < stc || selectedColumn > edc) return;
+
+  let hasMc = false;
+  const data: CellMatrix = [];
+  for (let r = str; r <= edr; r += 1) {
+    const rowData: (Cell | null)[] = [];
+    for (let c = stc; c <= edc; c += 1) {
+      const cell = flowdata?.[r]?.[c] ?? null;
+      if (cell?.mc != null) {
+        hasMc = true;
+        break;
+      }
+      rowData.push(cell);
+    }
+    if (hasMc) break;
+    data.push(rowData);
+  }
+
+  if (hasMc) return;
+
+  sortDataRange(
+    ctx,
+    flowdata,
+    data,
+    selectedColumn - stc,
+    isAsc,
+    str,
+    edr,
+    stc,
+    edc
+  );
+}
+
 function createRowsOrColumnsForSpilledValues(
   ctx: Context,
   startRow: number,

@@ -1830,6 +1830,30 @@ export function rangeValueToHtml(
   sheetId: string,
   ranges?: Range
 ) {
+  const isFilterActiveForSheet = () => {
+    if (sheetId !== ctx.currentSheetId) return false;
+    // Filter UI exists and at least one column filter state exists.
+    // (We intentionally *don't* use ctx.config.rowhidden here because it also
+    // includes manually-hidden rows; this feature should be filter-only.)
+    return !_.isNil(ctx.luckysheet_filter_save) && !_.isEmpty(ctx.filter);
+  };
+
+  const getFilterHiddenRowSet = (): Set<number> => {
+    const hidden = new Set<number>();
+    if (!isFilterActiveForSheet()) return hidden;
+    Object.values(ctx.filter || {}).forEach((entry: any) => {
+      const rowhidden: Record<string, number> | undefined = entry?.rowhidden;
+      if (!rowhidden) return;
+      Object.keys(rowhidden).forEach((r) => {
+        const n = Number(r);
+        if (!Number.isNaN(n)) hidden.add(n);
+      });
+    });
+    return hidden;
+  };
+
+  const filteredHiddenRows = getFilterHiddenRowSet();
+
   const idx = getSheetIndex(ctx, sheetId);
   if (idx == null) return "";
   const sheet = ctx.luckysheetfile[idx];
@@ -1846,6 +1870,9 @@ export function rangeValueToHtml(
     const c2 = range.column[1];
 
     for (let copyR = r1; copyR <= r2; copyR += 1) {
+      if (filteredHiddenRows.has(copyR)) {
+        continue;
+      }
       if (!rowIndexArr.includes(copyR)) {
         rowIndexArr.push(copyR);
       }

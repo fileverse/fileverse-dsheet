@@ -834,12 +834,21 @@
   background: hsl(var(--color-bg-tertiary));
 }
 
-.luckysheet-filter-options:hover {
+.luckysheet-filter-options:not(.luckysheet-filter-options-active):hover {
   background: hsl(var(--color-bg-default-hover));
 }
 
+.luckysheet-filter-options.luckysheet-filter-options-active:hover {
+  background: hsl(
+    var(
+      --color-bg-brand-hover,
+      var(--color-bg-brand, var(--color-bg-default-hover))
+    )
+  );
+}
+
 .luckysheet-filter-options-active {
-  background: hsl(var(--color-bg-tertiary));
+  background: hsl(var(--color-bg-brand, var(--color-bg-tertiary)));
 }
 
 .caret {

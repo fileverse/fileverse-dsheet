@@ -11430,6 +11430,12 @@ export default {
 
     sortRangeTitle: '排序范围从',
     sortRangeTitleTo: '到',
+    sortSheet: '排序工作表',
+    sortRange: '排序范围',
+    sortSheetByColumnAZ: '按列 {col} 排序工作表 (A 到 Z)',
+    sortSheetByColumnZA: '按列 {col} 排序工作表 (Z 到 A)',
+    sortRangeByColumnAZ: '按列 {col} 排序范围 (A 到 Z)',
+    sortRangeByColumnZA: '按列 {col} 排序范围 (Z 到 A)',
 
     noRangeError: '不能对多重选择区域执行此操作，请选择单个区域，然后再试',
     mergeError: '选区有合并单元格，无法执行此操作！',

@@ -117,7 +117,15 @@ export type SheetConfig = {
   merge?: Record<string, { r: number; c: number; rs: number; cs: number }>; // 合并单元格
   rowlen?: Record<string, number>; // 表格行高
   columnlen?: Record<string, number>; // 表格列宽
-  rowhidden?: Record<string, number>; // 隐藏行
+  rowhidden?: Record<string, number>; // 隐藏行（render-time union: manual ∪ filter）
+  /**
+   * Manually hidden rows (provenance-safe). `rowhidden` remains the render-time union of
+   * manual + filter-hidden rows. This map stores only manual hides so filters can be
+   * cleared without losing manual state.
+   */
+  rowhidden_manual?: Record<string, number>;
+  /** Cached union of all filter-hidden rows on the sheet (derived from `ctx.filter[*].rowhidden`). */
+  rowhidden_filter?: Record<string, number>;
   colhidden?: Record<string, number>; // 隐藏列
   customHeight?: Record<string, number>;
   customWidth?: Record<string, number>;

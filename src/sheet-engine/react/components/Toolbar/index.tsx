@@ -29,18 +29,17 @@ import {
   insertImage,
   showImgChooser,
   updateFormat,
-  handleSort,
   handleHorizontalAlign,
   handleVerticalAlign,
   handleScreenShot,
   createFilter,
   clearFilter,
+  toggleViewerFilter,
   applyLocation,
   insertDuneChart,
   getFormulaEditorOwner,
   Cell,
   api,
-  getSheetIndex,
   is_date,
   isHyperlinkCreationBlocked,
   isTypedCurrencyDisplayFormat,
@@ -85,6 +84,7 @@ import {
 } from '../../utils/convertCellsToCrypto';
 import { updateCellsDecimalFormat } from '../../utils/updateCellsDecimalFormat';
 import { FunctionList } from './FunctionList/FunctionListButton';
+import SortPopoverContent from './SortPopoverContent';
 
 export const getLucideIcon = (title: string) => {
   switch (title) {
@@ -144,6 +144,8 @@ export const getLucideIcon = (title: string) => {
       return 'PaintbrushVertical';
     case 'filter':
       return 'Filter';
+    case 'sort':
+      return 'ArrowDownUp';
     case 'link':
       return 'Link';
     case 'comment':
@@ -1927,82 +1929,85 @@ const Toolbar: React.FC<{
             </Combo>
           );
         }
-        if (name === 'filter') {
-          const items = [
-            {
-              iconId: 'sort-asc',
-              value: 'sort-asc',
-              text: sort.asc,
-              onClick: () => {
-                setContext((ctx) => {
-                  handleSort(ctx, true);
-                });
-              },
-            },
-            {
-              iconId: 'sort-desc',
-              value: 'sort-desc',
-              text: sort.desc,
-              onClick: () => {
-                setContext((ctx) => {
-                  handleSort(ctx, false);
-                });
-              },
-            },
-            // { iconId: "sort", value: "sort", text: sort.custom },
-            { iconId: '', value: 'divider' },
-            {
-              iconId: 'filter1',
-              value: 'filter',
-              text: filter.filter,
-              onClick: () =>
-                setContext((draftCtx) => {
-                  createFilter(draftCtx);
-                }),
-            },
-            {
-              iconId: 'eraser',
-              value: 'eraser',
-              text: filter.clearFilter,
-              onClick: () =>
-                setContext((draftCtx) => {
-                  clearFilter(draftCtx);
-                }),
-            },
-          ];
+        if (name === 'sort') {
           return (
             <Combo
-              iconId="filter"
+              iconId="sort"
               key={name}
-              tooltip={toolbar.sortAndFilter}
+              tooltip={toolbar.sort}
               showArrow={false}
             >
               {(setOpen) => (
-                <Select style={{ minWidth: '11.25rem' }}>
-                  {items.map(({ text, iconId, value, onClick }, index) =>
-                    value !== 'divider' ? (
-                      <Option
-                        key={value}
-                        onClick={() => {
-                          onClick?.();
-                          setOpen(false);
-                        }}
-                      >
-                        <div
-                          className="fortune-toolbar-menu-line gap-1"
-                          style={{ justifyContent: 'start' }}
-                        >
-                          <SVGIcon name={iconId} width={16} height={16} />
-                          {text}
-                        </div>
-                      </Option>
-                    ) : (
-                      <MenuDivider key={`divider-${index}`} />
-                    ),
-                  )}
-                </Select>
+                <SortPopoverContent
+                  context={context}
+                  setContext={setContext}
+                  sortLocale={sort}
+                  setOpen={setOpen}
+                />
               )}
             </Combo>
+          );
+        }
+        if (name === 'filter') {
+          const hasFilterConfigured =
+            !_.isEmpty(context.luckysheet_filter_save) ||
+            context.filterOptions != null;
+          const isReadOnlyViewer =
+            context.allowEdit === false || context.isFlvReadOnly;
+          const isFilterActive = isReadOnlyViewer
+            ? hasFilterConfigured && context.viewerFilterVisible !== false
+            : hasFilterConfigured;
+          const tooltip = toolbar.sortAndFilter;
+          const disabled = isReadOnlyViewer ? !hasFilterConfigured : false;
+          return (
+            <Tooltip text={tooltip} position="bottom">
+              <div
+                className="fortune-toolbar-item fortune-toolbar-button fortune-toolbar-button__cta fortune-toolbar-button--filter"
+                data-icon-id="filter"
+                data-testid="toolbar-cta-filter"
+                tabIndex={0}
+                role="button"
+                style={disabled ? { pointerEvents: 'none', opacity: 0.45 } : {}}
+                onClick={() => {
+                  if (disabled) return;
+                  setContext((draftCtx) => {
+                    if (isReadOnlyViewer) {
+                      toggleViewerFilter(draftCtx);
+                      return;
+                    }
+                    if (isFilterActive) {
+                      clearFilter(draftCtx);
+                      return;
+                    }
+                    createFilter(draftCtx);
+                  });
+                }}
+              >
+                <span
+                  className="fortune-toolbar-button__icon fortune-toolbar-button__icon--filter"
+                  data-icon-id="filter"
+                  data-testid="toolbar-icon-filter"
+                  style={{
+                    width: 20,
+                    height: 20,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <SVGIcon
+                    name={isFilterActive ? 'filter-fill' : 'filter'}
+                    width={20}
+                    height={20}
+                    style={{
+                      ...(disabled ? { opacity: 0.3 } : {}),
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
+                </span>
+              </div>
+            </Tooltip>
           );
         }
         if (name === 'currency') {

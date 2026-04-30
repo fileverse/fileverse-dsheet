@@ -63,6 +63,7 @@ export type Context = {
   showReplace?: boolean;
   findReplaceHiddenDuringRangePick?: boolean;
   findReplaceRestoreVisibility?: { showSearch: boolean; showReplace: boolean };
+  showFormulasFromFindReplace?: boolean;
   showQuickSearch?: boolean;
   quickSearchFocusNonce?: number;
   findReplacePrefill?: string;
@@ -198,6 +199,7 @@ export type Context = {
   filterchage: boolean; // 筛选
   filterOptions?: FilterOptions;
   luckysheet_filter_save?: { row: number[]; column: number[] } | undefined;
+  viewerFilterVisible: boolean;
   filter: Record<
     string,
     {
@@ -506,6 +508,7 @@ export function defaultContext(refs: RefValues): Context {
     luckysheet_paste_iscut: false,
 
     filterchage: true, // 筛选
+    viewerFilterVisible: true,
     filter: {},
 
     luckysheet_sheet_move_status: false,
@@ -582,6 +585,7 @@ export function defaultContext(refs: RefValues): Context {
     showQuickSearch: false,
     quickSearchFocusNonce: 0,
     findReplacePrefill: undefined,
+    showFormulasFromFindReplace: false,
     quickSearchLoading: false,
     quickSearchHighlight: null,
     searchRangeScopeHighlight: null,

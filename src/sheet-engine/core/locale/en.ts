@@ -11046,7 +11046,7 @@ export default {
     freeze: 'Freeze',
     sort: 'Sort',
     filter: 'Filter',
-    sortAndFilter: 'Sort and filter',
+    sortAndFilter: 'Filter',
     findAndReplace: 'Find and replace',
     'formula-sum': 'SUM',
     autoSum: 'Auto SUM',
@@ -11367,6 +11367,12 @@ export default {
 
     sortRangeTitle: 'Sort range from',
     sortRangeTitleTo: 'to',
+    sortSheet: 'Sort Sheet',
+    sortRange: 'Sort Range',
+    sortSheetByColumnAZ: 'Sort Sheet by Column {col} (A to Z)',
+    sortSheetByColumnZA: 'Sort Sheet by Column {col} (Z to A)',
+    sortRangeByColumnAZ: 'Sort Range by Column {col} (A to Z)',
+    sortRangeByColumnZA: 'Sort Range by Column {col} (Z to A)',
 
     noRangeError:
       'Cannot perform this operation on multiple selection areas, please select a single range and try again',
@@ -11376,8 +11382,8 @@ export default {
   filter: {
     filter: 'Create filter',
 
-    sortByAsc: 'Ascending',
-    sortByDesc: 'Descending',
+    sortByAsc: 'Sort A to Z',
+    sortByDesc: 'Sort Z to A',
     filterByColor: 'Filter by color',
     filterByCondition: 'Filter by condition',
     filterByValues: 'Filter by values',
@@ -11614,6 +11620,8 @@ export default {
     replaceTextbox: 'Replace with',
 
     regexTextbox: 'Search using regular expression',
+    regexFormulaReplaceWarning:
+      'Regex replacement can apply to formulas when “Search within formulae” is enabled. Use with care—this can break formulas.',
     wholeTextbox: 'Match entire cell content',
     distinguishTextbox: 'Match case',
     formulaTextbox: 'Search within formulae',
@@ -11628,10 +11636,10 @@ export default {
     rangeSelectOnSheetTitle: 'Select range on sheet',
     selectDataRangeTitle: 'Select a data range',
     replaceAllWithSkippedTip:
-      'Replaced ${n} matches. ${skipped} matches in formula cells were skipped.',
+      'Replaced ${n} matches. ${skipped} matches in formula cells were skipped (enable “Search within formulae” to include formulas).',
     replaceAllSuccessInfotext: "Replaced ${n} of '${find}' with '${replace}'",
     replaceAllSuccessWithSkippedInfotext:
-      "Replaced ${n} of '${find}' with '${replace}'. ${skipped} matches in formula cells were skipped.",
+      "Replaced ${n} of '${find}' with '${replace}'. ${skipped} matches in formula cells were skipped (enable “Search within formulae” to include formulas).",
 
     allReplaceBtn: 'Replace all',
     replaceBtn: 'Replace',

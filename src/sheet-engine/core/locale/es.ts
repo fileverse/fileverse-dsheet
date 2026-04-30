@@ -11359,6 +11359,12 @@ export default {
 
     sortRangeTitle: 'Ordenar rango de',
     sortRangeTitleTo: 'a',
+    sortSheet: 'Ordenar hoja',
+    sortRange: 'Ordenar rango',
+    sortSheetByColumnAZ: 'Ordenar hoja por columna {col} (A a Z)',
+    sortSheetByColumnZA: 'Ordenar hoja por columna {col} (Z a A)',
+    sortRangeByColumnAZ: 'Ordenar rango por columna {col} (A a Z)',
+    sortRangeByColumnZA: 'Ordenar rango por columna {col} (Z a A)',
 
     noRangeError:
       'No se puede realizar esta operación en múltiples áreas de selección, selecciona un solo rango e intenta nuevamente',

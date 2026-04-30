@@ -130,6 +130,11 @@ export {
   hideSelected,
   showSelected,
   isShowHidenCR,
+  // row visibility (manual vs filter provenance)
+  getFilterHiddenRowsUnionFromFilterMap,
+  getFilterHiddenRowsUnion,
+  ensureManualHiddenInitialized,
+  rebuildRowHiddenUnion,
   // selection
   scrollToHighlightCell,
   selectTitlesMap,
@@ -197,11 +202,13 @@ export {
   createDropCellRange,
   // sort
   sortSelection,
+  sortSheetBySelectedColumn,
   // searchReplace
   searchAll,
   searchNext,
   replace,
   replaceAll,
+  replaceAllScoped,
   getSearchIndexArr,
   getSearchIndexArrAsync,
   getFindRangeOnCurrentSheet,
@@ -231,6 +238,8 @@ export {
   // filter
   createFilterOptions,
   clearFilter,
+  clearFilterForColumn,
+  toggleViewerFilter,
   createFilter,
   getFilterColumnValues,
   getFilterColumnColors,
@@ -353,6 +362,7 @@ export type {
   CheckModes,
   HyperlinkMap,
   FindSearchScope,
+  ReplaceScope,
   SearchHiddenConfig,
   SearchNextResult,
   ReplaceAllResult,

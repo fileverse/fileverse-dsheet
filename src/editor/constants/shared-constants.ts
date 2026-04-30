@@ -60,6 +60,7 @@ export const TOOL_BAR_ITEMS = [
   'format',
   '|',
   'filter',
+  'sort',
   '|',
   'link',
   'comment',
