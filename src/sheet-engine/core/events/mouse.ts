@@ -62,7 +62,7 @@ import {
 } from "../modules/selection";
 import { Settings } from "../settings";
 import { GlobalCache } from "../types";
-import { getSheetIndex, isAllowEdit } from "../utils";
+import { getSheetIndex, isAllowEdit, isAllowEditReadOnly } from "../utils";
 import { onDropCellSelectEnd, onDropCellSelect } from "../modules/dropCell";
 import {
   handleFormulaInput,
@@ -362,6 +362,22 @@ export function handleCellAreaMouseDown(
   // }
 
   ctx.luckysheet_scroll_status = true;
+
+  // In FLV read-only "view-only edit" mode, clicking the grid should exit edit mode
+  // so selection can move between cells. Keep edit mode when interacting with the
+  // editor UI itself (text selection/copy).
+  if (ctx.isFlvReadOnly && ctx.luckysheetCellUpdate.length > 0) {
+    const target = e.target as HTMLElement | null;
+    const clickedInEditor =
+      !!target?.closest?.("#luckysheet-input-box") ||
+      target?.id === "luckysheet-rich-text-editor" ||
+      target?.id === "luckysheet-functionbox-cell";
+    if (!clickedInEditor) {
+      ctx.luckysheetCellUpdate = [];
+      globalCache.enteredEditByTyping = false;
+      delete globalCache.pendingTypeOverCell;
+    }
+  }
 
   // 公式相关
   if (ctx.luckysheetCellUpdate.length > 0) {
@@ -1290,8 +1306,9 @@ export function handleCellAreaDoubleClick(
     return;
   }
   // 禁止前台编辑(只可 框选单元格、滚动查看表格)
-  const allowEdit = isAllowEdit(ctx);
-  if (!allowEdit) return;
+  // In FLV read-only, allow opening the editor for selection/copy only.
+  const canOpenEditor = isAllowEdit(ctx) || isAllowEditReadOnly(ctx);
+  if (!canOpenEditor) return;
 
   // if (parseInt($("#luckysheet-input-box").css("top")) > 0) {
   //   return;

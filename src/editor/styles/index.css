@@ -46,7 +46,6 @@ body {
 }
 
 .fortune-read-only {
-  .luckysheet-rich-text-editor,
   .luckysheet-sheets-item-function,
   .fortune-sheettab-button,
   .luckysheet-input-box-inner {
@@ -67,6 +66,16 @@ body {
     display: none !important;
   }
 
+}
+
+/* View-only cell editor: allow substring select + copy.
+   The editor surface is still non-editable at runtime via `allowEdit && !isFlvReadOnly`. */
+.fortune-read-only {
+  .luckysheet-input-box-inner,
+  .luckysheet-rich-text-editor {
+    display: block !important;
+    user-select: text !important;
+  }
 }
 
 .fortune-tooltip {

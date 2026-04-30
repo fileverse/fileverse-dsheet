@@ -2604,7 +2604,7 @@ const InputBox: React.FC = () => {
           onPaste={onPaste}
           onCopy={onCopy}
           onContextMenu={(e) => e.stopPropagation()}
-          allowEdit={edit ? !isHidenRC : edit}
+          allowEdit={(edit ? !isHidenRC : edit) && !context.isFlvReadOnly}
         />
         {linkSelectionHighlightRects.length > 0 && (
           <div

@@ -43,7 +43,7 @@ import {
 } from "../modules/toolbar";
 import { hasPartMC } from "../modules/validation";
 import { CellMatrix, GlobalCache, Selection } from "../types";
-import { getNowDateTime, getSheetIndex, isAllowEdit } from "../utils";
+import { getNowDateTime, getSheetIndex, isAllowEdit, isAllowEditReadOnly } from "../utils";
 import { handleCopy } from "./copy";
 import { jfrefreshgrid } from "../modules/refresh";
 import { moveToEnd } from "../modules/cursor";
@@ -1217,7 +1217,9 @@ export async function handleGlobalKeyDown(
     }
     e.preventDefault();
   } else if (kstr === "F2") {
-    if (!allowEdit) return;
+    // In FLV read-only, allow opening the editor for selection/copy only.
+    const canOpenEditor = allowEdit || isAllowEditReadOnly(ctx);
+    if (!canOpenEditor) return;
     if (ctx.luckysheetCellUpdate.length > 0) {
       return;
     }
