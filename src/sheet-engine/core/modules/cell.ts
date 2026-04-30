@@ -2059,6 +2059,46 @@ export function getRangeByTxt(ctx: Context, txt: string) {
   return range;
 }
 
+/**
+ * Catches range strings the formula layer accepts (e.g. A1:B as “cell to column B”) that we
+ * reject in CF / range modals. Both sides of a single `:` must agree: either each part
+ * includes a row digit (A1, B2, 1) or neither does (A:B, whole-column / row-only style).
+ */
+function hasMismatchedRowSpecifiersOnColon(txt: string): boolean {
+  const pieces = (txt ?? "").split(",");
+  for (const raw of pieces) {
+    const s = String(raw).trim();
+    if (!s) continue;
+    const afterBang = s.lastIndexOf("!") >= 0 ? s.slice(s.lastIndexOf("!") + 1) : s;
+    if (afterBang.indexOf(":") === -1) continue;
+    const seg = afterBang.split(":");
+    if (seg.length !== 2) continue;
+    const [left, right] = seg;
+    if (left == null || right == null) return true;
+    if (!String(left).trim() || !String(right).trim()) return true;
+    const leftHasRow = /[0-9]/.test(String(left));
+    const rightHasRow = /[0-9]/.test(String(right));
+    if (leftHasRow !== rightHasRow) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True if the string is empty/whitespace (allowed while editing) or parses to at least
+ * one range with {@link getRangeByTxt} (same rules as sheet range entry elsewhere), plus
+ * stricter form checks for the conditional-format and range-dialog inputs.
+ */
+export function isValidRangeText(ctx: Context, txt: string): boolean {
+  const t = (txt ?? "").trim();
+  if (t === "") return true;
+  if (hasMismatchedRowSpecifiersOnColon(t)) {
+    return false;
+  }
+  return getRangeByTxt(ctx, t).length > 0;
+}
+
 export function isAllSelectedCellsInStatus(
   ctx: Context,
   attr: keyof Cell,

@@ -61,6 +61,7 @@ export {
   updateCell,
   getRangetxt,
   getRangeByTxt,
+  isValidRangeText,
   getInlineStringHTML,
   applyLinkToSelection,
   getHyperlinksFromInlineSegments,

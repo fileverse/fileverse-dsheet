@@ -443,6 +443,27 @@ export function selectTitlesRange(map: Record<string, number>) {
   return rangeArr;
 }
 
+/** Compare two sheet CF rectangles (row/col inclusive bounds). */
+function cfRangeBlocksEqual(
+  a: { row: number[]; column: number[] },
+  b: { row: number[]; column: number[] }
+) {
+  return (
+    a.row[0] === b.row[0] &&
+    a.row[1] === b.row[1] &&
+    a.column[0] === b.column[0] &&
+    a.column[1] === b.column[1]
+  );
+}
+
+/** Used to match a source CF rule to an entry on the target sheet (multi-range), excluding cellrange. */
+function condFormatRuleIdentityKey(rule: any) {
+  if (rule == null) return "";
+  const o = _.cloneDeep(rule);
+  delete o.cellrange;
+  return JSON.stringify(o);
+}
+
 export function pasteHandlerOfPaintModel(
   ctx: Context,
   copyRange: Context["luckysheet_copy_save"]
@@ -767,8 +788,30 @@ export function pasteHandlerOfPaintModel(
         }
 
         if (emptyRange.length > 0) {
-          ruleArr[i].cellrange = [{ row: [minh, maxh], column: [minc, maxc] }];
-          cdformat.push(ruleArr[i]);
+          const pasteBlock = { row: [minh, maxh], column: [minc, maxc] };
+          const idKey = condFormatRuleIdentityKey(ruleArr[i]);
+          const existingRuleIdx = cdformat.findIndex(
+            (r) => idKey === condFormatRuleIdentityKey(r)
+          );
+
+          if (existingRuleIdx >= 0) {
+            const merged = _.cloneDeep(cdformat[existingRuleIdx]);
+            if (!Array.isArray(merged.cellrange)) {
+              merged.cellrange = [];
+            }
+            if (
+              !merged.cellrange.some((cr: { row: number[]; column: number[] }) =>
+                cfRangeBlocksEqual(cr, pasteBlock)
+              )
+            ) {
+              merged.cellrange.push({ ...pasteBlock });
+            }
+            cdformat[existingRuleIdx] = merged;
+          } else {
+            const newRule = _.cloneDeep(ruleArr[i]);
+            newRule.cellrange = [_.cloneDeep(pasteBlock)];
+            cdformat.push(newRule);
+          }
         }
       }
 

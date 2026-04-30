@@ -107,6 +107,18 @@ function formulaRangeHighlightHcStyle(hex: string) {
   } as const;
 }
 
+/** CF rule list hover overlay only (darker green; not the default CF cell color). */
+const CF_RULE_HOVER_FILL_HEX = '#1a8026';
+
+function cfRuleHoverHighlightHcStyle(hex: string) {
+  const base = formulaRangeHighlightHcStyle(hex);
+  return {
+    ...base,
+    borderStyle: 'solid' as const,
+    borderWidth: 2,
+  };
+}
+
 const SheetOverlay: React.FC = () => {
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
   const { info, rightclick } = locale(context);
@@ -186,6 +198,46 @@ const SheetOverlay: React.FC = () => {
     context.visibledatarow,
     context.visibledatacolumn,
     context.currentSheetId,
+  ]);
+
+  const conditionalFormatHoverOverlayRects = useMemo(() => {
+    const ranges = context.conditionalFormatRuleHoverRanges;
+    if (!ranges?.length) return [];
+    return ranges
+      .map((box, i) => {
+        const r0 = box.row[0];
+        const r1 = box.row[1];
+        const c0 = box.column[0];
+        const c1 = box.column[1];
+        if (
+          r0 == null ||
+          r1 == null ||
+          c0 == null ||
+          c1 == null ||
+          r0 > r1 ||
+          c0 > c1
+        ) {
+          return null;
+        }
+        const rect = seletedHighlistByindex(context, r0, r1, c0, c1);
+        return rect ? { key: `cf-hover-${i}-${r0}_${r1}_${c0}_${c1}`, rect } : null;
+      })
+      .filter((v): v is NonNullable<typeof v> => v != null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    context.conditionalFormatRuleHoverRanges,
+    context.visibledatarow,
+    context.visibledatacolumn,
+    context.config.merge,
+    context.config.rowhidden,
+    context.config.colhidden,
+    context.currentSheetId,
+    context.scrollLeft,
+    context.scrollTop,
+    context.zoomRatio,
+    refs.globalCache.undoList.length,
+    refs.globalCache.redoList.length,
+    flowdataForQuickSearchDeps,
   ]);
 
   const { showDialog } = useDialog();
@@ -785,6 +837,22 @@ const SheetOverlay: React.FC = () => {
               </div>
             );
           })}
+          {conditionalFormatHoverOverlayRects.map(({ key, rect }) => (
+            <div
+              key={key}
+              className="fortune-selection-highlight fortune-cf-rule-hover-highlight"
+              style={{
+                ..._.pick(rect, ['left', 'top', 'height']),
+                width: (rect.width ?? 0) + 4,
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                className="fortune-selection-copy-hc"
+                style={cfRuleHoverHighlightHcStyle(CF_RULE_HOVER_FILL_HEX)}
+              />
+            </div>
+          ))}
           {quickSearchOverlayRects.map(({ key, box, rect }) => (
             <div
               key={`fortune-quick-search-hl-${key}`}

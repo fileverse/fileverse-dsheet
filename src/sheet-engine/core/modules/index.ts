@@ -13,6 +13,7 @@ export {
   updateCell,
   getRangetxt,
   getRangeByTxt,
+  isValidRangeText,
   getInlineStringHTML,
   getStyleByCell,
   clearSelectedCellFormat,

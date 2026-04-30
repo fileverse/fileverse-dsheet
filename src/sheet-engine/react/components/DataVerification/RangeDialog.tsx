@@ -1,4 +1,4 @@
-import { locale, getRangetxt } from '@sheet-engine/core';
+import { locale, getRangetxt, isValidRangeText } from '@sheet-engine/core';
 import { Button, cn, IconButton, TextField } from '@fileverse/ui';
 import React, {
   useCallback,
@@ -179,6 +179,17 @@ const RangeDialog: React.FC = () => {
     }
   };
 
+  const rangeDialogCombined = rangeValues
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .join(',');
+  const isRangeDialogRangeValid = isValidRangeText(
+    context,
+    rangeDialogCombined,
+  );
+  const showRangeTextError =
+    rangeDialogCombined !== '' && !isRangeDialogRangeValid;
+
   return (
     <div
       ref={dialogRef}
@@ -241,7 +252,11 @@ const RangeDialog: React.FC = () => {
               className="flex flex-row items-center gap-2 w-full min-w-0"
             >
               <TextField
-                className="w-full min-w-0 flex-1"
+                className={cn(
+                  'w-full min-w-0 flex-1',
+                  showRangeTextError &&
+                    'ring-1 ring-[hsl(var(--color-border-negative))] rounded-md',
+                )}
                 placeholder={
                   context.rangeDialog?.type === 'searchRange'
                     ? findAndReplace.rangeInputPlaceholder
@@ -266,9 +281,8 @@ const RangeDialog: React.FC = () => {
               />
               <IconButton
                 icon="Trash2"
-                variant="secondary"
+                variant="ghost"
                 size="md"
-                elevation={1}
                 aria-label="Remove range"
                 className="fortune-range-dialog__remove-range shrink-0 border-0 shadow-none text-[hsl(var(--color-icon-secondary))]"
                 data-testid={`range-dialog-remove-range-${index}`}
@@ -299,6 +313,14 @@ const RangeDialog: React.FC = () => {
           >
             Add another range
           </Button>
+          {showRangeTextError ? (
+            <p
+              className="text-body-xs text-[hsl(var(--color-text-negative))] mt-1"
+              role="alert"
+            >
+              {dataVerification.invalidRangeText}
+            </p>
+          ) : null}
         </div>
       </div>
       <div
@@ -319,7 +341,9 @@ const RangeDialog: React.FC = () => {
           variant="default"
           className="fortune-range-dialog__cta fortune-range-dialog__cta--confirm"
           style={{ minWidth: '80px' }}
+          disabled={showRangeTextError}
           onClick={() => {
+            if (showRangeTextError) return;
             const normalizedRangeTxt = rangeValues
               .map((value) => value.trim())
               .filter(Boolean)
