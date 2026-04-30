@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useMemo,
 } from 'react';
 import './index.css';
 import {
@@ -20,13 +21,26 @@ import {
   SelectLabel,
   TextField,
 } from '@fileverse/ui';
-import { locale, setConditionRules, getSheetIndex } from '@sheet-engine/core';
+import {
+  locale,
+  setConditionRules,
+  getSheetIndex,
+  getRangeByTxt,
+  isValidRangeText,
+  parseCfDateConditionForUi,
+  formatCfDatePresetSnapshot,
+  CF_DATE_DEFAULT_FORMAT,
+  parseDdMmYyyyToSerial,
+  type Context,
+} from '@sheet-engine/core';
 import produce from 'immer';
 import { numberToColumn } from '../SheetOverlay/helper';
 
 import WorkbookContext from '../../context';
 import { useDialog } from '../../hooks/useDialog';
 import { getDisplayedRangeTxt } from '../DataVerification/getDisplayedRangeTxt';
+import Combo from '../Toolbar/Combo';
+import { CustomColor } from '../Toolbar/CustomColor';
 import { injectDatepickerStyles } from '../../utils/datepickerStyles';
 
 import './formating.css';
@@ -34,19 +48,156 @@ import './formating.css';
 // Initialize datepicker styles
 injectDatepickerStyles();
 
+/** “Format cells if” dropdown: order and groups per product spec (legacy types remain in engine). */
+const FORMAT_CELLS_IF_RULE_GROUPS: { labelKey: string; rules: string[] }[] = [
+  {
+    labelKey: 'formatCellsIfRulesGroup_presenceText',
+    rules: [
+      'empty',
+      'notEmpty',
+      'textContains',
+      'textDoesNotContain',
+      'textStartsWith',
+      'textEndsWith',
+      'textExactly',
+    ],
+  },
+  {
+    labelKey: 'formatCellsIfRulesGroup_dates',
+    rules: ['dateIs', 'dateBefore', 'dateAfter'],
+  },
+  {
+    labelKey: 'formatCellsIfRulesGroup_numbers',
+    rules: [
+      'greaterThan',
+      'greaterThanOrEqual',
+      'lessThan',
+      'lessThanOrEqual',
+      'equal',
+      'notEqual',
+      'between',
+      'notBetween',
+    ],
+  },
+];
+
+const SINGLE_VALUE_CF_TYPES = new Set([
+  'greaterThan',
+  'greaterThanOrEqual',
+  'lessThan',
+  'lessThanOrEqual',
+  'equal',
+  'notEqual',
+  'textContains',
+  'textDoesNotContain',
+  'textStartsWith',
+  'textEndsWith',
+  'textExactly',
+]);
+
+const NO_VALUE_CF_TYPES = new Set(['empty', 'notEmpty']);
+
+const DATE_CF_TYPES = new Set([
+  'dateIs',
+  'dateBefore',
+  'dateAfter',
+  'occurrenceDate',
+]);
+
+/** Date rules that use preset dropdown + optional DD/MM/YYYY text (not the HTML date picker). */
+const CF_PRESET_DATE_TYPES = new Set(['dateIs', 'dateBefore']);
+
+const BETWEEN_CF_TYPES = new Set(['between', 'notBetween']);
+
+/** Defaults for CF dialog formatting (reset in toolbar-style color picker). */
+const CF_DIALOG_DEFAULT_TEXT_COLOR = '#177E23';
+const CF_DIALOG_DEFAULT_CELL_COLOR = '#DDFBDF';
+
+function formatStateFromSavedCfRule(rule: any) {
+  const f = rule?.format ?? {};
+  return {
+    textColor: (f.textColor as string) || CF_DIALOG_DEFAULT_TEXT_COLOR,
+    cellColor: (f.cellColor as string) || CF_DIALOG_DEFAULT_CELL_COLOR,
+    bold: !!f.bold,
+    italic: !!f.italic,
+    underline: !!f.underline,
+    strikethrough: !!f.strikethrough,
+  };
+}
+
+function cfSavedDateRuleSuffix(
+  conditionName: string,
+  conditionValue: any[] | undefined,
+  labels: Record<string, unknown>,
+): string {
+  if (
+    (conditionName === 'dateIs' ||
+      conditionName === 'dateBefore' ||
+      conditionName === 'dateAfter') &&
+    conditionValue?.length
+  ) {
+    const v0 = String(conditionValue[0]);
+    if (v0.startsWith('preset:')) {
+      const id = v0.slice(7);
+      const label =
+        (labels[`cfDatePreset_${id}`] as string | undefined) ?? id;
+      if (id === 'exact') {
+        const ex = String(conditionValue[1] || '').trim();
+        return ex ? `${label} ${ex}` : label;
+      }
+      return label;
+    }
+  }
+  return String(conditionValue?.[0] ?? '');
+}
+
+/** Presets shown for “Date is after” (subset of full date CF presets). */
+const CF_DATE_AFTER_SELECT = new Set([
+  'today',
+  'tomorrow',
+  'yesterday',
+  'exact',
+]);
+
+function collectCfRuleApplyRanges(
+  rule: any,
+  ctx: Context,
+): { row: number[]; column: number[] }[] {
+  const cr = rule?.cellrange;
+  if (typeof cr === 'string' && String(cr).trim()) {
+    const parsed = getRangeByTxt(ctx, String(cr).trim());
+    return parsed
+      .filter(
+        (x: any) =>
+          Array.isArray(x?.row) &&
+          x.row.length === 2 &&
+          Array.isArray(x?.column) &&
+          x.column.length === 2,
+      )
+      .map((x: any) => ({ row: [...x.row], column: [...x.column] }));
+  }
+  if (Array.isArray(cr) && cr.length > 0) {
+    return cr
+      .filter(
+        (x: any) => x?.row?.length === 2 && x?.column?.length === 2,
+      )
+      .map((x: any) => ({ row: [...x.row], column: [...x.column] }));
+  }
+  return [];
+}
+
 const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
-  const [type, setType] = useState<string>('greaterThan');
+  const [type, setType] = useState<string>('notEmpty');
   const [create, setCreate] = useState<boolean>(false);
   const buttonClickCreateRef = useRef<boolean>(false);
-  const textColorInputRef = useRef<HTMLInputElement | null>(null);
-  const cellColorInputRef = useRef<HTMLInputElement | null>(null);
   const [editConditionFormatKey, setEditConditionFormatKey] = useState<
     string | null
   >(null);
   const editKeyRef = useRef<string | null>(null);
   const firstRenderRef = useRef<boolean>(true);
+  const rangeDialogWasOpenRef = useRef(false);
   const [editConditionRange, setEditConditionRange] = useState<string | null>(
-    '',
+    null,
   );
   const [editConditionFormatValue, setEditConditionFormatValue] =
     useState<any>(null);
@@ -54,18 +205,24 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     string[]
   >([]);
   const [allConditionFormats, setAllConditionFormats] = useState<any>(null);
+  const [dragHandleKey, setDragHandleKey] = useState<string | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const { setContext } = useContext(WorkbookContext);
   const { hideDialog } = useDialog();
-  const { conditionformat, button, protection, generalDialog } =
+  const { conditionformat, button, protection, generalDialog, toolbar } =
     locale(context);
   const [colorRules, setColorRules] = useState<{
     textColor: string;
     cellColor: string;
-  }>({ textColor: '#177E23', cellColor: '#DDFBDF' });
+  }>({
+    textColor: CF_DIALOG_DEFAULT_TEXT_COLOR,
+    cellColor: CF_DIALOG_DEFAULT_CELL_COLOR,
+  });
   const [bold, setBold] = useState<boolean>(false);
   const [italic, setItalic] = useState<boolean>(false);
   const [underline, setUnderline] = useState<boolean>(false);
   const [strikethrough, setStrikethrough] = useState<boolean>(false);
+  const selectionRangeTxt = useMemo(() => getDisplayedRangeTxt(context), [context]);
 
   useEffect(() => {
     if (create) return;
@@ -80,23 +237,27 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     if (allCondition) {
       Object.keys(allCondition).forEach((key) => {
         const conditionFormat = allCondition[key];
-        const range = conditionFormat.cellrange?.[0];
+        const ranges = conditionFormat.cellrange || [];
 
-        if (!range || !selectionColumn || !selectionRow) return;
+        if (!ranges.length || !selectionColumn || !selectionRow) return;
 
-        const rangeColumns = range.column;
-        const rangeRows = range.row;
+        const hasOverlap = ranges.some((range: any) => {
+          const rangeColumns = range.column;
+          const rangeRows = range.row;
 
-        const isColumnOverlap = !(
-          selectionColumn[1] < rangeColumns[0] ||
-          selectionColumn[0] > rangeColumns[1]
-        );
+          const isColumnOverlap = !(
+            selectionColumn[1] < rangeColumns[0] ||
+            selectionColumn[0] > rangeColumns[1]
+          );
 
-        const isRowOverlap = !(
-          selectionRow[1] < rangeRows[0] || selectionRow[0] > rangeRows[1]
-        );
+          const isRowOverlap = !(
+            selectionRow[1] < rangeRows[0] || selectionRow[0] > rangeRows[1]
+          );
 
-        if (isColumnOverlap && isRowOverlap) {
+          return isColumnOverlap && isRowOverlap;
+        });
+
+        if (hasOverlap) {
           matchedCondition.push(key);
         }
       });
@@ -115,6 +276,62 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       firstRenderRef.current = false;
     }
   }, [context]);
+
+  useEffect(() => {
+    if (editConditionRange !== null) return;
+    if (context.rangeDialog?.show) return;
+    setEditConditionRange(selectionRangeTxt || '');
+  }, [context.rangeDialog?.show, editConditionRange, selectionRangeTxt]);
+
+  /** When range picker closes, apply combined range to Apply-to-range (not rulesValue). */
+  useEffect(() => {
+    const show = !!context.rangeDialog?.show;
+    if (show) {
+      rangeDialogWasOpenRef.current = true;
+      return;
+    }
+    if (!rangeDialogWasOpenRef.current) return;
+    rangeDialogWasOpenRef.current = false;
+
+    const rdType = context.rangeDialog?.type ?? '';
+    const rangeT = (context.rangeDialog?.rangeTxt ?? '').trim();
+
+    if (rdType === 'conditionRulesbetween1' || rdType === 'conditionRulesbetween2') {
+      setContext((ctx) => {
+        if (!ctx.rangeDialog) return;
+        const rt = ctx.rangeDialog.rangeTxt;
+        if (rdType === 'conditionRulesbetween1') {
+          ctx.conditionRules.betweenValue.value1 = rt;
+        } else {
+          ctx.conditionRules.betweenValue.value2 = rt;
+        }
+        ctx.rangeDialog.type = '';
+        ctx.rangeDialog.rangeTxt = '';
+      });
+      return;
+    }
+
+    if (
+      rdType.startsWith('conditionRules') &&
+      rdType !== 'conditionRulesbetween1' &&
+      rdType !== 'conditionRulesbetween2'
+    ) {
+      if (rangeT) {
+        setEditConditionRange(rangeT);
+      }
+      setContext((ctx) => {
+        if (ctx.rangeDialog) {
+          ctx.rangeDialog.type = '';
+          ctx.rangeDialog.rangeTxt = '';
+        }
+      });
+    }
+  }, [
+    context.rangeDialog?.show,
+    context.rangeDialog?.type,
+    context.rangeDialog?.rangeTxt,
+    setContext,
+  ]);
 
   const updateCacheRules = () => {
     setContext((ctx) => {
@@ -136,6 +353,8 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
           value1: '',
           value2: '',
         },
+        datePreset: ctx.conditionRules.datePreset || 'today',
+        dateFormat: ctx.conditionRules.dateFormat || CF_DATE_DEFAULT_FORMAT,
         dateValue: ctx.conditionRules.dateValue || '',
         repeatValue: ctx.conditionRules.repeatValue || '0',
         projectValue: ctx.conditionRules.projectValue || '10',
@@ -153,20 +372,98 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
 
         ctx.rangeDialog!.show = true;
         ctx.rangeDialog!.type = selectType;
-        ctx.rangeDialog!.rangeTxt = ctx.conditionRules.rulesValue;
+        ctx.rangeDialog!.rangeTxt =
+          editConditionRange ?? getDisplayedRangeTxt(ctx);
         ctx.rangeDialog!.singleSelect = false;
       });
       updateCacheRules();
     },
-    [colorRules.cellColor, colorRules.textColor, hideDialog, setContext],
+    [
+      colorRules.cellColor,
+      colorRules.textColor,
+      editConditionRange,
+      hideDialog,
+      setContext,
+    ],
+  );
+
+  const onConditionRangeInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = e.target;
+      setEditConditionRange(value);
+      setContext((ctx) => {
+        const parsedRange = getRangeByTxt(ctx, value);
+        if (parsedRange.length > 0) {
+          ctx.luckysheet_select_save = parsedRange;
+        }
+      });
+    },
+    [setContext],
   );
 
   useEffect(() => {
     updateCacheRules();
-  }, [type, bold, italic, underline, strikethrough, colorRules]);
+  }, [
+    type,
+    bold,
+    italic,
+    underline,
+    strikethrough,
+    colorRules,
+    editConditionFormatKey,
+  ]);
+
+  useEffect(() => {
+    setContext((draft) => {
+      draft.conditionFormatDraftActive = create;
+    });
+  }, [create, setContext]);
+
+  useEffect(
+    () => () => {
+      setContext((draft) => {
+        draft.conditionFormatDraftActive = false;
+      });
+    },
+    [setContext],
+  );
+
+  /** Keep grid selection in sync with Apply-to range so CF live preview can resolve cellrange. */
+  useEffect(() => {
+    if (!create) return;
+    const t = (editConditionRange ?? '').trim();
+    if (!t) return;
+    setContext((ctx) => {
+      const parsed = getRangeByTxt(ctx, t);
+      if (parsed.length > 0) {
+        ctx.luckysheet_select_save = parsed;
+      }
+    });
+  }, [create, editConditionRange, setContext]);
 
   const close = useCallback(
     (closeType: string) => {
+      const applyConditionRulesByRange = (ctx: any, shouldEdit = false) => {
+        const typedRanges = (editConditionRange ?? '').trim();
+        const parsedRanges = typedRanges ? getRangeByTxt(ctx, typedRanges) : [];
+        const previousSelection = ctx.luckysheet_select_save;
+        if (parsedRanges.length > 0) {
+          ctx.luckysheet_select_save = parsedRanges;
+        }
+
+        setConditionRules(
+          ctx,
+          protection,
+          generalDialog,
+          conditionformat,
+          ctx.conditionRules,
+          shouldEdit,
+          shouldEdit ? (editConditionFormatKey as string) : undefined,
+        );
+
+        ctx.luckysheet_select_save = previousSelection;
+      };
+
       if (closeType === 'confirm') {
         buttonClickCreateRef.current = false;
         setCreate(false);
@@ -179,13 +476,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             underline,
             strikethrough,
           };
-          setConditionRules(
-            ctx,
-            protection,
-            generalDialog,
-            conditionformat,
-            ctx.conditionRules,
-          );
+          applyConditionRulesByRange(ctx, false);
         });
       } else if (closeType === 'close') {
         buttonClickCreateRef.current = true;
@@ -203,19 +494,11 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             underline,
             strikethrough,
           };
-          setConditionRules(
-            ctx,
-            protection,
-            generalDialog,
-            conditionformat,
-            ctx.conditionRules,
-            true,
-            // @ts-ignore
-            editConditionFormatKey,
-          );
+          applyConditionRulesByRange(ctx, true);
         });
       }
       setContext((ctx) => {
+        ctx.conditionFormatDraftActive = false;
         ctx.conditionRules = {
           rulesType: 'greaterThan',
           rulesValue: '',
@@ -228,6 +511,8 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             strikethrough: false,
           },
           betweenValue: { value1: '', value2: '' },
+          datePreset: 'today',
+          dateFormat: CF_DATE_DEFAULT_FORMAT,
           dateValue: '',
           repeatValue: '0',
           projectValue: '10',
@@ -237,7 +522,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       setItalic(false);
       setUnderline(false);
       setStrikethrough(false);
-      setColorRules({ textColor: '#177E23', cellColor: '#DDFBDF' });
+      setColorRules({
+        textColor: CF_DIALOG_DEFAULT_TEXT_COLOR,
+        cellColor: CF_DIALOG_DEFAULT_CELL_COLOR,
+      });
       updateCacheRules();
       setEditConditionFormatKey(null);
       setContext((ctx) => {
@@ -266,21 +554,14 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     ],
   );
 
-  // rulesValue初始化
+  // rulesValue初始化 (range picker results are handled when dialog closes — see rangeDialogWasOpenRef effect)
   useEffect(() => {
     setContext((ctx) => {
       ctx.conditionRules.rulesType = type;
 
       if (!ctx.rangeDialog) return;
       const rangeDialogType = ctx.rangeDialog.type;
-      const rangeT = ctx.rangeDialog!.rangeTxt;
-      if (rangeDialogType === 'conditionRulesbetween1') {
-        ctx.conditionRules.betweenValue.value1 = rangeT;
-      } else if (rangeDialogType === 'conditionRulesbetween2') {
-        ctx.conditionRules.betweenValue.value2 = rangeT;
-      } else if (rangeDialogType.indexOf('conditionRules') >= 0) {
-        ctx.conditionRules.rulesValue = rangeT;
-      } else if (rangeDialogType === '') {
+      if (rangeDialogType === '') {
         ctx.conditionRules = {
           rulesType: type,
           rulesValue: context.conditionRules.rulesValue || '',
@@ -293,18 +574,19 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             strikethrough: false,
           },
           betweenValue: { value1: '', value2: '' },
+          datePreset: 'today',
+          dateFormat: CF_DATE_DEFAULT_FORMAT,
           dateValue: '',
           repeatValue: '0',
           projectValue: '10',
         };
       }
-      ctx.rangeDialog.type = '';
-      ctx.rangeDialog.rangeTxt = '';
     });
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
+  /*
   const cellHighlightConditionList = [
     { text: 'greaterThan', value: '>', label: 'Greater Than' },
     { text: 'greaterThanOrEqual', value: '>=', label: 'Greater Than or Equal' },
@@ -346,6 +628,170 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
       label: 'Below Average',
     },
   ];
+  */
+
+  const formatCellsIfTypeLabel = (rulesType: string) => {
+    if (rulesType === 'occurrenceDate') {
+      return (conditionformat as any).dateIs ?? rulesType;
+    }
+    return (conditionformat as any)[rulesType] ?? rulesType;
+  };
+
+  const showApplyToRangeError = useMemo(() => {
+    const t = (editConditionRange ?? '').trim();
+    if (t === '') return false;
+    return !isValidRangeText(context, t);
+  }, [editConditionRange, context]);
+
+  const isSubmitValueMissing = (): boolean => {
+    const rangeT = (editConditionRange ?? '').trim();
+    if (rangeT === '' || !isValidRangeText(context, rangeT)) {
+      return true;
+    }
+    if (NO_VALUE_CF_TYPES.has(type)) return false;
+    if (BETWEEN_CF_TYPES.has(type)) {
+      return (
+        !String(context.conditionRules.betweenValue.value1 ?? '').trim() ||
+        !String(context.conditionRules.betweenValue.value2 ?? '').trim()
+      );
+    }
+    if (DATE_CF_TYPES.has(type)) {
+      if (CF_PRESET_DATE_TYPES.has(type) || type === 'dateAfter') {
+        if (context.conditionRules.datePreset === 'exact') {
+          return (
+            parseDdMmYyyyToSerial(
+              String(context.conditionRules.dateValue ?? '').trim(),
+            ) == null
+          );
+        }
+        return !String(context.conditionRules.datePreset ?? '').trim();
+      }
+      return !String(context.conditionRules.dateValue ?? '').trim();
+    }
+    const effectiveSingleValue = Array.isArray(editConditionFormatValue)
+      ? String(editConditionFormatValue[0] ?? '')
+      : String(
+          editConditionFormatValue ?? context.conditionRules.rulesValue ?? '',
+        );
+    return !effectiveSingleValue.trim();
+  };
+
+  const allFormatCellsIfRuleTypes = FORMAT_CELLS_IF_RULE_GROUPS.flatMap(
+    (g) => g.rules,
+  );
+
+  const remapRuleIndex = useCallback(
+    (indexRaw: string | null, from: number, to: number): string | null => {
+      if (indexRaw == null) return indexRaw;
+      const index = Number(indexRaw);
+      if (!Number.isFinite(index)) return indexRaw;
+      if (index === from) return String(to);
+      if (from < to && index > from && index <= to) return String(index - 1);
+      if (from > to && index >= to && index < from) return String(index + 1);
+      return indexRaw;
+    },
+    [],
+  );
+
+  const reorderConditionRule = useCallback(
+    (fromKey: string, toKey: string) => {
+      if (fromKey === toKey) return;
+      const from = Number(fromKey);
+      const to = Number(toKey);
+      if (!Number.isFinite(from) || !Number.isFinite(to)) return;
+
+      setContext((ctx) => {
+        const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
+        const ruleArr =
+          ctx.luckysheetfile[index].luckysheet_conditionformat_save || [];
+        if (
+          from < 0 ||
+          to < 0 ||
+          from >= ruleArr.length ||
+          to >= ruleArr.length
+        ) {
+          return;
+        }
+        const moved = ruleArr.splice(from, 1)[0];
+        ruleArr.splice(to, 0, moved);
+        ctx.luckysheetfile[index].luckysheet_conditionformat_save = ruleArr;
+
+        if (ctx.luckysheetfile[index].conditionRules?.editKey !== undefined) {
+          const currentEditKey =
+            ctx.luckysheetfile[index].conditionRules?.editKey ?? null;
+          ctx.luckysheetfile[index].conditionRules!.editKey = remapRuleIndex(
+            currentEditKey,
+            from,
+            to,
+          );
+        }
+      });
+
+      setEditConditionFormatKey((prev) => remapRuleIndex(prev, from, to));
+      setMatchedConditionFormatKey((prev) => {
+        if (!prev.includes(fromKey) || !prev.includes(toKey)) return prev;
+        const fromIndex = prev.indexOf(fromKey);
+        const toIndex = prev.indexOf(toKey);
+        if (fromIndex < 0 || toIndex < 0) return prev;
+        const next = [...prev];
+        const [moved] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, moved);
+        return next;
+      });
+    },
+    [remapRuleIndex, setContext],
+  );
+
+  const clearCfRuleHoverRanges = useCallback(() => {
+    setContext((draftCtx) => {
+      draftCtx.conditionalFormatRuleHoverRanges = null;
+    });
+  }, [setContext]);
+
+  const showCfRuleHoverRangesForRule = useCallback(
+    (rule: any) => {
+      setContext((draftCtx) => {
+        const ranges = collectCfRuleApplyRanges(rule, draftCtx);
+        draftCtx.conditionalFormatRuleHoverRanges =
+          ranges.length > 0 ? ranges : null;
+      });
+    },
+    [setContext],
+  );
+
+  useEffect(() => {
+    clearCfRuleHoverRanges();
+  }, [context?.currentSheetId, clearCfRuleHoverRanges]);
+
+  useEffect(
+    () => () => {
+      clearCfRuleHoverRanges();
+    },
+    [clearCfRuleHoverRanges],
+  );
+
+  useEffect(() => {
+    if (!create) return;
+    setContext((draftCtx) => {
+      draftCtx.conditionalFormatRuleHoverRanges = null;
+    });
+  }, [create, setContext]);
+
+  const handleAddAnotherRule = useCallback(() => {
+    setType('notEmpty');
+    setCreate(true);
+    setEditConditionFormatKey(null);
+    setContext((ctx) => {
+      const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
+      if (
+        ctx.luckysheetfile[index]?.conditionRules?.editKey !== undefined
+      ) {
+        ctx.luckysheetfile[index]!.conditionRules!.editKey = null;
+      }
+    });
+    editKeyRef.current = null;
+    buttonClickCreateRef.current = true;
+  }, [setContext]);
 
   // const titleType =
   //   // eslint-disable-next-line no-nested-ternary
@@ -359,12 +805,20 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     <div className="condition-rules">
       {!create ? (
         <div>
-          <div style={{ marginBottom: '16px' }}>
+          <div
+            style={{ marginBottom: '16px' }}
+            onMouseLeave={clearCfRuleHoverRanges}
+          >
             {matchedConditionFormatKey.map((key) => {
               return (
                 <div
+                  onMouseEnter={() => {
+                    const rule = allConditionFormats?.[key];
+                    if (rule) showCfRuleHoverRangesForRule(rule);
+                  }}
                   onClick={() => {
                     setEditConditionFormatKey(key);
+                    const fmtRule = allConditionFormats[key];
                     setContext((ctx) => {
                       const index = getSheetIndex(
                         ctx,
@@ -378,9 +832,66 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                         ctx.luckysheetfile[index]!.conditionRules!.editKey =
                           key;
                       }
+                      const cn = fmtRule.conditionName;
+                      const sheetRules =
+                        ctx.luckysheetfile[index]?.conditionRules;
+                      if (
+                        cn === 'dateIs' ||
+                        cn === 'dateBefore' ||
+                        cn === 'dateAfter'
+                      ) {
+                        const p = parseCfDateConditionForUi(
+                          fmtRule.conditionValue,
+                        );
+                        ctx.conditionRules.datePreset = p.preset;
+                        ctx.conditionRules.dateValue = p.snapshotOrExact;
+                        ctx.conditionRules.dateFormat = p.format;
+                        if (sheetRules) {
+                          sheetRules.datePreset = p.preset;
+                          sheetRules.dateValue = p.snapshotOrExact;
+                          sheetRules.dateFormat = p.format;
+                        }
+                      } else if (cn === 'occurrenceDate') {
+                        const dv = fmtRule.conditionValue?.[0]
+                          ? String(fmtRule.conditionValue[0])
+                          : '';
+                        ctx.conditionRules.dateValue = dv;
+                        if (sheetRules) sheetRules.dateValue = dv;
+                      }
+
+                      const fs = formatStateFromSavedCfRule(fmtRule);
+                      ctx.conditionRules.textColor = {
+                        check: true,
+                        color: fs.textColor,
+                      };
+                      ctx.conditionRules.cellColor = {
+                        check: true,
+                        color: fs.cellColor,
+                      };
+                      ctx.conditionRules.font = {
+                        bold: fs.bold,
+                        italic: fs.italic,
+                        underline: fs.underline,
+                        strikethrough: fs.strikethrough,
+                      };
+                      if (sheetRules) {
+                        sheetRules.textColor = ctx.conditionRules.textColor;
+                        sheetRules.cellColor = ctx.conditionRules.cellColor;
+                        sheetRules.font = { ...ctx.conditionRules.font };
+                      }
                     });
                     editKeyRef.current = key;
                     setType(allConditionFormats[key].conditionName);
+
+                    const fs = formatStateFromSavedCfRule(fmtRule);
+                    setColorRules({
+                      textColor: fs.textColor,
+                      cellColor: fs.cellColor,
+                    });
+                    setBold(fs.bold);
+                    setItalic(fs.italic);
+                    setUnderline(fs.underline);
+                    setStrikethrough(fs.strikethrough);
 
                     const rangeEdit = allConditionFormats[key].cellrange
                       ?.map((range: any) => {
@@ -404,7 +915,52 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   data-condition-key={key}
                   key={key}
                   data-testid={`condition-rules-item-${key}`}
+                  draggable={dragHandleKey === key}
+                  onDragStart={(e) => {
+                    if (dragHandleKey !== key) {
+                      e.preventDefault();
+                      return;
+                    }
+                    setDraggingKey(key);
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', key);
+                  }}
+                  onDragOver={(e) => {
+                    if (!draggingKey || draggingKey === key) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const fromKey =
+                      draggingKey || e.dataTransfer.getData('text/plain');
+                    if (!fromKey || fromKey === key) return;
+                    reorderConditionRule(fromKey, key);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingKey(null);
+                    setDragHandleKey(null);
+                  }}
                 >
+                  <div
+                    className="fortune-condition-rules__icon fortune-condition-rules__action opacity-0 group-hover:opacity-100 transition-opacity"
+                    data-testid={`condition-rules-action-drag-${key}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ marginRight: '-12px' }}
+                  >
+                    <LucideIcon
+                      name="EllipsisVertical"
+                      size="sm"
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        setDragHandleKey(key);
+                      }}
+                      style={{
+                        cursor: 'grab',
+                        color: 'hsl(var(--color-icon-secondary))',
+                      }}
+                    />
+                  </div>
                   <div
                     className="condition-list-pill"
                     style={{
@@ -442,9 +998,11 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                         ]
                       }
                       {allConditionFormats[key].conditionName !== 'empty' &&
-                        ` ${
-                          allConditionFormats[key].conditionValue?.[0] ?? ''
-                        }`}
+                        ` ${cfSavedDateRuleSuffix(
+                          allConditionFormats[key].conditionName,
+                          allConditionFormats[key].conditionValue,
+                          conditionformat as Record<string, unknown>,
+                        )}`}
                     </h3>
                     <p
                       className="fortune-condition-rules__para condition-list-range"
@@ -505,22 +1063,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             size="md"
             variant="secondary"
             className="fortune-condition-rules__cta fortune-condition-rules__cta--add"
-            onClick={() => {
-              setType('greaterThan');
-              setCreate(true);
-              setEditConditionFormatKey(null);
-              setContext((ctx) => {
-                const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
-                if (
-                  ctx.luckysheetfile[index]?.conditionRules?.editKey !==
-                  undefined
-                ) {
-                  ctx.luckysheetfile[index]!.conditionRules!.editKey = null;
-                }
-              });
-              editKeyRef.current = null;
-              buttonClickCreateRef.current = true;
-            }}
+            onClick={handleAddAnotherRule}
             data-testid="condition-rules-cta-add"
           >
             Add another rule
@@ -536,6 +1079,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
               {conditionformat.applyRange} range
             </div>
             <TextField
+              className={cn(
+                showApplyToRangeError &&
+                  'ring-1 ring-[hsl(var(--color-border-negative))] rounded-md',
+              )}
               rightIcon={
                 <LucideIcon
                   name="Grid2x2"
@@ -543,17 +1090,26 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   onClick={() => {
                     dataSelectRange(`conditionRules${type}`);
                   }}
+                  style={{ cursor: 'pointer' }}
                 />
               }
               aria-hidden="true"
-              readOnly
               placeholder={conditionformat.selectRange}
-              value={editConditionRange || getDisplayedRangeTxt(context)}
-              onClick={() => {
-                setEditConditionRange(null);
-                dataSelectRange(`conditionRules${type}`);
+              value={editConditionRange ?? ''}
+              onKeyDown={(e) => {
+                e.stopPropagation();
               }}
+              onChange={onConditionRangeInputChange}
             />
+            {showApplyToRangeError ? (
+              <p
+                className="text-body-xs text-[hsl(var(--color-text-negative))] mt-1"
+                role="alert"
+              >
+                {(conditionformat as { invalidRangeText?: string })
+                  .invalidRangeText ?? 'Enter a valid range'}
+              </p>
+            ) : null}
           </div>
           <div>
             <div
@@ -565,11 +1121,26 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             <Select
               value={type}
               onValueChange={(value) => {
-                if (value === 'empty' || type === 'empty') {
+                if (
+                  NO_VALUE_CF_TYPES.has(value) ||
+                  NO_VALUE_CF_TYPES.has(type)
+                ) {
                   setContext((ctx) => {
                     ctx.conditionRules.rulesValue = '';
                   });
                   setEditConditionFormatValue(null);
+                }
+                if (
+                  value === 'dateIs' ||
+                  value === 'dateBefore' ||
+                  value === 'dateAfter'
+                ) {
+                  setContext((ctx) => {
+                    ctx.conditionRules.datePreset = 'today';
+                    ctx.conditionRules.dateFormat = CF_DATE_DEFAULT_FORMAT;
+                    ctx.conditionRules.dateValue =
+                      formatCfDatePresetSnapshot('today');
+                  });
                 }
                 setType(value);
               }}
@@ -577,8 +1148,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
               <SelectTrigger>
                 <SelectValue>
                   <div className="flex items-center gap-2">
-                    {/* <LucideIcon name={selectedOption.icon} size="sm" /> */}
-                    <span>{(conditionformat as any)[type]}</span>
+                    <span>{formatCellsIfTypeLabel(type)}</span>
                   </div>
                 </SelectValue>
               </SelectTrigger>
@@ -590,28 +1160,29 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                 className="z-[100]"
                 data-dropdown-content="true"
               >
-                <SelectGroup>
-                  <SelectLabel>Cell highlight rules</SelectLabel>
-                  {cellHighlightConditionList.map((option) => (
-                    <SelectItem key={option.value} value={option.text}>
-                      <div className="flex items-center gap-2">
-                        {/* <LucideIcon name={option.icon} size="sm" /> */}
-                        <span>{(conditionformat as any)[option.text]}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-                <SelectGroup>
-                  <SelectLabel>Item selections rules</SelectLabel>
-                  {itemSelectionConditionList.map((option) => (
-                    <SelectItem key={option.value} value={option.text}>
-                      <div className="flex items-center gap-2">
-                        {/* <LucideIcon name={option.icon} size="sm" /> */}
-                        <span>{(conditionformat as any)[option.text]}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
+                {FORMAT_CELLS_IF_RULE_GROUPS.map((group) => (
+                  <SelectGroup key={group.labelKey}>
+                    <SelectLabel>
+                      {(conditionformat as any)[group.labelKey]}
+                    </SelectLabel>
+                    {group.rules.map((rule) => (
+                      <SelectItem key={rule} value={rule}>
+                        <div className="flex items-center gap-2">
+                          <span>{formatCellsIfTypeLabel(rule)}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+                {editConditionFormatKey !== null &&
+                  !allFormatCellsIfRuleTypes.includes(type) && (
+                    <SelectGroup>
+                      <SelectLabel>Saved rule type</SelectLabel>
+                      <SelectItem value={type}>
+                        <span>{formatCellsIfTypeLabel(type)}</span>
+                      </SelectItem>
+                    </SelectGroup>
+                  )}
               </SelectContent>
             </Select>
           </div>
@@ -622,12 +1193,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
               {(conditionformat as any)[`conditionformat_${titleType}_title`]}
             </div> */}
 
-              {(type === 'greaterThan' ||
-                type === 'greaterThanOrEqual' ||
-                type === 'lessThan' ||
-                type === 'lessThanOrEqual' ||
-                type === 'equal' ||
-                type === 'textContains') && (
+              {SINGLE_VALUE_CF_TYPES.has(type) && (
                 <div className="w-full">
                   <TextField
                     label="Value for condition"
@@ -652,7 +1218,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                 </div>
               )}
 
-              {type === 'between' && (
+              {BETWEEN_CF_TYPES.has(type) && (
                 <div className="w-full flex gap-2 items-center">
                   <div className="w-full">
                     <TextField
@@ -686,16 +1252,149 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   </div>
                 </div>
               )}
-              {type === 'occurrenceDate' && (
+              {CF_PRESET_DATE_TYPES.has(type) && (
+                <div className="flex flex-col gap-2 w-full">
+                  <Select
+                    value={context.conditionRules.datePreset || 'today'}
+                    onValueChange={(preset) => {
+                      setContext((ctx) => {
+                        ctx.conditionRules.datePreset = preset;
+                        ctx.conditionRules.dateFormat = CF_DATE_DEFAULT_FORMAT;
+                        if (preset === 'exact') {
+                          ctx.conditionRules.dateValue = '';
+                        } else {
+                          ctx.conditionRules.dateValue =
+                            formatCfDatePresetSnapshot(preset);
+                        }
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={conditionformat.occurrenceDate} />
+                    </SelectTrigger>
+                    <SelectContent className="condition-rules-select">
+                      <SelectItem value="today">
+                        {conditionformat.cfDatePreset_today}
+                      </SelectItem>
+                      <SelectItem value="tomorrow">
+                        {conditionformat.cfDatePreset_tomorrow}
+                      </SelectItem>
+                      <SelectItem value="yesterday">
+                        {conditionformat.cfDatePreset_yesterday}
+                      </SelectItem>
+                      <SelectItem value="pastWeek">
+                        {conditionformat.cfDatePreset_pastWeek}
+                      </SelectItem>
+                      <SelectItem value="pastMonth">
+                        {conditionformat.cfDatePreset_pastMonth}
+                      </SelectItem>
+                      <SelectItem value="pastYear">
+                        {conditionformat.cfDatePreset_pastYear}
+                      </SelectItem>
+                      <SelectItem value="exact">
+                        {conditionformat.cfDatePreset_exact}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(context.conditionRules.datePreset || 'today') ===
+                    'exact' && (
+                    <TextField
+                      label={conditionformat.occurrenceDate}
+                      required
+                      placeholder="Date DD/MM/YYYY"
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      value={context.conditionRules.dateValue}
+                      onChange={(e) => {
+                        const { value: v } = e.target;
+                        setContext((ctx) => {
+                          ctx.conditionRules.dateValue = v;
+                        });
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+              {type === 'dateAfter' && (
+                <div className="flex flex-col gap-2 w-full">
+                  <Select
+                    value={
+                      CF_DATE_AFTER_SELECT.has(
+                        context.conditionRules.datePreset || '',
+                      )
+                        ? context.conditionRules.datePreset || 'today'
+                        : 'today'
+                    }
+                    onValueChange={(preset) => {
+                      setContext((ctx) => {
+                        ctx.conditionRules.datePreset = preset;
+                        ctx.conditionRules.dateFormat = CF_DATE_DEFAULT_FORMAT;
+                        if (preset === 'exact') {
+                          ctx.conditionRules.dateValue = '';
+                        } else {
+                          ctx.conditionRules.dateValue =
+                            formatCfDatePresetSnapshot(preset);
+                        }
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={conditionformat.occurrenceDate} />
+                    </SelectTrigger>
+                    <SelectContent className="condition-rules-select">
+                      <SelectItem value="today">
+                        {conditionformat.cfDatePreset_today}
+                      </SelectItem>
+                      <SelectItem value="tomorrow">
+                        {conditionformat.cfDatePreset_tomorrow}
+                      </SelectItem>
+                      <SelectItem value="yesterday">
+                        {conditionformat.cfDatePreset_yesterday}
+                      </SelectItem>
+                      <SelectItem
+                        value="exact"
+                        className="border-t border-gray-200 mt-1"
+                      >
+                        {conditionformat.cfDatePreset_exact}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(CF_DATE_AFTER_SELECT.has(
+                    context.conditionRules.datePreset || '',
+                  )
+                    ? context.conditionRules.datePreset
+                    : 'today') === 'exact' && (
+                    <TextField
+                      label={conditionformat.occurrenceDate}
+                      required
+                      placeholder="Date DD/MM/YYYY"
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                      }}
+                      value={context.conditionRules.dateValue}
+                      onChange={(e) => {
+                        const { value: v } = e.target;
+                        setContext((ctx) => {
+                          ctx.conditionRules.dateValue = v;
+                        });
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+              {DATE_CF_TYPES.has(type) &&
+                !CF_PRESET_DATE_TYPES.has(type) &&
+                type !== 'dateAfter' && (
                 <div className="datepicker-toggle">
                   <input
                     type="date"
                     className="datepicker-input"
                     value={context.conditionRules.dateValue}
                     onChange={(e) => {
-                      const { value } = e.target;
+                      const { value: v } = e.target;
                       setContext((ctx) => {
-                        ctx.conditionRules.dateValue = value;
+                        ctx.conditionRules.dateValue = v;
                       });
                     }}
                   />
@@ -908,101 +1607,87 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                   />
                 </Button>
 
-                <div>
-                  <Button
-                    onClick={() => {
-                      textColorInputRef.current?.click();
-                    }}
-                    variant="ghost"
-                    className={cn(
-                      'fortune-toolbar-combo-button !min-w-fit !px-0',
-                      {},
-                    )}
+                <div style={{ position: 'relative' }}>
+                  <div
                     style={{
-                      width: 30,
-                      height: 30,
+                      width: 24,
+                      height: 4,
+                      backgroundColor: colorRules.textColor,
+                      position: 'absolute',
+                      bottom: 2,
+                      left: 3,
+                      zIndex: 100,
                     }}
+                  />
+                  <Combo
+                    iconId="font-color"
+                    tooltip={toolbar?.['font-color'] ?? 'Font color'}
+                    showArrow={false}
+                    fillColor={colorRules.textColor}
                   >
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <svg
-                        style={{ width: '19px', height: '19px' }}
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="lucide lucide-spell-check2-icon lucide-spell-check-2"
-                      >
-                        <path d="m5 18 6-12 6 12" />
-                        <path d="M7 14h8" />
-                      </svg>
-                      <input
-                        ref={textColorInputRef}
-                        style={{
-                          marginBottom: '4px',
-                        }}
-                        type="color"
-                        className="condition-rules-select-color"
-                        value={colorRules.textColor}
-                        onChange={(e) => {
-                          const { value } = e.target;
+                    {(setOpen) => (
+                      <CustomColor
+                        onCustomPick={(color) => {
                           setColorRules(
                             produce((draft) => {
-                              draft.textColor = value;
+                              draft.textColor =
+                                color ?? CF_DIALOG_DEFAULT_TEXT_COLOR;
                             }),
                           );
+                          setOpen(false);
+                        }}
+                        onColorPick={(color) => {
+                          setColorRules(
+                            produce((draft) => {
+                              draft.textColor = color;
+                            }),
+                          );
+                          setOpen(false);
                         }}
                       />
-                    </div>
-                  </Button>
+                    )}
+                  </Combo>
                 </div>
 
-                <div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      cellColorInputRef.current?.click();
-                    }}
-                    className={cn(
-                      'fortune-toolbar-combo-button !min-w-fit !px-0',
-                      {},
-                    )}
+                <div style={{ position: 'relative' }}>
+                  <div
                     style={{
-                      width: 30,
-                      height: 30,
+                      width: 24,
+                      height: 4,
+                      backgroundColor: colorRules.cellColor,
+                      position: 'absolute',
+                      bottom: 2,
+                      left: 3,
+                      zIndex: 100,
                     }}
+                  />
+                  <Combo
+                    iconId="background"
+                    tooltip={toolbar?.background ?? 'Fill color'}
+                    showArrow={false}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <LucideIcon
-                        name="PaintBucket"
-                        style={{ width: '16px', height: '16px' }}
-                      />
-                      <input
-                        ref={cellColorInputRef}
-                        type="color"
-                        className="condition-rules-select-color"
-                        value={colorRules.cellColor}
-                        onChange={(e) => {
-                          const { value } = e.target;
+                    {(setOpen) => (
+                      <CustomColor
+                        onCustomPick={(color) => {
                           setColorRules(
                             produce((draft) => {
-                              draft.cellColor = value;
+                              draft.cellColor =
+                                color ?? CF_DIALOG_DEFAULT_CELL_COLOR;
                             }),
                           );
+                          setOpen(false);
+                        }}
+                        onColorPick={(color) => {
+                          setColorRules(
+                            produce((draft) => {
+                              draft.cellColor = color;
+                            }),
+                          );
+                          setOpen(false);
                         }}
                       />
-                    </div>
-                  </Button>
+                    )}
+                  </Combo>
                 </div>
               </div>
             </div>
@@ -1023,9 +1708,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
             </Button>
             {editConditionFormatKey !== null ? (
               <Button
-                disabled={
-                  context.conditionRules.rulesValue === '' && type !== 'empty'
-                }
+                disabled={isSubmitValueMissing()}
                 variant="default"
                 style={{
                   minWidth: '80px',
@@ -1039,9 +1722,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
               </Button>
             ) : (
               <Button
-                disabled={
-                  context.conditionRules.rulesValue === '' && type !== 'empty'
-                }
+                disabled={isSubmitValueMissing()}
                 variant="default"
                 style={{
                   minWidth: '80px',
@@ -1055,6 +1736,18 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
               </Button>
             )}
           </div>
+          <hr className="color-border-default my-4 w-full border-0 border-t" />
+          <Button
+            toggleLeftIcon
+            leftIcon="Plus"
+            size="md"
+            variant="secondary"
+            className="fortune-condition-rules__cta fortune-condition-rules__cta--add"
+            onClick={handleAddAnotherRule}
+            data-testid="condition-rules-cta-add-from-form"
+          >
+            Add another rule
+          </Button>
         </>
       )}
     </div>

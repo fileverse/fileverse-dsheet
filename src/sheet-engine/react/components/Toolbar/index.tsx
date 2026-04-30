@@ -670,7 +670,7 @@ const Toolbar: React.FC<{
     const [showDataValidation, setShowDataValidation] = useState(false);
     const [showConditionalFormat, setShowConditionalFormat] = useState(false);
 
-    const dataVerificationClick = (selectedCells: any) => {
+    const dataVerificationClick = useCallback((selectedCells: any) => {
       const selection = api.getSelection(context);
       if (!selection && !selectedCells) {
         setContext((ctx) => {
@@ -689,9 +689,9 @@ const Toolbar: React.FC<{
       setTimeout(() => {
         setShowDataValidation(true);
       }, 100);
-    };
+    }, [context, setContext]);
 
-    const conditionalFormatClick = (selectedCells: any) => {
+    const conditionalFormatClick = useCallback((selectedCells: any) => {
       const selection = api.getSelection(context);
       if (!selection && !selectedCells) {
         setContext((ctx) => {
@@ -705,14 +705,14 @@ const Toolbar: React.FC<{
       setTimeout(() => {
         setShowConditionalFormat(true);
       }, 100);
-    };
+    }, [context, setContext]);
 
     useEffect(() => {
       // @ts-ignore
       window.dataVerificationClick = dataVerificationClick;
       // @ts-ignore
       window.conditionalFormatClick = conditionalFormatClick;
-    }, []);
+    }, [dataVerificationClick, conditionalFormatClick]);
 
     // Sync toolbar recent colors from selected cell so picker and display stay correct (only when cell exists)
     useEffect(() => {
@@ -1619,6 +1619,21 @@ const Toolbar: React.FC<{
                       </div>
                     </Option>
                   ))}
+                  <MenuDivider key="merge-conditional-format-divider" />
+                  <Option
+                    key="conditional-formatting-from-merge-menu"
+                    onClick={() => {
+                      setOpen(false);
+                      conditionalFormatClick(context.luckysheet_select_save);
+                    }}
+                  >
+                    <div
+                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <SVGIcon name="conditionFormat" width={16} height={16} />
+                      {toolbar.conditionFormat}
+                    </div>
+                  </Option>
                 </Select>
               )}
             </Combo>
@@ -2096,6 +2111,7 @@ const Toolbar: React.FC<{
         customStyle,
         toolbarFormat.moreCurrency,
         context.dataVerification?.dataRegulation,
+        conditionalFormatClick,
       ],
     );
 

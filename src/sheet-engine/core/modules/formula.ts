@@ -4486,6 +4486,20 @@ export function isFormulaReferenceInputMode(ctx: Context): boolean {
     return false;
   }
 
+  // If a range was just inserted (kbd/mouse) and the caret is still on that
+  // managed range span, keep ref-input mode so arrow keys keep extending the
+  // range (e.g. `=A2` → arrow → `=A3`). This mirrors main's `refFlowActive`
+  // short-circuit and bypasses the bare-cell pattern check below for actively
+  // managed tokens. Dirty edits clear `rangeSelectionActive`, so this does not
+  // re-enable navigation after the user manually edited a token.
+  if (
+    ctx.formulaCache.rangeSelectionActive === true &&
+    editor &&
+    getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+  ) {
+    return true;
+  }
+
   // While user is still typing a function/identifier right after "="
   // (e.g. "=SUM" or "=kjnskfv"), do not treat it as range-reference mode.
   // Range-reference mode should start at insertion points such as "(" or ",".

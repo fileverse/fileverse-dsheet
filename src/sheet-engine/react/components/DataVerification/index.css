@@ -127,12 +127,29 @@
   background: #fff;
   border: 1px solid hsl(var(--color-border-default));
   outline: 0;
-  position: absolute;
+  position: fixed;
   z-index: 100003;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -90%);
   user-select: none;
+  min-width: min(360px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  touch-action: none;
+}
+
+#range-dialog.fortune-range-dialog--positioned {
+  transform: none;
+}
+
+#range-dialog .fortune-range-dialog__header--draggable {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+#range-dialog .fortune-range-dialog__header--draggable:active {
+  cursor: grabbing;
 }
 
 #range-dialog .dialog-title {
@@ -150,7 +167,7 @@
   padding: 0 10px;
   border: 1px solid #d4d4d4;
   outline-style: none;
-  user-select: none;
+  user-select: text;
 }
 
 #range-dialog .button-primary {

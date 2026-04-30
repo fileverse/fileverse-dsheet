@@ -385,6 +385,11 @@ export function setCellValue(
       } else if ("f" in cell) {
         delete cell.f;
       }
+      if (!_.isNil(v.m)) {
+        cell.m = v.m;
+      } else if ("m" in v && "m" in cell) {
+        delete cell.m;
+      }
 
       // if (!_.isNil(v.spl)) {
       //   cell.spl = v.spl;
@@ -843,19 +848,19 @@ export function setCellValue(
   // Safety net: formula commits should always end with a display value `m`.
   // Some mixed multiline/auto-close paths can carry `f`+`v` forward while `m`
   // is still empty; derive it here without touching existing non-empty `m`.
-  if (
-    !_.isNil((cell as Cell).f) &&
-    isRealNull((cell as Cell).m) &&
-    !isRealNull((cell as Cell).v)
-  ) {
-    if (cell?.ct?.t === "d" && cell?.ct?.fa) {
-      (cell as Cell).m = update(cell.ct.fa, (cell as Cell).v);
-    } else if (typeof (cell as Cell).v === "number") {
+  if (!_.isNil((cell as Cell).f) && isRealNull((cell as Cell).m)) {
+    const formulaResult = (cell as Cell).v;
+    if (cell?.ct?.t === "d" && cell?.ct?.fa && !isRealNull(formulaResult)) {
+      (cell as Cell).m = update(cell.ct.fa, formulaResult);
+    } else if (typeof formulaResult === "number") {
       refreshGeneralNumericDisplay(cell as Cell);
-    } else if (typeof (cell as Cell).v === "boolean") {
-      (cell as Cell).m = (cell as Cell).v ? "TRUE" : "FALSE";
+    } else if (typeof formulaResult === "boolean") {
+      (cell as Cell).m = formulaResult ? "TRUE" : "FALSE";
+    } else if (isRealNull(formulaResult)) {
+      // Keep `m` present for formulas even when result is null/empty.
+      (cell as Cell).m = "";
     } else {
-      (cell as Cell).m = String((cell as Cell).v);
+      (cell as Cell).m = String(formulaResult);
     }
   }
 
@@ -2052,6 +2057,46 @@ export function getRangeByTxt(ctx: Context, txt: string) {
     }
   }
   return range;
+}
+
+/**
+ * Catches range strings the formula layer accepts (e.g. A1:B as “cell to column B”) that we
+ * reject in CF / range modals. Both sides of a single `:` must agree: either each part
+ * includes a row digit (A1, B2, 1) or neither does (A:B, whole-column / row-only style).
+ */
+function hasMismatchedRowSpecifiersOnColon(txt: string): boolean {
+  const pieces = (txt ?? "").split(",");
+  for (const raw of pieces) {
+    const s = String(raw).trim();
+    if (!s) continue;
+    const afterBang = s.lastIndexOf("!") >= 0 ? s.slice(s.lastIndexOf("!") + 1) : s;
+    if (afterBang.indexOf(":") === -1) continue;
+    const seg = afterBang.split(":");
+    if (seg.length !== 2) continue;
+    const [left, right] = seg;
+    if (left == null || right == null) return true;
+    if (!String(left).trim() || !String(right).trim()) return true;
+    const leftHasRow = /[0-9]/.test(String(left));
+    const rightHasRow = /[0-9]/.test(String(right));
+    if (leftHasRow !== rightHasRow) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * True if the string is empty/whitespace (allowed while editing) or parses to at least
+ * one range with {@link getRangeByTxt} (same rules as sheet range entry elsewhere), plus
+ * stricter form checks for the conditional-format and range-dialog inputs.
+ */
+export function isValidRangeText(ctx: Context, txt: string): boolean {
+  const t = (txt ?? "").trim();
+  if (t === "") return true;
+  if (hasMismatchedRowSpecifiersOnColon(t)) {
+    return false;
+  }
+  return getRangeByTxt(ctx, t).length > 0;
 }
 
 export function isAllSelectedCellsInStatus(
