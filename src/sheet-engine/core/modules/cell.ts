@@ -874,13 +874,19 @@ export function setCellValue(
 
   // Only persist formula mirror `ct.s` from the incoming `v` (multiline). Do not
   // reattach a stale `ct.s` from the pre-update cell, or single-line stays span-like.
+  // Partial updates (e.g. `{ v, f }` from `groupValuesRefresh` after row/column
+  // drag) omit `ct` entirely — they must not strip an existing multiline mirror.
   if (!_.isNil((cell as Cell).f)) {
     if (incomingFormulaInlineSegments) {
       if (!cell.ct) {
         cell.ct = { fa: "General", t: "g" };
       }
       cell.ct.s = incomingFormulaInlineSegments;
-    } else if (cell?.ct) {
+    } else if (
+      cell?.ct &&
+      _.isPlainObject(v) &&
+      Object.prototype.hasOwnProperty.call(v, "ct")
+    ) {
       delete (cell as Cell).ct!.s;
     }
   }
