@@ -370,7 +370,6 @@
   z-index: 14;
   display: flex;
   flex-direction: column;
-  outline: 2px solid #f2f217;
 }
 
 .luckysheet-input-box-inner {
@@ -387,7 +386,7 @@
   resize: none;
   overflow: hidden;
   white-space: pre-wrap;
-  outline: none;
+  outline: 2px solid #f2f217;
   /* -webkit-box-shadow: 0 2px 5px rgb(0 0 0 / 40%);
   -moz-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4); */
   /* box-shadow: 0 2px 5px rgb(0 0 0 / 40%); */
@@ -839,12 +838,8 @@
 }
 
 .luckysheet-filter-options.luckysheet-filter-options-active:hover {
-  background: hsl(
-    var(
-      --color-bg-brand-hover,
-      var(--color-bg-brand, var(--color-bg-default-hover))
-    )
-  );
+  background: hsl(var(--color-bg-brand-hover,
+        var(--color-bg-brand, var(--color-bg-default-hover))));
 }
 
 .luckysheet-filter-options-active {
