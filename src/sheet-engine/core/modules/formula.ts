@@ -3090,11 +3090,13 @@ function functionHTML(txt: string) {
       leadingWS = acc.match(/^\s+/)?.[0] || "";
       trailingWS = acc.match(/\s+$/)?.[0] || "";
       acc = acc.slice(leadingWS.length, acc.length - trailingWS.length);
-      function_str += leadingWS;
       if (acc.length === 0) {
-        function_str += trailingWS;
+        // The whole tail was only whitespace (often a lone `\n` from the
+        // contenteditable tree). Do not emit it: `functionHTMLGenerate` turns
+        // `\n` into `<br>`, which looks like typing `,` inserted a new line.
         return;
       }
+      function_str += leadingWS;
     }
     if (iscelldata(_.trim(acc))) {
       const rangeIndex =

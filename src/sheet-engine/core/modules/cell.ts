@@ -387,8 +387,6 @@ export function setCellValue(
       }
       if (!_.isNil(v.m)) {
         cell.m = v.m;
-      } else if ("m" in v && "m" in cell) {
-        delete cell.m;
       }
 
       // if (!_.isNil(v.spl)) {
@@ -543,8 +541,18 @@ export function setCellValue(
       )
     ) {
       cell.v = vupdate;
+      // Multiline formula commits attach `ct.s` and `ensureFormulaCtFormatForMirror` fills
+      // `fa`/`t`. Single-line commits often pass `ct: {}` so merge can leave `cell.ct` without
+      // `fa`, and `update(cell.ct.fa, v)` cannot produce `m`. Default only missing fields.
       if (_.isNil(cell.ct)) {
         cell.ct = { fa: "General", t: "g" };
+      } else {
+        if (cell.ct.fa == null || cell.ct.fa === "") {
+          cell.ct = { ...cell.ct, fa: "General" };
+        }
+        if (cell.ct.t == null || cell.ct.t === "") {
+          cell.ct = { ...cell.ct, t: "g" };
+        }
       }
 
       // if output is number fetch fa from referenced cells
