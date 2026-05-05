@@ -193,20 +193,23 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [editorStateRef]);
 
   // Wrapper for onChange to handle type compatibility
-  const handleOnChangePortalUpdate = useMemo(
-    () =>
-      throttle(() => {
-        if (onChange && ydocRef.current) {
-          const encodedUpdate = fromUint8Array(
-            Y.encodeStateAsUpdate(ydocRef.current),
-          );
-          onChange({ data: currentDataRef.current }, encodedUpdate);
-        }
-      }, 1000),
-    [onChange, dsheetId],
-  );
+  const handleOnChangePortalUpdate = useMemo(() => {
+    if (!onChange) {
+      return () => { };
+    }
+
+    return throttle(() => {
+      if (!ydocRef.current) return;
+      const encodedUpdate = fromUint8Array(
+        Y.encodeStateAsUpdate(ydocRef.current),
+      );
+      onChange({ data: currentDataRef.current }, encodedUpdate);
+    }, 1000);
+  }, [onChange, dsheetId]);
 
   useEffect(() => {
+    if (!onChange) return;
+
     const handleBeforeUnload = () => {
       handleOnChangePortalUpdate();
     };
@@ -214,7 +217,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, []);
+  }, [onChange, handleOnChangePortalUpdate]);
 
   // Initialize sheet data
   const {
@@ -251,7 +254,6 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     dsheetId,
     username,
     enableWebrtc,
-    portalContent,
   );
 
   // Force re-render when data changes

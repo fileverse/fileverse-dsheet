@@ -70,7 +70,6 @@ enablePatches();
 export type WorkbookInstance = ReturnType<typeof generateAPIs>;
 
 type AdditionalProps = {
-  onChange?: (data: SheetType[]) => void;
   onOp?: (op: Op[]) => void;
 };
 
@@ -89,7 +88,7 @@ const concatProducer = (...producers: ((ctx: Context) => void)[]) => {
 };
 
 const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
-  ({ onChange, onOp, data: originalData, isFlvReadOnly, ...props }, ref) => {
+  ({ onOp, data: originalData, isFlvReadOnly, ...props }, ref) => {
     const globalCache = useRef<GlobalCache>({ undoList: [], redoList: [] });
     const cellInput = useRef<HTMLDivElement>(null);
     const fxInput = useRef<HTMLDivElement>(null);
@@ -412,11 +411,15 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const setContextWithProduce = useCallback(
       (recipe: (ctx: Context) => void, options: SetContextOptions = {}) => {
         setContext((ctx_) => {
+          if (options.noHistory) {
+            return produce(ctx_, concatProducer(recipe, triggerGroupValuesRefresh));
+          }
+
           const [result, patches, inversePatches] = produceWithPatches(
             ctx_,
             concatProducer(recipe, triggerGroupValuesRefresh),
           );
-          if (patches.length > 0 && !options.noHistory) {
+          if (patches.length > 0) {
             if (options.logPatch) {
               console.info('patch', patches);
             }
@@ -828,12 +831,6 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     }, [currentSheet?.hyperlink]);
 
     useEffect(() => {
-      if (!_.isEmpty(context.luckysheetfile)) {
-        onChange?.(context.luckysheetfile);
-      }
-    }, [context.luckysheetfile, onChange]);
-
-    useEffect(() => {
       const init = async () => {
         const resolvedLang: string =
           mergedSettings.lang ??
@@ -1114,7 +1111,6 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           clearTimeout(resetDeleteRowTimer);
           resetDeleteRowTimer = setTimeout(() => {
             waitingForDelRow = false;
-            console.log('Timeout: No second key (R or C) pressed in time.');
           }, 3000); // 3 seconds to press R or C
 
           e.preventDefault();

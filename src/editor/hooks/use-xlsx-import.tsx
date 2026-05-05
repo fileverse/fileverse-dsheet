@@ -734,11 +734,6 @@ export const useXLSXImport = ({
             file,
             function (exportJson: { sheets: Sheet[] }) {
               let sheets = exportJson.sheets;
-              console.log('[xlsx-import] parsed sheets data', {
-                fileName: file.name,
-                sheetCount: sheets.length,
-                sheets,
-              });
               sheets.forEach((sheet, sheetIndex) => {
                 const sheetDv = dataVerificationBySheet[sheetIndex];
                 if (sheetDv && Object.keys(sheetDv).length > 0) {

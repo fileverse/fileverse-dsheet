@@ -623,7 +623,6 @@ export function refreshGeneralNumericDisplay(cell: Cell): void {
 }
 
 export function is_date(fmt: string, v?: any) {
-  console.log(SSF.is_date(fmt, v), 'is_date');
   return SSF.is_date(fmt, v);
 }
 

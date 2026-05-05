@@ -24,17 +24,6 @@ export default function func(symbol) {
       if (formulajs[symbolParts[0]]) {
         foundFormula = true;
         const functionDetails = FUNCTIONLIST_MAP_EN[symbolParts[0]] || null;
-        // eslint-disable-next-line no-console -- debug: args + locale metadata before formulajs
-        console.log("[formulajs]", symbolParts[0], {
-          args: params,
-          functionDetails,
-          debug: {
-            requestedSymbol: symbol,
-            resolvedSymbol: symbolParts[0],
-            isSupportedInParser: SUPPORTED_FORMULAS.includes(symbol),
-            hasFormulaJsEntry: typeof formulajs[symbolParts[0]] === "function",
-          },
-        });
         result = formulajs[symbolParts[0]](...params);
       }
     } else {
@@ -54,17 +43,6 @@ export default function func(symbol) {
       if (nestedFormula) {
         foundFormula = true;
         const functionDetails = FUNCTIONLIST_MAP_EN[symbolParts[0]] || null;
-        // eslint-disable-next-line no-console -- debug: args + locale metadata before formulajs
-        console.log("[formulajs]", symbol, {
-          args: params,
-          functionDetails,
-          debug: {
-            requestedSymbol: symbol,
-            resolvedSymbol: symbolParts.join("."),
-            isSupportedInParser: SUPPORTED_FORMULAS.includes(symbol),
-            hasFormulaJsEntry: typeof nestedFormula === "function",
-          },
-        });
         result = nestedFormula(...params);
       }
     }

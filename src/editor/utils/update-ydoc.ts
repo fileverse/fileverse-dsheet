@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import { Sheet } from '@sheet-engine/react';
+import { current, isDraft } from 'immer';
 
 export type SheetChangePath = {
   sheetId: string;
@@ -9,10 +10,7 @@ export type SheetChangePath = {
   type?: 'update' | 'delete';
 };
 
-/**
- * Deep-clone value so Yjs stores plain data (no proxies).
- */
-function toPlain<T>(value: T): T {
+function cloneForYjs<T>(value: T): T {
   try {
     return structuredClone(value);
   } catch {
@@ -20,13 +18,30 @@ function toPlain<T>(value: T): T {
   }
 }
 
+/**
+ * Convert draft/proxy-ish values to plain data for Yjs.
+ * Fast path: primitives and non-draft objects are returned as-is.
+ */
+function toPlain<T>(value: T): T {
+  if (value === null || typeof value !== 'object') return value;
+  if (isDraft(value)) {
+    return current(value) as T;
+  }
+  return value;
+}
+
+function setMapValueSafe(target: Y.Map<any>, key: string, value: any) {
+  const normalizedValue = toPlain(value);
+  try {
+    target.set(key, normalizedValue);
+  } catch {
+    target.set(key, cloneForYjs(normalizedValue));
+  }
+}
+
 const getSheetId = (sheet: Y.Map<any> | Record<string, any>) => {
   if (sheet instanceof Y.Map) return sheet.get('id');
   return (sheet as Record<string, any>)?.id;
-};
-
-const logYdocWarning = (context: string, details: Record<string, unknown>) => {
-  console.warn(`[updateYdocSheetData] ${context}`, details);
 };
 
 export const updateYdocSheetData = (
@@ -38,7 +53,6 @@ export const updateYdocSheetData = (
   if (!ydoc || !changes.length) return;
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
-  console.log('Applying sheet changes to Y.Doc:', changes, sheetArray.toJSON());
 
   ydoc.transact(() => {
     changes.forEach(({ sheetId, path, key, value, type }) => {
@@ -48,28 +62,10 @@ export const updateYdocSheetData = (
       );
 
       if (!sheet) {
-        logYdocWarning('sheet not found for change', {
-          dsheetId,
-          sheetId,
-          path,
-          key,
-          type,
-          value,
-          allSheets,
-        });
         return;
       }
 
       if (!(sheet instanceof Y.Map)) {
-        logYdocWarning('matched sheet is not Y.Map, skipping change', {
-          dsheetId,
-          sheetId,
-          path,
-          key,
-          type,
-          value,
-          sheet,
-        });
         return;
       }
 
@@ -82,9 +78,7 @@ export const updateYdocSheetData = (
           sheet.set('celldata', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -98,7 +92,7 @@ export const updateYdocSheetData = (
 
         type === 'delete'
           ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value?.v));
+          : setMapValueSafe(cellMap, key, value?.v);
         return;
       }
 
@@ -110,9 +104,7 @@ export const updateYdocSheetData = (
           sheet.set('dataBlockCalcFunction', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -124,9 +116,7 @@ export const updateYdocSheetData = (
           sheet.set('liveQueryList', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -138,9 +128,7 @@ export const updateYdocSheetData = (
           sheet.set('dataVerification', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -152,9 +140,7 @@ export const updateYdocSheetData = (
           sheet.set('hyperlink', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -166,9 +152,7 @@ export const updateYdocSheetData = (
           sheet.set('conditionRules', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -180,9 +164,7 @@ export const updateYdocSheetData = (
           sheet.set('filter_select', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : cellMap.set(key, toPlain(value));
+        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -207,9 +189,9 @@ export const updateYdocSheetData = (
           typeof plainValue === 'object' &&
           !Array.isArray(plainValue)
         ) {
-          Object.entries(plainValue).forEach(([k, v]) =>
-            filterMap.set(k, toPlain(v)),
-          );
+          Object.entries(plainValue).forEach(([k, v]) => {
+            setMapValueSafe(filterMap as Y.Map<any>, k, v);
+          });
         }
         return;
       }
@@ -250,27 +232,16 @@ export const updateYdocSheetData = (
         target = next;
       }
 
-      target.set(path[path.length - 1], toPlain(value));
+      setMapValueSafe(target, path[path.length - 1], value);
     });
 
     // Keep a single active sheet by order after applying updates
     sheetArray.forEach((sheet: Y.Map<any> | Record<string, any>) => {
       if (sheet instanceof Y.Map) {
         sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
-        return;
       }
-
-      logYdocWarning('status sync encountered non-Y.Map sheet', {
-        dsheetId,
-        sheet,
-      });
     });
   });
-
-  console.log(
-    'Finished applying changes to Y.Doc. New state:',
-    sheetArray.toJSON(),
-  );
 
   if (handleContentPortal) {
     handleContentPortal();
@@ -288,13 +259,13 @@ export function ySheetArrayToPlain(
     const iterate =
       sheetMap instanceof Y.Map
         ? (fn: (value: any, key: string) => void) => {
-            sheetMap.forEach(fn);
-          }
+          sheetMap.forEach(fn);
+        }
         : (fn: (value: any, key: string) => void) => {
-            Object.entries(sheetMap as Record<string, any>).forEach(
-              ([key, value]) => fn(value, key),
-            );
-          };
+          Object.entries(sheetMap as Record<string, any>).forEach(
+            ([key, value]) => fn(value, key),
+          );
+        };
 
     iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format

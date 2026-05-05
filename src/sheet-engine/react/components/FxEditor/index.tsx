@@ -875,7 +875,8 @@ const FxEditor: React.FC = () => {
 
     const isStrictFormula = isStrictFormulaEditorText(refs.fxInput.current);
     if (!isStrictFormula) {
-      setContext((draftCtx) => {
+      setContext(
+        (draftCtx) => {
         if (draftCtx.functionCandidates.length > 0) {
           draftCtx.functionCandidates = [];
         }
@@ -885,7 +886,9 @@ const FxEditor: React.FC = () => {
         if (draftCtx.functionHint) {
           draftCtx.functionHint = '';
         }
-      });
+        },
+        { noHistory: true },
+      );
     }
 
     const currentCommaCount = countCommasBeforeCursor(refs.fxInput?.current!);
@@ -909,21 +912,24 @@ const FxEditor: React.FC = () => {
       if (!editor && isFormula(fx)) editor = fx;
       else if (!editor && isFormula(cell)) editor = cell;
       if (editor) {
-        setContext((draftCtx) => {
-          if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
-          if (getFormulaEditorOwner(draftCtx) !== 'fx') return;
-          if (
-            draftCtx.formulaCache.rangestart ||
-            draftCtx.formulaCache.rangedrag_column_start ||
-            draftCtx.formulaCache.rangedrag_row_start
-          ) {
+        setContext(
+          (draftCtx) => {
+            if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
+            if (getFormulaEditorOwner(draftCtx) !== 'fx') return;
+            if (
+              draftCtx.formulaCache.rangestart ||
+              draftCtx.formulaCache.rangedrag_column_start ||
+              draftCtx.formulaCache.rangedrag_row_start
+            ) {
+              rangeHightlightselected(draftCtx, editor!);
+              return;
+            }
+            draftCtx.formulaCache.selectingRangeIndex = -1;
+            createRangeHightlight(draftCtx, editor!.innerHTML);
             rangeHightlightselected(draftCtx, editor!);
-            return;
-          }
-          draftCtx.formulaCache.selectingRangeIndex = -1;
-          createRangeHightlight(draftCtx, editor!.innerHTML);
-          rangeHightlightselected(draftCtx, editor!);
-        });
+          },
+          { noHistory: true },
+        );
       }
       return;
     }
@@ -949,15 +955,18 @@ const FxEditor: React.FC = () => {
       kcode === 46 ||
       (e.ctrlKey && kcode === 86)
     ) {
-      setContext((draftCtx) => {
-        handleFormulaInput(
-          draftCtx,
-          refs.cellInput.current!,
-          refs.fxInput.current!,
-          kcode,
-          recentText.current,
-        );
-      });
+      setContext(
+        (draftCtx) => {
+          handleFormulaInput(
+            draftCtx,
+            refs.cellInput.current!,
+            refs.fxInput.current!,
+            kcode,
+            recentText.current,
+          );
+        },
+        { noHistory: true },
+      );
     }
     requestAnimationFrame(() => {
       if (getFormulaEditorOwner(context) !== 'fx') return;
@@ -977,24 +986,27 @@ const FxEditor: React.FC = () => {
   const refreshFxFormulaRangeHighlights = useCallback(() => {
     const el = refs.fxInput.current;
     if (!el) return;
-    setContext((draftCtx) => {
-      if (draftCtx.luckysheetCellUpdate.length === 0) return;
-      if (getFormulaEditorOwner(draftCtx) !== 'fx') return;
-      if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
-      const t = el.innerText?.trim() ?? '';
-      if (!t.startsWith('=')) return;
-      if (
-        draftCtx.formulaCache.rangestart ||
-        draftCtx.formulaCache.rangedrag_column_start ||
-        draftCtx.formulaCache.rangedrag_row_start
-      ) {
+    setContext(
+      (draftCtx) => {
+        if (draftCtx.luckysheetCellUpdate.length === 0) return;
+        if (getFormulaEditorOwner(draftCtx) !== 'fx') return;
+        if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
+        const t = el.innerText?.trim() ?? '';
+        if (!t.startsWith('=')) return;
+        if (
+          draftCtx.formulaCache.rangestart ||
+          draftCtx.formulaCache.rangedrag_column_start ||
+          draftCtx.formulaCache.rangedrag_row_start
+        ) {
+          rangeHightlightselected(draftCtx, el);
+          return;
+        }
+        draftCtx.formulaCache.selectingRangeIndex = -1;
+        createRangeHightlight(draftCtx, el.innerHTML);
         rangeHightlightselected(draftCtx, el);
-        return;
-      }
-      draftCtx.formulaCache.selectingRangeIndex = -1;
-      createRangeHightlight(draftCtx, el.innerHTML);
-      rangeHightlightselected(draftCtx, el);
-    });
+      },
+      { noHistory: true },
+    );
   }, [refs.fxInput, setContext]);
 
   useRerenderOnFormulaCaret(
