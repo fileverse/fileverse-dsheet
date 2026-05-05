@@ -33,6 +33,13 @@ export const formulaResponseUiSync = ({
   sheetEditorRef,
   shouldIgnoreUsdValue,
 }: FormulaSyncType): void => {
+  if (!apiData || apiData.length === 0) {
+    sheetEditorRef.current?.setCellError(row, column, {
+      title: 'No results',
+      message: 'The formula returned no rows.',
+    });
+    return;
+  }
   const currentSheetId = sheetEditorRef.current?.getWorkbookContext()
     ?.currentSheetId as string;
   const changesForYDoc: any = [];
