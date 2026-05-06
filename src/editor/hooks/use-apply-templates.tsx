@@ -63,8 +63,15 @@ export const useApplyTemplatesBtn = ({
       }, 100);
       setDataBlockCalcFunction((prev) => {
         if (templateData[0]?.dataBlockCalcFunction) {
-          // @ts-expect-error late
-          return { prev, [newSheetId]: templateData[0]?.dataBlockCalcFunction };
+          const targetSheetId = templateData[0]?.id ?? newSheetId;
+          if (!targetSheetId) return prev;
+          return {
+            ...prev,
+            [targetSheetId]: {
+              ...(prev?.[targetSheetId] || {}),
+              ...templateData[0]?.dataBlockCalcFunction,
+            },
+          };
         }
         return prev;
       });

@@ -2498,6 +2498,8 @@ export function deleteSelectedCellText(ctx: Context): string {
     if (!d) return "dataNullError";
 
     const rowsToRecalcAutoHeight = new Set<number>();
+    // Batch Yjs sync for bulk deletes. Dedupe by cell key; skip no-ops.
+    const changeMap = new Map<string, any>();
 
     let has_PartMC = false;
 
@@ -2532,7 +2534,6 @@ export function deleteSelectedCellText(ctx: Context): string {
       const c1 = selection[s].column[0];
       const c2 = selection[s].column[1];
 
-      const changes: any = [];
       for (let r = r1; r <= r2; r += 1) {
         for (let c = c1; c <= c2; c += 1) {
           const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
@@ -2588,21 +2589,16 @@ export function deleteSelectedCellText(ctx: Context): string {
             delete hyperlinkMap[`${r}_${c}`];
           }
 
-          if (ctx?.hooks?.afterUpdateCell) {
-            ctx.hooks.afterUpdateCell(r, c, null, d[r][c]);
-          }
-          // If afterUpdateCell is provided, it is expected to handle syncing external state (e.g. Yjs).
-          if (!ctx?.hooks?.afterUpdateCell) {
-            changes.push({
+          //skip already-blank/no-op cells (don't emit Yjs change).
+          const newCellAfter = (d[r][c] as any) ?? null;
+          if (!_.isEqual(oldCellBefore, newCellAfter)) {
+            const key = `${r}_${c}`;
+            changeMap.set(key, {
               sheetId: ctx.currentSheetId,
               path: ["celldata"],
-              value: {
-                r,
-                c,
-                v: d[r][c],
-              },
-              key: `${r}_${c}`,
-              type: "update",
+              value: { r, c, v: newCellAfter },
+              key,
+              type: newCellAfter == null ? 'delete' : 'update',
             });
           }
 
@@ -2611,9 +2607,10 @@ export function deleteSelectedCellText(ctx: Context): string {
           }
         }
       }
-      if (changes.length > 0 && ctx?.hooks?.updateCellYdoc) {
-        ctx.hooks.updateCellYdoc(changes);
-      }
+    }
+
+    if (changeMap.size > 0 && ctx?.hooks?.updateCellYdoc) {
+      ctx.hooks.updateCellYdoc(Array.from(changeMap.values()));
     }
 
     const canvasCtx =

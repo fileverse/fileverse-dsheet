@@ -92,8 +92,14 @@ interface AdjustRowHeightParams {
  * Checks if the cell value is empty or invalid
  */
 const isCellValueEmpty = (newValue: Cell): boolean => {
-  // @ts-ignore
-  return !newValue || (newValue?.v && !newValue.v);
+  if (!newValue) return true;
+
+  const v = newValue.v;
+  if (v === null || v === undefined) return true;
+  if (typeof v === 'string') return v.trim().length === 0;
+
+  // numbers (including 0) and booleans (including false) are valid cell values
+  return false;
 };
 
 type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
