@@ -66,6 +66,64 @@ const findSheetById = (sheets: any[] | undefined, sheetId: unknown) => {
   return sheets.find((sheet) => getSheetField(sheet, 'id') === sheetId);
 };
 
+const toYMapFromObject = (value: Record<string, any> | undefined | null) => {
+  const map = new Y.Map<any>();
+  if (!value || typeof value !== 'object') return map;
+  Object.entries(value).forEach(([k, v]) => {
+    map.set(k, v);
+  });
+  return map;
+};
+
+const toCellMap = (sheet: any) => {
+  const map = new Y.Map<any>();
+
+  if (Array.isArray(sheet?.celldata)) {
+    sheet.celldata.forEach((cell: any) => {
+      if (cell && typeof cell.r === 'number' && typeof cell.c === 'number') {
+        map.set(`${cell.r}_${cell.c}`, cell);
+      }
+    });
+    return map;
+  }
+
+  if (Array.isArray(sheet?.data)) {
+    sheet.data.forEach((row: any, r: number) => {
+      if (!Array.isArray(row)) return;
+      row.forEach((cell: any, c: number) => {
+        if (cell != null) {
+          map.set(`${r}_${c}`, { r, c, v: cell });
+        }
+      });
+    });
+  }
+
+  return map;
+};
+
+const toCalcChainMap = (sheet: any) => {
+  const map = new Y.Map<any>();
+  const calcChain = sheet?.calcChain;
+  if (!calcChain) return map;
+
+  if (Array.isArray(calcChain)) {
+    calcChain.forEach((item: any) => {
+      if (item && typeof item.r === 'number' && typeof item.c === 'number') {
+        map.set(`${item.r}_${item.c}`, item);
+      }
+    });
+    return map;
+  }
+
+  if (typeof calcChain === 'object') {
+    Object.entries(calcChain).forEach(([k, v]) => {
+      map.set(k, v);
+    });
+  }
+
+  return map;
+};
+
 const getCurrentSheetSafe = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
   source: string,
@@ -164,9 +222,42 @@ export const createSheetLengthChangeHandler = ({
         ySheet.set('column', sheet.column ?? 36);
         ySheet.set('status', 1);
         ySheet.set('config', sheet.config ?? {});
-        ySheet.set('celldata', new Y.Map());
-        ySheet.set('calcChain', new Y.Map());
-        ySheet.set('dataBlockCalcFunction', new Y.Array());
+        ySheet.set('celldata', toCellMap(sheet));
+        ySheet.set('calcChain', toCalcChainMap(sheet));
+        ySheet.set(
+          'dataBlockCalcFunction',
+          toYMapFromObject(sheet.dataBlockCalcFunction),
+        );
+        ySheet.set('liveQueryList', toYMapFromObject(sheet.liveQueryList));
+        ySheet.set('dataVerification', toYMapFromObject(sheet.dataVerification));
+        ySheet.set('hyperlink', toYMapFromObject(sheet.hyperlink));
+        ySheet.set('conditionRules', toYMapFromObject(sheet.conditionRules));
+        ySheet.set('filter_select', toYMapFromObject(sheet.filter_select));
+        ySheet.set('filter', toYMapFromObject(sheet.filter));
+        const conditionFormatArray = new Y.Array<any>();
+        const conditionFormat = Array.isArray(sheet.luckysheet_conditionformat_save)
+          ? sheet.luckysheet_conditionformat_save
+          : [];
+        conditionFormatArray.insert(0, conditionFormat);
+        ySheet.set('luckysheet_conditionformat_save', conditionFormatArray);
+        if (sheet.showGridLines != null) {
+          ySheet.set('showGridLines', sheet.showGridLines);
+        }
+        if (sheet.images != null) {
+          ySheet.set('images', sheet.images);
+        }
+        if (sheet.iframes != null) {
+          ySheet.set('iframes', sheet.iframes);
+        }
+        if (sheet.frozen != null) {
+          ySheet.set('frozen', sheet.frozen);
+        }
+        if (sheet.hide != null) {
+          ySheet.set('hide', sheet.hide);
+        }
+        if (sheet.color != null) {
+          ySheet.set('color', sheet.color);
+        }
 
         ydocRef.current?.transact(() => {
           sheetArray.push([ySheet]);
