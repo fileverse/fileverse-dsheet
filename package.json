@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "2.0.22-memory-1",
+  "version": "2.0.22-memory-2",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -11,9 +11,23 @@
       "default": "./dist/index.es.js",
       "types": "./dist/index.d.ts"
     },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "default": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
+    },
+    "./formula": {
+      "import": "./dist/formula.js",
+      "default": "./dist/formula.js",
+      "types": "./dist/formula.d.ts"
+    },
     "./styles": "./dist/style.css",
     "./types": "./dist/editor/types.d.ts"
   },
+  "sideEffects": [
+    "**/*.css",
+    "**/*.scss"
+  ],
   "files": [
     "/dist"
   ],
