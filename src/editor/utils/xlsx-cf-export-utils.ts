@@ -33,6 +33,7 @@ export type PendingDuplicateRule = {
   ref: string;
   format: FortuneFormat;
   priority: number;
+  type: 'duplicateValues' | 'uniqueValues';
 };
 
 export type CfExportResult = {
@@ -127,6 +128,7 @@ function luckysheetConditionToExcelCf(
 ): Record<string, unknown> | null {
   const { conditionName, conditionValue = [], format = {} } = rule;
   const style = fortuneFormatToExcelStyle(format);
+  const escapeForFormula = (s: string) => s.replace(/"/g, '""');
 
   // Top-left cell of range (needed for text-contains formula)
   const topLeft = ref.split(/[\s:]/)[0];
@@ -146,11 +148,31 @@ function luckysheetConditionToExcelCf(
         style,
       };
     }
+    case 'notEqual': {
+      if (!conditionValue[0]) return null;
+      return {
+        type: 'cellIs',
+        operator: 'notEqual',
+        formulae: [conditionValue[0]],
+        priority,
+        style,
+      };
+    }
     case 'between': {
       if (conditionValue.length < 2) return null;
       return {
         type: 'cellIs',
         operator: 'between',
+        formulae: [conditionValue[0], conditionValue[1]],
+        priority,
+        style,
+      };
+    }
+    case 'notBetween': {
+      if (conditionValue.length < 2) return null;
+      return {
+        type: 'cellIs',
+        operator: 'notBetween',
         formulae: [conditionValue[0], conditionValue[1]],
         priority,
         style,
@@ -164,7 +186,110 @@ function luckysheetConditionToExcelCf(
         type: 'containsText',
         operator: 'containsText',
         text,
-        formulae: [`NOT(ISERROR(SEARCH("${text}",${topLeft})))`],
+        formulae: [`NOT(ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft})))`],
+        priority,
+        style,
+      };
+    }
+    case 'containsText': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'containsText',
+        operator: 'containsText',
+        text,
+        formulae: [`NOT(ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft})))`],
+        priority,
+        style,
+      };
+    }
+    case 'textDoesNotContain': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'notContainsText',
+        operator: 'notContainsText',
+        text,
+        formulae: [`ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft}))`],
+        priority,
+        style,
+      };
+    }
+    case 'notContainsText':
+    case 'notContains': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'notContainsText',
+        operator: 'notContainsText',
+        text,
+        formulae: [`ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft}))`],
+        priority,
+        style,
+      };
+    }
+    case 'textStartsWith': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'beginsWith',
+        operator: 'beginsWith',
+        text,
+        formulae: [`LEFT(${topLeft},${text.length})="${escapeForFormula(text)}"`],
+        priority,
+        style,
+      };
+    }
+    case 'beginsWith': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'beginsWith',
+        operator: 'beginsWith',
+        text,
+        formulae: [`LEFT(${topLeft},${text.length})="${escapeForFormula(text)}"`],
+        priority,
+        style,
+      };
+    }
+    case 'textEndsWith': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'endsWith',
+        operator: 'endsWith',
+        text,
+        formulae: [
+          `RIGHT(${topLeft},${text.length})="${escapeForFormula(text)}"`,
+        ],
+        priority,
+        style,
+      };
+    }
+    case 'endsWith': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        type: 'endsWith',
+        operator: 'endsWith',
+        text,
+        formulae: [
+          `RIGHT(${topLeft},${text.length})="${escapeForFormula(text)}"`,
+        ],
+        priority,
+        style,
+      };
+    }
+    case 'textExactly': {
+      if (!conditionValue[0]) return null;
+      const text = conditionValue[0];
+      return {
+        // Keep this in the text-rule family so Google/OOXML readers preserve it
+        // similarly to other text CF rules.
+        type: 'containsText',
+        operator: 'equal',
+        text,
+        formulae: [`EXACT(${topLeft},"${escapeForFormula(text)}")`],
         priority,
         style,
       };
@@ -176,6 +301,31 @@ function luckysheetConditionToExcelCf(
       return {
         type: 'containsText',
         operator: 'containsBlanks',
+        formulae: [`LEN(TRIM(${topLeft}))=0`],
+        priority,
+        style,
+      };
+    case 'containsBlanks':
+      return {
+        type: 'containsText',
+        operator: 'containsBlanks',
+        formulae: [`LEN(TRIM(${topLeft}))=0`],
+        priority,
+        style,
+      };
+    case 'notEmpty':
+      return {
+        type: 'containsText',
+        operator: 'notContainsBlanks',
+        formulae: [`LEN(TRIM(${topLeft}))>0`],
+        priority,
+        style,
+      };
+    case 'notContainsBlanks':
+      return {
+        type: 'containsText',
+        operator: 'notContainsBlanks',
+        formulae: [`LEN(TRIM(${topLeft}))>0`],
         priority,
         style,
       };
@@ -190,7 +340,8 @@ function luckysheetConditionToExcelCf(
         style,
       };
     }
-    case 'top10Percent': {
+    case 'top10Percent':
+    case 'top10_percent': {
       const rank = parseInt(conditionValue[0] || '10', 10) || 10;
       return {
         type: 'top10',
@@ -212,7 +363,8 @@ function luckysheetConditionToExcelCf(
         style,
       };
     }
-    case 'last10Percent': {
+    case 'last10Percent':
+    case 'last10_percent': {
       const rank = parseInt(conditionValue[0] || '10', 10) || 10;
       return {
         type: 'top10',
@@ -227,9 +379,31 @@ function luckysheetConditionToExcelCf(
       return { type: 'aboveAverage', aboveAverage: true, priority, style };
     case 'belowAverage':
       return { type: 'aboveAverage', aboveAverage: false, priority, style };
-    case 'date': {
-      const timePeriod = conditionValue[0] || 'today';
-      return { type: 'timePeriod', timePeriod, priority, style };
+    case 'date':
+    case 'dateIs':
+    case 'dateBefore':
+    case 'dateAfter': {
+      const preset = String(conditionValue[0] ?? '');
+      const presetName = preset.startsWith('preset:')
+        ? preset.slice(7)
+        : preset.toLowerCase();
+      if (
+        presetName === 'today' ||
+        presetName === 'tomorrow' ||
+        presetName === 'yesterday'
+      ) {
+        return { type: 'timePeriod', timePeriod: presetName, priority, style };
+      }
+      if (presetName === 'pastWeek') {
+        return { type: 'timePeriod', timePeriod: 'last7Days', priority, style };
+      }
+      if (presetName === 'pastMonth') {
+        return { type: 'timePeriod', timePeriod: 'lastMonth', priority, style };
+      }
+      if (presetName === 'pastYear') {
+        return { type: 'timePeriod', timePeriod: 'lastYear', priority, style };
+      }
+      return null;
     }
     default:
       return null;
@@ -266,7 +440,16 @@ export function exportConditionalFormatting(
 
     // ExcelJS has no renderer for duplicateValues — collect for ZIP post-processing
     if (rule.conditionName === 'duplicateValue') {
-      pendingDuplicateValues.push({ ref, format: rule.format || {}, priority });
+      const type =
+        String(rule.conditionValue?.[0] ?? '0') === '1'
+          ? 'uniqueValues'
+          : 'duplicateValues';
+      pendingDuplicateValues.push({
+        ref,
+        format: rule.format || {},
+        priority,
+        type,
+      });
       priority++;
       continue;
     }

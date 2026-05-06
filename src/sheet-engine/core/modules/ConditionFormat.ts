@@ -402,6 +402,30 @@ const CF_DATE_AFTER_PRESETS = new Set([
   'exact',
 ]);
 
+function normalizeCfConditionName(name: string): string {
+  switch (name) {
+    case 'containsText':
+      return 'textContains';
+    case 'notContainsText':
+    case 'notContains':
+      return 'textDoesNotContain';
+    case 'beginsWith':
+      return 'textStartsWith';
+    case 'endsWith':
+      return 'textEndsWith';
+    case 'containsBlanks':
+      return 'empty';
+    case 'notContainsBlanks':
+      return 'notEmpty';
+    case 'top10Percent':
+      return 'top10_percent';
+    case 'last10Percent':
+      return 'last10_percent';
+    default:
+      return name;
+  }
+}
+
 function matchesCfDateAfter(cellVal: number, cva: any[]): boolean {
   if (!cva?.length) return false;
   const v0 = String(cva[0] ?? '');
@@ -1101,7 +1125,9 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
       } else {
         // 其他
         // 获取变量值
-        const { conditionName } = ruleArr[i];
+        const conditionName = normalizeCfConditionName(
+          String(ruleArr[i].conditionName ?? ''),
+        );
         const conditionValue0 = ruleArr[i].conditionValue[0];
         const conditionValue1 = ruleArr[i].conditionValue[1];
         const { textColor, cellColor, bold, italic, underline, strikethrough } =
@@ -1137,13 +1163,21 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
                 // 单元格值
                 const cell = d[r][c];
-                if (_.isNil(cell) || _.isNil(cell.v) || isRealNull(cell.v)) {
+                const isEmptyCell =
+                  _.isNil(cell) || _.isNil(cell.v) || isRealNull(cell.v);
+                const cellVal = isEmptyCell ? null : cell.v;
+                const cellText = isEmptyCell ? '' : String(cell.v);
+                const needleText =
+                  conditionValue0 == null ? '' : String(conditionValue0);
+                const cellTextLower = cellText.toLowerCase();
+                const needleLower = needleText.toLowerCase();
+                if (isEmptyCell && conditionName !== 'textDoesNotContain') {
                   continue;
                 }
                 // 符合条件 - UPDATED WITH STRING COMPARISON SUPPORT
                 if (
                   conditionName === 'greaterThan' &&
-                  compareGreaterThan(cell.v, conditionValue0, '>') &&
+                  compareGreaterThan(cellVal, conditionValue0, '>') &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1156,7 +1190,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'greaterThanOrEqual' &&
-                  compareGreaterThan(cell.v, conditionValue0, '>=') &&
+                  compareGreaterThan(cellVal, conditionValue0, '>=') &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1169,7 +1203,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'lessThan' &&
-                  compareLessThan(cell.v, conditionValue0, '<') &&
+                  compareLessThan(cellVal, conditionValue0, '<') &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1182,7 +1216,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'lessThanOrEqual' &&
-                  compareLessThan(cell.v, conditionValue0, '<=') &&
+                  compareLessThan(cellVal, conditionValue0, '<=') &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1194,8 +1228,21 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                     strikethrough,
                   };
                 } else if (
-                  (conditionName === 'equal' || conditionName === 'textExactly') &&
-                  cell.v.toString() === conditionValue0 &&
+                  conditionName === 'equal' &&
+                  String(cellVal) === conditionValue0 &&
+                  !(`${r}_${c}` in computeMap)
+                ) {
+                  computeMap[`${r}_${c}`] = {
+                    textColor,
+                    cellColor,
+                    bold,
+                    italic,
+                    underline,
+                    strikethrough,
+                  };
+                } else if (
+                  conditionName === 'textExactly' &&
+                  cellTextLower === needleLower &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1208,7 +1255,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'notEqual' &&
-                  cell.v.toString() !== conditionValue0.toString() &&
+                  String(cellVal) !== conditionValue0.toString() &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1221,7 +1268,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'textContains' &&
-                  cell.v.toString().indexOf(conditionValue0) !== -1 &&
+                  cellTextLower.indexOf(needleLower) !== -1 &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1234,7 +1281,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'textDoesNotContain' &&
-                  cell.v.toString().indexOf(conditionValue0) === -1 &&
+                  cellTextLower.indexOf(needleLower) === -1 &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1247,7 +1294,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'textStartsWith' &&
-                  cell.v.toString().startsWith(conditionValue0) &&
+                  cellTextLower.startsWith(needleLower) &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
@@ -1260,7 +1307,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                   };
                 } else if (
                   conditionName === 'textEndsWith' &&
-                  cell.v.toString().endsWith(conditionValue0) &&
+                  cellTextLower.endsWith(needleLower) &&
                   !(`${r}_${c}` in computeMap)
                 ) {
                   computeMap[`${r}_${c}`] = {
