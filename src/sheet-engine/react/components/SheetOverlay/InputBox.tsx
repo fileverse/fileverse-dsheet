@@ -1902,17 +1902,20 @@ const InputBox: React.FC = () => {
       );
 
       if (!isStrictFormula) {
-        setContext((draftCtx) => {
-          if (draftCtx.functionCandidates.length > 0) {
-            draftCtx.functionCandidates = [];
-          }
-          if (draftCtx.defaultCandidates.length > 0) {
-            draftCtx.defaultCandidates = [];
-          }
-          if (draftCtx.functionHint) {
-            draftCtx.functionHint = '';
-          }
-        });
+        setContext(
+          (draftCtx) => {
+            if (draftCtx.functionCandidates.length > 0) {
+              draftCtx.functionCandidates = [];
+            }
+            if (draftCtx.defaultCandidates.length > 0) {
+              draftCtx.defaultCandidates = [];
+            }
+            if (draftCtx.functionHint) {
+              draftCtx.functionHint = '';
+            }
+          },
+          { noHistory: true },
+        );
       }
 
       if (!isComposingRef.current) {
@@ -1932,10 +1935,13 @@ const InputBox: React.FC = () => {
           cellEl &&
           startsWithFormula(cellEl.innerText ?? cellEl.textContent ?? '')
         ) {
-          setContext((draftCtx) => {
-            if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
-            rangeHightlightselected(draftCtx, cellEl);
-          });
+          setContext(
+            (draftCtx) => {
+              if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
+              rangeHightlightselected(draftCtx, cellEl);
+            },
+            { noHistory: true },
+          );
         }
         return;
       }
@@ -1968,46 +1974,49 @@ const InputBox: React.FC = () => {
         kcode === 46 ||
         (e.ctrlKey && kcode === 86)
       ) {
-        setContext((draftCtx) => {
-          if (
-            (draftCtx.formulaCache.rangestart ||
-              draftCtx.formulaCache.rangedrag_column_start ||
-              draftCtx.formulaCache.rangedrag_row_start ||
-              israngeseleciton(draftCtx)) &&
-            isBlur
-          )
-            return;
-          if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) {
-            return;
-          }
-          // if(event.target.id!="luckysheet-input-box" && event.target.id!="luckysheet-rich-text-editor"){
-          handleFormulaInput(
-            draftCtx,
-            refs.fxInput.current,
-            refs.cellInput.current!,
-            kcode,
-            preTextRef.current,
-          );
-          const cellEl = refs.cellInput.current;
-          if (
-            cellEl &&
-            startsWithFormula(cellEl.innerText ?? cellEl.textContent ?? '')
-          ) {
-            rangeHightlightselected(draftCtx, cellEl);
-          }
-          // clearSearchItemActiveClass();
-          // formula.functionInputHanddler(
-          //   $("#luckysheet-functionbox-cell"),
-          //   $("#luckysheet-rich-text-editor"),
-          //   kcode
-          // );
-          // setCenterInputPosition(
-          //   draftCtx.luckysheetCellUpdate[0],
-          //   draftCtx.luckysheetCellUpdate[1],
-          //   draftCtx.flowdata
-          // );
-          // }
-        });
+        setContext(
+          (draftCtx) => {
+            if (
+              (draftCtx.formulaCache.rangestart ||
+                draftCtx.formulaCache.rangedrag_column_start ||
+                draftCtx.formulaCache.rangedrag_row_start ||
+                israngeseleciton(draftCtx)) &&
+              isBlur
+            )
+              return;
+            if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) {
+              return;
+            }
+            // if(event.target.id!="luckysheet-input-box" && event.target.id!="luckysheet-rich-text-editor"){
+            handleFormulaInput(
+              draftCtx,
+              refs.fxInput.current,
+              refs.cellInput.current!,
+              kcode,
+              preTextRef.current,
+            );
+            const cellEl = refs.cellInput.current;
+            if (
+              cellEl &&
+              startsWithFormula(cellEl.innerText ?? cellEl.textContent ?? '')
+            ) {
+              rangeHightlightselected(draftCtx, cellEl);
+            }
+            // clearSearchItemActiveClass();
+            // formula.functionInputHanddler(
+            //   $("#luckysheet-functionbox-cell"),
+            //   $("#luckysheet-rich-text-editor"),
+            //   kcode
+            // );
+            // setCenterInputPosition(
+            //   draftCtx.luckysheetCellUpdate[0],
+            //   draftCtx.luckysheetCellUpdate[1],
+            //   draftCtx.flowdata
+            // );
+            // }
+          },
+          { noHistory: true },
+        );
       }
       if (kcode === 32) {
         maybeAutoLinkUrlsInEditor('space');

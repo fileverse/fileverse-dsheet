@@ -18,9 +18,14 @@ export default defineConfig({
   build: {
     lib: {
       name: 'dsheet',
-      entry: path.resolve(__dirname, './src/index.ts'),
+      entry: {
+        index: path.resolve(__dirname, './src/index.ts'),
+        constants: path.resolve(__dirname, './src/constants.ts'),
+        formula: path.resolve(__dirname, './src/formula.ts'),
+      },
       formats: ['es'],
-      fileName: (format) => `index.${format}.js`,
+      fileName: (format, entryName) =>
+        entryName === 'index' ? `index.${format}.js` : `${entryName}.js`,
     },
     rollupOptions: {
       preserveEntrySignatures: 'strict',

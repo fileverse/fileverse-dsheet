@@ -190,6 +190,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
   const [type, setType] = useState<string>('notEmpty');
   const [create, setCreate] = useState<boolean>(false);
   const buttonClickCreateRef = useRef<boolean>(false);
+  const skipNextSelectionSyncRef = useRef<boolean>(false);
   const [editConditionFormatKey, setEditConditionFormatKey] = useState<
     string | null
   >(null);
@@ -431,6 +432,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
   /** Keep grid selection in sync with Apply-to range so CF live preview can resolve cellrange. */
   useEffect(() => {
     if (!create) return;
+    if (skipNextSelectionSyncRef.current) {
+      skipNextSelectionSyncRef.current = false;
+      return;
+    }
     const t = (editConditionRange ?? '').trim();
     if (!t) return;
     setContext((ctx) => {
@@ -779,6 +784,8 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
 
   const handleAddAnotherRule = useCallback(() => {
     setType('notEmpty');
+    skipNextSelectionSyncRef.current = true;
+    setEditConditionRange(selectionRangeTxt || '');
     setCreate(true);
     setEditConditionFormatKey(null);
     setContext((ctx) => {
@@ -791,7 +798,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     });
     editKeyRef.current = null;
     buttonClickCreateRef.current = true;
-  }, [setContext]);
+  }, [selectionRangeTxt, setContext]);
 
   // const titleType =
   //   // eslint-disable-next-line no-nested-ternary

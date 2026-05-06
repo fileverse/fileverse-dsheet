@@ -98,7 +98,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     sheetEditorRef,
     ydocRef,
     currentDataRef,
-    handleChange,
     forceSheetRender,
     setForceSheetRender,
     syncStatus,
@@ -131,8 +130,14 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     window.ydocRef = ydocRef.current;
     // @ts-ignore move this to firward ref
     window.setForceRenderEditor = setForceSheetRender;
-    // @ts-ignore
-    window.currentDataRef = currentDataRef;
+    return () => {
+      // @ts-ignore
+      delete window.editorRef;
+      // @ts-ignore
+      delete window.ydocRef;
+      // @ts-ignore
+      delete window.setForceRenderEditor;
+    };
   }, [isReadOnly]);
 
   // Initialize XLSX import functionality
@@ -220,7 +225,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         headerContextMenu={headerContextMenu}
         //@ts-ignore
         getCommentCellUI={getCommentCellUI}
-        onChange={handleChange}
         showFormulaBar={true}
         showToolbar={true}
         lang={'en'}

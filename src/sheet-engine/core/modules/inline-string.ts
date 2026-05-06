@@ -478,11 +478,6 @@ export function updateInlineStringFormat(
   value: any,
   cellInput: HTMLDivElement
 ) {
-  console.log("[format] updateInlineStringFormat", {
-    attr,
-    value,
-    editingCell: ctx.luckysheetCellUpdate,
-  });
   // let s = ctx.inlineStringEditCache;
   const w = window.getSelection();
   if (!w) return;

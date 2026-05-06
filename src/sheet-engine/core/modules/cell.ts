@@ -1211,13 +1211,6 @@ export function updateCell(
   value?: any,
   canvas?: CanvasRenderingContext2D
 ) {
-  console.log('[format] updateCell', {
-    r,
-    c,
-    value,
-    hasInput: !!$input,
-    editingCell: ctx.luckysheetCellUpdate,
-  });
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
 
@@ -1818,9 +1811,7 @@ export function updateCell(
           return;
         }
       }
-    } catch (e) {
-      console.log("[updateCell] spill failed; falling back", e);
-    }
+    } catch (_e) {}
 
     // --- hyperlink support ---
     const hyperlinkKey = `${r}_${c}`;

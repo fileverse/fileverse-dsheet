@@ -230,12 +230,13 @@ export const useEditorData = (
     const sheetArray = ydocRef.current.getArray(dsheetId);
 
     // Update local state when YJS array changes
-    const observerCallback = () => {
-      // Skip updates if we're in the middle of updating YJS ourselves
-      // This prevents flickering when the update comes from the local user
-      if (isUpdatingRef.current) {
-        return;
-      }
+    const observerCallback = (
+      _event: Y.YArrayEvent<any>,
+      transaction: Y.Transaction,
+    ) => {
+      // Only react to remote Yjs updates. Local edits are already reflected in Workbook state,
+      // and rebuilding a full plain snapshot on every local transaction is expensive.
+      if (transaction.local || isUpdatingRef.current) return;
 
       remoteUpdateRef.current = true;
 
@@ -278,7 +279,7 @@ export const useEditorData = (
         window.clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [ydocRef, dsheetId]);
+  }, [ydocRef, dsheetId, setForceSheetRender, sheetEditorRef]);
 
   // Handle changes to the sheet
   const handleChange = useCallback(

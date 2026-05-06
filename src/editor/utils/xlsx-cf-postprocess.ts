@@ -163,7 +163,7 @@ function patchContainsTextAttr(wsXml: string): string {
  * formatting issues that ExcelJS cannot handle natively:
  *
  *   1. Adds the `text` attribute to `containsText` cfRules (ExcelJS omits it).
- *   2. Injects `duplicateValues` cfRules that ExcelJS's renderer skips entirely,
+ *   2. Injects `duplicateValues` / `uniqueValues` cfRules that ExcelJS's renderer skips,
  *      including their dxf style entries in xl/styles.xml.
  */
 export async function patchXlsxCf(
@@ -200,7 +200,7 @@ export async function patchXlsxCf(
       stylesXml = newStylesXml;
       stylesModified = true;
 
-      const cfRuleXml = `<cfRule type="duplicateValues" dxfId="${dxfId}" priority="${rule.priority}"/>`;
+      const cfRuleXml = `<cfRule type="${rule.type}" dxfId="${dxfId}" priority="${rule.priority}"/>`;
       wsXml = injectCfRule(wsXml, rule.ref, cfRuleXml);
       wsModified = true;
     }

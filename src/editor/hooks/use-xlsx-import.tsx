@@ -211,14 +211,28 @@ function parseRefToRange(
   };
 }
 
-/** Build project cellrange from ref (row/column 0-based). Format: array of one range with row/column as arrays. */
+/** Parse one or more Excel refs separated by space/comma into 0-based ranges. */
+function parseRefToRanges(
+  ref: string,
+): { row: [number, number]; column: [number, number] }[] {
+  return String(ref || '')
+    .split(/[,\s]+/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .map((part) => parseRefToRange(part))
+    .filter(
+      (r): r is { row: [number, number]; column: [number, number] } => !!r,
+    );
+}
+
+/** Build project cellrange from one or more refs (row/column 0-based). */
 function buildCellrange(ref: string): unknown[] | null {
-  const range = parseRefToRange(ref);
-  if (!range) return null;
-  const [r0, r1] = range.row;
-  const [c0, c1] = range.column;
-  return [
-    {
+  const ranges = parseRefToRanges(ref);
+  if (!ranges.length) return null;
+  return ranges.map((range) => {
+    const [r0, r1] = range.row;
+    const [c0, c1] = range.column;
+    return {
       left: 0,
       width: 104,
       top: 0,
@@ -232,8 +246,8 @@ function buildCellrange(ref: string): unknown[] | null {
       row_focus: r0,
       column_focus: c0,
       column_select: true,
-    },
-  ];
+    };
+  });
 }
 
 /** Map ExcelJS dxf style to project format (textColor, cellColor, bold, italic, underline, strikethrough) */
@@ -298,13 +312,67 @@ function dxfStyleToFormat(style: {
  */
 function extractTextFromSearchFormula(formula: string | undefined): string {
   if (!formula || typeof formula !== 'string') return '';
-  const s = formula.trim();
+  const s = formula
+    .trim()
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/^=/, '');
   // SEARCH(("text"), or SEARCH("text", or SEARCH( ( "text" ) , – allow optional parens/spaces before first quote
-  const m = s.match(/SEARCH\s*\([\s(]*"((?:[^"]|"")*)"/i);
+  const m = s.match(/(?:^|[^A-Z])SEARCH\s*\([\s(]*"((?:[^"]|"")*)"/i);
   if (m) return (m[1] ?? '').replace(/""/g, '"');
-  const m2 = s.match(/SEARCH\s*\([\s(]*'([^']*)'/i);
+  const m2 = s.match(/(?:^|[^A-Z])SEARCH\s*\([\s(]*'([^']*)'/i);
   if (m2) return m2[1] ?? '';
   return '';
+}
+
+/** Fallback: extract first quoted string from a formula (supports "" escaping). */
+function extractFirstQuotedText(formula: string | undefined): string {
+  if (!formula || typeof formula !== 'string') return '';
+  const s = formula
+    .trim()
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/^=/, '');
+  const m = s.match(/"((?:[^"]|"")*)"/);
+  if (m) return (m[1] ?? '').replace(/""/g, '"');
+  const m2 = s.match(/'([^']*)'/);
+  if (m2) return m2[1] ?? '';
+  return '';
+}
+
+/**
+ * Google Sheets often stores text CF as expression formulas.
+ * Detect and map common text-oriented expressions to project condition names.
+ */
+function mapExpressionTextCf(
+  formula: string | undefined,
+): { conditionName: string; conditionValue: string[] } | null {
+  if (!formula || typeof formula !== 'string') return null;
+  const f = formula.trim().toUpperCase();
+  const text = extractTextFromSearchFormula(formula) || extractFirstQuotedText(formula);
+  if (!text) return null;
+
+  // contains / not contains
+  if (f.includes('SEARCH(')) {
+    if (f.includes('ISERROR(SEARCH(') || f.includes('NOTNUMBER(SEARCH(')) {
+      return { conditionName: 'textDoesNotContain', conditionValue: [text] };
+    }
+    return { conditionName: 'textContains', conditionValue: [text] };
+  }
+  // starts with
+  if (f.includes('LEFT(')) {
+    return { conditionName: 'textStartsWith', conditionValue: [text] };
+  }
+  // ends with
+  if (f.includes('RIGHT(')) {
+    return { conditionName: 'textEndsWith', conditionValue: [text] };
+  }
+  // exact text check
+  if (f.includes('EXACT(') || f.includes('="')) {
+    return { conditionName: 'textExactly', conditionValue: [text] };
+  }
+  return null;
 }
 
 /** Map ExcelJS cfRule type/operator to project conditionName; return null if unsupported */
@@ -320,7 +388,8 @@ function excelCfTypeToConditionName(
     timePeriod?: string;
   },
 ): { conditionName: string; conditionValue: string[] } | null {
-  if (type === 'cellIs') {
+  const t = (type || '').toLowerCase();
+  if (t === 'cellis') {
     const op = (operator || '').toLowerCase();
     if (op === 'greaterthan')
       return { conditionName: 'greaterThan', conditionValue: [] };
@@ -331,42 +400,87 @@ function excelCfTypeToConditionName(
     if (op === 'lessthanorequal')
       return { conditionName: 'lessThanOrEqual', conditionValue: [] };
     if (op === 'equal') return { conditionName: 'equal', conditionValue: [] };
+    if (op === 'notequal')
+      return { conditionName: 'notEqual', conditionValue: [] };
     if (op === 'between')
       return { conditionName: 'between', conditionValue: [] };
+    if (op === 'notbetween')
+      return { conditionName: 'notBetween', conditionValue: [] };
     return null;
   }
-  if (type === 'containsText' || type === 'notContainsText') {
+  if (
+    t === 'containstext' ||
+    t === 'notcontainstext' ||
+    t === 'beginswith' ||
+    t === 'endswith' ||
+    t === 'containsblanks' ||
+    t === 'notcontainsblanks'
+  ) {
     const op = (operator ?? '').toLowerCase();
-    if (op === 'containsblanks')
+    if (t === 'containsblanks' || op === 'containsblanks')
       return { conditionName: 'empty', conditionValue: [''] };
+    if (t === 'notcontainsblanks' || op === 'notcontainsblanks')
+      return { conditionName: 'notEmpty', conditionValue: [''] };
+    if (t === 'notcontainstext' || op === 'notcontainstext' || op === 'notcontains')
+      return { conditionName: 'textDoesNotContain', conditionValue: [] };
+    if (t === 'beginswith' || op === 'beginswith')
+      return { conditionName: 'textStartsWith', conditionValue: [] };
+    if (t === 'endswith' || op === 'endswith')
+      return { conditionName: 'textEndsWith', conditionValue: [] };
+    if (op === 'equal') return { conditionName: 'textExactly', conditionValue: [] };
     const text = opts?.text ?? '';
     return {
       conditionName: 'textContains',
       conditionValue: text ? [text] : [],
     };
   }
-  if (type === 'duplicateValues')
-    return { conditionName: 'duplicateValue', conditionValue: [] };
-  if (type === 'top10') {
+  if (t === 'duplicatevalues')
+    return { conditionName: 'duplicateValue', conditionValue: ['0'] };
+  if (t === 'uniquevalues')
+    return { conditionName: 'duplicateValue', conditionValue: ['1'] };
+  if (t === 'top10') {
     const rank = opts?.rank ?? 10;
     if (opts?.percent && opts?.bottom)
-      return { conditionName: 'last10Percent', conditionValue: [String(rank)] };
+      return { conditionName: 'last10_percent', conditionValue: [String(rank)] };
     if (opts?.percent)
-      return { conditionName: 'top10Percent', conditionValue: [String(rank)] };
+      return { conditionName: 'top10_percent', conditionValue: [String(rank)] };
     if (opts?.bottom)
       return { conditionName: 'last10', conditionValue: [String(rank)] };
     return { conditionName: 'top10', conditionValue: [String(rank)] };
   }
-  if (type === 'aboveAverage') {
+  if (t === 'aboveaverage') {
     if (opts?.aboveAverage === false)
       return { conditionName: 'belowAverage', conditionValue: [] };
     return { conditionName: 'aboveAverage', conditionValue: [] };
   }
-  if (type === 'timePeriod')
-    return {
-      conditionName: 'date',
-      conditionValue: opts?.timePeriod ? [opts.timePeriod] : [],
-    };
+  if (t === 'timeperiod') {
+    const tp = (opts?.timePeriod ?? '').toLowerCase();
+    if (tp === 'today' || tp === 'tomorrow' || tp === 'yesterday') {
+      return {
+        conditionName: 'dateIs',
+        conditionValue: [`preset:${tp}`, '', 'DD/MM/YYYY'],
+      };
+    }
+    if (tp === 'last7days') {
+      return {
+        conditionName: 'dateIs',
+        conditionValue: ['preset:pastWeek', '', 'DD/MM/YYYY'],
+      };
+    }
+    if (tp === 'lastmonth') {
+      return {
+        conditionName: 'dateIs',
+        conditionValue: ['preset:pastMonth', '', 'DD/MM/YYYY'],
+      };
+    }
+    if (tp === 'lastyear') {
+      return {
+        conditionName: 'dateIs',
+        conditionValue: ['preset:pastYear', '', 'DD/MM/YYYY'],
+      };
+    }
+    return null;
+  }
   return null;
 }
 
@@ -387,20 +501,51 @@ function excelCfRuleToLuckysheet(
   },
 ): Record<string, unknown> | null {
   if (!rule.type) return null;
-  const range = parseRefToRange(ref);
-  if (!range) return null;
 
-  // Text-contains: Google puts text only in formula e.g. SEARCH(("ab"),(C1)) – resolve once
+  // Text CF: Google often puts text only in formulae and leaves `text` empty.
   let resolvedText = (rule.text ?? '').trim();
+  const firstFormula =
+    Array.isArray(rule.formulae) && rule.formulae[0]
+      ? String(rule.formulae[0])
+      : undefined;
+
+  // Google may export text CF as expression formulas; detect these before enum mapping.
+  const expressionMapped =
+    (rule.type.toLowerCase() === 'expression' ||
+      rule.type.toLowerCase() === 'customformula') &&
+    mapExpressionTextCf(firstFormula);
+  if (expressionMapped) {
+    const cellrange = buildCellrange(ref);
+    if (!cellrange) return null;
+    const format = dxfStyleToFormat(rule.style as any);
+    return {
+      type: 'default',
+      cellrange,
+      format: {
+        textColor: format.textColor,
+        cellColor: format.cellColor,
+        bold: format.bold,
+        italic: format.italic,
+        underline: format.underline,
+        strikethrough: format.strikethrough,
+      },
+      conditionName: expressionMapped.conditionName,
+      conditionRange: [],
+      conditionValue: expressionMapped.conditionValue,
+    };
+  }
+
   if (
-    (rule.type === 'containsText' || rule.type === 'notContainsText') &&
+    (rule.type === 'containsText' ||
+      rule.type === 'notContainsText' ||
+      rule.type === 'beginsWith' ||
+      rule.type === 'endsWith') &&
     !resolvedText
   ) {
-    const formula =
-      Array.isArray(rule.formulae) && rule.formulae[0]
-        ? rule.formulae[0]
-        : undefined;
-    resolvedText = extractTextFromSearchFormula(formula);
+    resolvedText = extractTextFromSearchFormula(firstFormula);
+    if (!resolvedText) {
+      resolvedText = extractFirstQuotedText(firstFormula);
+    }
   }
 
   const mapped = excelCfTypeToConditionName(rule.type, rule.operator, {
@@ -420,10 +565,22 @@ function excelCfRuleToLuckysheet(
     rule.formulae.length > 0
   ) {
     conditionValue = rule.formulae.map((f) => String(f ?? ''));
-  } else if (mapped.conditionName === 'empty') {
+  } else if (
+    mapped.conditionName === 'empty' ||
+    mapped.conditionName === 'notEmpty'
+  ) {
     conditionValue = [''];
-  } else if (rule.type === 'containsText' || rule.type === 'notContainsText') {
-    conditionValue = resolvedText ? [resolvedText] : [];
+  } else if (
+    rule.type === 'containsText' ||
+    rule.type === 'notContainsText' ||
+    rule.type === 'beginsWith' ||
+    rule.type === 'endsWith'
+  ) {
+    conditionValue = resolvedText
+      ? [resolvedText]
+      : extractFirstQuotedText(firstFormula)
+        ? [extractFirstQuotedText(firstFormula)]
+        : [];
   } else {
     conditionValue = mapped.conditionValue.map((v) =>
       v == null ? '' : String(v),
@@ -707,7 +864,30 @@ export const useXLSXImport = ({
                     rank?: number;
                     aboveAverage?: boolean;
                   };
+                  console.log('[XLSX CF RAW]', {
+                    ref,
+                    type: r.type,
+                    operator: r.operator,
+                    formulae: r.formulae,
+                    text: r.text,
+                    timePeriod: r.timePeriod,
+                    percent: r.percent,
+                    bottom: r.bottom,
+                    rank: r.rank,
+                    aboveAverage: r.aboveAverage,
+                  });
                   const entry = r.type ? excelCfRuleToLuckysheet(ref, r) : null;
+                  if (!entry) {
+                    console.log('[XLSX CF MAPPED] skipped', {
+                      ref,
+                      type: r.type,
+                      operator: r.operator,
+                      formulae: r.formulae,
+                      text: r.text,
+                    });
+                  } else {
+                    console.log('[XLSX CF MAPPED] accepted', entry);
+                  }
                   if (entry) sheetCf.push(entry);
                 }
               }
@@ -734,11 +914,6 @@ export const useXLSXImport = ({
             file,
             function (exportJson: { sheets: Sheet[] }) {
               let sheets = exportJson.sheets;
-              console.log('[xlsx-import] parsed sheets data', {
-                fileName: file.name,
-                sheetCount: sheets.length,
-                sheets,
-              });
               sheets.forEach((sheet, sheetIndex) => {
                 const sheetDv = dataVerificationBySheet[sheetIndex];
                 if (sheetDv && Object.keys(sheetDv).length > 0) {
@@ -1093,6 +1268,11 @@ export const useXLSXImport = ({
                 }
 
                 return sheet;
+              });
+              console.log('[xlsx-import] parsed sheets data', {
+                fileName: file.name,
+                sheetCount: sheets.length,
+                sheets,
               });
 
               let combinedSheets;
