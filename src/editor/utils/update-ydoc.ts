@@ -18,16 +18,34 @@ function cloneForYjs<T>(value: T): T {
   }
 }
 
+function safeIsArray(value: unknown): boolean {
+  try {
+    return Array.isArray(value);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Convert draft/proxy-ish values to plain data for Yjs.
  * Fast path: primitives and non-draft objects are returned as-is.
  */
 function toPlain<T>(value: T): T {
   if (value === null || typeof value !== 'object') return value;
-  if (isDraft(value)) {
-    return current(value) as T;
+  try {
+    if (isDraft(value)) {
+      return current(value) as T;
+    }
+  } catch {
+    // Proxy/revoked proxy can throw during draft detection; fall through.
   }
-  return value;
+  // Keep low-memory fast path for plain non-draft objects.
+  // If value is a problematic proxy, normalize only in that case.
+  try {
+    return value;
+  } catch {
+    return cloneForYjs(value);
+  }
 }
 
 function setMapValueSafe(target: Y.Map<any>, key: string, value: any) {
@@ -55,19 +73,20 @@ export const updateYdocSheetData = (
   const sheetArray = ydoc.getArray<any>(dsheetId);
 
   ydoc.transact(() => {
+    const allSheets = sheetArray.toArray();
+    const sheetById = new Map<string, Y.Map<any>>();
+    for (let i = 0; i < allSheets.length; i += 1) {
+      const s = allSheets[i];
+      if (!(s instanceof Y.Map)) continue;
+      const id = s.get('id');
+      if (typeof id === 'string' && !sheetById.has(id)) {
+        sheetById.set(id, s);
+      }
+    }
+
     changes.forEach(({ sheetId, path, key, value, type }) => {
-      const allSheets = sheetArray.toArray();
-      const sheet = allSheets.find(
-        (s: Y.Map<any> | Record<string, any>) => getSheetId(s) === sheetId,
-      );
-
-      if (!sheet) {
-        return;
-      }
-
-      if (!(sheet instanceof Y.Map)) {
-        return;
-      }
+      const sheet = sheetById.get(sheetId);
+      if (!sheet) return;
 
       // Sheet fields stored as Y.Map use path + key for granular updates
       // celldata
@@ -187,7 +206,7 @@ export const updateYdocSheetData = (
         if (
           plainValue &&
           typeof plainValue === 'object' &&
-          !Array.isArray(plainValue)
+          !safeIsArray(plainValue)
         ) {
           Object.entries(plainValue).forEach(([k, v]) => {
             setMapValueSafe(filterMap as Y.Map<any>, k, v);
@@ -210,7 +229,7 @@ export const updateYdocSheetData = (
         const plainValue = toPlain(value);
         cellArray.insert(
           0,
-          Array.isArray(plainValue) ? plainValue : [plainValue],
+          safeIsArray(plainValue) ? plainValue : [plainValue],
         );
         return;
       }
@@ -236,11 +255,11 @@ export const updateYdocSheetData = (
     });
 
     // Keep a single active sheet by order after applying updates
-    sheetArray.forEach((sheet: Y.Map<any> | Record<string, any>) => {
-      if (sheet instanceof Y.Map) {
-        sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
-      }
-    });
+    for (let i = 0; i < allSheets.length; i += 1) {
+      const sheet = allSheets[i];
+      if (!(sheet instanceof Y.Map)) continue;
+      sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
+    }
   });
 
   if (handleContentPortal) {
