@@ -78,6 +78,10 @@ export const useFortuneDocumentStyle = ({
           attributeOldValue: true, // Track the old value of attributes
         });
       });
+
+      return () => {
+        observer.disconnect();
+      };
     }
   }, [isReadOnly, loading]);
 

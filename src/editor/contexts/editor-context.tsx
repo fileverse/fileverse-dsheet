@@ -5,6 +5,7 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  useCallback,
 } from 'react';
 import throttle from 'lodash/throttle';
 import { LiveQueryData, Sheet } from '@sheet-engine/react';
@@ -88,7 +89,7 @@ interface EditorProviderProps {
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   isCollaborative?: boolean;
-  commentData?: Object;
+  commentData?: object;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
@@ -128,54 +129,60 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     [key: string]: { [key: string]: any };
   }>({});
 
-  const updateDataBlockCalcFunctionAfterRowDrag = (
-    selectedSourceIndex: number[],
-    selectedTargetIndex: number[],
-    type: string,
-    sheetId: string,
-    sourceIndex: number,
-    targetIndex: number,
-  ) => {
-    const cloneDataBlockCalcFunction = { ...dataBlockCalcFunction };
-    const sheetData = cloneDataBlockCalcFunction?.[sheetId];
+  const updateDataBlockCalcFunctionAfterRowDrag = useCallback(
+    (
+      selectedSourceIndex: number[],
+      selectedTargetIndex: number[],
+      type: string,
+      sheetId: string,
+      sourceIndex: number,
+      targetIndex: number,
+    ) => {
+      setDataBlockCalcFunction((prev) => {
+        const cloneDataBlockCalcFunction = { ...prev };
+        const sheetData = cloneDataBlockCalcFunction?.[sheetId];
 
-    let result;
-    if (type === 'row') {
-      result = updateRowIndices(
-        sheetData,
-        selectedSourceIndex,
-        selectedTargetIndex,
-        sourceIndex,
-        targetIndex,
-      );
-    } else {
-      result = updateColumnIndices(
-        sheetData,
-        selectedSourceIndex,
-        selectedTargetIndex,
-        sourceIndex,
-        targetIndex,
-      );
-    }
+        let result;
+        if (type === 'row') {
+          result = updateRowIndices(
+            sheetData,
+            selectedSourceIndex,
+            selectedTargetIndex,
+            sourceIndex,
+            targetIndex,
+          );
+        } else {
+          result = updateColumnIndices(
+            sheetData,
+            selectedSourceIndex,
+            selectedTargetIndex,
+            sourceIndex,
+            targetIndex,
+          );
+        }
 
-    if (result !== sheetData) {
-      cloneDataBlockCalcFunction[sheetId] = result;
-    }
+        if (result !== sheetData) {
+          cloneDataBlockCalcFunction[sheetId] = result;
+        }
 
-    if (
-      JSON.stringify(cloneDataBlockCalcFunction) !==
-      JSON.stringify(dataBlockCalcFunction)
-    ) {
-      setDataBlockCalcFunction(cloneDataBlockCalcFunction);
-    }
-  };
+        if (
+          JSON.stringify(cloneDataBlockCalcFunction) !== JSON.stringify(prev)
+        ) {
+          return cloneDataBlockCalcFunction;
+        }
+
+        return prev;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
-    //@ts-ignore
+    // @ts-expect-error exposed for FortuneSheet drag hook
     window.updateDataBlockCalcFunctionAfterRowDrag =
       updateDataBlockCalcFunctionAfterRowDrag;
     return () => {
-      //@ts-ignore
+      // @ts-expect-error exposed for FortuneSheet drag hook
       delete window.updateDataBlockCalcFunctionAfterRowDrag;
     };
   }, [updateDataBlockCalcFunctionAfterRowDrag]);
