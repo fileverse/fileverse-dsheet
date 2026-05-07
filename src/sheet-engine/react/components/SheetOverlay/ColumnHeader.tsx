@@ -46,6 +46,12 @@ const ColumnHeader: React.FC = () => {
   const sheetIndex = getSheetIndex(context, context.currentSheetId);
   const sheet = sheetIndex == null ? null : context.luckysheetfile[sheetIndex];
 
+  // `column_select` is the reliable signal for "entire column(s)" selection.
+  // Cmd/Ctrl+A sets both `row_select` and `column_select` to true.
+  const isEntireColumnSelection = !!context.luckysheet_select_save?.some(
+    (sel) => !!sel?.column_select,
+  );
+
   const freezeHandleLeft = useMemo(() => {
     if (
       sheet?.frozen?.type === 'column' ||
@@ -284,12 +290,20 @@ const ColumnHeader: React.FC = () => {
     const s = context.luckysheet_select_save;
     if (_.isNil(s)) return;
     setSelectedLocation([]);
-    if (s[0].row_select) return;
+
+    const allRowOnly = s.every(
+      (sel) => !!sel?.row_select && !sel?.column_select,
+    );
+    if (allRowOnly) return;
+
+    const relevant = s.filter(
+      (sel) => !(!!sel?.row_select && !sel?.column_select),
+    );
 
     let columnTitleMap = {};
-    for (let i = 0; i < s.length; i += 1) {
-      const c1 = s[i].column[0];
-      const c2 = s[i].column[1];
+    for (let i = 0; i < relevant.length; i += 1) {
+      const c1 = relevant[i].column[0];
+      const c2 = relevant[i].column[1];
       columnTitleMap = selectTitlesMap(columnTitleMap, c1, c2);
     }
     const columnTitleRange = selectTitlesRange(columnTitleMap);
@@ -307,18 +321,19 @@ const ColumnHeader: React.FC = () => {
     setSelectedLocation(selects);
   }, [context.luckysheet_select_save, context.visibledatacolumn]);
 
-  const [hiddenPointers, setHiddenPointers] = useState([]);
+  type HiddenPointer = { col: number; left: number };
+  const [hiddenPointers, setHiddenPointers] = useState<HiddenPointer[]>([]);
 
   useEffect(() => {
     if (sheetIndex == null) return;
 
-    const tempPointers: any = [];
+    const tempPointers: HiddenPointer[] = [];
     const colhidden = context.luckysheetfile[sheetIndex]?.config?.colhidden;
 
     if (colhidden) {
       Object.keys(colhidden).forEach((key) => {
-        const item = {
-          col: key,
+        const item: HiddenPointer = {
+          col: Number(key),
           left: context.visibledatacolumn[Number(key) - 1],
         };
         tempPointers.push(item);
@@ -327,11 +342,11 @@ const ColumnHeader: React.FC = () => {
     } else {
       setHiddenPointers([]);
     }
-  }, [context.visibledatacolumn, sheetIndex]);
+  }, [context.visibledatacolumn, context.luckysheetfile, sheetIndex]);
 
   const showColumn = (
     e: React.MouseEvent<HTMLDivElement, MouseEvent>,
-    item: any,
+    item: HiddenPointer,
   ) => {
     if (sheetIndex == null) return;
 
@@ -346,7 +361,7 @@ const ColumnHeader: React.FC = () => {
     while (cod) {
       tempStartPoint = Number(tempStartPoint) - 1;
       // eslint-disable-next-line no-prototype-builtins
-      if (colhiddenData?.hasOwnProperty(tempStartPoint)) {
+      if (colhiddenData?.hasOwnProperty(String(tempStartPoint))) {
         startCol = tempStartPoint;
       } else {
         cod = false;
@@ -359,7 +374,7 @@ const ColumnHeader: React.FC = () => {
     while (cod) {
       tempStartPoint = Number(tempStartPoint) + 1;
       // eslint-disable-next-line no-prototype-builtins
-      if (colhiddenData?.hasOwnProperty(tempStartPoint)) {
+      if (colhiddenData?.hasOwnProperty(String(tempStartPoint))) {
         endCol = tempStartPoint;
       } else {
         cod = false;
@@ -406,7 +421,7 @@ const ColumnHeader: React.FC = () => {
     containerRef.current!.scrollLeft = context.scrollLeft;
   }, [context.scrollLeft]);
 
-  const getCursor = (colIndex: any) => {
+  const getCursor = (colIndex: number) => {
     if (mouseDown) return 'grabbing';
     const sel = api.getSelection(context);
     const lastSelectedRow = sel?.[0].row?.[1];
@@ -446,7 +461,7 @@ const ColumnHeader: React.FC = () => {
         });
       }}
     >
-      {hiddenPointers.map((item: any) => {
+      {hiddenPointers.map((item) => {
         return (
           <div
             className="flex gap-4 cursor-pointer hide-btn align-center jusify-between"
@@ -549,7 +564,7 @@ const ColumnHeader: React.FC = () => {
       ) : null}
       {selectedLocation.map(({ col, col_pre, c1, c2 }, i) => (
         <div
-          className="fortune-col-header-selected color-bg-tertiary"
+          className={`fortune-col-header-selected ${isEntireColumnSelection ? 'color-bg-brand' : 'color-bg-tertiary'}`}
           key={i}
           style={_.assign(
             {
@@ -557,7 +572,7 @@ const ColumnHeader: React.FC = () => {
               width: col - col_pre - 1,
               display: 'block',
               // backgroundColor: "#EFC703",
-              mixBlendMode: 'multiply' as any,
+              mixBlendMode: 'multiply' as const,
             },
             fixColumnStyleOverflowInFreeze(
               context,

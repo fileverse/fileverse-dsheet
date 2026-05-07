@@ -14,7 +14,7 @@ function cloneForYjs<T>(value: T): T {
   try {
     return structuredClone(value);
   } catch {
-    return JSON.parse(JSON.stringify(value));
+    return deepCloneSafe(value);
   }
 }
 
@@ -24,6 +24,56 @@ function safeIsArray(value: unknown): boolean {
   } catch {
     return false;
   }
+}
+
+function deepCloneSafe<T>(value: T): T {
+  const seen = new WeakMap<object, any>();
+
+  const walk = (input: any): any => {
+    if (input === null || typeof input !== 'object') return input;
+
+    if (seen.has(input)) return seen.get(input);
+
+    if (safeIsArray(input)) {
+      const arr: any[] = [];
+      seen.set(input, arr);
+      let len = 0;
+      try {
+        len = Number((input as any).length) || 0;
+      } catch {
+        return arr;
+      }
+      for (let i = 0; i < len; i += 1) {
+        try {
+          arr.push(walk((input as any)[i]));
+        } catch {
+          arr.push(null);
+        }
+      }
+      return arr;
+    }
+
+    const out: Record<string, any> = {};
+    seen.set(input, out);
+    let keys: (string | symbol)[] = [];
+    try {
+      keys = Reflect.ownKeys(input);
+    } catch {
+      return out;
+    }
+    for (let i = 0; i < keys.length; i += 1) {
+      const k = keys[i];
+      if (typeof k !== 'string') continue;
+      try {
+        out[k] = walk((input as any)[k]);
+      } catch {
+        out[k] = null;
+      }
+    }
+    return out;
+  };
+
+  return walk(value) as T;
 }
 
 /**
@@ -37,19 +87,29 @@ function toPlain<T>(value: T): T {
       return current(value) as T;
     }
   } catch {
-    // Proxy/revoked proxy can throw during draft detection; fall through.
+    // Proxy/revoked proxy can throw during draft detection; force deep-plain fallback.
+    return cloneForYjs(value);
   }
   // Keep low-memory fast path for plain non-draft objects.
-  // If value is a problematic proxy, normalize only in that case.
+  // But revoked proxies can still throw when Yjs introspects them (e.g. GetPrototypeOf / isArray).
   try {
+    Object.getPrototypeOf(value);
     return value;
   } catch {
     return cloneForYjs(value);
   }
 }
 
+function normalizeForYjs<T>(value: T): T {
+  const plainValue = toPlain(value);
+  if (plainValue === null || typeof plainValue !== 'object') {
+    return plainValue;
+  }
+  return cloneForYjs(plainValue);
+}
+
 function setMapValueSafe(target: Y.Map<any>, key: string, value: any) {
-  const normalizedValue = toPlain(value);
+  const normalizedValue = normalizeForYjs(value);
   try {
     target.set(key, normalizedValue);
   } catch {
@@ -226,11 +286,13 @@ export const updateYdocSheetData = (
         cellArray.delete(0, cellArray.length);
         if (type === 'delete') return;
 
-        const plainValue = toPlain(value);
-        cellArray.insert(
-          0,
-          safeIsArray(plainValue) ? plainValue : [plainValue],
-        );
+        const plainValue = normalizeForYjs(value);
+        const payload = safeIsArray(plainValue) ? plainValue : [plainValue];
+        try {
+          cellArray.insert(0, payload);
+        } catch {
+          cellArray.insert(0, cloneForYjs(payload));
+        }
         return;
       }
 
