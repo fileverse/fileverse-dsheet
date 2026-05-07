@@ -112,28 +112,6 @@ function formatPlainTextForClipboard(
 }
 
 export default class clipboard {
-  static writeText(text: string) {
-    if (typeof navigator?.clipboard?.writeText === "function") {
-      navigator.clipboard.writeText(text).catch((e) => console.error(e));
-      return;
-    }
-
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.left = "-10000px";
-      ta.style.top = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
   static writeHtml(str: string) {
     // Use the modern Clipboard API to write the HTML as a raw Blob.
     // The legacy execCommand("copy") approach serializes computed DOM styles

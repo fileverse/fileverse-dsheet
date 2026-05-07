@@ -2315,60 +2315,6 @@ export function rangeValueToHtml(
   return `<table data-type="fortune-copy-action-table">${colgroup}${cpdata}</table>`;
 }
 
-function rangeValueToHtmlFast(
-  ctx: Context,
-  sheetId: string,
-  ranges?: Range
-) {
-  const idx = getSheetIndex(ctx, sheetId);
-  if (idx == null) return "";
-  const sheet = ctx.luckysheetfile[idx];
-  const d = sheet.data;
-  if (!d) return "";
-
-  const rowSet = new Set<number>();
-  const colSet = new Set<number>();
-  for (let s = 0; s < (ranges?.length ?? 0); s += 1) {
-    const range = ranges![s];
-    for (let r = range.row[0]; r <= range.row[1]; r += 1) rowSet.add(r);
-    for (let c = range.column[0]; c <= range.column[1]; c += 1) colSet.add(c);
-  }
-  const rowIndexArr = Array.from(rowSet).sort((a, b) => a - b);
-  const colIndexArr = Array.from(colSet).sort((a, b) => a - b);
-
-  let colgroup = "";
-  for (let j = 0; j < colIndexArr.length; j += 1) {
-    const c = colIndexArr[j];
-    const width = sheet.config?.columnlen?.[c.toString()] ?? 72;
-    colgroup += `<colgroup width="${width}px"></colgroup>`;
-  }
-
-  let body = "";
-  for (let i = 0; i < rowIndexArr.length; i += 1) {
-    const r = rowIndexArr[i];
-    const rowLen = sheet.config?.rowlen?.[r.toString()] ?? sheet.defaultRowHeight;
-    body += `<tr height=${rowLen}px >`;
-    for (let j = 0; j < colIndexArr.length; j += 1) {
-      const c = colIndexArr[j];
-      let cellValue = getCellValue(r, c, d, "m");
-      if (_.isNil(cellValue)) {
-        cellValue = getCellValue(r, c, d);
-      }
-      if (_.isNil(cellValue)) {
-        cellValue = "";
-      }
-      const html = escapeHTMLTag(String(cellValue)).replace(
-        /&lt;br\s*\/?&gt;/g,
-        "<br>"
-      );
-      body += `<td style="white-space: pre-line;">${html}</td>`;
-    }
-    body += "</tr>";
-  }
-
-  return `<table data-type="fortune-copy-action-table">${colgroup}${body}</table>`;
-}
-
 export function copy(ctx: Context) {
   const flowdata = getFlowdata(ctx);
 
@@ -2511,16 +2457,11 @@ export function copy(ctx: Context) {
 
     cpdata = `<table data-type="fortune-copy-action-table"><tr><td style="white-space: pre-line; ${styleStr}" data-fortune-cell="${cellData}">${innerContent}</td></tr></table>`;
   } else {
-    let copiedCellCount = 0;
-    for (let s = 0; s < (ctx.luckysheet_select_save?.length ?? 0); s += 1) {
-      const rg = ctx.luckysheet_select_save![s];
-      copiedCellCount +=
-        (rg.row[1] - rg.row[0] + 1) * (rg.column[1] - rg.column[0] + 1);
-    }
-    const useFastCopyHtml = copiedCellCount >= 80;
-    cpdata = useFastCopyHtml
-      ? rangeValueToHtmlFast(ctx, ctx.currentSheetId, ctx.luckysheet_select_save)
-      : rangeValueToHtml(ctx, ctx.currentSheetId, ctx.luckysheet_select_save);
+    cpdata = rangeValueToHtml(
+      ctx,
+      ctx.currentSheetId,
+      ctx.luckysheet_select_save
+    );
     cpdata =
       cpdata === null
         ? cpdata
