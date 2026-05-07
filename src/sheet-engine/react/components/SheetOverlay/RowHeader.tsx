@@ -47,6 +47,12 @@ const RowHeader: React.FC = () => {
   const sheetIndex = getSheetIndex(context, context.currentSheetId);
   const sheet = sheetIndex == null ? null : context.luckysheetfile[sheetIndex];
 
+  // `row_select` is the reliable signal for "entire row(s)" selection.
+  // Cmd/Ctrl+A sets both `row_select` and `column_select` to true.
+  const isEntireRowSelection = !!context.luckysheet_select_save?.some(
+    (sel) => !!sel?.row_select,
+  );
+
   // Manual-hidden rows only: do not show "unhide" pointers for filter-hidden rows.
   const manualRowHidden = useMemo(() => {
     if (sheetIndex == null) return null;
@@ -281,12 +287,20 @@ const RowHeader: React.FC = () => {
     const s = context.luckysheet_select_save || [];
     if (_.isNil(s)) return;
     setSelectedLocation([]);
-    if (s[0]?.column_select) return;
+
+    const allColOnly = s.every(
+      (sel) => !!sel?.column_select && !sel?.row_select,
+    );
+    if (allColOnly) return;
+
+    const relevant = s.filter(
+      (sel) => !(!!sel?.column_select && !sel?.row_select),
+    );
 
     let rowTitleMap = {};
-    for (let i = 0; i < s.length; i += 1) {
-      const r1 = s[i].row[0];
-      const r2 = s[i].row[1];
+    for (let i = 0; i < relevant.length; i += 1) {
+      const r1 = relevant[i].row[0];
+      const r2 = relevant[i].row[1];
       rowTitleMap = selectTitlesMap(rowTitleMap, r1, r2);
     }
     const rowTitleRange = selectTitlesRange(rowTitleMap);
@@ -508,7 +522,7 @@ const RowHeader: React.FC = () => {
       ) : null}
       {selectedLocation.map(({ row, row_pre, r1, r2 }, i) => (
         <div
-          className="fortune-row-header-selected color-bg-tertiary"
+          className={`fortune-row-header-selected ${isEntireRowSelection ? 'color-bg-brand' : 'color-bg-tertiary'}`}
           key={i}
           style={_.assign(
             {

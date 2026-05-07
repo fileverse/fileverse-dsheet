@@ -39,7 +39,6 @@
   width: 100%;
   margin-top: 2px;
   display: none;
-  background-color: rgba(194, 194, 194, 0.4);
 }
 
 .fortune-row-header-selected {
@@ -77,7 +76,6 @@
   height: 100%;
   margin-left: 0px;
   display: none;
-  background-color: rgba(194, 194, 194, 0.4);
 }
 
 .fortune-col-header-hover .header-arrow {
@@ -631,7 +629,9 @@
   top: 0;
 }
 
-.luckysheet-postil-show-active .luckysheet-postil-dialog-move .luckysheet-postil-dialog-move-item {
+.luckysheet-postil-show-active
+  .luckysheet-postil-dialog-move
+  .luckysheet-postil-dialog-move-item {
   border-color: #0188fb;
 }
 
@@ -838,8 +838,12 @@
 }
 
 .luckysheet-filter-options.luckysheet-filter-options-active:hover {
-  background: hsl(var(--color-bg-brand-hover,
-        var(--color-bg-brand, var(--color-bg-default-hover))));
+  background: hsl(
+    var(
+      --color-bg-brand-hover,
+      var(--color-bg-brand, var(--color-bg-default-hover))
+    )
+  );
 }
 
 .luckysheet-filter-options-active {
