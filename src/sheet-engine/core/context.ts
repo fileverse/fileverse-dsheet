@@ -236,6 +236,12 @@ export type Context = {
 
   iscopyself: boolean;
 
+  /**
+   * True when the last in-app copy dropped per-cell `data-fortune-cell` JSON due to HTML size cap.
+   * Paste must rely on `luckysheet_copy_save` + grid data (internal route), not HTML text equality.
+   */
+  lastInternalCopyHtmlMetadataStripped: boolean;
+
   orderbyindex: number; // 排序下标
 
   luckysheet_model_move_state: boolean; // 模态框拖动
@@ -532,6 +538,7 @@ export function defaultContext(refs: RefValues): Context {
     luckysheet_shiftpositon: undefined,
 
     iscopyself: true,
+    lastInternalCopyHtmlMetadataStripped: false,
     activeImg: undefined,
     insertedIframes: [],
     activeIframe: undefined,

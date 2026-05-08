@@ -1228,11 +1228,12 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const onPaste = useCallback(
       (e: ClipboardEvent) => {
         let startPaste = true;
+        const active = document.activeElement;
+        const focusInSheetOverlay =
+          typeof active?.closest === 'function' &&
+          active.closest('.fortune-sheet-overlay') != null;
         // deal with multi instance case, only the focused sheet handles the paste
-        if (
-          cellInput.current === document.activeElement ||
-          document.activeElement?.className === 'fortune-sheet-overlay'
-        ) {
+        if (cellInput.current === active || focusInSheetOverlay) {
           if (!startPaste) return;
           let { clipboardData } = e;
           if (!clipboardData) {
@@ -1258,40 +1259,39 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               ) as number
             ].data!.length;
           const range = context.luckysheet_select_save;
-          if (rowToBeAdded > 0) {
-            const insertRowColOp: SetContextOptions['insertRowColOp'] = {
-              type: 'row',
-              index:
-                context.luckysheetfile[
-                  getSheetIndex(
-                    context,
-                    context!.currentSheetId! as string,
-                  ) as number
-                ].data!.length - 1,
-              count: rowToBeAdded,
-              direction: 'rightbottom',
-              id: context.currentSheetId,
-            };
-            setContextWithProduce(
-              (draftCtx) => {
-                insertRowCol(draftCtx, insertRowColOp);
-                draftCtx.luckysheet_select_save = range;
-              },
-              {
-                insertRowColOp,
-              },
-            );
-          }
-          setContextWithProduce((draftCtx) => {
-            try {
-              if (startPaste) {
-                startPaste = false;
-                handlePaste(draftCtx, e);
+          const insertRowColOp: SetContextOptions['insertRowColOp'] | null =
+            rowToBeAdded > 0
+              ? {
+                type: 'row',
+                index:
+                  context.luckysheetfile[
+                    getSheetIndex(
+                      context,
+                      context!.currentSheetId! as string,
+                    ) as number
+                  ].data!.length - 1,
+                count: rowToBeAdded,
+                direction: 'rightbottom',
+                id: context.currentSheetId,
               }
-            } catch (err: any) {
-              console.error(err);
-            }
-          });
+              : null;
+          setContextWithProduce(
+            (draftCtx) => {
+              try {
+                if (insertRowColOp) {
+                  insertRowCol(draftCtx, insertRowColOp);
+                  draftCtx.luckysheet_select_save = range;
+                }
+                if (startPaste) {
+                  startPaste = false;
+                  handlePaste(draftCtx, e);
+                }
+              } catch (err: any) {
+                console.error(err);
+              }
+            },
+            insertRowColOp ? { insertRowColOp } : {},
+          );
         }
         setContextWithProduce((ctx: any) => {
           if (ctx.luckysheet_selection_range) {

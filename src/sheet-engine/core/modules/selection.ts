@@ -16,6 +16,7 @@ import { isInlineStringCell } from "./inline-string";
 import { delFunctionGroup } from "./formula";
 import clipboard from "./clipboard";
 import { getBorderInfoCompute } from "./border";
+import { getComputeMap } from "./ConditionFormat";
 import {
   escapeHTMLTag,
   getSheetIndex,
@@ -29,11 +30,21 @@ import { locale } from "../locale";
 // import SSF from "./ssf";
 import { CFSplitRange } from "./ConditionFormat";
 import { clearCellError } from "./error-state-helpers";
+import { scheduleSheetMetadataSyncHooks } from "./sheet-metadata-hooks";
 
 export const selectionCache = {
   isPasteAction: false,
   isPasteValuesOnly: false,
 };
+
+interface RangeValueToHtmlOptions {
+  includeCellMetadata?: boolean;
+  preferRichText?: boolean;
+  respectFilterHiddenRows?: boolean;
+}
+
+/** Browsers commonly truncate clipboard HTML near ~1–2MB; huge per-cell `data-fortune-cell` JSON causes tail loss on large copies. */
+const CLIPBOARD_HTML_SAFE_BYTES = 1_400_000;
 
 export function scrollToHighlightCell(ctx: Context, r: number, c: number) {
   const { scrollLeft, scrollTop } = ctx;
@@ -550,6 +561,13 @@ export function pasteHandlerOfPaintModel(
     value: any;
     type?: "update" | "delete";
   }[] = [];
+  const dataVerificationYdocChanges: {
+    sheetId: string;
+    path: string[];
+    key: string;
+    value: any;
+    type: "update";
+  }[] = [];
   const cellMaxLength = flowdata[0].length;
   const rowMaxLength = flowdata.length;
 
@@ -636,8 +654,16 @@ export function pasteHandlerOfPaintModel(
               );
             }
 
-            dataVerification[`${h}_${c}`] =
+            const dvSrc =
               c_dataVerification[`${c_r1 + h - mth}_${c_c1 + c - mtc}`];
+            dataVerification[`${h}_${c}`] = dvSrc;
+            dataVerificationYdocChanges.push({
+              sheetId: ctx.currentSheetId,
+              path: ["dataVerification"],
+              key: `${h}_${c}`,
+              value: JSON.parse(JSON.stringify(dvSrc)),
+              type: "update",
+            });
           }
 
           if (isPlainObject(x[c]) && x[c].mc) {
@@ -745,7 +771,13 @@ export function pasteHandlerOfPaintModel(
   }
 
   if (cellChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
-    ctx.hooks.updateCellYdoc(cellChanges);
+    ctx.hooks.updateCellYdoc(
+      dataVerificationYdocChanges.length > 0
+        ? [...cellChanges, ...dataVerificationYdocChanges]
+        : cellChanges
+    );
+  } else if (dataVerificationYdocChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
+    ctx.hooks.updateCellYdoc(dataVerificationYdocChanges);
   }
 
   const currFile = ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!];
@@ -818,6 +850,8 @@ export function pasteHandlerOfPaintModel(
       currFile.luckysheet_conditionformat_save = cdformat;
     }
   }
+
+  scheduleSheetMetadataSyncHooks(ctx);
 }
 
 // }
@@ -1828,32 +1862,29 @@ function getHtmlBorderStyle(type: string, color: string) {
 export function rangeValueToHtml(
   ctx: Context,
   sheetId: string,
-  ranges?: Range
+  ranges?: Range,
+  options?: RangeValueToHtmlOptions
 ) {
-  const isFilterActiveForSheet = () => {
-    if (sheetId !== ctx.currentSheetId) return false;
-    // Filter UI exists and at least one column filter state exists.
-    // (We intentionally *don't* use ctx.config.rowhidden here because it also
-    // includes manually-hidden rows; this feature should be filter-only.)
-    return !_.isNil(ctx.luckysheet_filter_save) && !_.isEmpty(ctx.filter);
-  };
-
-  const getFilterHiddenRowSet = (): Set<number> => {
-    const hidden = new Set<number>();
-    if (!isFilterActiveForSheet()) return hidden;
+  const includeCellMetadata = options?.includeCellMetadata ?? false;
+  const preferRichText = options?.preferRichText ?? false;
+  const respectFilterHiddenRows = options?.respectFilterHiddenRows ?? false;
+  const cf_compute = getComputeMap(ctx);
+  const filteredHiddenRows = new Set<number>();
+  if (
+    respectFilterHiddenRows &&
+    sheetId === ctx.currentSheetId &&
+    !_.isNil(ctx.luckysheet_filter_save) &&
+    !_.isEmpty(ctx.filter)
+  ) {
     Object.values(ctx.filter || {}).forEach((entry: any) => {
       const rowhidden: Record<string, number> | undefined = entry?.rowhidden;
       if (!rowhidden) return;
       Object.keys(rowhidden).forEach((r) => {
         const n = Number(r);
-        if (!Number.isNaN(n)) hidden.add(n);
+        if (!Number.isNaN(n)) filteredHiddenRows.add(n);
       });
     });
-    return hidden;
-  };
-
-  const filteredHiddenRows = getFilterHiddenRowSet();
-
+  }
   const idx = getSheetIndex(ctx, sheetId);
   if (idx == null) return "";
   const sheet = ctx.luckysheetfile[idx];
@@ -1870,9 +1901,7 @@ export function rangeValueToHtml(
     const c2 = range.column[1];
 
     for (let copyR = r1; copyR <= r2; copyR += 1) {
-      if (filteredHiddenRows.has(copyR)) {
-        continue;
-      }
+      if (filteredHiddenRows.has(copyR)) continue;
       if (!rowIndexArr.includes(copyR)) {
         rowIndexArr.push(copyR);
       }
@@ -1903,18 +1932,16 @@ export function rangeValueToHtml(
   for (let i = 0; i < rowIndexArr.length; i += 1) {
     const r = rowIndexArr[i];
 
-    const rowLen =
-      sheet.config?.rowlen?.[r.toString()] ?? sheet.defaultRowHeight;
-    cpdata += `<tr height=${rowLen}px >`;
+    cpdata += "<tr>";
 
     for (let j = 0; j < colIndexArr.length; j += 1) {
       const c = colIndexArr[j];
 
       // eslint-disable-next-line no-template-curly-in-string
-      let column =
-        '<td ${span} style="${style}" data-fortune-cell="${cellData}">';
+      let column = '<td ${span} style="${style}" data-fortune-cell="${cellData}">';
 
       const cell = d[r]?.[c];
+
       if (cell != null) {
         let style = "";
         let span = "";
@@ -1933,15 +1960,15 @@ export function rangeValueToHtml(
         }
 
         if (c === colIndexArr[0]) {
-          const rowLenValue = sheet.config?.rowlen?.[r.toString()];
-          const colLen = sheet.config?.columnlen?.[c.toString()];
-          if (_.isNil(rowLenValue)) {
+          if (
+            _.isNil(sheet.config) ||
+            _.isNil(sheet.config.rowlen) ||
+            _.isNil(sheet.config.rowlen[r.toString()])
+          ) {
             style += "height:19px;";
           } else {
-            style += `height:${rowLenValue}px;`;
+            style += `height:${sheet.config.rowlen[r.toString()]}px;`;
           }
-          // Fallback to 72px if column width is not available
-          style += `width:${colLen ?? sheet.defaultColWidth}px;`;
         }
 
         const reg = /^(w|W)((0?)|(0\.0+))$/;
@@ -1956,23 +1983,10 @@ export function rangeValueToHtml(
           c_value = getCellValue(r, c, d, "m");
         }
 
-        const styleObj = getStyleByCell(ctx, d, r, c);
-        if (styleObj.borderBottom) {
-          const existing = styleObj.textDecoration as string | undefined;
-          const decorations = new Set(
-            existing ? existing.split(/\s+/).filter(Boolean) : []
-          );
-          decorations.add("underline");
-          styleObj.textDecoration = Array.from(decorations).join(" ");
-          styleObj.textDecorationSkipInk = "none";
-          delete styleObj.borderBottom;
-        }
-        style += _.toPairs(styleObj)
-          .filter(([, v]) => !_.isNil(v) && v !== "" && v !== "undefined")
-          .map(
-            ([key, v]) => `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`
-          )
-          .join(" ");
+        const styleObj = getStyleByCell(ctx, d, r, c, cf_compute);
+        style += _.map(styleObj, (v, key) => {
+          return `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`;
+        }).join("");
 
         if (cell.mc) {
           if ("rs" in cell.mc) {
@@ -2211,35 +2225,28 @@ export function rangeValueToHtml(
           }
         }
 
-        const cellData = encodeURIComponent(
-          JSON.stringify({ ...cell, _srcRow: r, _srcCol: c })
-        );
+        const cellData = includeCellMetadata
+          ? encodeURIComponent(JSON.stringify({ ...cell, _srcRow: r, _srcCol: c }))
+          : "";
         column = replaceHtml(column, { style, span, cellData });
 
-        let cellHtml = "";
+        if (_.isNil(c_value)) {
+          c_value = getCellValue(r, c, d);
+        }
 
-        if (cell && isInlineStringCell(cell)) {
-          cellHtml = getInlineStringHTML(r, c, d, {
+        if (_.isNil(c_value)) {
+          c_value = "";
+        }
+
+        if (preferRichText && isInlineStringCell(cell)) {
+          column += getInlineStringHTML(r, c, d, {
             useSemanticMarkup: true,
             inheritedStyle: styleObj,
             isRichTextCopy: true,
           });
         } else {
-          if (_.isNil(c_value)) {
-            c_value = getCellValue(r, c, d);
-          }
-
-          if (_.isNil(c_value)) {
-            c_value = "";
-          }
-
-          cellHtml = escapeHTMLTag(String(c_value)).replace(
-            /&lt;br\s*\/?&gt;/g,
-            "<br>"
-          );
+          column += escapeHTMLTag(c_value);
         }
-
-        column += cellHtml;
       } else {
         let style = "";
 
@@ -2301,6 +2308,11 @@ export function rangeValueToHtml(
           }
         }
 
+        const styleObjEmpty = getStyleByCell(ctx, d, r, c, cf_compute);
+        style += _.map(styleObjEmpty, (v, key) => {
+          return `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`;
+        }).join("");
+
         column = replaceHtml(column, { style, span: "", cellData: "" });
         column += "";
       }
@@ -2312,17 +2324,24 @@ export function rangeValueToHtml(
     cpdata += "</tr>";
   }
 
-  return `<table data-type="fortune-copy-action-table">${colgroup}${cpdata}</table>`;
+  const html = `<table data-type="fortune-copy-action-table">${colgroup}${cpdata}</table>`;
+
+  return html;
 }
 
 export function copy(ctx: Context) {
   const flowdata = getFlowdata(ctx);
 
+  ctx.lastInternalCopyHtmlMetadataStripped = false;
   ctx.luckysheet_selection_range = [];
   // copy范围
   const copyRange = [];
   let RowlChange = false;
   let HasMC = false;
+  let hasInlineRichText = false;
+  let hasFormula = false;
+  let hasHyperlink = false;
+  let hasMultiline = false;
 
   for (let s = 0; s < (ctx.luckysheet_select_save?.length ?? 0); s += 1) {
     const range = ctx.luckysheet_select_save![s];
@@ -2353,6 +2372,13 @@ export function copy(ctx: Context) {
         }
 
         const cell = flowdata?.[copyR]?.[copyC];
+        if (cell) {
+          if (isInlineStringCell(cell)) hasInlineRichText = true;
+          if (!_.isNil(cell.f)) hasFormula = true;
+          if (!_.isNil((cell as any).hl)) hasHyperlink = true;
+          const mv = cell.m ?? cell.v;
+          if (_.isString(mv) && mv.includes("\n")) hasMultiline = true;
+        }
 
         if (!_.isNil(cell?.mc?.rs)) {
           HasMC = true;
@@ -2377,15 +2403,19 @@ export function copy(ctx: Context) {
     HasMC,
   };
 
-  let cpdata: string | null;
+  const canUseRichMode =
+    hasInlineRichText || hasFormula || hasHyperlink || hasMultiline;
+  const includeCellMetadata =
+    canUseRichMode && (hasInlineRichText || hasFormula || hasHyperlink);
 
+  let cpdata: string | null;
   const sel = ctx.luckysheet_select_save;
   const isSingleCell =
     sel?.length === 1 &&
     sel[0].row[0] === sel[0].row[1] &&
     sel[0].column[0] === sel[0].column[1];
 
-  if (isSingleCell) {
+  if (isSingleCell && canUseRichMode) {
     const r = sel![0].row[0];
     const c = sel![0].column[0];
     const { fontarray } = locale(ctx);
@@ -2398,19 +2428,9 @@ export function copy(ctx: Context) {
       textAlign: "left",
       backgroundColor: "transparent",
     };
-    const cell = flowdata![r]?.[c];
+    const cell = flowdata?.[r]?.[c];
     const isRichText = cell != null && isInlineStringCell(cell);
     const styleObj = getStyleByCell(ctx, flowdata!, r, c);
-    if (styleObj.borderBottom) {
-      const existing = styleObj.textDecoration as string | undefined;
-      const decorations = new Set(
-        existing ? existing.split(/\s+/).filter(Boolean) : []
-      );
-      decorations.add("underline");
-      styleObj.textDecoration = Array.from(decorations).join(" ");
-      styleObj.textDecorationSkipInk = "none";
-      delete styleObj.borderBottom;
-    }
     const mergedStyle = { ...defaultStyle, ...styleObj };
     const TEXT_LEVEL_KEYS = new Set([
       "color",
@@ -2431,45 +2451,47 @@ export function copy(ctx: Context) {
       )
       .map(([key, v]) => `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`)
       .join(" ");
-    let innerContent: string;
-    if (isRichText) {
-      // Rich text cell: inner spans carry all text-level styles per segment
-      innerContent = getInlineStringHTML(r, c, flowdata!, {
+    const innerContent = isRichText
+      ? getInlineStringHTML(r, c, flowdata!, {
         useSemanticMarkup: true,
         inheritedStyle: mergedStyle,
         isRichTextCopy: true,
-      });
-    } else {
-      const displayValue =
-        getCellValue(r, c, flowdata!, "m") ??
-        getCellValue(r, c, flowdata!) ??
-        "";
-      // escapeHTMLTag turns <br /> into &lt;br /&gt; — restore them as actual <br> tags
-      innerContent = escapeHTMLTag(String(displayValue)).replace(
-        /&lt;br\s*\/?&gt;/g,
-        "<br>"
-      );
-    }
+      })
+      : escapeHTMLTag(
+        String(
+          getCellValue(r, c, flowdata!, "m") ?? getCellValue(r, c, flowdata!) ?? ""
+        )
+      ).replace(/&lt;br\s*\/?&gt;/g, "<br>");
 
-    const cellData = encodeURIComponent(
-      JSON.stringify({ ...(cell ?? {}), _srcRow: r, _srcCol: c })
-    );
-
+    const cellData = includeCellMetadata
+      ? encodeURIComponent(JSON.stringify({ ...(cell ?? {}), _srcRow: r, _srcCol: c }))
+      : "";
     cpdata = `<table data-type="fortune-copy-action-table"><tr><td style="white-space: pre-line; ${styleStr}" data-fortune-cell="${cellData}">${innerContent}</td></tr></table>`;
   } else {
-    cpdata = rangeValueToHtml(
-      ctx,
-      ctx.currentSheetId,
-      ctx.luckysheet_select_save
-    );
+    cpdata = rangeValueToHtml(ctx, ctx.currentSheetId, ctx.luckysheet_select_save, {
+      includeCellMetadata,
+      preferRichText: canUseRichMode,
+      respectFilterHiddenRows: true,
+    });
     cpdata =
       cpdata === null
         ? cpdata
         : cpdata.replace('<td style="', '<td style="white-space: pre-line; ');
   }
 
+  let clipboardMetadataStripped = false;
+  if (
+    cpdata &&
+    includeCellMetadata &&
+    cpdata.length > CLIPBOARD_HTML_SAFE_BYTES
+  ) {
+    clipboardMetadataStripped = true;
+    cpdata = cpdata.replace(/\sdata-fortune-cell="[^"]*"/g, "");
+  }
+
   if (cpdata) {
     ctx.iscopyself = true;
+    ctx.lastInternalCopyHtmlMetadataStripped = clipboardMetadataStripped;
     clipboard.writeHtml(cpdata);
   }
 }

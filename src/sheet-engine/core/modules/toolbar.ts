@@ -27,6 +27,7 @@ import {
   execfunction,
   execFunctionGroup,
   getFormulaEditorOwner,
+  groupValuesRefresh,
   israngeseleciton,
   rangeSetValue,
   setCaretPosition,
@@ -414,6 +415,55 @@ export function updateFormat(
     //   cfg = rowlenByRange(ctx, d, row_st, row_ed, cfg);
     // }
   });
+
+  // Value-only edits run execFunctionGroup; number-format edits do not, so dependents (e.g. SUM)
+  // kept stale `fa`/`m`. If any touched cell has formula dependents (rev graph), refresh them.
+  // Skip when dependency graph reports nothing — avoids an O(all-formulas) pass for stray formats.
+  if (
+    attr === "ct" &&
+    ctx.luckysheet_select_save?.length &&
+    ctx.currentSheetId
+  ) {
+    const sid = ctx.currentSheetId;
+    const revMap = ctx.formulaCache.revDepsByCell;
+    const touchedByKey = new Map<string, { r: number; c: number }>();
+    _.forEach(ctx.luckysheet_select_save, (selection) => {
+      const [row_st, row_ed] = selection.row;
+      const [col_st, col_ed] = selection.column;
+      for (let r = row_st; r <= row_ed; r += 1) {
+        if (!_.isNil(ctx.config.rowhidden) && !_.isNil(ctx.config.rowhidden[r])) {
+          continue;
+        }
+        for (let c = col_st; c <= col_ed; c += 1) {
+          touchedByKey.set(`${r}_${c}`, { r, c });
+        }
+      }
+    });
+
+    let hasDependent = false;
+    if (revMap?.size) {
+      for (const { r, c } of touchedByKey.values()) {
+        if (revMap.get(`${sid}:${r}:${c}`)?.size) {
+          hasDependent = true;
+          break;
+        }
+      }
+    }
+
+    if (hasDependent && touchedByKey.size > 0) {
+      const execExist = Array.from(touchedByKey.values()).map(({ r, c }) => ({
+        r,
+        c,
+        i: sid,
+      }));
+      ctx.formulaCache.execFunctionExist = execExist;
+      ctx.formulaCache.execFunctionExist.reverse();
+      // @ts-expect-error origins null forces dependency fan-out via execFunctionExist
+      execFunctionGroup(ctx, null, null, null, null, d);
+      ctx.formulaCache.execFunctionGlobalData = null;
+      groupValuesRefresh(ctx);
+    }
+  }
 
   //   let allParam = {};
   //   if (attr === "tb" || attr === "tr" || attr === "fs") {

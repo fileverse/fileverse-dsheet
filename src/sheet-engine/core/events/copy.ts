@@ -5,6 +5,7 @@ import { copy, selectIsOverlap } from '../modules/selection';
 import { hasPartMC } from '../modules/validation';
 
 export function handleCopy(ctx: Context) {
+  const selection = ctx.luckysheet_select_save;
   // if (imageCtrl.currentImgId != null) {
   //   imageCtrl.copyImgItem(event);
   //   return;
@@ -15,7 +16,6 @@ export function handleCopy(ctx: Context) {
     cancelPaintModel(ctx);
   }
 
-  const selection = ctx.luckysheet_select_save;
   if (!selection || _.isEmpty(selection)) {
     return;
   }
