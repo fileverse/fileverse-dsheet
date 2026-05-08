@@ -6,7 +6,7 @@ import { getQKBorder, saveHyperlink } from "./modules";
 import { Cell } from "./types";
 import { getSheetIndex } from "./utils";
 import { setRowHeight, setColumnWidth } from "./api";
-import { adjustFormulaForPaste } from "./events/paste";
+import { adjustFormulaForPaste } from "./paste/formula-adjust";
 import { convertSpanToShareString } from "./modules/inline-string";
 import { genarate } from "./modules/format";
 import { isRealNum } from "./modules/validation";

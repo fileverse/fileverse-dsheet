@@ -2209,6 +2209,38 @@ export function isAllSelectedCellsInStatus(
   });
 }
 
+/** Apply luckysheet computeMap CF result (textColor, cellColor, font flags) to clipboard CSS. */
+function applyConditionalFormatComputedStyle(
+  style: Record<string, any>,
+  checksCF: any | null | undefined,
+) {
+  if (!checksCF) return;
+  if (checksCF.cellColor) {
+    style.background = `${checksCF.cellColor}`;
+  }
+  if (checksCF.textColor) {
+    style.color = checksCF.textColor;
+  }
+  if (checksCF.bold) {
+    style.fontWeight = "bold";
+  }
+  if (checksCF.italic) {
+    style.fontStyle = "italic";
+  }
+  if (checksCF.underline) {
+    const cur = String(style.textDecoration || "").trim();
+    const parts = cur ? cur.split(/\s+/).filter(Boolean) : [];
+    if (!parts.includes("underline")) parts.push("underline");
+    style.textDecoration = parts.join(" ");
+  }
+  if (checksCF.strikethrough) {
+    const cur = String(style.textDecoration || "").trim();
+    const parts = cur ? cur.split(/\s+/).filter(Boolean) : [];
+    if (!parts.includes("line-through")) parts.push("line-through");
+    style.textDecoration = parts.join(" ");
+  }
+}
+
 export function getFontStyleByCell(
   cell: Cell | null | undefined,
   checksAF?: any[],
@@ -2281,7 +2313,8 @@ export function getStyleByCell(
   ctx: Context,
   d: CellMatrix,
   r: number,
-  c: number
+  c: number,
+  precomputedCfCompute?: ReturnType<typeof getComputeMap>
 ) {
   let style: any = {};
 
@@ -2290,24 +2323,24 @@ export function getStyleByCell(
   //   const checksAF = alternateformat.checksAF(r, c, af_compute);
   const checksAF: any = [];
   // 条件格式
-  const cf_compute = getComputeMap(ctx);
+  const cf_compute = precomputedCfCompute ?? getComputeMap(ctx);
   const checksCF = checkCF(r, c, cf_compute);
 
   const cell = d?.[r]?.[c];
-  if (!cell) return {};
+  if (!cell) {
+    if (!checksCF) {
+      return {};
+    }
+    const out: Record<string, any> = {};
+    applyConditionalFormatComputedStyle(out, checksCF);
+    return out;
+  }
 
-  if ("bg" in cell) {
-    const value = normalizedCellAttr(cell, "bg");
-    if (checksCF?.cellColor) {
-      if (checksCF?.cellColor) {
-        style.background = `${checksCF.cellColor}`;
-      } else if (checksAF.length > 1) {
-        style.background = `${checksAF[1]}`;
-      } else {
-        style.background = `${value}`;
-      }
-    } else {
-      style.background = `${value}`;
+  if (!checksCF?.cellColor) {
+    if ((checksAF?.length ?? 0) > 1) {
+      style.background = `${checksAF[1]}`;
+    } else if ("bg" in cell) {
+      style.background = `${normalizedCellAttr(cell, "bg")}`;
     }
   }
   if ("ht" in cell) {
@@ -2344,6 +2377,7 @@ export function getStyleByCell(
     }
   }
   style = _.assign(style, getFontStyleByCell(cell, checksAF, checksCF));
+  applyConditionalFormatComputedStyle(style, checksCF);
 
   return style;
 }
