@@ -46,7 +46,6 @@ export function computeFortuneInternalPasteDecision(
   ctx: Context,
   txtdata: string
 ): FortuneInternalPasteDecision {
-  const __fd0 = performance.now();
   let isEqual = true;
   let internalFortunePaste = false;
 
@@ -55,24 +54,6 @@ export function computeFortuneInternalPasteDecision(
     ctx.luckysheet_copy_save?.copyRange != null &&
     ctx.luckysheet_copy_save.copyRange.length === 1
   ) {
-    // #region agent log
-    fetch("http://127.0.0.1:7807/ingest/fc498105-2ce8-4b6c-9c08-4e5af4351528", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "62e6c9",
-      },
-      body: JSON.stringify({
-        sessionId: "62e6c9",
-        runId: "pre",
-        hypothesisId: "H4",
-        location: "fortune-internal-paste.ts:span-fast",
-        message: "fortune decision",
-        data: { path: "span-fast", ms: performance.now() - __fd0 },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     return { abortPaste: false, internalFortunePaste: true };
   }
 
@@ -83,28 +64,8 @@ export function computeFortuneInternalPasteDecision(
   ) {
     // Large internal copies strip `data-fortune-cell`; skip expensive HTML parse — use grid path.
     if (ctx.lastInternalCopyHtmlMetadataStripped === true) {
-      // #region agent log
-      fetch("http://127.0.0.1:7807/ingest/fc498105-2ce8-4b6c-9c08-4e5af4351528", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "62e6c9",
-        },
-        body: JSON.stringify({
-          sessionId: "62e6c9",
-          runId: "pre",
-          hypothesisId: "H4",
-          location: "fortune-internal-paste.ts:strip-fast",
-          message: "fortune decision",
-          data: { path: "strip-fast", ms: performance.now() - __fd0 },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
       return { abortPaste: false, internalFortunePaste: true };
     }
-
-    const __fdSlow0 = performance.now();
 
     const cpDataArr: string[][] = [];
 
@@ -227,30 +188,6 @@ export function computeFortuneInternalPasteDecision(
     }
 
     internalFortunePaste = isEqual;
-    // #region agent log
-    fetch("http://127.0.0.1:7807/ingest/fc498105-2ce8-4b6c-9c08-4e5af4351528", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "62e6c9",
-      },
-      body: JSON.stringify({
-        sessionId: "62e6c9",
-        runId: "pre",
-        hypothesisId: "H4",
-        location: "fortune-internal-paste.ts:table-compare",
-        message: "fortune decision",
-        data: {
-          path: "table-parse-compare",
-          totalMs: performance.now() - __fd0,
-          parseCompareMs: performance.now() - __fdSlow0,
-          trCount: regArr.length,
-          internalFortunePaste,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
   }
 
   return { abortPaste: false, internalFortunePaste };

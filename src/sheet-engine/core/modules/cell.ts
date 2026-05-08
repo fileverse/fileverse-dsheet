@@ -477,6 +477,28 @@ export function setCellValue(
 
   if (!cell) return;
 
+  // Dependency recalcs (groupValuesRefresh, Yjs/sync) can deliver numeric formula results as
+  // strings. Without coercion, `typeof vupdate === "number"` fails and we fall through to the
+  // plain-numeric path that resets `ct` to General — dropping currency and other masks.
+  if (
+    !_.isNil((cell as Cell).f) &&
+    typeof vupdate === "string" &&
+    isRealNum(vupdate) &&
+    !valueIsError(vupdate)
+  ) {
+    const trimmed = vupdate.trim();
+    if (
+      !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
+        trimmed,
+      )
+    ) {
+      const coerced = Number(trimmed);
+      if (Number.isFinite(coerced)) {
+        vupdate = coerced;
+      }
+    }
+  }
+
   const vupdateStr = vupdate.toString();
 
   if (vupdateStr.substr(0, 1) === "'") {
@@ -532,6 +554,18 @@ export function setCellValue(
       } else {
         cell.ct = { fa: "General", t: "g" };
       }
+    } else if (!_.isNil(cell.f) && Array.isArray(vupdate)) {
+      // Range spills (e.g. =A1:C1) arrive as matrices. Never run SSF/update with a numeric
+      // currency mask on an array — it becomes NaN.00. Ref-format inference is scalar-only.
+      // Spilled/matrix results: `Cell['v']` type is scalar-only at compile time, but runtime stores arrays.
+      (cell as Omit<Cell, "v"> & { v?: unknown }).v = vupdate;
+      if (_.isNil(cell.ct)) {
+        cell.ct = { fa: "General", t: "g" };
+      } else {
+        cell.ct = { ...cell.ct, fa: "General", t: "g" };
+        delete cell.ct.dp;
+      }
+      cell.m = spilledMatrixFormulaDisplay(vupdate);
     } else if (
       !_.isNil(cell.f) &&
       typeof vupdate === "number" &&
@@ -555,9 +589,14 @@ export function setCellValue(
         }
       }
 
-      // if output is number fetch fa from referenced cells
-      const isDigit = /^\d+$/.test(vupdateStr);
-      if (isDigit) {
+      // If the formula cell has no explicit mask yet, infer from referenced range (same idea as
+      // first commit in updateCell). Integers-only `^\d+$` missed decimals like SUM → 12.34.
+      const canInferRefNumberFormat =
+        isRealNum(vupdate) &&
+        /^[\d.,]+$/.test(vupdateStr.replace(/\s/g, "")) &&
+        (cell.ct.fa == null || cell.ct.fa === "" || cell.ct.fa === "General");
+
+      if (canInferRefNumberFormat) {
         const flowdata = getFlowdata(ctx);
         const args = getContentInParentheses(cell?.f)?.split(",");
         const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
@@ -566,6 +605,8 @@ export function setCellValue(
           cell.ct.fa = formatted;
           if (is_date(formatted)) {
             cell.ct.t = "d";
+          } else if (!cell.ct.t || cell.ct.t === "g") {
+            cell.ct.t = "n";
           }
         }
       }
@@ -861,7 +902,13 @@ export function setCellValue(
     if (cell?.ct?.t === "d" && cell?.ct?.fa && !isRealNull(formulaResult)) {
       (cell as Cell).m = update(cell.ct.fa, formulaResult);
     } else if (typeof formulaResult === "number") {
-      refreshGeneralNumericDisplay(cell as Cell);
+      const fa = cell?.ct?.fa;
+      if (fa && fa !== "General" && Number.isFinite(formulaResult)) {
+        const vRound = Math.round(formulaResult * 1000000000) / 1000000000;
+        (cell as Cell).m = String(update(fa, vRound));
+      } else {
+        refreshGeneralNumericDisplay(cell as Cell);
+      }
     } else if (typeof formulaResult === "boolean") {
       (cell as Cell).m = formulaResult ? "TRUE" : "FALSE";
     } else if (isRealNull(formulaResult)) {
@@ -1200,6 +1247,30 @@ export function cancelNormalSelected(ctx: Context) {
   ctx.formulaCache.rangeSelectionActive = null;
   ctx.formulaCache.keyboardRangeSelectionLock = false;
   ctx.formulaCache.formulaEditorOwner = null;
+}
+
+/** Spilled/matrix formula results — not numeric scalars. */
+function isFormulaResultNumericScalar(value: unknown): boolean {
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (typeof value !== "string") {
+    return false;
+  }
+  return /^[\d.,]+$/.test(value.replace(/\s/g, ""));
+}
+
+function spilledMatrixFormulaDisplay(matrix: unknown): string {
+  if (!Array.isArray(matrix) || matrix.length === 0) {
+    return "";
+  }
+  const first = matrix[0];
+  if (Array.isArray(first) && matrix.every((row) => Array.isArray(row))) {
+    return (matrix as unknown[][])
+      .map((row) => row.map((x) => String(x ?? "")).join(", "))
+      .join("; ");
+  }
+  return (matrix as unknown[]).map((x) => String(x ?? "")).join(", ");
 }
 
 // formula.updatecell
@@ -1670,12 +1741,18 @@ export function updateCell(
           delete (value as Cell).ct?.s;
         }
 
-        if (/^[\d.,]+$/.test(value.v)) {
+        if (isFormulaResultNumericScalar(value.v)) {
           const args = getContentInParentheses(value?.f)?.split(",");
           const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
           const formatted = processArray(cellRefs, d, flowdata);
           if (formatted) {
-            value.m = update(formatted, value.v);
+            const numArg =
+              typeof value.v === "number"
+                ? value.v
+                : Number(String(value.v).replace(/,/g, ""));
+            value.m = Number.isFinite(numArg)
+              ? String(update(formatted, numArg))
+              : String(value.v);
             value.ct = {
               ...value.ct,
               fa: formatted,
@@ -1811,7 +1888,7 @@ export function updateCell(
           return;
         }
       }
-    } catch (_e) {}
+    } catch (_e) { }
 
     // --- hyperlink support ---
     const hyperlinkKey = `${r}_${c}`;

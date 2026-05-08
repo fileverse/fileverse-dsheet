@@ -40,7 +40,7 @@ function clonePasteMatrix(arr: CellMatrix): CellMatrix {
     return arr;
   }
   // Avoid `structuredClone` on full matrices: large pastes with rich `ct`/inline
-  // strings can block the main thread for 10s+ (see debug session 62e6c9).
+  // strings can block the main thread for a long time in some engines.
   return _.cloneDeep(arr);
 }
 
@@ -1537,9 +1537,7 @@ export function pasteHandlerOfCopyPaste(
     });
   }
 
-  const __cloneBuf0 = performance.now();
   const copyData = clonePasteMatrix(arr);
-  const __cloneBufMs = performance.now() - __cloneBuf0;
 
   if (valuesOnly) {
     for (let i = 0; i < copyData.length; i += 1) {
@@ -1675,8 +1673,6 @@ export function pasteHandlerOfCopyPaste(
   const file = ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!];
   const hiddenRows = new Set(Object.keys(file.config?.rowhidden || {}));
   const hiddenCols = new Set(Object.keys(file.config?.colhidden || {}));
-
-  const __pasteT0 = performance.now();
 
   for (let th = 1; th <= timesH; th += 1) {
     for (let tc = 1; tc <= timesC; tc += 1) {
@@ -2090,8 +2086,6 @@ export function pasteHandlerOfCopyPaste(
     }
   }
 
-  const __preYdoc = performance.now();
-
   if (ctx?.hooks?.updateCellYdoc) {
     if (
       changes.length > 0 ||
@@ -2106,9 +2100,6 @@ export function pasteHandlerOfCopyPaste(
     }
   }
 
-  const __postYdoc = performance.now();
-
-  const __jf0 = performance.now();
   if (copyRowlChange || addr > 0 || addc > 0) {
     // cfg = rowlenByRange(d, minh, maxh, cfg);
     // const allParam = {
@@ -2117,49 +2108,16 @@ export function pasteHandlerOfCopyPaste(
     //   cdformat,
     //   dataVerification,
     // };
-    jfrefreshgrid(ctx, d, ctx.luckysheet_select_save, false);
+    jfrefreshgrid(ctx, d, ctx.luckysheet_select_save);
   } else {
     // const allParam = {
     //   cfg,
     //   cdformat,
     //   dataVerification,
     // };
-    jfrefreshgrid(ctx, d, ctx.luckysheet_select_save, false);
+    jfrefreshgrid(ctx, d, ctx.luckysheet_select_save);
     // selectHightlightShow();
   }
-  const __jf1 = performance.now();
-
-  // #region agent log
-  fetch("http://127.0.0.1:7807/ingest/fc498105-2ce8-4b6c-9c08-4e5af4351528", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "62e6c9",
-    },
-    body: JSON.stringify({
-      sessionId: "62e6c9",
-      runId: "pre",
-      hypothesisId: "H2-H3",
-      location: "paste-internals.ts:pasteHandlerOfCopyPaste",
-      message: "paste core segments",
-      data: {
-        preYdocMs: __preYdoc - __pasteT0,
-        ydocMs: __postYdoc - __preYdoc,
-        jfMs: __jf1 - __jf0,
-        copyh,
-        copyc,
-        timesH,
-        timesC,
-        needForkPasteCell,
-        cloneBufferMs: __cloneBufMs,
-        changesLen: changes.length,
-        dvLen: dataVerificationYdocChanges.length,
-        hlLen: hyperlinkYdocChanges.length,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 
   scheduleSheetMetadataSyncHooks(ctx);
 }
@@ -2216,7 +2174,6 @@ export function parseAsLinkIfUrl(txtdata: string, ctx: Context) {
 }
 
 export function resizePastedCellsToContent(ctx: Context) {
-  const __rz0 = performance.now();
   const lastSelectedRange =
     ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1];
   if (!lastSelectedRange) return;
@@ -2242,29 +2199,6 @@ export function resizePastedCellsToContent(ctx: Context) {
   if (sheetIdx == null) return;
 
   updateSheetCellSizes(ctx, sheetIdx, rangeCellSize);
-
-  // #region agent log
-  fetch("http://127.0.0.1:7807/ingest/fc498105-2ce8-4b6c-9c08-4e5af4351528", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "62e6c9",
-    },
-    body: JSON.stringify({
-      sessionId: "62e6c9",
-      runId: "pre",
-      hypothesisId: "H1",
-      location: "paste-internals.ts:resizePastedCellsToContent",
-      message: "auto-resize pasted range",
-      data: {
-        rzMs: performance.now() - __rz0,
-        rowSpan: endRow - startRow + 1,
-        colSpan: endCol - startCol + 1,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
 }
 
 export function shouldHandleNonTableHtml(html: string) {

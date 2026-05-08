@@ -57,9 +57,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
       txtdata = clipboardData.getData("text/plain");
     }
 
-    const __fortT0 = performance.now();
     const fortunePaste = computeFortuneInternalPasteDecision(ctx, txtdata);
-    const __fortT1 = performance.now();
     if (fortunePaste.abortPaste) {
       return;
     }
@@ -78,7 +76,6 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
       ctx.luckysheet_copy_save.copyRange.length > 0 &&
       internalFortunePaste
     ) {
-      const __ip0 = performance.now();
       if (ctx.luckysheet_paste_iscut) {
         ctx.luckysheet_paste_iscut = false;
         pasteHandlerOfCutPaste(ctx, ctx.luckysheet_copy_save);
@@ -86,34 +83,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
       } else {
         pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save, pasteValuesOnly);
       }
-      const __ip1 = performance.now();
       resizePastedCellsToContent(ctx);
-      const __ip2 = performance.now();
-      // #region agent log
-      fetch("http://127.0.0.1:7807/ingest/fc498105-2ce8-4b6c-9c08-4e5af4351528", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Debug-Session-Id": "62e6c9",
-        },
-        body: JSON.stringify({
-          sessionId: "62e6c9",
-          runId: "pre",
-          hypothesisId: "H1-H5",
-          location: "clipboard-entry.ts:internal-fortune-paste",
-          message: "paste path timings",
-          data: {
-            fortuneDecisionMs: __fortT1 - __fortT0,
-            pasteHandlerMs: __ip1 - __ip0,
-            resizeAfterPasteMs: __ip2 - __ip1,
-            internalFortunePaste: true,
-            strippedMeta: ctx.lastInternalCopyHtmlMetadataStripped === true,
-            txtLen: txtdata.length,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     } else if (txtdata.indexOf("fortune-copy-action-image") > -1) {
       // imageCtrl.pasteImgItem();
     } else {

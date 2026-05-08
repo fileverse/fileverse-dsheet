@@ -1262,18 +1262,18 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           const insertRowColOp: SetContextOptions['insertRowColOp'] | null =
             rowToBeAdded > 0
               ? {
-                  type: 'row',
-                  index:
-                    context.luckysheetfile[
-                      getSheetIndex(
-                        context,
-                        context!.currentSheetId! as string,
-                      ) as number
-                    ].data!.length - 1,
-                  count: rowToBeAdded,
-                  direction: 'rightbottom',
-                  id: context.currentSheetId,
-                }
+                type: 'row',
+                index:
+                  context.luckysheetfile[
+                    getSheetIndex(
+                      context,
+                      context!.currentSheetId! as string,
+                    ) as number
+                  ].data!.length - 1,
+                count: rowToBeAdded,
+                direction: 'rightbottom',
+                id: context.currentSheetId,
+              }
               : null;
           setContextWithProduce(
             (draftCtx) => {
