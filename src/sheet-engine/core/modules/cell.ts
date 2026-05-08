@@ -589,14 +589,16 @@ export function setCellValue(
         }
       }
 
-      // If the formula cell has no explicit mask yet, infer from referenced range (same idea as
-      // first commit in updateCell). Integers-only `^\d+$` missed decimals like SUM → 12.34.
-      const canInferRefNumberFormat =
+      // Infer / refresh numeric format from referenced cells on every numeric formula write
+      // (recalc paths), so changing A1:A3 from $ to € updates the SUM cell—not only when fa
+      // is still General.
+      const numericResultCanUseRefFmt =
         isRealNum(vupdate) &&
         /^[\d.,]+$/.test(vupdateStr.replace(/\s/g, "")) &&
-        (cell.ct.fa == null || cell.ct.fa === "" || cell.ct.fa === "General");
+        _.isNil((cell as Cell).qp) &&
+        (cell as Cell).ct?.fa !== "@";
 
-      if (canInferRefNumberFormat) {
+      if (numericResultCanUseRefFmt) {
         const flowdata = getFlowdata(ctx);
         const args = getContentInParentheses(cell?.f)?.split(",");
         const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
@@ -605,7 +607,7 @@ export function setCellValue(
           cell.ct.fa = formatted;
           if (is_date(formatted)) {
             cell.ct.t = "d";
-          } else if (!cell.ct.t || cell.ct.t === "g") {
+          } else {
             cell.ct.t = "n";
           }
         }
