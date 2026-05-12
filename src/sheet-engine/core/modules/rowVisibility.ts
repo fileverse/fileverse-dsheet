@@ -85,7 +85,6 @@ export function rebuildRowHiddenUnion(ctx: Context) {
       _.size(expected) === _.size(rowhidden) &&
       _.every(expected, (v, k) => rowhidden[k] === v);
     if (!same) {
-      // eslint-disable-next-line no-console
       console.warn('[rowVisibility] ctx.config.rowhidden diverged from union', {
         manual: _.size(manual),
         filter: _.size(filterUnion),

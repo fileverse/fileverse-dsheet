@@ -1,5 +1,5 @@
-import _ from "lodash";
-import { Context } from "../context";
+import _ from 'lodash';
+import { Context } from '../context';
 import {
   delFunctionGroup,
   dropCellCache,
@@ -9,24 +9,24 @@ import {
   updateCell,
   updateDropCell,
   updateFormatCell,
-} from "../modules";
-import { Cell, CellStyle, SingleRange } from "../types";
-import { CommonOptions, getSheet } from "./common";
-import { SHEET_NOT_FOUND } from "./errors";
+} from '../modules';
+import { Cell, CellStyle, SingleRange } from '../types';
+import { CommonOptions, getSheet } from './common';
+import { SHEET_NOT_FOUND } from './errors';
 // @ts-ignore
-import SSF from "../modules/ssf";
+import SSF from '../modules/ssf';
 
 export function getCellValue(
   ctx: Context,
   row: number,
   column: number,
-  options: CommonOptions & { type?: keyof Cell } = {}
+  options: CommonOptions & { type?: keyof Cell } = {},
 ) {
   if (!_.isNumber(row) || !_.isNumber(column)) {
-    throw new Error("row or column cannot be null or undefined");
+    throw new Error('row or column cannot be null or undefined');
   }
   const sheet = getSheet(ctx, options);
-  const { type = "v" } = options;
+  const { type = 'v' } = options;
   const targetSheetData = sheet.data;
   if (!targetSheetData) {
     throw SHEET_NOT_FOUND;
@@ -37,16 +37,16 @@ export function getCellValue(
   if (cellData && _.isPlainObject(cellData)) {
     ret = cellData[type];
 
-    if (type === "f" && ret != null) {
+    if (type === 'f' && ret != null) {
       ret = functionHTMLGenerate(ret);
-    } else if (type === "f") {
+    } else if (type === 'f') {
       ret = cellData.v;
-    } else if (cellData && cellData.ct && cellData.ct.fa === "yyyy-MM-dd") {
+    } else if (cellData && cellData.ct && cellData.ct.fa === 'yyyy-MM-dd') {
       ret = cellData.m;
-    } else if (cellData.ct?.t === "inlineStr") {
+    } else if (cellData.ct?.t === 'inlineStr') {
       ret = cellData.ct.s.reduce(
-        (prev: string, cur: any) => prev + (cur.v ?? ""),
-        ""
+        (prev: string, cur: any) => prev + (cur.v ?? ''),
+        '',
       );
     }
   }
@@ -64,13 +64,13 @@ export function setCellValue(
   column: number,
   value: any,
   cellInput: HTMLDivElement | null,
-  // eslint-disable-next-line default-param-last
+
   options: CommonOptions = {},
-  callAfterUpdate?: boolean
+  callAfterUpdate?: boolean,
 ) {
   // const afterUpdateCellCalledInInternal = false;
   if (!_.isNumber(row) || !_.isNumber(column)) {
-    throw new Error("row or column cannot be null or undefined");
+    throw new Error('row or column cannot be null or undefined');
   }
 
   const sheet = getSheet(ctx, options);
@@ -148,7 +148,7 @@ export function setCellValue(
           row,
           row,
           column,
-          column
+          column,
         ); // change range format
       } else {
         // @ts-ignore
@@ -158,8 +158,8 @@ export function setCellValue(
     data![row][column] = cell;
   } else {
     if (
-      value.toString().substr(0, 1) === "=" ||
-      value.toString().substr(0, 5) === "<span"
+      value.toString().substr(0, 1) === '=' ||
+      value.toString().substr(0, 5) === '<span'
     ) {
       updateCell(ctx, row, column, cellInput, value); // update formula value or convert inline string html to object
     } else {
@@ -177,10 +177,10 @@ export function clearCell(
   ctx: Context,
   row: number,
   column: number,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   if (!_.isNumber(row) || !_.isNumber(column)) {
-    throw new Error("row or column cannot be null or undefined");
+    throw new Error('row or column cannot be null or undefined');
   }
 
   const sheet = getSheet(ctx, options);
@@ -206,14 +206,14 @@ export function setCellFormat(
   column: number,
   attr: keyof Cell,
   value: any,
-  options: CommonOptions = {}
+  options: CommonOptions = {},
 ) {
   if (!_.isNumber(row) || !_.isNumber(column)) {
-    throw new Error("row or column cannot be null or undefined");
+    throw new Error('row or column cannot be null or undefined');
   }
 
   if (!attr) {
-    throw new Error("attr cannot be null or undefined");
+    throw new Error('attr cannot be null or undefined');
   }
 
   const sheet = getSheet(ctx, options);
@@ -227,25 +227,25 @@ export function setCellFormat(
   const cfg = sheet.config || {};
 
   // 特殊格式
-  if (attr === "ct" && (!value || value.fa == null || value.t == null)) {
+  if (attr === 'ct' && (!value || value.fa == null || value.t == null)) {
     throw new Error(
-      "'fa' and 't' should be present in value when attr is 'ct'"
+      "'fa' and 't' should be present in value when attr is 'ct'",
     );
-  } else if (attr === "ct" && !_.isNil(cellData.v)) {
+  } else if (attr === 'ct' && !_.isNil(cellData.v)) {
     cellData.m = SSF.format(value.fa, cellData.v); // auto generate mask
   }
 
   // @ts-ignore
-  if (attr === "bd") {
+  if (attr === 'bd') {
     if (cfg.borderInfo == null) {
       cfg.borderInfo = [];
     }
 
     const borderInfo = {
-      rangeType: "range",
-      borderType: "border-all",
-      color: "#000",
-      style: "1",
+      rangeType: 'range',
+      borderType: 'border-all',
+      color: '#000',
+      style: '1',
       range: [
         {
           column: [column, column],
@@ -270,7 +270,7 @@ export function autoFillCell(
   ctx: Context,
   copyRange: SingleRange,
   applyRange: SingleRange,
-  direction: "up" | "down" | "left" | "right"
+  direction: 'up' | 'down' | 'left' | 'right',
 ) {
   dropCellCache.copyRange = copyRange;
   dropCellCache.applyRange = applyRange;
@@ -285,9 +285,9 @@ export function autoFillCell(
     !typeItemHide[5] &&
     !typeItemHide[6]
   ) {
-    dropCellCache.applyType = "0";
+    dropCellCache.applyType = '0';
   } else {
-    dropCellCache.applyType = "1";
+    dropCellCache.applyType = '1';
   }
   updateDropCell(ctx);
 }

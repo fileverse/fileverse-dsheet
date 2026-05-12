@@ -20,8 +20,13 @@ export function hasChinaword(s: string) {
   return true;
 }
 
+const TEXT_HEIGHT_CACHE_MAX = 200;
+const MEASURE_TEXT_CACHE_MAX = 5000;
+
 const textHeightCache: any = {};
+let textHeightCacheSize = 0;
 let measureTextCache: any = {};
+let measureTextCacheSize = 0;
 let measureTextCellInfoCache: any = {};
 
 function getAccountingCurrencySymbol(format?: string): string | null {
@@ -67,7 +72,8 @@ function formatAccountingDisplayValue(
   const symbolWidth = renderCtx.measureText(symbol).width;
   const numberWidth = renderCtx.measureText(numericPart).width;
   const spaceWidth = Math.max(1, renderCtx.measureText(' ').width || 1);
-  const availableGap = cellWidth - horizontalPadding - symbolWidth - numberWidth;
+  const availableGap =
+    cellWidth - horizontalPadding - symbolWidth - numberWidth;
   const gapSpaces = Math.floor(availableGap / spaceWidth);
 
   if (gapSpaces <= 1) {
@@ -80,7 +86,10 @@ function formatAccountingDisplayValue(
 
 export function clearMeasureTextCache() {
   measureTextCache = {};
+  measureTextCacheSize = 0;
   measureTextCellInfoCache = {};
+  for (const k in textHeightCache) delete textHeightCache[k];
+  textHeightCacheSize = 0;
 }
 
 function getTextSize(text: string, font: string) {
@@ -100,7 +109,12 @@ function getTextSize(text: string, font: string) {
   const w = Math.max(ele.scrollWidth, ele.offsetWidth, ele.clientWidth);
   const h = Math.max(ele.scrollHeight, ele.offsetHeight, ele.clientHeight);
 
+  if (textHeightCacheSize >= TEXT_HEIGHT_CACHE_MAX) {
+    for (const k in textHeightCache) delete textHeightCache[k];
+    textHeightCacheSize = 0;
+  }
   textHeightCache[font] = [w, h];
+  textHeightCacheSize += 1;
 
   ele.remove();
   return [w, h];
@@ -284,8 +298,12 @@ export function getMeasureText(
   cache.width *= sheetCtx.zoomRatio;
   cache.actualBoundingBoxDescent *= sheetCtx.zoomRatio;
   cache.actualBoundingBoxAscent *= sheetCtx.zoomRatio;
+  if (measureTextCacheSize >= MEASURE_TEXT_CACHE_MAX) {
+    measureTextCache = {};
+    measureTextCacheSize = 0;
+  }
   measureTextCache[`${value}_${sheetCtx.zoomRatio}_${renderCtx.font}`] = cache;
-  // console.log(measureText, value);
+  measureTextCacheSize += 1;
   return cache;
 }
 
@@ -962,7 +980,7 @@ export function getCellTextInfo(
             textWidth += sc.measureText.width;
             textHeight = Math.max(
               sc.measureText.actualBoundingBoxAscent +
-              sc.measureText.actualBoundingBoxDescent,
+                sc.measureText.actualBoundingBoxDescent,
             );
             // console.log(sc.v,sc.measureText.width,sc.measureText.actualBoundingBoxAscent,sc.measureText.actualBoundingBoxDescent);
           }

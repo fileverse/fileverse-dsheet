@@ -16,7 +16,9 @@ export {
   ERROR_MESSAGES_FLAG,
   SERVICES_API_KEY,
 } from './editor/constants/shared-constants';
-export { TEMPLATES } from '@fileverse-dev/dsheets-templates';
+// Subpath import avoids the package barrel (`index.js`), which statically
+// re-exports heavy JSON — bundlers would otherwise pull all templates into the graph.
+export { TEMPLATES } from '@fileverse-dev/dsheets-templates/template-metadata-list';
 
 // Import/Export utilities
 export { handleCSVUpload } from './editor/utils/csv-import';

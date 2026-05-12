@@ -89,11 +89,13 @@ const EditorContent = ({
     setForceSheetRender,
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
+    setSelectedTemplate: contextSetSelectedTemplate,
   } = useEditor();
 
   // Initialize template button functionality
   useApplyTemplatesBtn({
     selectedTemplate,
+    setSelectedTemplate: contextSetSelectedTemplate,
     ydocRef,
     dsheetId,
     currentDataRef,

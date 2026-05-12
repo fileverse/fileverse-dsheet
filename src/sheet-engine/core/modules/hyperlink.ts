@@ -1,31 +1,31 @@
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { getSheetIndex, isAllowEdit } from "../utils";
-import { cancelNormalSelected, mergeBorder } from "./cell";
-import { setSelectionByCharacterOffset } from "./cursor";
-import { getcellrange, iscelldata } from "./formula";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { getSheetIndex, isAllowEdit } from '../utils';
+import { cancelNormalSelected, mergeBorder } from './cell';
+import { setSelectionByCharacterOffset } from './cursor';
+import { getcellrange, iscelldata } from './formula';
 import {
   applyLinkToSelection,
   convertSpanToShareString,
   getHyperlinksFromInlineSegments,
   isInlineStringCell,
   stripInlineSegmentHyperlinkDecoration,
-} from "./inline-string";
-import { colLocation, rowLocation } from "./location";
-import { normalizeSelection } from "./selection";
-import { changeSheet } from "./sheet";
-import { locale } from "../locale";
-import type { Cell, CellStyle, GlobalCache, HyperlinkEntry } from "../types";
+} from './inline-string';
+import { colLocation, rowLocation } from './location';
+import { normalizeSelection } from './selection';
+import { changeSheet } from './sheet';
+import { locale } from '../locale';
+import type { Cell, CellStyle, GlobalCache, HyperlinkEntry } from '../types';
 
 function isEmailAddressLike(value: string): boolean {
-  const v = String(value ?? "").trim();
+  const v = String(value ?? '').trim();
   if (!v) return false;
-  const noMailto = v.replace(/^mailto:/i, "");
+  const noMailto = v.replace(/^mailto:/i, '');
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(noMailto);
 }
 
 function normalizeEditorPlainText(s: string): string {
-  return s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
 export function getCellRowColumn(
@@ -33,7 +33,7 @@ export function getCellRowColumn(
   e: MouseEvent,
   container: HTMLDivElement,
   scrollX: HTMLDivElement,
-  scrollY: HTMLDivElement
+  scrollY: HTMLDivElement,
 ) {
   const flowdata = getFlowdata(ctx);
   if (flowdata == null) return undefined;
@@ -62,13 +62,13 @@ function normalizeSheetHyperlinkValue(raw: unknown): HyperlinkEntry[] {
     return raw.filter(
       (x) =>
         x &&
-        typeof x === "object" &&
+        typeof x === 'object' &&
         (x as HyperlinkEntry).linkType &&
-        (x as HyperlinkEntry).linkAddress
+        (x as HyperlinkEntry).linkAddress,
     ) as HyperlinkEntry[];
   }
   if (
-    typeof raw === "object" &&
+    typeof raw === 'object' &&
     (raw as HyperlinkEntry).linkType &&
     (raw as HyperlinkEntry).linkAddress
   ) {
@@ -86,9 +86,9 @@ function linkEquals(a: HyperlinkEntry, b: HyperlinkEntry) {
  * treating contiguous segments with the same link as one occurrence.
  */
 function getInlineHyperlinkOccurrences(
-  cell: Cell | null | undefined
+  cell: Cell | null | undefined,
 ): HyperlinkEntry[] {
-  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return [];
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return [];
   const out: HyperlinkEntry[] = [];
   let prev: HyperlinkEntry | undefined;
   for (const seg of cell.ct.s as { link?: HyperlinkEntry }[]) {
@@ -105,13 +105,19 @@ function getInlineHyperlinkOccurrences(
   return out;
 }
 
-export function getCellHyperlinks(ctx: Context, r: number, c: number): HyperlinkEntry[] {
+export function getCellHyperlinks(
+  ctx: Context,
+  r: number,
+  c: number,
+): HyperlinkEntry[] {
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIndex == null) return [];
   const raw = ctx.luckysheetfile[sheetIndex].hyperlink?.[`${r}_${c}`];
   const fromSheet = normalizeSheetHyperlinkValue(raw);
   if (fromSheet.length > 0) return fromSheet;
-  return getHyperlinksFromInlineSegments(getFlowdata(ctx)?.[r]?.[c] ?? undefined);
+  return getHyperlinksFromInlineSegments(
+    getFlowdata(ctx)?.[r]?.[c] ?? undefined,
+  );
 }
 
 export function getCellHyperlink(ctx: Context, r: number, c: number) {
@@ -121,25 +127,26 @@ export function getCellHyperlink(ctx: Context, r: number, c: number) {
 /** Join display text for all inline segments that use this link. */
 export function getHyperlinkDisplayTextInCell(
   cell: Cell | null | undefined,
-  link: HyperlinkEntry
+  link: HyperlinkEntry,
 ): string {
-  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return "";
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return '';
   return (cell.ct.s as { link?: HyperlinkEntry; v?: string }[])
     .filter((s) => s.link && linkEquals(s.link, link))
-    .map((s) => s.v ?? "")
-    .join("");
+    .map((s) => s.v ?? '')
+    .join('');
 }
 
 function normalizeInlinePlainSegment(s: string | undefined): string {
-  return (s ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return (s ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
 /** Plain-text [start, end) of consecutive inline segments that carry `target`. */
 export function getInlineLinkPlainRange(
   cell: Cell | null | undefined,
-  target: HyperlinkEntry
+  target: HyperlinkEntry,
 ): { start: number; end: number } | undefined {
-  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return undefined;
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s))
+    return undefined;
   let cursor = 0;
   let start: number | undefined;
   let end: number | undefined;
@@ -166,10 +173,11 @@ export function getInlineLinkPlainRange(
 export function getUniformLinkCoveringPlainRange(
   cell: Cell | null | undefined,
   start: number,
-  end: number
+  end: number,
 ): HyperlinkEntry | undefined {
   if (start >= end) return undefined;
-  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return undefined;
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s))
+    return undefined;
   let cursor = 0;
   let found: HyperlinkEntry | undefined;
   for (const seg of cell.ct.s as { v?: string; link?: HyperlinkEntry }[]) {
@@ -194,9 +202,10 @@ export function getUniformLinkCoveringPlainRange(
 /** Plain caret offset `pos` lies strictly inside a linked segment (before that segment's end). */
 export function getUniformLinkAtPlainOffset(
   cell: Cell | null | undefined,
-  pos: number
+  pos: number,
 ): HyperlinkEntry | undefined {
-  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return undefined;
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s))
+    return undefined;
   let cursor = 0;
   for (const seg of cell.ct.s as { v?: string; link?: HyperlinkEntry }[]) {
     const text = normalizeInlinePlainSegment(seg?.v);
@@ -214,7 +223,7 @@ function setSheetHyperlinkValue(
   sheetFile: { hyperlink?: Record<string, HyperlinkEntry | HyperlinkEntry[]> },
   r: number,
   c: number,
-  links: HyperlinkEntry[]
+  links: HyperlinkEntry[],
 ) {
   const key = `${r}_${c}`;
   if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
@@ -228,9 +237,9 @@ function setSheetHyperlinkValue(
 }
 
 function stripInlineLinkProperties(cell: Cell | null | undefined) {
-  if (cell?.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return;
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return;
   for (const seg of cell.ct.s) {
-    if (!seg || typeof seg !== "object") continue;
+    if (!seg || typeof seg !== 'object') continue;
     const s = seg as { link?: HyperlinkEntry } & CellStyle;
     if (s.link?.linkType && s.link?.linkAddress) {
       delete s.link;
@@ -240,19 +249,19 @@ function stripInlineLinkProperties(cell: Cell | null | undefined) {
 }
 
 function refreshInlineCellPlainText(cell: Cell) {
-  if (cell.ct?.t !== "inlineStr" || !Array.isArray(cell.ct.s)) return;
-  const full = (cell.ct.s as { v?: string }[]).map((s) => s.v ?? "").join("");
+  if (cell.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return;
+  const full = (cell.ct.s as { v?: string }[]).map((s) => s.v ?? '').join('');
   cell.v = full;
   cell.m = full;
 }
 
 function getCellPlainNormalized(cell: Cell | null | undefined): string {
-  if (cell?.ct?.t === "inlineStr" && Array.isArray(cell.ct.s)) {
+  if (cell?.ct?.t === 'inlineStr' && Array.isArray(cell.ct.s)) {
     return normalizeEditorPlainText(
-      (cell.ct.s as { v?: string }[]).map((s) => s?.v ?? "").join("")
+      (cell.ct.s as { v?: string }[]).map((s) => s?.v ?? '').join(''),
     );
   }
-  if (cell?.v == null || Array.isArray(cell.v)) return "";
+  if (cell?.v == null || Array.isArray(cell.v)) return '';
   return normalizeEditorPlainText(`${cell.v}`);
 }
 
@@ -261,7 +270,7 @@ function splitPlainIntoLinkedSegments(
   linkStart: number,
   linkEnd: number,
   link: HyperlinkEntry,
-  base: CellStyle
+  base: CellStyle,
 ): (CellStyle & { v?: string; link?: HyperlinkEntry })[] {
   const out: (CellStyle & { v?: string; link?: HyperlinkEntry })[] = [];
   const baseClean = { ...base };
@@ -275,7 +284,7 @@ function splitPlainIntoLinkedSegments(
       ...baseClean,
       v: t,
       link,
-      fc: "rgb(0, 0, 255)",
+      fc: 'rgb(0, 0, 255)',
       un: 1,
     });
   };
@@ -298,7 +307,7 @@ function trySaveHyperlinkSelectionFromModel(
   linkType: string,
   linkAddress: string,
   sheetIndex: number,
-  flowdata: NonNullable<ReturnType<typeof getFlowdata>>
+  flowdata: NonNullable<ReturnType<typeof getFlowdata>>,
 ): boolean {
   const offsets = ctx.linkCard?.selectionOffsets;
   if (!offsets || !linkType || !linkAddress) return false;
@@ -315,7 +324,7 @@ function trySaveHyperlinkSelectionFromModel(
   }
 
   const resolvedDisplay =
-    String(linkText ?? "").trim() || String(linkAddress ?? "").trim();
+    String(linkText ?? '').trim() || String(linkAddress ?? '').trim();
   const effectiveDisplay = normalizeEditorPlainText(resolvedDisplay);
   const fullNorm = getCellPlainNormalized(cell);
   const a = Math.max(0, Math.min(offsets.start, fullNorm.length));
@@ -324,7 +333,7 @@ function trySaveHyperlinkSelectionFromModel(
   const shouldAppend =
     effectiveDisplay.length > 0 && effectiveDisplay !== slice;
   const insertAnchor =
-    typeof ctx.linkCard?.linkInsertOffset === "number"
+    typeof ctx.linkCard?.linkInsertOffset === 'number'
       ? ctx.linkCard.linkInsertOffset
       : b;
   const insertAt = Math.max(0, Math.min(insertAnchor, fullNorm.length));
@@ -334,9 +343,7 @@ function trySaveHyperlinkSelectionFromModel(
   let linkEnd: number;
   if (shouldAppend) {
     newPlain =
-      fullNorm.slice(0, insertAt) +
-      effectiveDisplay +
-      fullNorm.slice(insertAt);
+      fullNorm.slice(0, insertAt) + effectiveDisplay + fullNorm.slice(insertAt);
     linkStart = insertAt;
     linkEnd = insertAt + effectiveDisplay.length;
   } else {
@@ -359,12 +366,12 @@ function trySaveHyperlinkSelectionFromModel(
     linkStart,
     linkEnd,
     linkEntry,
-    base
+    base,
   );
 
   const next: Cell = {
     ...cell,
-    ct: { fa: "General", tb: "1", t: "inlineStr", s: segments },
+    ct: { fa: 'General', tb: '1', t: 'inlineStr', s: segments },
   };
   delete (next as { f?: unknown }).f;
   delete (next as { hl?: unknown }).hl;
@@ -388,7 +395,7 @@ function pushHyperlinkAndCellYdoc(
   r: number,
   c: number,
   cell: Cell,
-  sheetFile: { hyperlink?: Record<string, HyperlinkEntry | HyperlinkEntry[]> }
+  sheetFile: { hyperlink?: Record<string, HyperlinkEntry | HyperlinkEntry[]> },
 ) {
   if (!ctx?.hooks?.updateCellYdoc) return;
   const key = `${r}_${c}`;
@@ -396,25 +403,30 @@ function pushHyperlinkAndCellYdoc(
   ctx.hooks.updateCellYdoc([
     {
       sheetId: ctx.currentSheetId,
-      path: ["hyperlink"],
+      path: ['hyperlink'],
       key,
       value: hv ?? null,
-      type: hv == null ? "delete" : "update",
+      type: hv == null ? 'delete' : 'update',
     },
     {
       sheetId: ctx.currentSheetId,
-      path: ["celldata"],
+      path: ['celldata'],
       value: { r, c, v: cell },
       key,
-      type: "update",
+      type: 'update',
     },
   ]);
 }
 
 /** After changing hyperlinks on (r,c), update or close `ctx.linkCard` if it matches. */
-export function syncLinkCardAfterHyperlinkChange(ctx: Context, r: number, c: number) {
+export function syncLinkCardAfterHyperlinkChange(
+  ctx: Context,
+  r: number,
+  c: number,
+) {
   const rc = `${r}_${c}`;
-  if (ctx.linkCard?.rc !== rc || ctx.linkCard.sheetId !== ctx.currentSheetId) return;
+  if (ctx.linkCard?.rc !== rc || ctx.linkCard.sheetId !== ctx.currentSheetId)
+    return;
   const links = getCellHyperlinks(ctx, r, c);
   if (links.length === 0) {
     ctx.linkCard = undefined;
@@ -429,7 +441,7 @@ export function syncLinkCardAfterHyperlinkChange(ctx: Context, r: number, c: num
   ctx.linkCard.originType = first.linkType;
   ctx.linkCard.originAddress = first.linkAddress;
   ctx.linkCard.originText =
-    cell?.v != null && !Array.isArray(cell.v) ? `${cell.v}` : "";
+    cell?.v != null && !Array.isArray(cell.v) ? `${cell.v}` : '';
 }
 
 export function saveHyperlink(
@@ -444,7 +456,7 @@ export function saveHyperlink(
     cellInput?: HTMLDivElement | null;
     /** When true, apply range from ctx.linkCard using cell data only (no active editor). */
     applySelectionFromModel?: boolean;
-  }
+  },
 ) {
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   const flowdata = getFlowdata(ctx);
@@ -461,7 +473,7 @@ export function saveHyperlink(
       linkType,
       linkAddress,
       sheetIndex,
-      flowdata
+      flowdata,
     )
   ) {
     return;
@@ -481,13 +493,13 @@ export function saveHyperlink(
       if (curv == null || !_.isPlainObject(curv)) curv = {};
       const editor = options.cellInput;
       const resolvedDisplay =
-        String(linkText ?? "").trim() || String(linkAddress ?? "").trim();
+        String(linkText ?? '').trim() || String(linkAddress ?? '').trim();
       const effectiveDisplay = normalizeEditorPlainText(resolvedDisplay);
 
       const offsets = ctx.linkCard?.selectionOffsets;
       if (offsets) {
         const fullNorm = normalizeEditorPlainText(
-          editor.innerText ?? editor.textContent ?? ""
+          editor.innerText ?? editor.textContent ?? '',
         );
         const a = Math.max(0, Math.min(offsets.start, fullNorm.length));
         const b = Math.max(a, Math.min(offsets.end, fullNorm.length));
@@ -495,7 +507,7 @@ export function saveHyperlink(
         const shouldAppend =
           effectiveDisplay.length > 0 && effectiveDisplay !== slice;
         const insertAnchor =
-          typeof ctx.linkCard?.linkInsertOffset === "number"
+          typeof ctx.linkCard?.linkInsertOffset === 'number'
             ? ctx.linkCard.linkInsertOffset
             : b;
         const insertAt = Math.max(0, Math.min(insertAnchor, fullNorm.length));
@@ -504,9 +516,9 @@ export function saveHyperlink(
         if (shouldAppend) {
           setSelectionByCharacterOffset(editor, insertAt, insertAt);
           document.execCommand(
-            "insertText",
+            'insertText',
             false,
-            effectiveDisplay.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+            effectiveDisplay.replace(/\r\n/g, '\n').replace(/\r/g, '\n'),
           );
           const insLen = effectiveDisplay.length;
           setSelectionByCharacterOffset(editor, insertAt, insertAt + insLen);
@@ -520,12 +532,12 @@ export function saveHyperlink(
 
       const fontSize = (curv as Cell).fs || 10;
       if (!(curv as Cell).ct) {
-        (curv as Cell).ct = { fa: "General", tb: "1" };
+        (curv as Cell).ct = { fa: 'General', tb: '1' };
       }
-      (curv as Cell).ct!.t = "inlineStr";
+      (curv as Cell).ct!.t = 'inlineStr';
       (curv as Cell).ct!.s = convertSpanToShareString(
-        options.cellInput.querySelectorAll("span"),
-        curv as Cell
+        options.cellInput.querySelectorAll('span'),
+        curv as Cell,
       );
       delete (curv as Cell).f;
       delete (curv as Cell).hl;
@@ -550,11 +562,11 @@ export function saveHyperlink(
   if (sheetIndex != null && flowdata != null && linkType && linkAddress) {
     let cell = flowdata[r][c];
     if (cell == null) cell = {};
-    _.set(ctx.luckysheetfile[sheetIndex], ["hyperlink", `${r}_${c}`], {
+    _.set(ctx.luckysheetfile[sheetIndex], ['hyperlink', `${r}_${c}`], {
       linkType,
       linkAddress,
     });
-    cell.fc = "rgb(0, 0, 255)";
+    cell.fc = 'rgb(0, 0, 255)';
     cell.un = 1;
     cell.v = linkText || linkAddress;
     cell.m = linkText || linkAddress;
@@ -565,14 +577,14 @@ export function saveHyperlink(
       ctx?.hooks?.updateCellYdoc([
         {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r,
             c,
             v: cell,
           },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         },
       ]);
     }
@@ -588,9 +600,9 @@ export function removeHyperlink(ctx: Context, r: number, c: number) {
   if (flowdata != null && sheetIndex != null) {
     const hyperlink = _.omit(
       ctx.luckysheetfile[sheetIndex].hyperlink,
-      `${r}_${c}`
+      `${r}_${c}`,
     );
-    _.set(ctx.luckysheetfile[sheetIndex], "hyperlink", hyperlink);
+    _.set(ctx.luckysheetfile[sheetIndex], 'hyperlink', hyperlink);
     const cell = flowdata[r][c];
     if (cell != null) {
       stripInlineLinkProperties(cell);
@@ -606,19 +618,19 @@ export function removeHyperlink(ctx: Context, r: number, c: number) {
     const changes: any[] = [
       {
         sheetId: ctx.currentSheetId,
-        path: ["hyperlink"],
+        path: ['hyperlink'],
         key: `${r}_${c}`,
         value: null,
-        type: "delete",
+        type: 'delete',
       },
     ];
     if (updatedCell != null) {
       changes.push({
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: updatedCell },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       });
     }
     ctx.hooks.updateCellYdoc(changes);
@@ -630,7 +642,7 @@ export function removeHyperlinkForLink(
   ctx: Context,
   r: number,
   c: number,
-  target: HyperlinkEntry
+  target: HyperlinkEntry,
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
@@ -645,7 +657,7 @@ export function removeHyperlinkForLink(
   const cell = flowdata[r][c];
   if (cell == null) return;
 
-  if (cell.ct?.t === "inlineStr" && Array.isArray(cell.ct.s)) {
+  if (cell.ct?.t === 'inlineStr' && Array.isArray(cell.ct.s)) {
     for (const seg of cell.ct.s as { link?: HyperlinkEntry; v?: string }[]) {
       if (seg.link && linkEquals(seg.link, target)) {
         delete seg.link;
@@ -673,10 +685,10 @@ export function removeHyperlinkForLink(
     ctx.hooks.updateCellYdoc([
       {
         sheetId: ctx.currentSheetId,
-        path: ["hyperlink"],
+        path: ['hyperlink'],
         key,
         value: next.length === 1 ? next[0] : next,
-        type: "update",
+        type: 'update',
       },
     ]);
   }
@@ -691,7 +703,7 @@ export function updateHyperlinkForLink(
   target: HyperlinkEntry,
   linkText: string,
   linkType: string,
-  linkAddress: string
+  linkAddress: string,
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit) return;
@@ -706,10 +718,10 @@ export function updateHyperlinkForLink(
   const cell = flowdata[r][c];
   if (cell == null) return;
 
-  if (cell.ct?.t === "inlineStr" && Array.isArray(cell.ct.s)) {
-    const matched = (cell.ct.s as { link?: HyperlinkEntry; v?: string }[]).filter(
-      (s) => s.link && linkEquals(s.link, target)
-    );
+  if (cell.ct?.t === 'inlineStr' && Array.isArray(cell.ct.s)) {
+    const matched = (
+      cell.ct.s as { link?: HyperlinkEntry; v?: string }[]
+    ).filter((s) => s.link && linkEquals(s.link, target));
     const nextLink: HyperlinkEntry = { linkType, linkAddress };
     for (const seg of cell.ct.s as { link?: HyperlinkEntry; v?: string }[]) {
       if (seg.link && linkEquals(seg.link, target)) {
@@ -733,7 +745,7 @@ export function updateHyperlinkForLink(
   const next = [...list];
   next[idx] = { linkType, linkAddress };
   setSheetHyperlinkValue(sheetFile, r, c, next);
-  if (cell && typeof cell === "object") {
+  if (cell && typeof cell === 'object') {
     (cell as Cell).v = linkText || linkAddress;
     (cell as Cell).m = linkText || linkAddress;
   }
@@ -741,19 +753,19 @@ export function updateHyperlinkForLink(
     const changes: any[] = [
       {
         sheetId: ctx.currentSheetId,
-        path: ["hyperlink"],
+        path: ['hyperlink'],
         key,
         value: next.length === 1 ? next[0] : next,
-        type: "update",
+        type: 'update',
       },
     ];
     if (cell != null) {
       changes.push({
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: cell },
         key,
-        type: "update",
+        type: 'update',
       });
     }
     ctx.hooks.updateCellYdoc(changes);
@@ -779,7 +791,7 @@ export function showLinkCard(
     caretViewLink?: HyperlinkEntry;
   },
   isEditing = false,
-  isMouseDown = false
+  isMouseDown = false,
 ) {
   const isCellEditingActiveForThisCell =
     (ctx.luckysheetCellUpdate?.length ?? 0) === 2 &&
@@ -824,9 +836,7 @@ export function showLinkCard(
   if (
     isEditing ||
     (link != null && (!ctx.linkCard?.isEditing || isMouseDown)) ||
-    (caretViewLink != null &&
-      isCellEditingActiveForThisCell &&
-      !isEditing) ||
+    (caretViewLink != null && isCellEditingActiveForThisCell && !isEditing) ||
     ctx.linkCard?.sheetId !== ctx.currentSheetId
   ) {
     const col_pre = c - 1 === -1 ? 0 : ctx.visibledatacolumn[c - 1];
@@ -837,22 +847,21 @@ export function showLinkCard(
         const disp = getHyperlinkDisplayTextInCell(cell, caretViewLink);
         if (disp.length > 0) return disp;
       }
-      if (cell?.v == null) return "";
+      if (cell?.v == null) return '';
       return `${cell.v}`;
     })();
     // Insert-on-selection: do not reuse existing cell links (would open "edit first link" and
     // route save to updateHyperlinkForLink instead of saveHyperlink).
     const linkForDefaults =
+      insertingOnSelection || isEditing ? undefined : (caretViewLink ?? link);
+    const linksForCard =
       insertingOnSelection || isEditing
         ? undefined
-        : caretViewLink ?? link;
-    const linksForCard = insertingOnSelection || isEditing
-      ? undefined
-      : caretViewLink
-        ? [caretViewLink]
-        : linksForView.length > 0
-          ? linksForView
-          : undefined;
+        : caretViewLink
+          ? [caretViewLink]
+          : linksForView.length > 0
+            ? linksForView
+            : undefined;
     ctx.linkCard = {
       sheetId: ctx.currentSheetId,
       r,
@@ -862,11 +871,9 @@ export function showLinkCard(
       originType:
         options?.prefillLink?.linkType ??
         linkForDefaults?.linkType ??
-        "webpage",
+        'webpage',
       originAddress:
-        options?.prefillLink?.linkAddress ??
-        linkForDefaults?.linkAddress ??
-        "",
+        options?.prefillLink?.linkAddress ?? linkForDefaults?.linkAddress ?? '',
       links: linksForCard,
       editingLinkIndex: undefined,
       position: {
@@ -888,16 +895,16 @@ export function goToLink(
   linkType: string,
   linkAddress: string,
   scrollbarX: HTMLDivElement,
-  scrollbarY: HTMLDivElement
+  scrollbarY: HTMLDivElement,
 ) {
   const currSheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
   if (currSheetIndex == null) return;
   if (getCellHyperlinks(ctx, r, c).length === 0) return;
-  if (linkType === "webpage") {
-    const raw = String(linkAddress ?? "").trim();
+  if (linkType === 'webpage') {
+    const raw = String(linkAddress ?? '').trim();
     if (!raw) return;
     if (isEmailAddressLike(raw)) {
-      const email = raw.replace(/^mailto:/i, "");
+      const email = raw.replace(/^mailto:/i, '');
       window.open(`mailto:${email}`);
     } else {
       let toOpen = raw;
@@ -906,7 +913,7 @@ export function goToLink(
       }
       window.open(toOpen);
     }
-  } else if (linkType === "sheet") {
+  } else if (linkType === 'sheet') {
     let sheetId;
     _.forEach(ctx.luckysheetfile, (f) => {
       if (linkAddress === f.name) {
@@ -934,13 +941,13 @@ export function goToLink(
 export function isLinkValid(
   ctx: Context,
   linkType: string,
-  linkAddress: string
+  linkAddress: string,
 ) {
-  if (!linkAddress) return { isValid: false, tooltip: "" };
+  if (!linkAddress) return { isValid: false, tooltip: '' };
   const { insertLink } = locale(ctx);
-  const raw = String(linkAddress ?? "").trim();
+  const raw = String(linkAddress ?? '').trim();
   if (isEmailAddressLike(raw)) {
-    return { isValid: true, tooltip: "" };
+    return { isValid: true, tooltip: '' };
   }
   // prepend https:// if missing
   if (!/^https?:\/\//i.test(linkAddress)) {
@@ -955,26 +962,26 @@ export function isLinkValid(
   if (!isValid) {
     return { isValid: false, tooltip: insertLink.tooltipInfo1 };
   }
-  if (linkType === "cellrange" && !iscelldata(linkAddress)) {
+  if (linkType === 'cellrange' && !iscelldata(linkAddress)) {
     return { isValid: false, tooltip: insertLink.invalidCellRangeTip };
   }
-  return { isValid: true, tooltip: "" };
+  return { isValid: true, tooltip: '' };
 }
 
 export function onRangeSelectionModalMoveStart(
   ctx: Context,
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   const box = document.querySelector(
-    "div.fortune-link-modify-modal.range-selection-modal"
+    'div.fortune-link-modify-modal.range-selection-modal',
   ) as HTMLDivElement;
   if (!box) return;
   const { width, height } = box.getBoundingClientRect();
   const left = box.offsetLeft;
   const top = box.offsetTop;
   const initialPosition = { left, top, width, height };
-  _.set(globalCache, "linkCard.rangeSelectionModal", {
+  _.set(globalCache, 'linkCard.rangeSelectionModal', {
     cursorMoveStartPosition: {
       x: e.pageX,
       y: e.pageY,
@@ -985,12 +992,12 @@ export function onRangeSelectionModalMoveStart(
 
 export function onRangeSelectionModalMove(
   globalCache: GlobalCache,
-  e: MouseEvent
+  e: MouseEvent,
 ) {
   const moveProps = globalCache.linkCard?.rangeSelectionModal;
   if (moveProps == null) return;
   const modal = document.querySelector(
-    "div.fortune-link-modify-modal.range-selection-modal"
+    'div.fortune-link-modify-modal.range-selection-modal',
   );
   const { x: startX, y: startY } = moveProps.cursorMoveStartPosition!;
   let { top, left } = moveProps.initialPosition!;
@@ -1002,5 +1009,5 @@ export function onRangeSelectionModalMove(
 }
 
 export function onRangeSelectionModalMoveEnd(globalCache: GlobalCache) {
-  _.set(globalCache, "linkCard.rangeSelectionModal", undefined);
+  _.set(globalCache, 'linkCard.rangeSelectionModal', undefined);
 }

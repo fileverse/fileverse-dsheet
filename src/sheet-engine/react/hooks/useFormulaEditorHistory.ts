@@ -1,12 +1,12 @@
-import { useCallback, useRef, type RefObject } from "react";
-import { type Context, escapeScriptTag } from "@sheet-engine/core";
+import { useCallback, useRef, type RefObject } from 'react';
+import { type Context, escapeScriptTag } from '@sheet-engine/core';
 import {
   getCursorPosition,
   getSelectionOffsets,
   setSelectionOffsets,
   setCursorPosition,
-} from "../components/SheetOverlay/helper";
-import type { SetContextOptions } from "../context";
+} from '../components/SheetOverlay/helper';
+import type { SetContextOptions } from '../context';
 
 export type FormulaHistoryEntry = {
   html: string;
@@ -14,27 +14,27 @@ export type FormulaHistoryEntry = {
 };
 
 /** Which editor receives caret placement and drives history snapshots. */
-export type FormulaEditorHistoryPrimary = "cell" | "fx";
+export type FormulaEditorHistoryPrimary = 'cell' | 'fx';
 
 type SetContext = (
   recipe: (ctx: Context) => void,
-  options?: SetContextOptions
+  options?: SetContextOptions,
 ) => void;
 
 const MAX_FORMULA_HISTORY = 100;
 
 function normalizeEditorHtmlSnapshot(html: string): string {
   // Treat editor placeholders as "empty" so undo can clear the first char.
-  const stripped = (html ?? "").replace(/\u200B/g, "").trim();
+  const stripped = (html ?? '').replace(/\u200B/g, '').trim();
   if (
-    stripped === "" ||
-    stripped === "<br>" ||
-    stripped === "<div><br></div>" ||
-    stripped === "<div></div>"
+    stripped === '' ||
+    stripped === '<br>' ||
+    stripped === '<div><br></div>' ||
+    stripped === '<div></div>'
   ) {
-    return "";
+    return '';
   }
-  return html ?? "";
+  return html ?? '';
 }
 
 /**
@@ -46,10 +46,10 @@ export function useFormulaEditorHistory(
   cellInputRef: RefObject<HTMLDivElement | null>,
   fxInputRef: RefObject<HTMLDivElement | null>,
   _setContext: SetContext,
-  primary: FormulaEditorHistoryPrimary
+  primary: FormulaEditorHistoryPrimary,
 ) {
-  const preTextRef = useRef("");
-  const preHtmlRef = useRef("");
+  const preTextRef = useRef('');
+  const preHtmlRef = useRef('');
   const preCaretRef = useRef<number>(0);
   const startedFromEmptyRef = useRef<boolean>(true);
   const formulaHistoryRef = useRef<{
@@ -70,7 +70,7 @@ export function useFormulaEditorHistory(
       entries: [],
       index: -1,
     };
-    preHtmlRef.current = "";
+    preHtmlRef.current = '';
     preCaretRef.current = 0;
     startedFromEmptyRef.current = true;
   }, []);
@@ -95,7 +95,7 @@ export function useFormulaEditorHistory(
   const applyFormulaHistoryEntry = useCallback(
     (
       entry: FormulaHistoryEntry,
-      preserveSelection?: { start: number; end: number }
+      preserveSelection?: { start: number; end: number },
     ) => {
       const primaryEl = primaryRef.current;
       if (!primaryEl) return;
@@ -103,13 +103,13 @@ export function useFormulaEditorHistory(
       isApplyingHistoryRef.current = true;
 
       // We store and re-apply raw `innerHTML` snapshots.
-      const html = escapeScriptTag(entry.html ?? "");
+      const html = escapeScriptTag(entry.html ?? '');
 
       const cell = cellInputRef.current;
       const fx = fxInputRef.current;
 
       primaryEl.innerHTML = html;
-      if (primary === "cell") {
+      if (primary === 'cell') {
         if (fx) fx.innerHTML = html;
       } else if (cell) {
         cell.innerHTML = html;
@@ -137,7 +137,7 @@ export function useFormulaEditorHistory(
         });
       });
     },
-    [cellInputRef, fxInputRef, primary, primaryRef]
+    [cellInputRef, fxInputRef, primary, primaryRef],
   );
 
   const handleFormulaHistoryUndoRedo = useCallback(
@@ -149,10 +149,10 @@ export function useFormulaEditorHistory(
       if (nextIndex < 0 || nextIndex >= history.entries.length) {
         if (!isRedo && nextIndex < 0 && startedFromEmptyRef.current) {
           const liveHtml = normalizeEditorHtmlSnapshot(
-            primaryRef.current?.innerHTML ?? ""
+            primaryRef.current?.innerHTML ?? '',
           );
-          if (liveHtml !== "") {
-            history.entries[0] = { html: "", caret: 0 };
+          if (liveHtml !== '') {
+            history.entries[0] = { html: '', caret: 0 };
             history.index = 0;
             const currentSelection = primaryRef.current
               ? getSelectionOffsets(primaryRef.current)
@@ -171,7 +171,7 @@ export function useFormulaEditorHistory(
       applyFormulaHistoryEntry(entry, currentSelection);
       return true;
     },
-    [applyFormulaHistoryEntry, primaryRef]
+    [applyFormulaHistoryEntry, primaryRef],
   );
 
   /** Call at editor keydown start (formula + plain/rich text). */
@@ -183,7 +183,7 @@ export function useFormulaEditorHistory(
     preCaretRef.current = getCursorPosition(el);
     if (!formulaHistoryRef.current.active) {
       startedFromEmptyRef.current =
-        normalizeEditorHtmlSnapshot(preHtmlRef.current ?? "") === "";
+        normalizeEditorHtmlSnapshot(preHtmlRef.current ?? '') === '';
     }
   }, [primaryRef]);
 
@@ -207,22 +207,22 @@ export function useFormulaEditorHistory(
       if (!el) return;
 
       const preHtmlSnapshot = normalizeEditorHtmlSnapshot(
-        preHtmlRef.current ?? ""
+        preHtmlRef.current ?? '',
       );
-      const snapshotHtml = normalizeEditorHtmlSnapshot(el.innerHTML ?? "");
+      const snapshotHtml = normalizeEditorHtmlSnapshot(el.innerHTML ?? '');
       const caret = getCaret();
 
       const history = formulaHistoryRef.current;
       const wasInactive = !history.active || history.entries.length === 0;
 
       if (wasInactive) {
-        startedFromEmptyRef.current = preHtmlSnapshot === "";
+        startedFromEmptyRef.current = preHtmlSnapshot === '';
         // Seed with the captured pre-state, then push the post-state.
         // If pre and post match (can happen on the first character due to
         // editor placeholder/DOM timing), force a truly empty seed so undo
         // can clear the first character.
         const seedHtml =
-          preHtmlSnapshot === snapshotHtml ? "" : preHtmlSnapshot ?? "";
+          preHtmlSnapshot === snapshotHtml ? '' : (preHtmlSnapshot ?? '');
         pushFormulaHistoryEntry({
           html: seedHtml,
           caret: preCaretRef.current,
@@ -234,7 +234,7 @@ export function useFormulaEditorHistory(
         caret,
       });
     },
-    [primaryRef, pushFormulaHistoryEntry]
+    [primaryRef, pushFormulaHistoryEntry],
   );
 
   return {

@@ -59,7 +59,11 @@ const CellDatePicker: React.FC<{ variant?: CellDatePickerVariant }> = ({
     const cell = d?.[r]?.[c];
     if (cell?.ct?.t !== 'd') return null;
     return { r, c, cell };
-  }, [context.luckysheetCellUpdate, context.currentSheetId, context.luckysheetfile]);
+  }, [
+    context.luckysheetCellUpdate,
+    context.currentSheetId,
+    context.luckysheetfile,
+  ]);
 
   const owner = getFormulaEditorOwner(context);
   const ownerMatchesVariant =

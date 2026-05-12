@@ -1,30 +1,26 @@
-import _, { isObject } from "lodash";
-import { Context, getFlowdata } from "../context";
-import { execfunction } from "../modules/formula";
-import { getdatabyselection } from "../modules/cell";
-import { update, genarate } from "../modules/format";
-import { normalizeSelection } from "../modules/selection";
-import { Cell, CellMatrix, HyperlinkEntry } from "../types";
-import { getSheetIndex, isAllowEdit } from "../utils";
-import { hasPartMC, isRealNum } from "../modules/validation";
-import { getBorderInfoCompute } from "../modules/border";
-import { expandRowsAndColumns, storeSheetParamALL } from "../modules/sheet";
-import { jfrefreshgrid } from "../modules/refresh";
-import {
-  CFSplitRange,
-  saveHyperlink,
-  spillSortResult,
-} from "../modules";
+import _, { isObject } from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { execfunction } from '../modules/formula';
+import { getdatabyselection } from '../modules/cell';
+import { update, genarate } from '../modules/format';
+import { normalizeSelection } from '../modules/selection';
+import { Cell, CellMatrix, HyperlinkEntry } from '../types';
+import { getSheetIndex, isAllowEdit } from '../utils';
+import { hasPartMC, isRealNum } from '../modules/validation';
+import { getBorderInfoCompute } from '../modules/border';
+import { expandRowsAndColumns, storeSheetParamALL } from '../modules/sheet';
+import { jfrefreshgrid } from '../modules/refresh';
+import { CFSplitRange, saveHyperlink, spillSortResult } from '../modules';
 import {
   calculateRangeCellSize,
   updateSheetCellSizes,
-} from "../paste-helpers/calculate-range-cell-size";
-import { scheduleSheetMetadataSyncHooks } from "../modules/sheet-metadata-hooks";
-import { adjustFormulaForPaste } from "./formula-adjust";
+} from '../paste-helpers/calculate-range-cell-size';
+import { scheduleSheetMetadataSyncHooks } from '../modules/sheet-metadata-hooks';
+import { adjustFormulaForPaste } from './formula-adjust';
 
 /** Deep-clone a cell for paste targets; avoids double-`cloneDeep` when assigning into the grid. */
 function clonePasteCellValue(cell: any): any {
-  if (cell == null || typeof cell !== "object") {
+  if (cell == null || typeof cell !== 'object') {
     return cell;
   }
   try {
@@ -48,7 +44,7 @@ function postPasteCut(
   ctx: Context,
   source: any,
   target: any,
-  RowlChange: boolean
+  RowlChange: boolean,
 ) {
   // 单元格数据更新联动
   const execF_rc: any = {};
@@ -246,7 +242,7 @@ const handleFormulaOnPaste = (ctx: Context, d: any) => {
     const x = d[r];
     for (let c = 0; c < d[0].length; c += 1) {
       const value = isObject(d[r][c]) ? d[r][c]?.v : d[r][c];
-      if (value && String(value).startsWith("=")) {
+      if (value && String(value).startsWith('=')) {
         const cell: Cell = {};
         const [, v, f] = execfunction(
           ctx,
@@ -255,7 +251,7 @@ const handleFormulaOnPaste = (ctx: Context, d: any) => {
           c,
           undefined,
           undefined,
-          true
+          true,
         );
 
         cell.v = v;
@@ -265,14 +261,14 @@ const handleFormulaOnPaste = (ctx: Context, d: any) => {
 
         changes.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r,
             c,
             v: d[r][c],
           },
           key: `${r}_${c}`,
-          type: "update",
+          type: 'update',
         });
       }
       d[r] = x;
@@ -287,7 +283,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
   const normalizeDecimalStringOnPaste = (input: string): string => {
     const trimmed = input.trim();
     if (!/^[+-]?\d+\.\d+$/.test(trimmed)) return input;
-    return trimmed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+    return trimmed.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
   };
 
   if (ctx.luckysheet_selection_range) {
@@ -316,7 +312,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
     return;
   }
 
-  if (typeof data === "object") {
+  if (typeof data === 'object') {
     if (data.length === 0) {
       return;
     }
@@ -387,7 +383,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
 
       for (let c = minc; c <= maxc; c += 1) {
         if (x?.[c]?.mc) {
-          if ("rs" in x[c]!.mc!) {
+          if ('rs' in x[c]!.mc!) {
             delete cfg.merge[`${x[c]!.mc!.r}_${x[c]!.mc!.c}`];
           }
           delete x![c]!.mc;
@@ -401,25 +397,25 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         // Normalize pasted object/table values as dates too (HTML paste can bypass
         // the plain-text date path). This keeps direct paste behavior aligned with
         // typing/InputBox detection.
-        if (typeof value === "string") {
+        if (typeof value === 'string') {
           const generated = genarate(value);
-          if (generated?.[1]?.t === "d") {
+          if (generated?.[1]?.t === 'd') {
             const [m, ct, v] = generated;
             value = {
               v,
               m: m != null ? String(m) : value,
               ct,
-              tb: "1",
+              tb: '1',
             };
           }
         } else if (
           value &&
-          typeof value === "object" &&
+          typeof value === 'object' &&
           !isObject(value.v) &&
-          typeof value.v === "string"
+          typeof value.v === 'string'
         ) {
           const generated = genarate(value.v);
-          if (generated?.[1]?.t === "d") {
+          if (generated?.[1]?.t === 'd') {
             const [m, ct, v] = generated;
             value = {
               ...value,
@@ -456,7 +452,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
 
         if (borderInfo[`${h - minh}_${c - minc}`]) {
           const bd_obj = {
-            rangeType: "cell",
+            rangeType: 'cell',
             value: {
               row_index: h,
               col_index: c,
@@ -480,14 +476,14 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
 
         changes.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r: h,
             c,
             v: d[h][c],
           },
           key: `${h}_${c}`,
-          type: "update",
+          type: 'update',
         });
       }
       d[h] = x;
@@ -518,7 +514,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
       // selectHightlightShow();
     }
     jfrefreshgrid(ctx, null, undefined);
-    if (data.includes("=")) {
+    if (data.includes('=')) {
       handleFormulaOnPaste(ctx, d);
     }
     // for (let r = 0; r < d.length; r += 1) {
@@ -538,7 +534,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
     //   }
     // }
   } else {
-    data = data.replace(/\r/g, "");
+    data = data.replace(/\r/g, '');
     const dataChe: any[][] = [];
 
     // Detect a CSV-quoted single-cell multiline value written by fortune-sheet's
@@ -549,20 +545,20 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
     // wrapping reason) and has no \t (which would indicate multi-column data).
     if (data.startsWith('"') && data.endsWith('"') && data.length > 1) {
       const inner = data.slice(1, -1);
-      if (inner.includes("\n") && !inner.includes("\t")) {
+      if (inner.includes('\n') && !inner.includes('\t')) {
         dataChe.push([inner.replace(/""/g, '"')]);
       }
     }
 
     if (dataChe.length === 0) {
-      const che = data.split("\n");
-      const colchelen = che[0].split("\t").length;
+      const che = data.split('\n');
+      const colchelen = che[0].split('\t').length;
 
       for (let i = 0; i < che.length; i += 1) {
-        if (che[i].split("\t").length < colchelen) {
+        if (che[i].split('\t').length < colchelen) {
           continue;
         }
-        dataChe.push(che[i].split("\t"));
+        dataChe.push(che[i].split('\t'));
       }
     }
 
@@ -587,7 +583,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         curR,
         curR + rlen - 1,
         curC,
-        curC + clen - 1
+        curC + clen - 1,
       );
     }
 
@@ -616,14 +612,14 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
       // only treat a single token as a URL (no spaces/newlines)
       if (!t || /[\s\r\n]/.test(t)) return null;
       if (!/^(https?:\/\/|www\.)\S+$/i.test(t)) return null;
-      return t.startsWith("http") ? t : `https://${t}`;
+      return t.startsWith('http') ? t : `https://${t}`;
     };
 
     const applyMultilineTextToCell = (cell: Cell, text: string) => {
-      const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const inlineStringSegment: Record<string, any> = { v: normalizedText };
 
-      ["fs", "fc", "ff", "bl", "it", "un", "cl"].forEach((key) => {
+      ['fs', 'fc', 'ff', 'bl', 'it', 'un', 'cl'].forEach((key) => {
         const typedKey = key as keyof Cell;
         const currentValue = cell[typedKey];
         if (currentValue != null) {
@@ -634,11 +630,11 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
       cell.v = normalizedText;
       cell.m = normalizedText;
       cell.ct = {
-        fa: cell.ct?.fa === "@" ? "@" : "General",
-        t: "inlineStr",
+        fa: cell.ct?.fa === '@' ? '@' : 'General',
+        t: 'inlineStr',
         s: [inlineStringSegment],
       } as any;
-      cell.tb = "2";
+      cell.tb = '2';
     };
 
     const changes: any = [];
@@ -649,9 +645,9 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         let value = dataChe[r][c];
         const originalValueStr = String(value);
         const normalizedValueStr = originalValueStr
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n");
-        const isMultilineValue = normalizedValueStr.includes("\n");
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n');
+        const isMultilineValue = normalizedValueStr.includes('\n');
 
         // Check if the value is a URL first - if so, keep it as string and skip number conversion
         const url = getUrlFromText(normalizedValueStr);
@@ -662,14 +658,12 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
             ? normalizeDecimalStringOnPaste(normalizedValueStr)
             : normalizedValueStr;
         const generatedDateValue =
-          !isUrl && !isMultilineValue
-            ? genarate(normalizedValueStr)
-            : null;
-        const isGeneratedDate = generatedDateValue?.[1]?.t === "d";
+          !isUrl && !isMultilineValue ? genarate(normalizedValueStr) : null;
+        const isGeneratedDate = generatedDateValue?.[1]?.t === 'd';
 
         if (!isUrl && !isMultilineValue && isRealNum(value)) {
           // 如果单元格设置了纯文本格式，那么就不要转成数值类型了，防止数值过大自动转成科学计数法
-          if (originCell && originCell.ct && originCell.ct.fa === "@") {
+          if (originCell && originCell.ct && originCell.ct.fa === '@') {
             value = normalizedNumericValueStr;
           } else if (!/^0x?[a-fA-F0-9]+$/.test(value)) {
             value = parseFloat(normalizedNumericValueStr);
@@ -688,7 +682,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
             const generated = genarate(normalizedNumericValueStr);
             if (generated) {
               const [genM, genCt, genV] = generated;
-              if (genCt?.t === "d") {
+              if (genCt?.t === 'd') {
                 // Pasted value is a date — always update ct so toolbar shows "Date"
                 originCell.v = genV;
                 originCell.m = genM ?? normalizedNumericValueStr;
@@ -698,8 +692,8 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
                 originCell.v = value;
                 if (originCell.ct != null && originCell.ct.fa != null) {
                   if (
-                    originCell.ct.t === "d" &&
-                    typeof originCell.v !== "number"
+                    originCell.ct.t === 'd' &&
+                    typeof originCell.v !== 'number'
                   ) {
                     originCell.m = String(originCell.v);
                   } else {
@@ -707,7 +701,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
                   }
                 } else {
                   originCell.m =
-                    typeof originCell.v === "boolean"
+                    typeof originCell.v === 'boolean'
                       ? String(originCell.v)
                       : originCell.v;
                 }
@@ -718,7 +712,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
                 originCell.m = update(originCell.ct.fa, originCell.v);
               } else {
                 originCell.m =
-                  typeof originCell.v === "boolean"
+                  typeof originCell.v === 'boolean'
                     ? String(originCell.v)
                     : originCell.v;
               }
@@ -729,7 +723,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
 
           if (originCell.f != null && originCell.f.length > 0) {
-            originCell.f = "";
+            originCell.f = '';
             // delFunctionGroup(ctx, r + curR, c + curC, ctx.currentSheetId);
           }
 
@@ -742,8 +736,8 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               targetRow,
               targetCol,
               url,
-              "webpage",
-              originalValueStr
+              'webpage',
+              originalValueStr,
             );
             // Set hyperlink marker and styling
             originCell.hl = {
@@ -751,7 +745,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               c: targetCol,
               id: ctx.currentSheetId,
             };
-            originCell.fc = originCell.fc || "rgb(0, 0, 255)";
+            originCell.fc = originCell.fc || 'rgb(0, 0, 255)';
             originCell.un = originCell.un !== undefined ? originCell.un : 1;
           }
         } else {
@@ -762,8 +756,8 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
             cell.v = originalValueStr;
             cell.m = originalValueStr;
             cell.ct = {
-              fa: "@",
-              t: "s",
+              fa: '@',
+              t: 's',
             };
           } else if (isMultilineValue) {
             applyMultilineTextToCell(cell, normalizedValueStr);
@@ -777,15 +771,15 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
             if (/^0x?[a-fA-F0-9]+$/.test(value)) {
               cell.v = value;
               cell.m = value;
-              cell.ct = { fa: "@", t: "s" };
+              cell.ct = { fa: '@', t: 's' };
             } else {
               const [m, ct, v] = genarate(normalizedNumericValueStr) ?? [];
               cell.v = v ?? normalizedNumericValueStr;
               cell.m = m != null ? String(m) : normalizedNumericValueStr;
-              if (ct?.t === "n") {
-                cell.ct = { fa: "General", t: "g" };
+              if (ct?.t === 'n') {
+                cell.ct = { fa: 'General', t: 'g' };
               } else {
-                cell.ct = ct ?? { fa: "General", t: "g" };
+                cell.ct = ct ?? { fa: 'General', t: 'g' };
               }
             }
           }
@@ -799,30 +793,30 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
               targetRow,
               targetCol,
               url,
-              "webpage",
-              originalValueStr
+              'webpage',
+              originalValueStr,
             );
             // Set hyperlink marker and styling
             cell.hl = { r: targetRow, c: targetCol, id: ctx.currentSheetId };
-            cell.fc = cell.fc || "rgb(0, 0, 255)";
+            cell.fc = cell.fc || 'rgb(0, 0, 255)';
             cell.un = cell.un !== undefined ? cell.un : 1;
           }
 
           if (cell.tb == null) {
-            cell.tb = "1"; // overflow
+            cell.tb = '1'; // overflow
           }
           x[c + curC] = cell;
         }
         changes.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: {
             r: r + curR,
             c: c + curC,
             v: d[r + curR][c + curC],
           },
           key: `${r + curR}_${c + curC}`,
-          type: "update",
+          type: 'update',
         });
       }
       d[r + curR] = x;
@@ -845,7 +839,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
     //   selectHightlightShow();
     // }
     jfrefreshgrid(ctx, null, undefined);
-    if (data.includes("=")) {
+    if (data.includes('=')) {
       handleFormulaOnPaste(ctx, d);
     }
 
@@ -872,7 +866,7 @@ function setCellHyperlink(
   id: string,
   r: number,
   c: number,
-  link: HyperlinkEntry | HyperlinkEntry[]
+  link: HyperlinkEntry | HyperlinkEntry[],
 ) {
   const index = getSheetIndex(ctx, id) as number;
   if (!ctx.luckysheetfile[index].hyperlink) {
@@ -883,7 +877,7 @@ function setCellHyperlink(
 
 export function pasteHandlerOfCutPaste(
   ctx: Context,
-  copyRange: Context["luckysheet_copy_save"]
+  copyRange: Context['luckysheet_copy_save'],
 ) {
   // if (
   //   !checkProtectionLockedRangeList(
@@ -917,8 +911,8 @@ export function pasteHandlerOfCutPaste(
     getdatabyselection(
       ctx,
       { row: [c_r1, c_r2], column: [c_c1, c_c2] },
-      copySheetId
-    )
+      copySheetId,
+    ),
   );
 
   const copyh = copyData.length;
@@ -968,18 +962,18 @@ export function pasteHandlerOfCutPaste(
     path: string[];
     value: any;
     key: string;
-    type: "update";
+    type: 'update';
   }[] = [];
 
   const borderInfoCompute = getBorderInfoCompute(ctx, copySheetId);
   const c_dataVerification =
     _.cloneDeep(
-      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].dataVerification
+      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].dataVerification,
     ) || {};
   const dataVerification =
     _.cloneDeep(
       ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-        .dataVerification
+        .dataVerification,
     ) || {};
 
   // 若选区内包含超链接（目标坐标在 currentSheetId 上，registry 必须写在当前表）
@@ -987,7 +981,7 @@ export function pasteHandlerOfCutPaste(
     _.forEach(ctx.luckysheet_copy_save?.copyRange, (range) => {
       const srcIndex = getSheetIndex(
         ctx,
-        ctx.luckysheet_copy_save?.dataSheetId as string
+        ctx.luckysheet_copy_save?.dataSheetId as string,
       ) as number;
 
       for (let r = 0; r <= range.row[1] - range.row[0]; r += 1) {
@@ -1002,13 +996,7 @@ export function pasteHandlerOfCutPaste(
           const targetR = r + ctx.luckysheet_select_save![0].row[0];
           const targetC = c + ctx.luckysheet_select_save![0].column[0];
 
-          setCellHyperlink(
-            ctx,
-            ctx.currentSheetId,
-            targetR,
-            targetC,
-            srcLink
-          );
+          setCellHyperlink(ctx, ctx.currentSheetId, targetR, targetC, srcLink);
         }
       }
     });
@@ -1020,7 +1008,7 @@ export function pasteHandlerOfCutPaste(
       for (let j = c_c1; j <= c_c2; j += 1) {
         const cell = d[i][j];
 
-        if (cell && _.isPlainObject(cell) && "mc" in cell) {
+        if (cell && _.isPlainObject(cell) && 'mc' in cell) {
           if (cell.mc?.rs != null) {
             delete cfg.merge[`${cell.mc.r}_${cell.mc.c}`];
           }
@@ -1030,10 +1018,10 @@ export function pasteHandlerOfCutPaste(
         d[i][j] = null;
         changes.push({
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           value: { r: i, c: j, v: null },
           key: `${i}_${j}`,
-          type: "update",
+          type: 'update',
         });
 
         delete dataVerification[`${i}_${j}`];
@@ -1051,7 +1039,7 @@ export function pasteHandlerOfCutPaste(
       for (let i = 0; i < cfg.borderInfo.length; i += 1) {
         const bd_rangeType = cfg.borderInfo[i].rangeType;
 
-        if (bd_rangeType === "range") {
+        if (bd_rangeType === 'range') {
           const bd_range = cfg.borderInfo[i].range;
           let bd_emptyRange: any = [];
 
@@ -1061,15 +1049,15 @@ export function pasteHandlerOfCutPaste(
                 bd_range[j],
                 { row: [c_r1, c_r2], column: [c_c1, c_c2] },
                 { row: [minh, maxh], column: [minc, maxc] },
-                "restPart"
-              )
+                'restPart',
+              ),
             );
           }
 
           cfg.borderInfo[i].range = bd_emptyRange;
 
           source_borderInfo.push(cfg.borderInfo[i]);
-        } else if (bd_rangeType === "cell") {
+        } else if (bd_rangeType === 'cell') {
           const bd_r = cfg.borderInfo[i].value.row_index;
           const bd_c = cfg.borderInfo[i].value.col_index;
 
@@ -1093,7 +1081,7 @@ export function pasteHandlerOfCutPaste(
         !borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].s
       ) {
         const bd_obj = {
-          rangeType: "cell",
+          rangeType: 'cell',
           value: {
             row_index: h,
             col_index: c,
@@ -1111,7 +1099,7 @@ export function pasteHandlerOfCutPaste(
         cfg.borderInfo.push(bd_obj);
       } else if (borderInfoCompute[`${h}_${c}`]) {
         const bd_obj = {
-          rangeType: "cell",
+          rangeType: 'cell',
           value: {
             row_index: h,
             col_index: c,
@@ -1129,8 +1117,8 @@ export function pasteHandlerOfCutPaste(
         cfg.borderInfo.push(bd_obj);
       } else if (borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`]) {
         const bd_obj = {
-          rangeType: "range",
-          borderType: "border-slash",
+          rangeType: 'range',
+          borderType: 'border-slash',
           color:
             borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].s.color!,
           style:
@@ -1166,10 +1154,10 @@ export function pasteHandlerOfCutPaste(
       x[c] = _.cloneDeep(value);
       changes.push({
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r: h, c, v: d[h][c] },
         key: `${h}_${c}`,
-        type: "update",
+        type: 'update',
       });
 
       if (value != null && copyHasMC && x[c]?.mc) {
@@ -1220,10 +1208,10 @@ export function pasteHandlerOfCutPaste(
   if (ctx.currentSheetId !== copySheetId) {
     // 跨表操作
     const sourceData = _.cloneDeep(
-      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].data!
+      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].data!,
     );
     const sourceConfig = _.cloneDeep(
-      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].config
+      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].config,
     );
 
     const sourceCurData = _.cloneDeep(sourceData);
@@ -1237,7 +1225,7 @@ export function pasteHandlerOfCutPaste(
         const cell = sourceCurData[source_r][source_c];
 
         if (cell?.mc) {
-          if ("rs" in cell.mc) {
+          if ('rs' in cell.mc) {
             delete sourceCurConfig.merge[`${cell.mc.r}_${cell.mc.c}`];
           }
           delete cell.mc;
@@ -1262,7 +1250,7 @@ export function pasteHandlerOfCutPaste(
       for (let i = 0; i < sourceCurConfig.borderInfo.length; i += 1) {
         const bd_rangeType = sourceCurConfig.borderInfo[i].rangeType;
 
-        if (bd_rangeType === "range") {
+        if (bd_rangeType === 'range') {
           const bd_range = sourceCurConfig.borderInfo[i].range;
           let bd_emptyRange: any = [];
 
@@ -1272,15 +1260,15 @@ export function pasteHandlerOfCutPaste(
                 bd_range[j],
                 { row: [c_r1, c_r2], column: [c_c1, c_c2] },
                 { row: [minh, maxh], column: [minc, maxc] },
-                "restPart"
-              )
+                'restPart',
+              ),
             );
           }
 
           sourceCurConfig.borderInfo[i].range = bd_emptyRange;
 
           source_borderInfo.push(sourceCurConfig.borderInfo[i]);
-        } else if (bd_rangeType === "cell") {
+        } else if (bd_rangeType === 'cell') {
           const bd_r = sourceCurConfig.borderInfo[i].value.row_index;
           const bd_c = sourceCurConfig.borderInfo[i].value.col_index;
 
@@ -1296,7 +1284,7 @@ export function pasteHandlerOfCutPaste(
     // 条件格式
     const source_cdformat = _.cloneDeep(
       ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!]
-        .luckysheet_conditionformat_save
+        .luckysheet_conditionformat_save,
     );
     const source_curCdformat = _.cloneDeep(source_cdformat);
     const ruleArr: any[] = [];
@@ -1312,7 +1300,7 @@ export function pasteHandlerOfCutPaste(
             source_curCdformat_cellrange[j],
             { row: [c_r1, c_r2], column: [c_c1, c_c2] },
             { row: [minh, maxh], column: [minc, maxc] },
-            "restPart"
+            'restPart',
           );
 
           emptyRange = emptyRange.concat(range);
@@ -1321,7 +1309,7 @@ export function pasteHandlerOfCutPaste(
             source_curCdformat_cellrange[j],
             { row: [c_r1, c_r2], column: [c_c1, c_c2] },
             { row: [minh, maxh], column: [minc, maxc] },
-            "operatePart"
+            'operatePart',
           );
 
           if (range2.length > 0) {
@@ -1341,7 +1329,7 @@ export function pasteHandlerOfCutPaste(
 
     const target_cdformat = _.cloneDeep(
       ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-        .luckysheet_conditionformat_save
+        .luckysheet_conditionformat_save,
     );
     let target_curCdformat = _.cloneDeep(target_cdformat);
     if (ruleArr.length > 0) {
@@ -1364,7 +1352,7 @@ export function pasteHandlerOfCutPaste(
       cdformat: source_cdformat,
       curCdformat: source_curCdformat,
       dataVerification: _.cloneDeep(
-        ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].dataVerification
+        ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].dataVerification,
       ),
       curDataVerification: c_dataVerification,
       range: {
@@ -1382,7 +1370,7 @@ export function pasteHandlerOfCutPaste(
       curCdformat: target_curCdformat,
       dataVerification: _.cloneDeep(
         ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-          .dataVerification
+          .dataVerification,
       ),
       curDataVerification: dataVerification,
       range: {
@@ -1394,7 +1382,7 @@ export function pasteHandlerOfCutPaste(
     // 条件格式
     const cdformat = _.cloneDeep(
       ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-        .luckysheet_conditionformat_save
+        .luckysheet_conditionformat_save,
     );
     const curCdformat = _.cloneDeep(cdformat);
     if (curCdformat != null && curCdformat.length > 0) {
@@ -1406,7 +1394,7 @@ export function pasteHandlerOfCutPaste(
             cellrange[j],
             { row: [c_r1, c_r2], column: [c_c1, c_c2] },
             { row: [minh, maxh], column: [minc, maxc] },
-            "allPart"
+            'allPart',
           );
           emptyRange = emptyRange.concat(range);
         }
@@ -1425,7 +1413,7 @@ export function pasteHandlerOfCutPaste(
       curCdformat,
       dataVerification: _.cloneDeep(
         ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-          .dataVerification
+          .dataVerification,
       ),
       curDataVerification: dataVerification,
       range: {
@@ -1443,7 +1431,7 @@ export function pasteHandlerOfCutPaste(
       curCdformat,
       dataVerification: _.cloneDeep(
         ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-          .dataVerification
+          .dataVerification,
       ),
       curDataVerification: dataVerification,
       range: {
@@ -1462,8 +1450,8 @@ export function pasteHandlerOfCutPaste(
 
 export function pasteHandlerOfCopyPaste(
   ctx: Context,
-  copyRange: Context["luckysheet_copy_save"],
-  valuesOnly = false
+  copyRange: Context['luckysheet_copy_save'],
+  valuesOnly = false,
 ) {
   // if (
   //   !checkProtectionLockedRangeList(
@@ -1502,7 +1490,7 @@ export function pasteHandlerOfCopyPaste(
         row: copyRange.copyRange[i].row,
         column: copyRange.copyRange[i].column,
       },
-      copySheetIndex
+      copySheetIndex,
     );
     if (copyRange.copyRange.length > 1) {
       if (
@@ -1639,7 +1627,7 @@ export function pasteHandlerOfCopyPaste(
     path: string[];
     value: any;
     key: string;
-    type: "update";
+    type: 'update';
   }[] = [];
 
   const dataVerificationYdocChanges: {
@@ -1647,7 +1635,7 @@ export function pasteHandlerOfCopyPaste(
     path: string[];
     value: any;
     key: string;
-    type: "update";
+    type: 'update';
   }[] = [];
 
   const hyperlinkYdocChanges: {
@@ -1655,13 +1643,13 @@ export function pasteHandlerOfCopyPaste(
     path: string[];
     value: any;
     key: string;
-    type: "update";
+    type: 'update';
   }[] = [];
 
   const borderInfoCompute = getBorderInfoCompute(ctx, copySheetIndex);
   const c_dataVerification =
     _.cloneDeep(
-      ctx.luckysheetfile[getSheetIndex(ctx, copySheetIndex)!].dataVerification
+      ctx.luckysheetfile[getSheetIndex(ctx, copySheetIndex)!].dataVerification,
     ) || {};
   let dataVerification = null;
 
@@ -1696,7 +1684,7 @@ export function pasteHandlerOfCopyPaste(
             !borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].s
           ) {
             const bd_obj = {
-              rangeType: "cell",
+              rangeType: 'cell',
               value: {
                 row_index: h,
                 col_index: c,
@@ -1714,7 +1702,7 @@ export function pasteHandlerOfCopyPaste(
             cfg.borderInfo.push(bd_obj);
           } else if (borderInfoCompute[`${h}_${c}`]) {
             const bd_obj = {
-              rangeType: "cell",
+              rangeType: 'cell',
               value: {
                 row_index: h,
                 col_index: c,
@@ -1732,8 +1720,8 @@ export function pasteHandlerOfCopyPaste(
             cfg.borderInfo.push(bd_obj);
           } else if (borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`]) {
             const bd_obj = {
-              rangeType: "range",
-              borderType: "border-slash",
+              rangeType: 'range',
+              borderType: 'border-slash',
               color:
                 borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].s
                   .color!,
@@ -1755,23 +1743,24 @@ export function pasteHandlerOfCopyPaste(
             if (_.isNil(dataVerification)) {
               dataVerification = _.cloneDeep(
                 ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]
-                  ?.dataVerification || {}
+                  ?.dataVerification || {},
               );
             }
 
-            const dvSrc = c_dataVerification[`${c_r1 + h - mth}_${c_c1 + c - mtc}`];
+            const dvSrc =
+              c_dataVerification[`${c_r1 + h - mth}_${c_c1 + c - mtc}`];
             dataVerification[`${h}_${c}`] = dvSrc;
             dataVerificationYdocChanges.push({
               sheetId: ctx.currentSheetId,
-              path: ["dataVerification"],
+              path: ['dataVerification'],
               key: `${h}_${c}`,
               value: JSON.parse(JSON.stringify(dvSrc)),
-              type: "update",
+              type: 'update',
             });
           }
 
           if (x[c]?.mc != null) {
-            if ("rs" in x[c]!.mc!) {
+            if ('rs' in x[c]!.mc!) {
               delete cfg.merge[`${x[c]!.mc!.r}_${x[c]!.mc!.c}`];
             }
             delete x[c]!.mc;
@@ -1780,16 +1769,14 @@ export function pasteHandlerOfCopyPaste(
           let value = null;
           if (copyData[h - mth]?.[c - mtc]) {
             const srcCell = copyData[h - mth][c - mtc];
-            value = needForkPasteCell
-              ? clonePasteCellValue(srcCell)
-              : srcCell;
+            value = needForkPasteCell ? clonePasteCellValue(srcCell) : srcCell;
             if (
               value?.v &&
               value?.f &&
               value?.isDataBlockFormula &&
               arr.length === 1
             ) {
-              value.m = "Loading...";
+              value.m = 'Loading...';
             }
           }
 
@@ -1806,17 +1793,17 @@ export function pasteHandlerOfCopyPaste(
                 srcCol,
                 srcRow,
                 c,
-                h
+                h,
               );
             } catch (error: any) {
               isError = true;
               value.error = {
                 row_column: `${h}_${c}`,
-                title: "Error",
-                message: error?.message || "Failed to adjust cell reference",
+                title: 'Error',
+                message: error?.message || 'Failed to adjust cell reference',
               };
               // strip off all formatting from source
-              value.m = "#ERROR";
+              value.m = '#ERROR';
               value.f = error?.formula;
               delete value.ct;
               delete value.v;
@@ -1832,7 +1819,7 @@ export function pasteHandlerOfCopyPaste(
                 c,
                 undefined,
                 undefined,
-                true
+                true,
               );
 
               value.f = adjustedFormula;
@@ -1850,18 +1837,16 @@ export function pasteHandlerOfCopyPaste(
                       f: value.f,
                       v: formulaResultValue,
                     },
-                    d
+                    d,
                   );
                 } else {
-                  // eslint-disable-next-line prefer-destructuring
                   value.m = String(funcV[1]);
                   value.v = String(funcV[1]);
                 }
               } else if (funcV[3]) {
-                // eslint-disable-next-line prefer-destructuring
                 value.error = funcV[3];
                 // strip off all formatting from source
-                value.m = "#ERROR";
+                value.m = '#ERROR';
                 value.f = adjustedFormula;
                 delete value.ct;
                 delete value.v;
@@ -1875,7 +1860,7 @@ export function pasteHandlerOfCopyPaste(
                   ...value,
                   v: arr.length === 1 ? funcV[1] : value.v, // To check with mritunjay for the "arr.length === 1" cond
                   m:
-                    funcV[1] instanceof Promise ? "[object Promise]" : funcV[1],
+                    funcV[1] instanceof Promise ? '[object Promise]' : funcV[1],
                 });
                 afterHookCalled = true;
               }
@@ -1924,10 +1909,10 @@ export function pasteHandlerOfCopyPaste(
           if (!(ctx?.hooks?.afterUpdateCell && afterHookCalled)) {
             changes.push({
               sheetId: ctx.currentSheetId,
-              path: ["celldata"],
+              path: ['celldata'],
               value: { r: h, c, v: d[h][c] },
               key: `${h}_${c}`,
-              type: "update",
+              type: 'update',
             });
           }
         }
@@ -1966,7 +1951,7 @@ export function pasteHandlerOfCopyPaste(
                 cf_range[j],
                 { row: [c_r1, c_r2], column: [c_c1, c_c2] },
                 { row: [mth, maxrowCache - 1], column: [mtc, maxcellCahe - 1] },
-                "operatePart"
+                'operatePart',
               );
 
               if (range.length > 0) {
@@ -1999,7 +1984,7 @@ export function pasteHandlerOfCopyPaste(
   if (ctx.luckysheet_copy_save?.copyRange?.length === 1) {
     const srcIndex = getSheetIndex(
       ctx,
-      ctx.luckysheet_copy_save?.dataSheetId as string
+      ctx.luckysheet_copy_save?.dataSheetId as string,
     ) as number;
     const targetSheetIndex = getSheetIndex(ctx, ctx.currentSheetId) as number;
 
@@ -2048,10 +2033,10 @@ export function pasteHandlerOfCopyPaste(
             targetHyperlinks[targetKey] = srcLink;
             hyperlinkYdocChanges.push({
               sheetId: ctx.currentSheetId,
-              path: ["hyperlink"],
+              path: ['hyperlink'],
               key: targetKey,
               value: JSON.parse(JSON.stringify(srcLink)),
-              type: "update",
+              type: 'update',
             });
 
             // Update cell data to ensure hyperlink properties are set
@@ -2076,7 +2061,7 @@ export function pasteHandlerOfCopyPaste(
                 if (srcCell.un !== undefined) cell.un = srcCell.un;
               } else {
                 // Default hyperlink styling
-                cell.fc = cell.fc || "rgb(0, 0, 255)";
+                cell.fc = cell.fc || 'rgb(0, 0, 255)';
                 cell.un = cell.un !== undefined ? cell.un : 1;
               }
             }
@@ -2131,18 +2116,18 @@ export function handleFormulaStringPaste(ctx: Context, formulaStr: string) {
 
   const val = funcV[1];
 
-  const isDataBlockRespose = typeof val !== "string" && typeof val !== "number";
+  const isDataBlockRespose = typeof val !== 'string' && typeof val !== 'number';
 
   const d = getFlowdata(ctx);
   if (!d) return;
 
   if (!d[r][c]) d[r][c] = {};
-  d[r][c]!.m = isDataBlockRespose ? "Loading..." : val.toString();
+  d[r][c]!.m = isDataBlockRespose ? 'Loading...' : val.toString();
   d[r][c]!.v = val;
   d[r][c]!.f = formulaStr;
-  const cellTemp = { m: "", v: "", f: "" };
+  const cellTemp = { m: '', v: '', f: '' };
 
-  cellTemp.m = isDataBlockRespose ? "Loading..." : val.toString();
+  cellTemp.m = isDataBlockRespose ? 'Loading...' : val.toString();
   cellTemp.v = val;
   cellTemp.f = formulaStr;
 
@@ -2159,7 +2144,7 @@ export function parseAsLinkIfUrl(txtdata: string, ctx: Context) {
     if (ctx.luckysheetCellUpdate.length === 2) {
       const rowIndex = ctx.luckysheetCellUpdate[0];
       const colIndex = ctx.luckysheetCellUpdate[1];
-      saveHyperlink(ctx, rowIndex, colIndex, txtdata, "webpage", txtdata);
+      saveHyperlink(ctx, rowIndex, colIndex, txtdata, 'webpage', txtdata);
     } else {
       // Otherwise, use luckysheet_select_save
       const last =
@@ -2167,7 +2152,7 @@ export function parseAsLinkIfUrl(txtdata: string, ctx: Context) {
       if (last) {
         const rowIndex = last.row_focus ?? last.row?.[0] ?? 0;
         const colIndex = last.column_focus ?? last.column?.[0] ?? 0;
-        saveHyperlink(ctx, rowIndex, colIndex, txtdata, "webpage", txtdata);
+        saveHyperlink(ctx, rowIndex, colIndex, txtdata, 'webpage', txtdata);
       }
     }
   }
@@ -2193,7 +2178,7 @@ export function resizePastedCellsToContent(ctx: Context) {
     startRow,
     endRow,
     startCol,
-    endCol
+    endCol,
   );
   const sheetIdx = getSheetIndex(ctx, ctx.currentSheetId);
   if (sheetIdx == null) return;
@@ -2207,76 +2192,76 @@ export function shouldHandleNonTableHtml(html: string) {
 }
 
 export function convertAnyHtmlToTable(html: string): string {
-  const container = document.createElement("div");
+  const container = document.createElement('div');
   container.innerHTML = html;
 
   const rows: string[] = [];
   let currentParts: string[] = [];
 
   const BLOCK_TAGS = new Set([
-    "P",
-    "DIV",
-    "SECTION",
-    "ARTICLE",
-    "ASIDE",
-    "HEADER",
-    "FOOTER",
-    "MAIN",
-    "NAV",
-    "BLOCKQUOTE",
-    "PRE",
-    "H1",
-    "H2",
-    "H3",
-    "H4",
-    "H5",
-    "H6",
-    "UL",
-    "OL",
-    "LI",
-    "DL",
-    "DT",
-    "DD",
-    "TABLE",
-    "THEAD",
-    "TBODY",
-    "TFOOT",
-    "TR",
-    "TD",
-    "TH",
-    "HR",
+    'P',
+    'DIV',
+    'SECTION',
+    'ARTICLE',
+    'ASIDE',
+    'HEADER',
+    'FOOTER',
+    'MAIN',
+    'NAV',
+    'BLOCKQUOTE',
+    'PRE',
+    'H1',
+    'H2',
+    'H3',
+    'H4',
+    'H5',
+    'H6',
+    'UL',
+    'OL',
+    'LI',
+    'DL',
+    'DT',
+    'DD',
+    'TABLE',
+    'THEAD',
+    'TBODY',
+    'TFOOT',
+    'TR',
+    'TD',
+    'TH',
+    'HR',
   ]);
 
   const SKIP_TAGS = new Set([
-    "SCRIPT",
-    "STYLE",
-    "NOSCRIPT",
-    "META",
-    "LINK",
-    "HEAD",
-    "SVG",
-    "CANVAS",
-    "IFRAME",
-    "OBJECT",
+    'SCRIPT',
+    'STYLE',
+    'NOSCRIPT',
+    'META',
+    'LINK',
+    'HEAD',
+    'SVG',
+    'CANVAS',
+    'IFRAME',
+    'OBJECT',
   ]);
 
   const escapeHtml = (text: string): string =>
     text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
 
   const normalizeText = (text: string): string =>
-    text.replace(/\u00A0/g, " ").replace(/\s+/g, " ");
+    text.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ');
 
   const flushRow = () => {
-    const htmlContent = currentParts.join("").trim();
+    const htmlContent = currentParts.join('').trim();
     const textOnly = htmlContent
-      .replace(/<br\s*\/?>/gi, "")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/\s+/g, " ")
+      .replace(/<br\s*\/?>/gi, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
 
     if (textOnly) {
@@ -2290,14 +2275,14 @@ export function convertAnyHtmlToTable(html: string): string {
     const normalized = normalizeText(text);
     if (!normalized.trim()) return;
 
-    const prev = currentParts[currentParts.length - 1] || "";
+    const prev = currentParts[currentParts.length - 1] || '';
     const needsSpace =
       prev &&
-      !prev.endsWith(" ") &&
-      !prev.endsWith("<br>") &&
+      !prev.endsWith(' ') &&
+      !prev.endsWith('<br>') &&
       !/>\s*$/.test(prev);
 
-    currentParts.push((needsSpace ? " " : "") + escapeHtml(normalized.trim()));
+    currentParts.push((needsSpace ? ' ' : '') + escapeHtml(normalized.trim()));
   };
 
   const isBlock = (node: Node): boolean =>
@@ -2306,7 +2291,7 @@ export function convertAnyHtmlToTable(html: string): string {
 
   const walk = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
-      appendText(node.textContent || "");
+      appendText(node.textContent || '');
       return;
     }
 
@@ -2317,21 +2302,21 @@ export function convertAnyHtmlToTable(html: string): string {
 
     if (SKIP_TAGS.has(tag)) return;
 
-    if (tag === "BR" || tag === "HR") {
+    if (tag === 'BR' || tag === 'HR') {
       flushRow();
       return;
     }
 
-    if (tag === "TABLE") {
+    if (tag === 'TABLE') {
       flushRow();
 
       const trs = el.querySelectorAll(
-        ":scope > tbody > tr, :scope > thead > tr, :scope > tfoot > tr, :scope > tr"
+        ':scope > tbody > tr, :scope > thead > tr, :scope > tfoot > tr, :scope > tr',
       );
       if (trs.length > 0) {
         trs.forEach((tr) => {
           const cells = Array.from(tr.children).filter((child) =>
-            /^(TD|TH)$/.test((child as Element).tagName)
+            /^(TD|TH)$/.test((child as Element).tagName),
           ) as Element[];
 
           if (!cells.length) return;
@@ -2340,17 +2325,17 @@ export function convertAnyHtmlToTable(html: string): string {
             .map(
               (cell) =>
                 `<td>${escapeHtml(
-                  (cell.textContent || "").replace(/\s+/g, " ").trim()
-                )}</td>`
+                  (cell.textContent || '').replace(/\s+/g, ' ').trim(),
+                )}</td>`,
             )
-            .join("");
+            .join('');
 
-          if (rowHtml.replace(/<[^>]+>/g, "").trim()) {
+          if (rowHtml.replace(/<[^>]+>/g, '').trim()) {
             rows.push(`<tr>${rowHtml}</tr>`);
           }
         });
       } else {
-        const text = (el.textContent || "").replace(/\s+/g, " ").trim();
+        const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
         if (text) rows.push(`<tr><td>${escapeHtml(text)}</td></tr>`);
       }
 
@@ -2359,11 +2344,11 @@ export function convertAnyHtmlToTable(html: string): string {
 
     const block = isBlock(el);
 
-    if (block && currentParts.length > 0 && tag !== "LI") {
+    if (block && currentParts.length > 0 && tag !== 'LI') {
       flushRow();
     }
 
-    if (tag === "LI") {
+    if (tag === 'LI') {
       flushRow();
     }
 
@@ -2378,9 +2363,9 @@ export function convertAnyHtmlToTable(html: string): string {
   flushRow();
 
   if (!rows.length) {
-    const text = (container.textContent || "").replace(/\s+/g, " ").trim();
+    const text = (container.textContent || '').replace(/\s+/g, ' ').trim();
     return `<table><tr><td>${escapeHtml(text)}</td></tr></table>`;
   }
 
-  return `<table>${rows.join("")}</table>`;
+  return `<table>${rows.join('')}</table>`;
 }

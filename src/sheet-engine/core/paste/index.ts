@@ -4,11 +4,11 @@ export {
   indexToColumnLabel,
   FormularCellRefError,
   adjustFormulaForPaste,
-} from "./formula-adjust";
+} from './formula-adjust';
 export {
   computeFortuneInternalPasteDecision,
   type FortuneInternalPasteDecision,
-} from "./fortune-internal-paste";
+} from './fortune-internal-paste';
 export {
   parseAsLinkIfUrl,
   pasteHandler,
@@ -18,5 +18,5 @@ export {
   resizePastedCellsToContent,
   shouldHandleNonTableHtml,
   convertAnyHtmlToTable,
-} from "./paste-internals";
-export { handlePaste, handlePasteByClick } from "./clipboard-entry";
+} from './paste-internals';
+export { handlePaste, handlePasteByClick } from './clipboard-entry';

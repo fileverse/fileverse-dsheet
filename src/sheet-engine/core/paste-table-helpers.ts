@@ -1,15 +1,14 @@
-/* eslint-disable no-plusplus */
-import _ from "lodash";
-import { Context } from "./context";
-import { locale } from "./locale";
-import { getQKBorder, saveHyperlink } from "./modules";
-import { Cell } from "./types";
-import { getSheetIndex } from "./utils";
-import { setRowHeight, setColumnWidth } from "./api";
-import { adjustFormulaForPaste } from "./paste/formula-adjust";
-import { convertSpanToShareString } from "./modules/inline-string";
-import { genarate } from "./modules/format";
-import { isRealNum } from "./modules/validation";
+import _ from 'lodash';
+import { Context } from './context';
+import { locale } from './locale';
+import { getQKBorder, saveHyperlink } from './modules';
+import { Cell } from './types';
+import { getSheetIndex } from './utils';
+import { setRowHeight, setColumnWidth } from './api';
+import { adjustFormulaForPaste } from './paste/formula-adjust';
+import { convertSpanToShareString } from './modules/inline-string';
+import { genarate } from './modules/format';
+import { isRealNum } from './modules/validation';
 
 export const DEFAULT_FONT_SIZE = 10;
 
@@ -31,19 +30,19 @@ const parseInlineStyleBlock = (block?: string) => {
   if (!block) return {} as Record<string, string>;
   const trimmed = block.substring(1, block.length - 1); // remove { }
   const entries = trimmed
-    .split("\n\t")
+    .split('\n\t')
     .map((s) => s.trim())
     .filter(Boolean);
   const out: Record<string, string> = {};
   entries.forEach((entry) => {
-    const [k, v] = entry.split(":");
-    if (k && v) out[k] = v.replace(";", "").trim();
+    const [k, v] = entry.split(':');
+    if (k && v) out[k] = v.replace(';', '').trim();
   });
   return out;
 };
 
 const mapFontFamilyToIndex = (ff: string, ctx: Context) => {
-  const families = ff.split(",");
+  const families = ff.split(',');
   const locale_fontjson = locale(ctx).fontjson as Record<string, number>;
   const found = families
     .map((raw) => raw.trim().toLowerCase())
@@ -56,39 +55,39 @@ const mapFontFamilyToIndex = (ff: string, ctx: Context) => {
 };
 
 const BLOCK_TAGS = new Set([
-  "p",
-  "div",
-  "li",
-  "tr",
-  "blockquote",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
+  'p',
+  'div',
+  'li',
+  'tr',
+  'blockquote',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
 ]);
 
 const getInlineStringSegmentsFromTd = (
   td: HTMLTableCellElement,
   cell: Cell,
-  defaultFontSize: number
+  defaultFontSize: number,
 ) => {
   const segments: HTMLSpanElement[] = [];
 
   function walk(
     node: Node,
     css: Record<string, string>,
-    link?: { type: string; address: string }
+    link?: { type: string; address: string },
   ) {
     if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent || "";
+      const text = node.textContent || '';
       if (text) {
-        const span = document.createElement("span");
+        const span = document.createElement('span');
         const cssText = Object.entries(css)
           .map(([k, v]) => `${k}:${v}`)
-          .join(";");
-        if (cssText) span.setAttribute("style", cssText);
+          .join(';');
+        if (cssText) span.setAttribute('style', cssText);
         span.textContent = text;
         if (link) {
           span.dataset.linkType = link.type;
@@ -104,40 +103,40 @@ const getInlineStringSegmentsFromTd = (
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
-    if (tag === "br") {
-      const span = document.createElement("span");
-      span.textContent = "\n";
+    if (tag === 'br') {
+      const span = document.createElement('span');
+      span.textContent = '\n';
       segments.push(span);
       return;
     }
 
     if (BLOCK_TAGS.has(tag) && segments.length > 0) {
-      const nl = document.createElement("span");
-      nl.textContent = "\n";
+      const nl = document.createElement('span');
+      nl.textContent = '\n';
       segments.push(nl);
     }
 
     const newCss = { ...css };
-    if (tag === "b" || tag === "strong") newCss["font-weight"] = "bold";
-    if (tag === "i" || tag === "em") newCss["font-style"] = "italic";
-    if (tag === "u") newCss["text-decoration"] = "underline";
-    if (tag === "s" || tag === "strike") {
-      newCss["text-decoration"] = "line-through";
+    if (tag === 'b' || tag === 'strong') newCss['font-weight'] = 'bold';
+    if (tag === 'i' || tag === 'em') newCss['font-style'] = 'italic';
+    if (tag === 'u') newCss['text-decoration'] = 'underline';
+    if (tag === 's' || tag === 'strike') {
+      newCss['text-decoration'] = 'line-through';
     }
 
     if (el.style?.cssText) {
       Array.from(el.style).forEach((prop) => {
-        if (prop === "font-size") return;
+        if (prop === 'font-size') return;
         const val = el.style.getPropertyValue(prop);
         if (val) newCss[prop] = val;
       });
     }
 
     let newLink = link;
-    if (tag === "a") {
-      const href = el.getAttribute("href")?.trim() || "";
+    if (tag === 'a') {
+      const href = el.getAttribute('href')?.trim() || '';
       if (/^https?:\/\//i.test(href)) {
-        newLink = { type: "webpage", address: href };
+        newLink = { type: 'webpage', address: href };
       }
     }
 
@@ -151,7 +150,7 @@ const getInlineStringSegmentsFromTd = (
   if (segments.length === 0) return [];
 
   const base = {
-    fc: cell.fc || "#000000",
+    fc: cell.fc || '#000000',
     fs: cell.fs || defaultFontSize,
     cl: cell.cl || 0,
     un: cell.un || 0,
@@ -178,43 +177,43 @@ function applyBordersAndMerges(
   rowSpanCount: number,
   colSpanCount: number,
   borderInfo: any,
-  data: any[][]
+  data: any[][],
 ) {
   // Pre-compute border configs once
   const topBorder =
-    td.style.borderTop && !td.style.borderTop.startsWith("0px")
+    td.style.borderTop && !td.style.borderTop.startsWith('0px')
       ? getQKBorder(
-        td.style.borderTopWidth,
-        td.style.borderTopStyle,
-        td.style.borderTopColor
-      )
+          td.style.borderTopWidth,
+          td.style.borderTopStyle,
+          td.style.borderTopColor,
+        )
       : null;
 
   const bottomBorder =
-    td.style.borderBottom && !td.style.borderBottom.startsWith("0px")
+    td.style.borderBottom && !td.style.borderBottom.startsWith('0px')
       ? getQKBorder(
-        td.style.borderBottomWidth,
-        td.style.borderBottomStyle,
-        td.style.borderBottomColor
-      )
+          td.style.borderBottomWidth,
+          td.style.borderBottomStyle,
+          td.style.borderBottomColor,
+        )
       : null;
 
   const leftBorder =
-    td.style.borderLeft && !td.style.borderLeft.startsWith("0px")
+    td.style.borderLeft && !td.style.borderLeft.startsWith('0px')
       ? getQKBorder(
-        td.style.borderLeftWidth,
-        td.style.borderLeftStyle,
-        td.style.borderLeftColor
-      )
+          td.style.borderLeftWidth,
+          td.style.borderLeftStyle,
+          td.style.borderLeftColor,
+        )
       : null;
 
   const rightBorder =
-    td.style.borderRight && !td.style.borderRight.startsWith("0px")
+    td.style.borderRight && !td.style.borderRight.startsWith('0px')
       ? getQKBorder(
-        td.style.borderRightWidth,
-        td.style.borderRightStyle,
-        td.style.borderRightColor
-      )
+          td.style.borderRightWidth,
+          td.style.borderRightStyle,
+          td.style.borderRightColor,
+        )
       : null;
 
   for (let rowOffset = 0; rowOffset < rowSpanCount; rowOffset++) {
@@ -275,42 +274,42 @@ interface BuiltCellResult {
 const HEX_REGEX = /^0x?[a-fA-F0-9]+$/;
 
 const detectHyperlink = (td: HTMLTableCellElement) => {
-  const anchor = td.querySelector("a[href]") as HTMLAnchorElement | null;
+  const anchor = td.querySelector('a[href]') as HTMLAnchorElement | null;
   const urlRegex = /^(https?:\/\/[^\s]+)$/i;
   if (anchor) {
-    const href = anchor.getAttribute("href")?.trim() || "";
+    const href = anchor.getAttribute('href')?.trim() || '';
     const display = anchor.textContent?.trim() || href;
-    const cellText = (td.textContent || "").trim();
-    const anchorText = (anchor.textContent || "").trim();
+    const cellText = (td.textContent || '').trim();
+    const anchorText = (anchor.textContent || '').trim();
     if (href && urlRegex.test(href) && cellText === anchorText)
       return { href, display };
   } else {
-    const raw = (td.textContent || "").trim();
+    const raw = (td.textContent || '').trim();
     if (urlRegex.test(raw)) return { href: raw, display: raw };
   }
   return null;
 };
 
 function brToNewline(str: string) {
-  return str.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(div|p|li)>/gi, "\n");
+  return str.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n');
 }
 
 const buildCellFromTd = (
   td: HTMLTableCellElement,
   classStyles: Record<string, string>,
-  ctx: Context
+  ctx: Context,
 ): BuiltCellResult => {
-  const fortuneCellAttr = td.getAttribute("data-fortune-cell");
+  const fortuneCellAttr = td.getAttribute('data-fortune-cell');
   if (fortuneCellAttr) {
     try {
       const { _srcRow, _srcCol, ...parsed } = JSON.parse(
-        decodeURIComponent(fortuneCellAttr)
+        decodeURIComponent(fortuneCellAttr),
       );
       const cell = parsed as Cell;
       delete cell.mc;
       delete cell.hl;
-      const rowspan = parseInt(td.getAttribute("rowspan") || "1", 10);
-      const colspan = parseInt(td.getAttribute("colspan") || "1", 10);
+      const rowspan = parseInt(td.getAttribute('rowspan') || '1', 10);
+      const colspan = parseInt(td.getAttribute('colspan') || '1', 10);
       return {
         cell,
         rowspan: Number.isNaN(rowspan) ? 1 : rowspan,
@@ -325,42 +324,42 @@ const buildCellFromTd = (
   }
 
   let cell: Cell = {};
-  const rawHtml = td.innerHTML || "";
+  const rawHtml = td.innerHTML || '';
   const hasHtmlLineBreak = /<br\s*\/?>|<\/(div|p|li)>/i.test(rawHtml);
-  const domText = td.innerText || td.textContent || "";
-  const htmlText = brToNewline(rawHtml).replace(/<[^>]*>/g, "");
+  const domText = td.innerText || td.textContent || '';
+  const htmlText = brToNewline(rawHtml).replace(/<[^>]*>/g, '');
   const rawText = (
     hasHtmlLineBreak && !/[\r\n]/.test(domText)
       ? htmlText
-      : domText || htmlText || rawHtml || ""
+      : domText || htmlText || rawHtml || ''
   ).trim();
-  const normalizedText = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const isLineBreak = hasHtmlLineBreak || normalizedText.includes("\n");
+  const normalizedText = rawText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const isLineBreak = hasHtmlLineBreak || normalizedText.includes('\n');
 
   if (!normalizedText) {
     cell.v = undefined;
-    cell.m = "";
+    cell.m = '';
   } else if (isLineBreak) {
     cell.v = normalizedText;
     cell.m = normalizedText;
     cell = {
       ...cell,
-      ct: { fa: "General", t: "inlineStr", s: [{ v: normalizedText }] },
+      ct: { fa: 'General', t: 'inlineStr', s: [{ v: normalizedText }] },
     };
   } else {
     cell.v = normalizedText;
     cell.m = normalizedText;
-    cell.ct = { fa: "General", t: "g" };
+    cell.ct = { fa: 'General', t: 'g' };
     if (HEX_REGEX.test(normalizedText)) {
-      cell.ct = { fa: "@", t: "s" };
+      cell.ct = { fa: '@', t: 's' };
     } else {
       const generated = genarate(normalizedText);
       if (generated?.[1]) {
         const [m, ct, v] = generated;
-        if (ct?.t === "n") {
+        if (ct?.t === 'n') {
           cell.v = v;
           cell.m = normalizedText;
-          cell.ct = { fa: "General", t: "g" };
+          cell.ct = { fa: 'General', t: 'g' };
         } else {
           // Keep generated date/time (and other explicit) cell typing for HTML paste,
           // matching plain-text paste behavior.
@@ -371,23 +370,23 @@ const buildCellFromTd = (
       } else if (isRealNum(normalizedText)) {
         cell.v = parseFloat(normalizedText);
         cell.m = normalizedText;
-        cell.ct = { fa: "General", t: "g" };
+        cell.ct = { fa: 'General', t: 'g' };
       }
     }
   }
 
-  if (td.style?.alignItems === "center") {
+  if (td.style?.alignItems === 'center') {
     cell.vt = 0;
-  } else if (td.style?.alignItems === "flex-end") {
+  } else if (td.style?.alignItems === 'flex-end') {
     cell.vt = 2;
-  } else if (td.style?.alignItems === "flex-start") {
+  } else if (td.style?.alignItems === 'flex-start') {
     cell.vt = 1;
   }
 
   const styleBlock =
-    typeof classStyles[`.${td.className}`] === "string"
+    typeof classStyles[`.${td.className}`] === 'string'
       ? classStyles[`.${td.className}`]
-      : "";
+      : '';
   const styles = parseInlineStyleBlock(styleBlock);
 
   if (!_.isNil(styles.border)) td.style.border = styles.border;
@@ -395,22 +394,22 @@ const buildCellFromTd = (
   // Background
   let bg: string | undefined = (td.style.backgroundColor ||
     styles.background) as string | undefined;
-  if (!bg || bg === "rgba(0, 0, 0, 0)") bg = undefined;
+  if (!bg || bg === 'rgba(0, 0, 0, 0)') bg = undefined;
   cell.bg = bg;
 
   // Bold / Italic
   const { fontWeight } = td.style;
   cell.bl =
-    (fontWeight.toString() === "400" ||
-      fontWeight === "normal" ||
+    (fontWeight.toString() === '400' ||
+      fontWeight === 'normal' ||
       _.isEmpty(fontWeight)) &&
-      !_.includes(styles["font-style"], "bold") &&
-      (!styles["font-weight"] || styles["font-weight"] === "400")
+    !_.includes(styles['font-style'], 'bold') &&
+    (!styles['font-weight'] || styles['font-weight'] === '400')
       ? 0
       : 1;
   cell.it =
-    (td.style.fontStyle === "normal" || _.isEmpty(td.style.fontStyle)) &&
-      !_.includes(styles["font-style"], "italic")
+    (td.style.fontStyle === 'normal' || _.isEmpty(td.style.fontStyle)) &&
+    !_.includes(styles['font-style'], 'italic')
       ? 0
       : 1;
 
@@ -419,38 +418,38 @@ const buildCellFromTd = (
     td.style.textDecoration,
     // @ts-ignore
     td.style.textDecorationLine,
-    styles["text-decoration"],
-    styles["text-decoration-line"],
+    styles['text-decoration'],
+    styles['text-decoration-line'],
   ]
     .filter(Boolean)
-    .join(" ")
+    .join(' ')
     .toLowerCase();
-  cell.un = textDecoration.includes("underline") ? 1 : undefined;
+  cell.un = textDecoration.includes('underline') ? 1 : undefined;
   cell.cl =
-    textDecoration.includes("line-through") || _.includes(td.innerHTML, "<s>")
+    textDecoration.includes('line-through') || _.includes(td.innerHTML, '<s>')
       ? 1
       : undefined;
 
   // Font family / size / color
-  const ff = td.style.fontFamily || styles["font-family"] || "";
+  const ff = td.style.fontFamily || styles['font-family'] || '';
   cell.ff = mapFontFamilyToIndex(ff, ctx);
   const ctxDefaultFontSize = ctx.defaultFontSize ?? DEFAULT_FONT_SIZE;
   const fontSize = Math.round(
-    styles["font-size"]
-      ? parseInt(styles["font-size"].replace("pt", ""), 10)
-      : parseInt(td.style.fontSize || `${ctxDefaultFontSize}`, 10)
+    styles['font-size']
+      ? parseInt(styles['font-size'].replace('pt', ''), 10)
+      : parseInt(td.style.fontSize || `${ctxDefaultFontSize}`, 10),
   );
   cell.fs = fontSize;
   cell.fc = td.style.color || styles.color;
 
   // Preserve explicit horizontal alignment from pasted HTML (e.g. dsheet->dsheet),
   // but do not force a default alignment when text-align is not provided.
-  const htStyle = td.style.textAlign || styles["text-align"];
-  if (htStyle === "center") {
+  const htStyle = td.style.textAlign || styles['text-align'];
+  if (htStyle === 'center') {
     cell.ht = 0;
-  } else if (htStyle === "right") {
+  } else if (htStyle === 'right') {
     cell.ht = 2;
-  } else if (htStyle === "left") {
+  } else if (htStyle === 'left') {
     cell.ht = 1;
   }
 
@@ -471,40 +470,40 @@ const buildCellFromTd = (
   // }
 
   // @ts-ignore
-  if (td?.style?.["overflow-wrap"] === "anywhere") {
-    cell.tb = "2";
+  if (td?.style?.['overflow-wrap'] === 'anywhere') {
+    cell.tb = '2';
   } else {
-    cell.tb = "1"; // overflow
+    cell.tb = '1'; // overflow
   }
 
   // Rotation
-  if ("mso-rotate" in styles) cell.rt = parseFloat(styles["mso-rotate"]);
+  if ('mso-rotate' in styles) cell.rt = parseFloat(styles['mso-rotate']);
 
   const inlineSegments = getInlineStringSegmentsFromTd(
     td,
     cell,
-    ctxDefaultFontSize
+    ctxDefaultFontSize,
   );
-  const segmentsText = inlineSegments.map((s: any) => s.v ?? "").join("");
+  const segmentsText = inlineSegments.map((s: any) => s.v ?? '').join('');
   const shouldUseInlineString =
     normalizedText.length > 0 &&
     inlineSegments.length > 0 &&
     segmentsText.trim().length > 0 &&
     (isLineBreak ||
-      td.querySelector("[data-sheets-root]") != null ||
+      td.querySelector('[data-sheets-root]') != null ||
       td.querySelector(
-        "span[style], b, strong, i, em, u, s, strike, a[href]"
+        'span[style], b, strong, i, em, u, s, strike, a[href]',
       ) != null);
 
   if (shouldUseInlineString) {
     cell.v = normalizedText;
     cell.m = normalizedText;
-    cell.ct = { fa: "General", t: "inlineStr", s: inlineSegments };
+    cell.ct = { fa: 'General', t: 'inlineStr', s: inlineSegments };
   }
 
   // Span
-  let rowspan = parseInt(td.getAttribute("rowspan") || "1", 10);
-  let colspan = parseInt(td.getAttribute("colspan") || "1", 10);
+  let rowspan = parseInt(td.getAttribute('rowspan') || '1', 10);
+  let colspan = parseInt(td.getAttribute('colspan') || '1', 10);
   if (Number.isNaN(rowspan)) rowspan = 1;
   if (Number.isNaN(colspan)) colspan = 1;
 
@@ -514,32 +513,32 @@ const buildCellFromTd = (
 export function handlePastedTable(
   ctx: Context,
   html: string,
-  pasteHandler: (context: Context, data: any, borderInfo?: any) => void
+  pasteHandler: (context: Context, data: any, borderInfo?: any) => void,
 ) {
   if (!/<table[\s/>]/i.test(html)) return;
 
-  const containerDiv = document.createElement("div");
+  const containerDiv = document.createElement('div');
   containerDiv.innerHTML = html;
 
-  const tableColGropup = containerDiv.querySelectorAll("colgroup");
+  const tableColGropup = containerDiv.querySelectorAll('colgroup');
 
   tableColGropup.forEach((colGroup, index) => {
-    const colWidth = colGroup?.getAttribute("width");
-    const intColWidth = parseInt(colWidth || "0", 10);
+    const colWidth = colGroup?.getAttribute('width');
+    const intColWidth = parseInt(colWidth || '0', 10);
     if (intColWidth <= 0) return;
     const anchorCol = ctx.luckysheet_select_save![0].column[0];
     const absoluteCol = anchorCol + index;
     setColumnWidth(ctx, { [absoluteCol]: intColWidth });
   });
 
-  const tableRows = containerDiv.querySelectorAll("table tr");
+  const tableRows = containerDiv.querySelectorAll('table tr');
   if (tableRows.length === 0) {
     containerDiv.remove();
     return;
   }
 
   let totalColumns = 0;
-  tableRows[0].querySelectorAll("td, th").forEach((cellEl) => {
+  tableRows[0].querySelectorAll('td, th').forEach((cellEl) => {
     const tableCell = cellEl as HTMLTableCellElement;
     const span = Number.isNaN(tableCell.colSpan) ? 1 : tableCell.colSpan;
     totalColumns += span;
@@ -548,12 +547,12 @@ export function handlePastedTable(
   const totalRows = tableRows.length;
   const pastedMatrix: any[][] = Array.from(
     { length: totalRows },
-    () => new Array(totalColumns)
+    () => new Array(totalColumns),
   );
   const pasteBorderInfo: any = {};
 
   const inlineStyleBlock =
-    containerDiv.querySelectorAll("style")[0]?.innerHTML || "";
+    containerDiv.querySelectorAll('style')[0]?.innerHTML || '';
   const classStyleMap = parseStylesheetPairs(inlineStyleBlock);
 
   const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
@@ -577,12 +576,12 @@ export function handlePastedTable(
     const anchorRow = ctx.luckysheet_select_save![0].row[0];
     const targetRowIndex = anchorRow + localRowIndex;
 
-    const explicitRowHeightAttr = tr.getAttribute("height");
+    const explicitRowHeightAttr = tr.getAttribute('height');
     if (!_.isNil(explicitRowHeightAttr)) {
       const explicitRowHeight = parseInt(explicitRowHeightAttr, 10);
       const hasCustomRowHeight = _.has(
         sheetFile.config?.rowlen,
-        targetRowIndex
+        targetRowIndex,
       );
       const currentRowHeight = hasCustomRowHeight
         ? sheetFile.config!.rowlen![targetRowIndex]
@@ -596,7 +595,7 @@ export function handlePastedTable(
         [String(targetRowIndex)]: explicitRowHeight,
       });
     }
-    tr.querySelectorAll("td, th").forEach((node) => {
+    tr.querySelectorAll('td, th').forEach((node) => {
       const tdElement = node as HTMLTableCellElement;
 
       while (
@@ -621,7 +620,7 @@ export function handlePastedTable(
             srcCol,
             srcRow,
             absoluteCol,
-            absoluteRow
+            absoluteRow,
           );
         } catch {
           // invalid ref — leave formula as-is
@@ -638,12 +637,12 @@ export function handlePastedTable(
           absoluteRow,
           absoluteCol,
           hyperlink.href,
-          "webpage",
-          hyperlink.display
+          'webpage',
+          hyperlink.display,
         );
         // Force blue color and underline for all pasted links
         cell.hl = { r: absoluteRow, c: absoluteCol, id: ctx.currentSheetId };
-        cell.fc = "rgb(0, 0, 255)";
+        cell.fc = 'rgb(0, 0, 255)';
         cell.un = 1;
         // Update the cell in the matrix with the styling
         pastedMatrix[localRowIndex][localColIndex] = cell;
@@ -659,7 +658,7 @@ export function handlePastedTable(
         rowspan,
         colspan,
         pasteBorderInfo,
-        pastedMatrix
+        pastedMatrix,
       );
 
       // Mark merged cell metadata, if any

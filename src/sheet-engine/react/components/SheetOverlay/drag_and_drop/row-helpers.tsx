@@ -49,10 +49,10 @@ export const useRowDragAndDrop = (
     const { lineEl, ghostEl } = dragRef.current;
     try {
       if (lineEl?.parentElement) lineEl.parentElement.removeChild(lineEl);
-    } catch { }
+    } catch {}
     try {
       if (ghostEl?.parentElement) ghostEl.parentElement.removeChild(ghostEl);
-    } catch { }
+    } catch {}
     dragRef.current.lineEl = null;
     dragRef.current.ghostEl = null;
     dragRef.current.active = false;
@@ -137,7 +137,10 @@ export const useRowDragAndDrop = (
       0,
       mouseYInWorkbook,
     );
-    const [, , hoveredRowIndex] = rowLocation(yWorkbook, context.visibledatarow);
+    const [, , hoveredRowIndex] = rowLocation(
+      yWorkbook,
+      context.visibledatarow,
+    );
     return hoveredRowIndex;
   };
 
@@ -146,11 +149,7 @@ export const useRowDragAndDrop = (
     const selectedRowRange = context.luckysheet_select_save?.[0]?.row;
     const start = selectedRowRange?.[0];
     const end = selectedRowRange?.[1];
-    if (
-      hoveredRowIndex < 0 ||
-      start == null ||
-      end == null
-    ) {
+    if (hoveredRowIndex < 0 || start == null || end == null) {
       return false;
     }
     return hoveredRowIndex >= start && hoveredRowIndex <= end;
@@ -197,10 +196,7 @@ export const useRowDragAndDrop = (
     if (cellArea) {
       const r = cellArea.getBoundingClientRect();
       // Keep indicator aligned to the original row-header start X, not ghost start X.
-      const w = Math.max(
-        0,
-        r.right - hr.left - GHOST_CELL_AREA_WIDTH_INSET_PX,
-      );
+      const w = Math.max(0, r.right - hr.left - GHOST_CELL_AREA_WIDTH_INSET_PX);
       line.style.top = `${lineT}px`;
       line.style.left = `${hr.left}px`;
       line.style.width = `${w}px`;
@@ -262,10 +258,7 @@ export const useRowDragAndDrop = (
     return { el, ghostHeightPx };
   };
 
-  const layoutGhostInViewport = (
-    ghost: HTMLDivElement,
-    ghostTopV: number,
-  ) => {
+  const layoutGhostInViewport = (ghost: HTMLDivElement, ghostTopV: number) => {
     const cellArea = refs.cellArea?.current;
     if (cellArea) {
       const r = cellArea.getBoundingClientRect();
@@ -306,11 +299,7 @@ export const useRowDragAndDrop = (
     dragRef.current.ghostCursorOffsetY = startCursorV - selectedTopV;
     if (dragRef.current.lineEl) {
       const { lineTopPx } = computeInsertionFromPageY(dragRef.current.startY);
-      layoutInsertionLineInViewport(
-        dragRef.current.lineEl,
-        lineTopPx,
-        host,
-      );
+      layoutInsertionLineInViewport(dragRef.current.lineEl, lineTopPx, host);
     }
 
     return true;
@@ -343,10 +332,7 @@ export const useRowDragAndDrop = (
     if (dragRef.current.ghostEl) {
       const cursorV = ev.pageY - window.scrollY;
       const ghostTopV = cursorV - dragRef.current.ghostCursorOffsetY;
-      layoutGhostInViewport(
-        dragRef.current.ghostEl,
-        ghostTopV,
-      );
+      layoutGhostInViewport(dragRef.current.ghostEl, ghostTopV);
     }
   };
 
@@ -359,7 +345,7 @@ export const useRowDragAndDrop = (
       document.body.style.userSelect = dragRef.current.prevUserSelect || '';
       (document.body.style as any).webkitUserSelect =
         dragRef.current.prevWebkitUserSelect || '';
-    } catch { }
+    } catch {}
 
     const cursorInsideSelection = isCursorInsideSelectedRows(ev.pageY);
     if (dragRef.current.active && !cursorInsideSelection) {
@@ -406,7 +392,8 @@ export const useRowDragAndDrop = (
             targetIndex -= moveCount;
           }
           if (targetIndex < 0) targetIndex = 0;
-          if (targetIndex > rows.length - moveCount) targetIndex = rows.length - moveCount;
+          if (targetIndex > rows.length - moveCount)
+            targetIndex = rows.length - moveCount;
 
           const selectedTargetRow: number[] = Array.from(
             { length: moveCount },
@@ -454,14 +441,15 @@ export const useRowDragAndDrop = (
               Object.keys(mapObj).forEach((k) => {
                 const oldIdx = parseInt(k, 10);
                 if (!Number.isFinite(oldIdx)) return;
-                const newIdx =
-                  rowMap[oldIdx] != null ? rowMap[oldIdx] : oldIdx;
+                const newIdx = rowMap[oldIdx] != null ? rowMap[oldIdx] : oldIdx;
                 next[newIdx] = (mapObj as any)[k];
               });
               return next;
             };
             _sheet.config.rowlen = remapIndexMap(_sheet.config.rowlen);
-            _sheet.config.customHeight = remapIndexMap(_sheet.config.customHeight);
+            _sheet.config.customHeight = remapIndexMap(
+              _sheet.config.customHeight,
+            );
             // calcRowColSize reads from ctx.config; keep it in sync with sheet config.
             draft.config.rowlen = _sheet.config.rowlen;
             draft.config.customHeight = _sheet.config.customHeight;
@@ -469,9 +457,7 @@ export const useRowDragAndDrop = (
 
           // Keep conditional formatting ranges aligned with moved rows.
           if (Array.isArray(_sheet.luckysheet_conditionformat_save)) {
-            const remapConditionalFormatByRowMap = (
-              rules: any[],
-            ): any[] => {
+            const remapConditionalFormatByRowMap = (rules: any[]): any[] => {
               const toNumberRange = (v: any): [number, number] | null => {
                 if (!Array.isArray(v) || v.length !== 2) return null;
                 const a = Number(v[0]);
@@ -532,9 +518,10 @@ export const useRowDragAndDrop = (
                 };
               });
             };
-            _sheet.luckysheet_conditionformat_save = remapConditionalFormatByRowMap(
-              _sheet.luckysheet_conditionformat_save,
-            );
+            _sheet.luckysheet_conditionformat_save =
+              remapConditionalFormatByRowMap(
+                _sheet.luckysheet_conditionformat_save,
+              );
           }
 
           // Keep alternate-format ranges aligned with moved rows.
@@ -599,9 +586,10 @@ export const useRowDragAndDrop = (
               });
               return remappedRules;
             };
-            _sheet.luckysheet_alternateformat_save = remapAlternateFormatByRowMap(
-              _sheet.luckysheet_alternateformat_save,
-            );
+            _sheet.luckysheet_alternateformat_save =
+              remapAlternateFormatByRowMap(
+                _sheet.luckysheet_alternateformat_save,
+              );
           }
 
           d?.forEach((row) => {

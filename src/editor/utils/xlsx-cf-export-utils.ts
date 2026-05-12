@@ -124,7 +124,6 @@ function luckysheetConditionToExcelCf(
   rule: FortuneRule,
   ref: string,
   priority: number,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Record<string, unknown> | null {
   const { conditionName, conditionValue = [], format = {} } = rule;
   const style = fortuneFormatToExcelStyle(format);
@@ -186,7 +185,9 @@ function luckysheetConditionToExcelCf(
         type: 'containsText',
         operator: 'containsText',
         text,
-        formulae: [`NOT(ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft})))`],
+        formulae: [
+          `NOT(ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft})))`,
+        ],
         priority,
         style,
       };
@@ -198,7 +199,9 @@ function luckysheetConditionToExcelCf(
         type: 'containsText',
         operator: 'containsText',
         text,
-        formulae: [`NOT(ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft})))`],
+        formulae: [
+          `NOT(ISERROR(SEARCH("${escapeForFormula(text)}",${topLeft})))`,
+        ],
         priority,
         style,
       };
@@ -235,7 +238,9 @@ function luckysheetConditionToExcelCf(
         type: 'beginsWith',
         operator: 'beginsWith',
         text,
-        formulae: [`LEFT(${topLeft},${text.length})="${escapeForFormula(text)}"`],
+        formulae: [
+          `LEFT(${topLeft},${text.length})="${escapeForFormula(text)}"`,
+        ],
         priority,
         style,
       };
@@ -247,7 +252,9 @@ function luckysheetConditionToExcelCf(
         type: 'beginsWith',
         operator: 'beginsWith',
         text,
-        formulae: [`LEFT(${topLeft},${text.length})="${escapeForFormula(text)}"`],
+        formulae: [
+          `LEFT(${topLeft},${text.length})="${escapeForFormula(text)}"`,
+        ],
         priority,
         style,
       };

@@ -30,8 +30,8 @@ type SubmenuProps = {
 export type HoverMenuItemProps = CommonProps &
   (
     | {
-      renderSubmenu?: undefined;
-    }
+        renderSubmenu?: undefined;
+      }
     | SubmenuProps
   );
 

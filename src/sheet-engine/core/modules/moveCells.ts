@@ -1,25 +1,25 @@
-import _ from "lodash";
-import { getdatabyselection } from "./cell";
-import { recalcAutoRowHeightForRow } from "./cell";
+import _ from 'lodash';
+import { getdatabyselection } from './cell';
+import { recalcAutoRowHeightForRow } from './cell';
 
-import { Context, getFlowdata, updateContextWithSheetData } from "../context";
+import { Context, getFlowdata, updateContextWithSheetData } from '../context';
 import {
   colLocation,
   colLocationByIndex,
   mousePosition,
   rowLocation,
   rowLocationByIndex,
-} from "./location";
-import { hasPartMC } from "./validation";
-import { locale } from "../locale";
-import { getBorderInfoCompute } from "./border";
-import { normalizeSelection } from "./selection";
-import { getSheetIndex, isAllowEdit } from "../utils";
-import { cfSplitRange } from "./conditionalFormat";
-import { GlobalCache, HyperlinkEntry } from "../types";
-import { jfrefreshgrid } from "./refresh";
-import { CFSplitRange } from "./ConditionFormat";
-import { functionMoveReference } from "./formula";
+} from './location';
+import { hasPartMC } from './validation';
+import { locale } from '../locale';
+import { getBorderInfoCompute } from './border';
+import { normalizeSelection } from './selection';
+import { getSheetIndex, isAllowEdit } from '../utils';
+import { cfSplitRange } from './conditionalFormat';
+import { GlobalCache, HyperlinkEntry } from '../types';
+import { jfrefreshgrid } from './refresh';
+import { CFSplitRange } from './ConditionFormat';
+import { functionMoveReference } from './formula';
 
 const dragCellThreshold = 8;
 
@@ -30,16 +30,18 @@ function recalcMovedRowsAutoHeight(
   sourceRowStart: number,
   sourceRowEnd: number,
   targetRowStart: number,
-  targetRowEnd: number
+  targetRowEnd: number,
 ) {
   if (!d) return;
   const doc = container.ownerDocument || document;
   const canvasEl =
-    (container.querySelector(".fortune-sheet-canvas") as HTMLCanvasElement | null) ||
-    (doc.querySelector(".fortune-sheet-canvas") as HTMLCanvasElement | null);
-  const canvas = canvasEl?.getContext("2d");
+    (container.querySelector(
+      '.fortune-sheet-canvas',
+    ) as HTMLCanvasElement | null) ||
+    (doc.querySelector('.fortune-sheet-canvas') as HTMLCanvasElement | null);
+  const canvas = canvasEl?.getContext('2d');
   if (!canvas) return;
-  canvas.textBaseline = "top";
+  canvas.textBaseline = 'top';
 
   const rowIndexes = new Set<number>();
   for (let r = sourceRowStart; r <= sourceRowEnd; r += 1) rowIndexes.add(r);
@@ -52,7 +54,7 @@ function getCellLocationByMouse(
   e: MouseEvent,
   scrollbarX: HTMLDivElement,
   scrollbarY: HTMLDivElement,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
   const rect = container.getBoundingClientRect();
   const x = e.pageX - rect.left - ctx.rowHeaderWidth + scrollbarX.scrollLeft;
@@ -70,7 +72,7 @@ export function onCellsMoveStart(
   e: MouseEvent,
   scrollbarX: HTMLDivElement,
   scrollbarY: HTMLDivElement,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
   // if (isEditMode() || ctx.allowEdit === false) {
   const allowEdit = isAllowEdit(ctx);
@@ -102,14 +104,14 @@ export function onCellsMoveStart(
 
   ctx.luckysheet_cell_selected_move_index = [row_index, col_index];
 
-  const ele = document.getElementById("fortune-cell-selected-move");
+  const ele = document.getElementById('fortune-cell-selected-move');
   if (ele == null) return;
-  ele.style.cursor = "grabbing";
+  ele.style.cursor = 'grabbing';
   ele.style.left = `${col_pre}px`;
   ele.style.top = `${row_pre}px`;
   ele.style.width = `${col - col_pre - 1}px`;
   ele.style.height = `${row - row_pre - 1}px`;
-  ele.style.display = "block";
+  ele.style.display = 'block';
 
   e.stopPropagation();
 }
@@ -120,7 +122,7 @@ export function onCellsMove(
   e: MouseEvent,
   scrollbarX: HTMLDivElement,
   scrollbarY: HTMLDivElement,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
   if (!ctx.luckysheet_cell_selected_move) return;
   if (globalCache.dragCellStartPos != null) {
@@ -142,7 +144,7 @@ export function onCellsMove(
     e,
     scrollbarX,
     scrollbarY,
-    container
+    container,
   );
   let [row_pre, row] = rowL;
   let [col_pre, col] = column;
@@ -199,13 +201,13 @@ export function onCellsMove(
   row_pre = row_s - 1 === -1 ? 0 : ctx.visibledatarow[row_s - 1];
   row = ctx.visibledatarow[row_e];
 
-  const ele = document.getElementById("fortune-cell-selected-move");
+  const ele = document.getElementById('fortune-cell-selected-move');
   if (ele == null) return;
   ele.style.left = `${col_pre}px`;
   ele.style.top = `${row_pre}px`;
   ele.style.width = `${col - col_pre - 2}px`;
   ele.style.height = `${row - row_pre - 2}px`;
-  ele.style.display = "block";
+  ele.style.display = 'block';
 }
 
 export function onCellsMoveEnd(
@@ -214,15 +216,15 @@ export function onCellsMoveEnd(
   e: MouseEvent,
   scrollbarX: HTMLDivElement,
   scrollbarY: HTMLDivElement,
-  container: HTMLDivElement
+  container: HTMLDivElement,
 ) {
   // 改变选择框的位置并替换目标单元格
   if (!ctx.luckysheet_cell_selected_move) return;
   ctx.luckysheet_cell_selected_move = false;
-  const ele = document.getElementById("fortune-cell-selected-move");
+  const ele = document.getElementById('fortune-cell-selected-move');
   if (ele != null) {
-    ele.style.cursor = "grabbing";
-    ele.style.display = "none";
+    ele.style.cursor = 'grabbing';
+    ele.style.display = 'none';
   }
   if (globalCache.dragCellStartPos != null) {
     globalCache.dragCellStartPos = undefined;
@@ -288,7 +290,7 @@ export function onCellsMoveEnd(
       last.row[0],
       last.row[1],
       last.column[0],
-      last.column[1]
+      last.column[1],
     )
   ) {
     // if (isEditMode()) {
@@ -356,7 +358,7 @@ export function onCellsMoveEnd(
     path: string[];
     key?: string;
     value: any;
-    type?: "update" | "delete";
+    type?: 'update' | 'delete';
   }[] = [];
 
   const hyperLinkList: Record<string, HyperlinkEntry | HyperlinkEntry[]> = {};
@@ -366,7 +368,8 @@ export function onCellsMoveEnd(
   const file: any = ctx.luckysheetfile[index];
   // Data validation is stored under `dataVerification` in this codebase.
   // Keep a fallback to legacy `dataValidation` to avoid dropping old in-memory state.
-  const sourceDataValidation = file.dataVerification ?? file.dataValidation ?? {};
+  const sourceDataValidation =
+    file.dataVerification ?? file.dataValidation ?? {};
   const nextDataValidation = _.cloneDeep(sourceDataValidation);
   const movedDataValidation: Record<string, any> = {};
   const sourceCalcChain = file.calcChain ?? [];
@@ -417,10 +420,10 @@ export function onCellsMoveEnd(
       d[r][c] = null;
       cellChanges.push({
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r, c, v: null },
         key: `${r}_${c}`,
-        type: "update",
+        type: 'update',
       });
       if (ctx.luckysheetfile[index].hyperlink?.[`${r}_${c}`]) {
         hyperLinkList[`${r}_${c}`] =
@@ -454,8 +457,8 @@ export function onCellsMoveEnd(
       const bd_rangeType = cfg.borderInfo[i].rangeType;
 
       if (
-        bd_rangeType === "range" &&
-        cfg.borderInfo[i].borderType !== "border-slash"
+        bd_rangeType === 'range' &&
+        cfg.borderInfo[i].borderType !== 'border-slash'
       ) {
         const bd_range = cfg.borderInfo[i].range;
         let bd_emptyRange: any[] = [];
@@ -465,14 +468,14 @@ export function onCellsMoveEnd(
               bd_range[j],
               { row: last.row, column: last.column },
               { row: [row_s, row_e], column: [col_s, col_e] },
-              "restPart"
-            )
+              'restPart',
+            ),
           );
         }
 
         cfg.borderInfo[i].range = bd_emptyRange;
         borderInfo.push(cfg.borderInfo[i]);
-      } else if (bd_rangeType === "cell") {
+      } else if (bd_rangeType === 'cell') {
         const bd_r = cfg.borderInfo[i].value.row_index;
         const bd_c = cfg.borderInfo[i].value.col_index;
 
@@ -487,8 +490,8 @@ export function onCellsMoveEnd(
           borderInfo.push(cfg.borderInfo[i]);
         }
       } else if (
-        bd_rangeType === "range" &&
-        cfg.borderInfo[i].borderType === "border-slash" &&
+        bd_rangeType === 'range' &&
+        cfg.borderInfo[i].borderType === 'border-slash' &&
         !(
           cfg.borderInfo[i].range[0].row[0] >= last.row[0] &&
           cfg.borderInfo[i].range[0].row[0] <= last.row[1] &&
@@ -511,7 +514,7 @@ export function onCellsMoveEnd(
         !borderInfoCompute[`${r + last.row[0]}_${c + last.column[0]}`].s
       ) {
         const bd_obj = {
-          rangeType: "cell",
+          rangeType: 'cell',
           value: {
             row_index: r + row_s,
             col_index: c + col_s,
@@ -531,8 +534,8 @@ export function onCellsMoveEnd(
         borderInfoCompute[`${r + last.row[0]}_${c + last.column[0]}`]
       ) {
         const bd_obj = {
-          rangeType: "range",
-          borderType: "border-slash",
+          rangeType: 'range',
+          borderType: 'border-slash',
           color:
             borderInfoCompute[`${r + last.row[0]}_${c + last.column[0]}`].s
               .color!,
@@ -558,7 +561,7 @@ export function onCellsMoveEnd(
 
       if (value?.mc != null) {
         const mc = _.assign({}, value.mc);
-        if ("rs" in value.mc) {
+        if ('rs' in value.mc) {
           _.set(offsetMC, `${mc.r}_${mc.c}`, [r + row_s, c + col_s]);
 
           value.mc.r = r + row_s;
@@ -566,17 +569,17 @@ export function onCellsMoveEnd(
 
           _.set(cfg.merge, `${r + row_s}_${c + col_s}`, value.mc);
         } else {
-          _.set(value.mc, "r", offsetMC[`${mc.r}_${mc.c}`][0]);
-          _.set(value.mc, "c", offsetMC[`${mc.r}_${mc.c}`][1]);
+          _.set(value.mc, 'r', offsetMC[`${mc.r}_${mc.c}`][0]);
+          _.set(value.mc, 'c', offsetMC[`${mc.r}_${mc.c}`][1]);
         }
       }
       d[r + row_s][c + col_s] = value;
       cellChanges.push({
         sheetId: ctx.currentSheetId,
-        path: ["celldata"],
+        path: ['celldata'],
         value: { r: r + row_s, c: c + col_s, v: d[r + row_s][c + col_s] },
         key: `${r + row_s}_${c + col_s}`,
-        type: "update",
+        type: 'update',
       });
       if (hyperLinkList?.[`${r + last.row[0]}_${c + last.column[0]}`]) {
         ctx.luckysheetfile[index].hyperlink![`${r + row_s}_${c + col_s}`] =
@@ -611,19 +614,19 @@ export function onCellsMoveEnd(
       for (let j = 0; j < ruleRanges.length; j += 1) {
         const current = ruleRanges[j];
         movedRanges = movedRanges.concat(
-          CFSplitRange(current, sourceRange, targetRange, "operatePart")
+          CFSplitRange(current, sourceRange, targetRange, 'operatePart'),
         );
 
         const sourceRest = CFSplitRange(
           current,
           sourceRange,
           targetRange,
-          "restPart"
+          'restPart',
         );
         for (let k = 0; k < sourceRest.length; k += 1) {
           const rest = sourceRest[k];
           keptRanges = keptRanges.concat(
-            CFSplitRange(rest, targetRange, targetRange, "restPart")
+            CFSplitRange(rest, targetRange, targetRange, 'restPart'),
           );
         }
       }
@@ -680,7 +683,7 @@ export function onCellsMoveEnd(
   const targetRowStart = row_s;
   const targetColStart = col_s;
   const movedSheet = ctx.luckysheetfile[index];
-  const movedSheetName = movedSheet?.name || "";
+  const movedSheetName = movedSheet?.name || '';
   const refCellChanges: typeof cellChanges = [];
 
   for (let si = 0; si < ctx.luckysheetfile.length; si += 1) {
@@ -701,17 +704,17 @@ export function onCellsMoveEnd(
           movedSheetName,
           sourceRect,
           targetRowStart,
-          targetColStart
+          targetColStart,
         )}`;
 
         if (nextF !== cell.f) {
           cell.f = nextF;
           refCellChanges.push({
             sheetId: sheet.id || ctx.currentSheetId,
-            path: ["celldata"],
+            path: ['celldata'],
             value: { r, c, v: cell },
             key: `${r}_${c}`,
-            type: "update",
+            type: 'update',
           });
         }
       }
@@ -729,7 +732,7 @@ export function onCellsMoveEnd(
     range[0].row[0],
     range[0].row[1],
     range[1].row[0],
-    range[1].row[1]
+    range[1].row[1],
   );
   updateContextWithSheetData(ctx, d);
 

@@ -70,7 +70,7 @@ export function selectTextContentCross(sEle: HTMLElement, eEle: HTMLElement) {
 }
 
 function normalizePlainForOffset(s: string): string {
-  return s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  return s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 }
 
 /**
@@ -142,7 +142,7 @@ export function setSelectionByCharacterOffset(
     }
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
-      if (el.tagName === "BR") {
+      if (el.tagName === 'BR') {
         const brLen = 1;
         const parent = el.parentNode;
         if (parent) {
@@ -221,7 +221,7 @@ export function getRangeRectsByCharacterOffset(
     }
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
-      if (el.tagName === "BR") {
+      if (el.tagName === 'BR') {
         const brLen = 1;
         const parent = el.parentNode;
         if (parent) {

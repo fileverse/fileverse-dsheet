@@ -1,8 +1,7 @@
 export function columnLabelIndex(label: string): number {
   let index = 0;
-  const A = "A".charCodeAt(0);
+  const A = 'A'.charCodeAt(0);
 
-  // eslint-disable-next-line no-plusplus
   for (let i = 0; i < label.length; i++) {
     const charCode = label.charCodeAt(i) - A + 1;
     index = index * 26 + charCode;
@@ -12,7 +11,7 @@ export function columnLabelIndex(label: string): number {
 }
 
 export function indexToColumnLabel(index: number): string {
-  let label = "";
+  let label = '';
   while (index >= 0) {
     const remainder = index % 26;
     label = String.fromCharCode(65 + remainder) + label;
@@ -26,7 +25,7 @@ export class FormularCellRefError extends Error {
 
   constructor(message: string, formula: string) {
     super(message);
-    this.name = "FormularCellRefError";
+    this.name = 'FormularCellRefError';
     this.formula = formula;
   }
 }
@@ -36,7 +35,7 @@ export function adjustFormulaForPaste(
   srcCol: number,
   srcRow: number,
   destCol: number,
-  destRow: number
+  destRow: number,
 ) {
   const colOffset = destCol - srcCol;
   const rowOffset = destRow - srcRow;
@@ -74,23 +73,23 @@ export function adjustFormulaForPaste(
         hadInvalid = true;
         const invalidCol =
           colIndex < 0
-            ? `${absCol ? "$" : ""}${colLetters}${colIndex}`
-            : `${absCol ? "$" : ""}${indexToColumnLabel(colIndex)}`;
+            ? `${absCol ? '$' : ''}${colLetters}${colIndex}`
+            : `${absCol ? '$' : ''}${indexToColumnLabel(colIndex)}`;
         const invalidRow = rowIndex.toString();
         return `${invalidCol}${invalidRow}`;
       }
 
       const newCol = indexToColumnLabel(colIndex);
-      return `${absCol ? "$" : ""}${newCol}${absRow ? "$" : ""}${rowIndex}`;
-    }
+      return `${absCol ? '$' : ''}${newCol}${absRow ? '$' : ''}${rowIndex}`;
+    },
   );
 
   // if any invalid references were generated, throw error with full visible formula
   if (hadInvalid) {
-    const brokenFormula = `=${result.replace(/^=/, "")}`;
+    const brokenFormula = `=${result.replace(/^=/, '')}`;
     throw new FormularCellRefError(
       `Invalid cell reference generated while pasting formula: ${formula}`,
-      brokenFormula
+      brokenFormula,
     );
   }
 

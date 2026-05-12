@@ -54,10 +54,10 @@ export const useColumnDragAndDrop = (
     const { lineEl, ghostEl } = dragRef.current;
     try {
       if (lineEl?.parentElement) lineEl.parentElement.removeChild(lineEl);
-    } catch { }
+    } catch {}
     try {
       if (ghostEl?.parentElement) ghostEl.parentElement.removeChild(ghostEl);
-    } catch { }
+    } catch {}
     dragRef.current.lineEl = null;
     dragRef.current.ghostEl = null;
     dragRef.current.active = false;
@@ -144,7 +144,10 @@ export const useColumnDragAndDrop = (
       mouseXInWorkbook,
       0,
     );
-    const [, , hoveredColIndex] = colLocation(xWorkbook, context.visibledatacolumn);
+    const [, , hoveredColIndex] = colLocation(
+      xWorkbook,
+      context.visibledatacolumn,
+    );
     return hoveredColIndex;
   };
 
@@ -153,11 +156,7 @@ export const useColumnDragAndDrop = (
     const selectedColRange = context.luckysheet_select_save?.[0]?.column;
     const start = selectedColRange?.[0];
     const end = selectedColRange?.[1];
-    if (
-      hoveredColIndex < 0 ||
-      start == null ||
-      end == null
-    ) {
+    if (hoveredColIndex < 0 || start == null || end == null) {
       return false;
     }
     return hoveredColIndex >= start && hoveredColIndex <= end;
@@ -265,10 +264,7 @@ export const useColumnDragAndDrop = (
     return { el, ghostWidthPx };
   };
 
-  const layoutGhostInViewport = (
-    ghost: HTMLDivElement,
-    ghostLeftV: number,
-  ) => {
+  const layoutGhostInViewport = (ghost: HTMLDivElement, ghostLeftV: number) => {
     const cellArea = refs.cellArea?.current;
     if (cellArea) {
       const r = cellArea.getBoundingClientRect();
@@ -309,11 +305,7 @@ export const useColumnDragAndDrop = (
     dragRef.current.ghostCursorOffsetX = startCursorV - selectedLeftV;
     if (dragRef.current.lineEl) {
       const { lineLeftPx } = computeInsertionFromPageX(dragRef.current.startX);
-      layoutInsertionLineInViewport(
-        dragRef.current.lineEl,
-        lineLeftPx,
-        host,
-      );
+      layoutInsertionLineInViewport(dragRef.current.lineEl, lineLeftPx, host);
     }
 
     return true;
@@ -346,10 +338,7 @@ export const useColumnDragAndDrop = (
     if (dragRef.current.ghostEl) {
       const cursorV = ev.pageX - window.scrollX;
       const ghostLeftV = cursorV - dragRef.current.ghostCursorOffsetX;
-      layoutGhostInViewport(
-        dragRef.current.ghostEl,
-        ghostLeftV,
-      );
+      layoutGhostInViewport(dragRef.current.ghostEl, ghostLeftV);
     }
   };
 
@@ -362,7 +351,7 @@ export const useColumnDragAndDrop = (
       document.body.style.userSelect = dragRef.current.prevUserSelect || '';
       (document.body.style as any).webkitUserSelect =
         dragRef.current.prevWebkitUserSelect || '';
-    } catch { }
+    } catch {}
 
     const cursorInsideSelection = isCursorInsideSelectedColumns(ev.pageX);
     if (dragRef.current.active && !cursorInsideSelection) {
@@ -412,7 +401,8 @@ export const useColumnDragAndDrop = (
             targetIndex -= moveCount;
           }
           if (targetIndex < 0) targetIndex = 0;
-          if (targetIndex > numCols - moveCount) targetIndex = numCols - moveCount;
+          if (targetIndex > numCols - moveCount)
+            targetIndex = numCols - moveCount;
 
           const selectedTargetCol: number[] = Array.from(
             { length: moveCount },
@@ -466,14 +456,15 @@ export const useColumnDragAndDrop = (
               Object.keys(mapObj).forEach((k) => {
                 const oldIdx = parseInt(k, 10);
                 if (!Number.isFinite(oldIdx)) return;
-                const newIdx =
-                  colMap[oldIdx] != null ? colMap[oldIdx] : oldIdx;
+                const newIdx = colMap[oldIdx] != null ? colMap[oldIdx] : oldIdx;
                 next[newIdx] = (mapObj as any)[k];
               });
               return next;
             };
             _sheet.config.columnlen = remapIndexMap(_sheet.config.columnlen);
-            _sheet.config.customWidth = remapIndexMap(_sheet.config.customWidth);
+            _sheet.config.customWidth = remapIndexMap(
+              _sheet.config.customWidth,
+            );
             // calcRowColSize reads from ctx.config; keep it in sync with sheet config.
             draft.config.columnlen = _sheet.config.columnlen;
             draft.config.customWidth = _sheet.config.customWidth;
@@ -481,9 +472,7 @@ export const useColumnDragAndDrop = (
 
           // Keep conditional formatting ranges aligned with moved columns.
           if (Array.isArray(_sheet.luckysheet_conditionformat_save)) {
-            const remapConditionalFormatByColMap = (
-              rules: any[],
-            ): any[] => {
+            const remapConditionalFormatByColMap = (rules: any[]): any[] => {
               const toNumberRange = (v: any): [number, number] | null => {
                 if (!Array.isArray(v) || v.length !== 2) return null;
                 const a = Number(v[0]);
@@ -544,9 +533,10 @@ export const useColumnDragAndDrop = (
                 };
               });
             };
-            _sheet.luckysheet_conditionformat_save = remapConditionalFormatByColMap(
-              _sheet.luckysheet_conditionformat_save,
-            );
+            _sheet.luckysheet_conditionformat_save =
+              remapConditionalFormatByColMap(
+                _sheet.luckysheet_conditionformat_save,
+              );
           }
 
           // Keep alternate-format ranges aligned with moved columns.
@@ -611,9 +601,10 @@ export const useColumnDragAndDrop = (
               });
               return remappedRules;
             };
-            _sheet.luckysheet_alternateformat_save = remapAlternateFormatByColMap(
-              _sheet.luckysheet_alternateformat_save,
-            );
+            _sheet.luckysheet_alternateformat_save =
+              remapAlternateFormatByColMap(
+                _sheet.luckysheet_alternateformat_save,
+              );
           }
 
           d?.forEach((row) => {

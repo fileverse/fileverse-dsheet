@@ -40,6 +40,15 @@ class CellFadeAnimator {
     this.ensureTicking();
   }
 
+  private sweepExpired() {
+    const now = performance.now();
+    this.active.forEach((entry, key) => {
+      if (now - entry.start >= entry.dur) {
+        this.active.delete(key);
+      }
+    });
+  }
+
   private ensureTicking() {
     if (this.animationFrameId !== null) return;
     if (this.active.size === 0) return;
@@ -47,6 +56,7 @@ class CellFadeAnimator {
     const loop = () => {
       this.animationFrameId = null;
 
+      this.sweepExpired();
       if (this.active.size === 0) {
         return;
       }

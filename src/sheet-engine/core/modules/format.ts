@@ -25,10 +25,10 @@ export function gsAllowsScientificMagnitude(av: number): boolean {
 
 /** Integer string (optional `-`, optional `,`) with ≥16 digits — store literally under General/Auto. */
 export function isSixteenPlusDigitIntegerString(value: unknown): boolean {
-  if (typeof value !== "string") return false;
-  const t = value.trim().replace(/,/g, "");
+  if (typeof value !== 'string') return false;
+  const t = value.trim().replace(/,/g, '');
   if (!/^-?\d+$/.test(t)) return false;
-  const core = t.startsWith("-") ? t.slice(1) : t;
+  const core = t.startsWith('-') ? t.slice(1) : t;
   return core.length >= 16;
 }
 
@@ -42,26 +42,36 @@ export function formatMForNumericCellAvoidingGsRules(v: number): string {
   if (gsAllowsScientificMagnitude(av)) {
     const s = v.toString();
     let len = 0;
-    if (s.toLowerCase().includes("e")) {
+    if (s.toLowerCase().includes('e')) {
       const mant = s.split(/[eE]/)[0];
-      if (mant.includes(".")) {
-        len = Math.min(5, (mant.split(".")[1] || "").length);
+      if (mant.includes('.')) {
+        len = Math.min(5, (mant.split('.')[1] || '').length);
       }
-    } else if (s.includes(".")) {
-      len = Math.min(5, (s.split(".")[1] || "").split(/[eE]/)[0].length);
+    } else if (s.includes('.')) {
+      len = Math.min(5, (s.split('.')[1] || '').split(/[eE]/)[0].length);
     }
     return formatCompactScientific(v, len);
   }
   if (av >= GS_SIXTEEN_DIGIT_MIN_ABS) {
-    return v.toLocaleString("en-US", { maximumFractionDigits: 50, useGrouping: false });
+    return v.toLocaleString('en-US', {
+      maximumFractionDigits: 50,
+      useGrouping: false,
+    });
   }
-  return v.toLocaleString("en-US", { maximumFractionDigits: 21, useGrouping: false });
+  return v.toLocaleString('en-US', {
+    maximumFractionDigits: 21,
+    useGrouping: false,
+  });
 }
 
 function countSignificantDigits(v: number): number {
   if (!Number.isFinite(v) || v === 0) return 1;
-  const mantissa = v.toExponential().split("e")[0].replace("-", "").replace(".", "");
-  const trimmed = mantissa.replace(/^0+/, "").replace(/0+$/, "");
+  const mantissa = v
+    .toExponential()
+    .split('e')[0]
+    .replace('-', '')
+    .replace('.', '');
+  const trimmed = mantissa.replace(/^0+/, '').replace(/0+$/, '');
   return trimmed.length || 1;
 }
 
@@ -77,10 +87,10 @@ export function shouldUseScientificForComputedNumber(v: number): boolean {
 }
 
 export function formatScientificForComputedNumber(v: number): string {
-  const mantissa = v.toExponential().split("e")[0];
+  const mantissa = v.toExponential().split('e')[0];
   let fracLen = 0;
-  if (mantissa.includes(".")) {
-    fracLen = (mantissa.split(".")[1] || "").length;
+  if (mantissa.includes('.')) {
+    fracLen = (mantissa.split('.')[1] || '').length;
   }
   return formatCompactScientific(v, Math.min(5, Math.max(0, fracLen)));
 }
@@ -88,14 +98,14 @@ export function formatScientificForComputedNumber(v: number): string {
 export function formatCompactScientific(v: number, fractionDigits = 5): string {
   if (!Number.isFinite(v)) return String(v);
   const raw = v.toExponential(Math.max(0, Math.min(20, fractionDigits)));
-  const [mantissaRaw, expRaw = "0"] = raw.split("e");
+  const [mantissaRaw, expRaw = '0'] = raw.split('e');
   const mantissa = mantissaRaw
-    .replace(/(\.\d*?[1-9])0+$/, "$1")
-    .replace(/\.0+$/, "")
-    .replace(/\.$/, "");
+    .replace(/(\.\d*?[1-9])0+$/, '$1')
+    .replace(/\.0+$/, '')
+    .replace(/\.$/, '');
   const expNum = Number(expRaw);
-  const expSign = expNum >= 0 ? "+" : "-";
-  const expAbs = Math.abs(expNum).toString().padStart(2, "0");
+  const expSign = expNum >= 0 ? '+' : '-';
+  const expAbs = Math.abs(expNum).toString().padStart(2, '0');
   return `${mantissa}E${expSign}${expAbs}`;
 }
 
@@ -106,7 +116,9 @@ export function formatCompactScientific(v: number, fractionDigits = 5): string {
  * - 999999999.478 -> 999999999.5
  * - 123456.123456 -> 123456.1235
  */
-export function formatGeneralAutoDecimalWithTenDigitRule(v: number): string | null {
+export function formatGeneralAutoDecimalWithTenDigitRule(
+  v: number,
+): string | null {
   if (!Number.isFinite(v)) return null;
   if (Number.isInteger(v)) return null;
   const av = Math.abs(v);
@@ -118,7 +130,7 @@ export function formatGeneralAutoDecimalWithTenDigitRule(v: number): string | nu
   let rounded = Number(v.toFixed(maxDecimals));
   if (Object.is(rounded, -0)) rounded = 0;
   const fixed = rounded.toFixed(maxDecimals);
-  return fixed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+  return fixed.replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
 }
 
 export function datenum_local(v: Date, date1904?: number) {
@@ -154,7 +166,7 @@ export function genarate(value: string | number | boolean) {
     value = value as string;
     // 表述金额的字符串，如：12,000.00 或者 -12,000.00
     m = value;
-    v = Number(value.replace(/,/g, ""));
+    v = Number(value.replace(/,/g, ''));
     let fa = '#,##0';
     if (value.split('.')[1]) {
       fa = '#,##0.';
@@ -201,7 +213,8 @@ export function genarate(value: string | number | boolean) {
     if (str.indexOf('.') > -1) {
       precision = Math.min(5, str.split('.')[1].split('e')[0].length);
     }
-    const optionalDecimals = precision > 0 ? `.${new Array(precision + 1).join('#')}` : "";
+    const optionalDecimals =
+      precision > 0 ? `.${new Array(precision + 1).join('#')}` : '';
     ct = { fa: `#0${optionalDecimals}E+00`, t: 'n' };
     m = formatCompactScientific(v, precision);
   } else if (value.toString().indexOf('%') > -1) {
@@ -328,7 +341,10 @@ export function genarate(value: string | number | boolean) {
     v = pv;
     ct = { fa: 'General', t: 'n' };
     if (av >= GS_SIXTEEN_DIGIT_MIN_ABS) {
-      m = pv.toLocaleString('en-US', { maximumFractionDigits: 50, useGrouping: false });
+      m = pv.toLocaleString('en-US', {
+        maximumFractionDigits: 50,
+        useGrouping: false,
+      });
     } else {
       m = pv.toString();
     }
@@ -453,9 +469,10 @@ function getSortedFiatPrefixSymbols(currencyDetail: unknown): string[] {
         .map((c: { value?: string }) => c.value)
         .filter((v): v is string => typeof v === 'string' && v.length > 0),
     ),
-  ].sort((a: string, b: string) =>
-    b.length - a.length ||
-    (indexByValue.get(a) ?? 0) - (indexByValue.get(b) ?? 0),
+  ].sort(
+    (a: string, b: string) =>
+      b.length - a.length ||
+      (indexByValue.get(a) ?? 0) - (indexByValue.get(b) ?? 0),
   );
 }
 
@@ -586,15 +603,15 @@ export const MAX_GENERAL_AUTO_DP = 15;
  */
 export function refreshGeneralNumericDisplay(cell: Cell): void {
   const ct = cell.ct;
-  if (!ct || ct.fa !== "General") return;
+  if (!ct || ct.fa !== 'General') return;
   const v = cell.v;
   if (v === Infinity || v === -Infinity) {
     cell.m = String(v);
     return;
   }
   // Long integer strings: keep exact digits (IEEE doubles cannot represent them).
-  if (typeof v === "string" && /^-?\d+$/.test(v)) {
-    const core = v.startsWith("-") ? v.slice(1) : v;
+  if (typeof v === 'string' && /^-?\d+$/.test(v)) {
+    const core = v.startsWith('-') ? v.slice(1) : v;
     if (core.length >= 16) {
       cell.m = v;
       return;
@@ -605,7 +622,7 @@ export function refreshGeneralNumericDisplay(cell: Cell): void {
   if (ct.dp != null && ct.dp >= 1) {
     const d = Math.min(MAX_GENERAL_AUTO_DP, Math.max(1, Math.floor(ct.dp)));
     const s = num.toString();
-    if (s.toLowerCase().includes("e")) {
+    if (s.toLowerCase().includes('e')) {
       const g = genarate(num);
       if (g) cell.m = g[0].toString();
       return;

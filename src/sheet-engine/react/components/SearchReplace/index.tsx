@@ -1024,13 +1024,13 @@ const SearchReplace: React.FC<{
                                 draftCtx.luckysheetfile[
                                   toIdx
                                 ].luckysheet_select_save = [
-                                    {
-                                      row: [v.r, v.r],
-                                      column: [v.c, v.c],
-                                      row_focus: v.r,
-                                      column_focus: v.c,
-                                    },
-                                  ];
+                                  {
+                                    row: [v.r, v.r],
+                                    column: [v.c, v.c],
+                                    row_focus: v.r,
+                                    column_focus: v.c,
+                                  },
+                                ];
                               }
                               changeSheet(draftCtx, v.sheetId);
                             }

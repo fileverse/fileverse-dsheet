@@ -7,4 +7,4 @@ export {
   FormularCellRefError,
   adjustFormulaForPaste,
   parseAsLinkIfUrl,
-} from "../paste";
+} from '../paste';

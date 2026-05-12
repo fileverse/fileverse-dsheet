@@ -1,33 +1,31 @@
-import _ from "lodash";
-import type { Context } from "../context";
-import { getFlowdata } from "../context";
-import { getCellValue } from "../modules/cell";
-import { getSheetIndex } from "../utils";
+import _ from 'lodash';
+import type { Context } from '../context';
+import { getFlowdata } from '../context';
+import { getCellValue } from '../modules/cell';
+import { getSheetIndex } from '../utils';
 
 /** Same rule as `rangeValueToHtml`: only these `ct.fa` patterns embed raw value in copied HTML. */
 const FORTUNE_COPY_WEALTH_FA_REG = /^(w|W)((0?)|(0\.0+))$/;
 
 function fortuneClipboardTdToPlainText(tdHtml: string): string {
-  const inner = tdHtml
-    .replace(/^<td\b[^>]*>/i, "")
-    .replace(/<\/td>\s*$/i, "");
-  if (typeof document !== "undefined") {
-    const el = document.createElement("div");
+  const inner = tdHtml.replace(/^<td\b[^>]*>/i, '').replace(/<\/td>\s*$/i, '');
+  if (typeof document !== 'undefined') {
+    const el = document.createElement('div');
     el.innerHTML = inner;
-    const t = (el.textContent || el.innerText || "")
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n");
+    const t = (el.textContent || el.innerText || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
     return t.trim();
   }
   return inner
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n")
-    .replace(/<\/div>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
     .trim();
 }
 
@@ -44,13 +42,13 @@ export type FortuneInternalPasteDecision = {
  */
 export function computeFortuneInternalPasteDecision(
   ctx: Context,
-  txtdata: string
+  txtdata: string,
 ): FortuneInternalPasteDecision {
   let isEqual = true;
   let internalFortunePaste = false;
 
   if (
-    txtdata.indexOf("fortune-copy-action-span") > -1 &&
+    txtdata.indexOf('fortune-copy-action-span') > -1 &&
     ctx.luckysheet_copy_save?.copyRange != null &&
     ctx.luckysheet_copy_save.copyRange.length === 1
   ) {
@@ -58,7 +56,7 @@ export function computeFortuneInternalPasteDecision(
   }
 
   if (
-    txtdata.indexOf("fortune-copy-action-table") > -1 &&
+    txtdata.indexOf('fortune-copy-action-table') > -1 &&
     ctx.luckysheet_copy_save?.copyRange != null &&
     ctx.luckysheet_copy_save.copyRange.length > 0
   ) {
@@ -155,24 +153,24 @@ export function computeFortuneInternalPasteDecision(
           ) {
             v = getCellValue(r, c, d);
           } else {
-            v = getCellValue(r, c, d, "m");
+            v = getCellValue(r, c, d, 'm');
           }
         } else {
-          v = "";
+          v = '';
         }
 
-        if (_.isNil(v) && d[r]?.[c]?.ct?.t === "inlineStr") {
-          v = d[r]![c]!.ct!.s!.map((val: any) => val.v).join("");
+        if (_.isNil(v) && d[r]?.[c]?.ct?.t === 'inlineStr') {
+          v = d[r]![c]!.ct!.s!.map((val: any) => val.v).join('');
           isInlineStr = true;
         }
         if (_.isNil(v)) {
-          v = "";
+          v = '';
         }
-        const clipPlain = String(clipRow[ci] ?? "").trim();
+        const clipPlain = String(clipRow[ci] ?? '').trim();
         if (isInlineStr) {
           ci += 1;
         } else {
-          const cellPlain = String(v ?? "").trim();
+          const cellPlain = String(v ?? '').trim();
           ci += 1;
           if (clipPlain !== cellPlain) {
             isEqual = false;
