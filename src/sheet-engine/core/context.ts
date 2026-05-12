@@ -175,10 +175,12 @@ export type Context = {
    * Apply-to ranges (0-based inclusive row/column) for transient sheet overlay when
    * hovering a conditional-formatting rule in the list. Null when inactive.
    */
-  conditionalFormatRuleHoverRanges: {
-    row: number[];
-    column: number[];
-  }[] | null;
+  conditionalFormatRuleHoverRanges:
+    | {
+        row: number[];
+        column: number[];
+      }[]
+    | null;
   /**
    * True while the CF create/edit form is open — drives live sheet preview of the draft
    * rule in `getComputeMap` (must be false on list or after close).

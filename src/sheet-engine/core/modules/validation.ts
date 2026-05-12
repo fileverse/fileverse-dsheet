@@ -78,10 +78,15 @@ export function isRealNum(val: any) {
  * Explicit number format (`t === 'n'`) or General/Automatic with a numeric stored value (`t === 'g'`).
  * Use wherever logic previously required `ct.t === 'n'` so Automatic numeric cells behave the same.
  */
-export function isNumericCellType(cell: {
-  ct?: { t?: string; fa?: string };
-  v?: unknown;
-} | null | undefined): boolean {
+export function isNumericCellType(
+  cell:
+    | {
+        ct?: { t?: string; fa?: string };
+        v?: unknown;
+      }
+    | null
+    | undefined,
+): boolean {
   if (!cell?.ct?.t) return false;
   if (cell.ct.t === 'n') return true;
   if (cell.ct.t === 'g' && isRealNum(cell.v)) return true;
@@ -269,8 +274,12 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: mi,
         seconds: 0,
         formatType: prefersUsDateOrder
-          ? (m[1].length === 1 ? 'M/d/yyyy h:mm AM/PM' : 'MM/dd/yyyy h:mm AM/PM')
-          : (m[1].length === 1 ? 'd/M/yyyy h:mm AM/PM' : 'dd/MM/yyyy h:mm AM/PM'),
+          ? m[1].length === 1
+            ? 'M/d/yyyy h:mm AM/PM'
+            : 'MM/dd/yyyy h:mm AM/PM'
+          : m[1].length === 1
+            ? 'd/M/yyyy h:mm AM/PM'
+            : 'dd/MM/yyyy h:mm AM/PM',
       };
     }
   }
@@ -292,8 +301,12 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: 0,
         seconds: 0,
         formatType: prefersUsDateOrder
-          ? (m[1].length === 1 ? 'M/d/yyyy' : 'MM/dd/yyyy')
-          : (m[1].length === 1 ? 'd/M/yyyy' : 'dd/MM/yyyy'),
+          ? m[1].length === 1
+            ? 'M/d/yyyy'
+            : 'MM/dd/yyyy'
+          : m[1].length === 1
+            ? 'd/M/yyyy'
+            : 'dd/MM/yyyy',
       };
     }
   }
@@ -315,8 +328,12 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: 0,
         seconds: 0,
         formatType: prefersUsDateOrder
-          ? (m[1].length === 1 ? 'M/d/yy' : 'MM/dd/yy')
-          : (m[1].length === 1 ? 'd/M/yy' : 'dd/MM/yy'),
+          ? m[1].length === 1
+            ? 'M/d/yy'
+            : 'MM/dd/yy'
+          : m[1].length === 1
+            ? 'd/M/yy'
+            : 'dd/MM/yy',
       };
     }
   }
@@ -499,7 +516,9 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
   }
 
   // YYYY Month D: 2026 February 5 / 2026 Feb 5
-  m = new RegExp(`^(\\d{4})\\s+(${MONTH_NAMES_RE})\\s+(\\d{1,2})$`, 'i').exec(s);
+  m = new RegExp(`^(\\d{4})\\s+(${MONTH_NAMES_RE})\\s+(\\d{1,2})$`, 'i').exec(
+    s,
+  );
   if (m) {
     const y = +m[1];
     const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
@@ -628,9 +647,10 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
   }
 
   // Slash-separated with 4-digit year + h:mm:ss AM/PM (base-order aware)
-  m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})\s?(AM|PM)$/i.exec(
-    s,
-  );
+  m =
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})\s?(AM|PM)$/i.exec(
+      s,
+    );
   if (m) {
     const p1 = +m[1];
     const p2 = +m[2];
@@ -653,8 +673,12 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: mi,
         seconds: sec,
         formatType: prefersUsDateOrder
-          ? (m[1].length === 1 ? 'M/d/yyyy h:mm:ss AM/PM' : 'MM/dd/yyyy h:mm:ss AM/PM')
-          : (m[1].length === 1 ? 'd/M/yyyy h:mm:ss AM/PM' : 'dd/MM/yyyy h:mm:ss AM/PM'),
+          ? m[1].length === 1
+            ? 'M/d/yyyy h:mm:ss AM/PM'
+            : 'MM/dd/yyyy h:mm:ss AM/PM'
+          : m[1].length === 1
+            ? 'd/M/yyyy h:mm:ss AM/PM'
+            : 'dd/MM/yyyy h:mm:ss AM/PM',
       };
     }
   }
@@ -735,8 +759,12 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: mi,
         seconds: 0,
         formatType: prefersUsDateOrder
-          ? (m[1].length === 1 ? 'M/d/yyyy HH:mm' : 'MM/dd/yyyy HH:mm')
-          : (m[1].length === 1 ? 'd/M/yyyy HH:mm' : 'dd/MM/yyyy HH:mm'),
+          ? m[1].length === 1
+            ? 'M/d/yyyy HH:mm'
+            : 'MM/dd/yyyy HH:mm'
+          : m[1].length === 1
+            ? 'd/M/yyyy HH:mm'
+            : 'dd/MM/yyyy HH:mm',
       };
     }
   }
@@ -762,8 +790,12 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         minutes: mi,
         seconds: sec,
         formatType: prefersUsDateOrder
-          ? (m[1].length === 1 ? 'M/d/yyyy HH:mm:ss' : 'MM/dd/yyyy HH:mm:ss')
-          : (m[1].length === 1 ? 'd/M/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'),
+          ? m[1].length === 1
+            ? 'M/d/yyyy HH:mm:ss'
+            : 'MM/dd/yyyy HH:mm:ss'
+          : m[1].length === 1
+            ? 'd/M/yyyy HH:mm:ss'
+            : 'dd/MM/yyyy HH:mm:ss',
       };
     }
   }
@@ -815,9 +847,10 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
   }
 
   // Day, slash date (base-order aware)
-  m = new RegExp(`^(?:${WEEKDAY_NAMES_RE}),\\s+(\\d{2})\\/(\\d{2})\\/(\\d{4})$`, 'i').exec(
-    s,
-  );
+  m = new RegExp(
+    `^(?:${WEEKDAY_NAMES_RE}),\\s+(\\d{2})\\/(\\d{2})\\/(\\d{4})$`,
+    'i',
+  ).exec(s);
   if (m) {
     const p1 = +m[1];
     const p2 = +m[2];
@@ -832,9 +865,7 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         hours: 0,
         minutes: 0,
         seconds: 0,
-        formatType: prefersUsDateOrder
-          ? 'day, MM/dd/yyyy'
-          : 'day, dd/MM/yyyy',
+        formatType: prefersUsDateOrder ? 'day, MM/dd/yyyy' : 'day, dd/MM/yyyy',
       };
     }
   }
@@ -862,9 +893,10 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
   }
 
   // Dy, Mon D
-  m = new RegExp(`^(?:${WEEKDAY_ABBR_RE}),\\s+(${MONTH_ABBR_RE})\\s+(\\d{1,2})$`, 'i').exec(
-    s,
-  );
+  m = new RegExp(
+    `^(?:${WEEKDAY_ABBR_RE}),\\s+(${MONTH_ABBR_RE})\\s+(\\d{1,2})$`,
+    'i',
+  ).exec(s);
   if (m) {
     const mo = MONTH_NAME_MAP[m[1].toLowerCase()];
     const d = +m[2];
@@ -882,8 +914,10 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
   }
 
   // Dy, D Mon YYYY
-  m = new RegExp(`^(?:${WEEKDAY_ABBR_RE}),\\s+(\\d{1,2})\\s+(${MONTH_ABBR_RE})\\s+(\\d{4})$`, 'i')
-    .exec(s);
+  m = new RegExp(
+    `^(?:${WEEKDAY_ABBR_RE}),\\s+(\\d{1,2})\\s+(${MONTH_ABBR_RE})\\s+(\\d{4})$`,
+    'i',
+  ).exec(s);
   if (m) {
     const d = +m[1];
     const mo = MONTH_NAME_MAP[m[2].toLowerCase()];
@@ -902,7 +936,10 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
   }
 
   // Dy slash date (base-order aware)
-  m = new RegExp(`^(?:${WEEKDAY_ABBR_RE})\\s+(\\d{2})\\/(\\d{2})\\/(\\d{4})$`, 'i').exec(s);
+  m = new RegExp(
+    `^(?:${WEEKDAY_ABBR_RE})\\s+(\\d{2})\\/(\\d{2})\\/(\\d{4})$`,
+    'i',
+  ).exec(s);
   if (m) {
     const p1 = +m[1];
     const p2 = +m[2];
@@ -917,9 +954,7 @@ export function detectDateFormat(str: string): DateFormatInfo | null {
         hours: 0,
         minutes: 0,
         seconds: 0,
-        formatType: prefersUsDateOrder
-          ? 'dy MM/dd/yyyy'
-          : 'dy dd/MM/yyyy',
+        formatType: prefersUsDateOrder ? 'dy MM/dd/yyyy' : 'dy dd/MM/yyyy',
       };
     }
   }

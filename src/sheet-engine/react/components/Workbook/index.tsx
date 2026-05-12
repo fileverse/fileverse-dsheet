@@ -237,8 +237,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const changeMap = new Map<string, any>();
 
         const upsert = (change: any) => {
-          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${change.key ?? ''
-            }`;
+          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${
+            change.key ?? ''
+          }`;
           changeMap.set(k, change);
         };
 
@@ -412,7 +413,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       (recipe: (ctx: Context) => void, options: SetContextOptions = {}) => {
         setContext((ctx_) => {
           if (options.noHistory) {
-            return produce(ctx_, concatProducer(recipe, triggerGroupValuesRefresh));
+            return produce(
+              ctx_,
+              concatProducer(recipe, triggerGroupValuesRefresh),
+            );
           }
 
           const [result, patches, inversePatches] = produceWithPatches(
@@ -539,10 +543,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterUndo != null &&
-              newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
+            newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
               ? {
-                config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
-              }
+                  config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
+                }
               : {}),
           };
           if (isBorderUndo) {
@@ -580,10 +584,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterRedo != null &&
-              newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
+            newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
               ? {
-                config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
-              }
+                  config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
+                }
               : {}),
           };
           if (isBorderUndo) {
@@ -1262,18 +1266,18 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           const insertRowColOp: SetContextOptions['insertRowColOp'] | null =
             rowToBeAdded > 0
               ? {
-                type: 'row',
-                index:
-                  context.luckysheetfile[
-                    getSheetIndex(
-                      context,
-                      context!.currentSheetId! as string,
-                    ) as number
-                  ].data!.length - 1,
-                count: rowToBeAdded,
-                direction: 'rightbottom',
-                id: context.currentSheetId,
-              }
+                  type: 'row',
+                  index:
+                    context.luckysheetfile[
+                      getSheetIndex(
+                        context,
+                        context!.currentSheetId! as string,
+                      ) as number
+                    ].data!.length - 1,
+                  count: rowToBeAdded,
+                  direction: 'rightbottom',
+                  id: context.currentSheetId,
+                }
               : null;
           setContextWithProduce(
             (draftCtx) => {

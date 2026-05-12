@@ -45,11 +45,15 @@ function getSelectionOffsetsForInlineLink(
   target: { linkType: string; linkAddress: string },
   occurrenceIndex = 0,
 ): { start: number; end: number } | undefined {
-  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s)) return undefined;
+  if (cell?.ct?.t !== 'inlineStr' || !Array.isArray(cell.ct.s))
+    return undefined;
   let cursor = 0;
   const ranges: Array<{ start: number; end: number }> = [];
   let openStart: number | undefined;
-  for (const seg of cell.ct.s as Array<{ v?: string; link?: { linkType?: string; linkAddress?: string } }>) {
+  for (const seg of cell.ct.s as Array<{
+    v?: string;
+    link?: { linkType?: string; linkAddress?: string };
+  }>) {
     const text = normalizeInlineTextForEditor(seg?.v);
     const len = text.length;
     const isMatch =
@@ -101,7 +105,9 @@ function getTextByOffsets(
 }
 
 function emailFromAddress(address: string): string {
-  return String(address ?? '').trim().replace(/^mailto:/i, '');
+  return String(address ?? '')
+    .trim()
+    .replace(/^mailto:/i, '');
 }
 
 function isEmailLikeAddress(address: string): boolean {
@@ -110,7 +116,11 @@ function isEmailLikeAddress(address: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function getViewLabel(linkType: string, linkAddress: string, fallbackText: string): string {
+function getViewLabel(
+  linkType: string,
+  linkAddress: string,
+  fallbackText: string,
+): string {
   if (linkType === 'webpage' && isEmailLikeAddress(linkAddress)) {
     return `Send to: ${emailFromAddress(linkAddress)}`;
   }
@@ -215,9 +225,18 @@ async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
       const description = String(metadata.description || '').trim();
       const imageUrl = normalizeMetaUrl(String(metadata.image || '').trim());
       const logoUrl = normalizeMetaUrl(String(metadata.logo || '').trim());
-      const faviconUrl = normalizeMetaUrl(String(metadata.favicon || '').trim());
+      const faviconUrl = normalizeMetaUrl(
+        String(metadata.favicon || '').trim(),
+      );
       const link = String(metadata.link || '').trim();
-      if (!pageTitle && !description && !imageUrl && !logoUrl && !faviconUrl && !link) {
+      if (
+        !pageTitle &&
+        !description &&
+        !imageUrl &&
+        !logoUrl &&
+        !faviconUrl &&
+        !link
+      ) {
         continue;
       }
       const candidateList = [
@@ -226,8 +245,8 @@ async function fetchLinkPreview(address: string): Promise<LinkPreviewData> {
         fallback.faviconUrl || '',
         host
           ? `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(
-            `http://${host}`,
-          )}&size=64`
+              `http://${host}`,
+            )}&size=64`
           : '',
         host ? `https://${host}/favicon.ico` : '',
       ].filter((u, i, arr) => !!u && arr.indexOf(u) === i);
@@ -292,9 +311,9 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   const [linkText, setLinkText] = useState<string>(originText);
   const [linkAddress, setLinkAddress] = useState<string>(originAddress);
   const [linkType, setLinkType] = useState<string>(originType);
-  const [previewByKey, setPreviewByKey] = useState<Record<string, LinkPreviewData>>(
-    {},
-  );
+  const [previewByKey, setPreviewByKey] = useState<
+    Record<string, LinkPreviewData>
+  >({});
   const inflightPreviewKeysRef = useRef<Set<string>>(new Set());
   const { insertLink, linkTypeList } = locale(context);
   const isLinkAddressValid = isLinkValid(context, linkType, linkAddress);
@@ -318,7 +337,10 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
   }, [linkText, linkAddress, linkType, isLinkAddressValid.isValid]);
 
   const getPreviewKey = useCallback(
-    (lt: string, la: string) => `${lt}::${String(la ?? '').trim().toLowerCase()}`,
+    (lt: string, la: string) =>
+      `${lt}::${String(la ?? '')
+        .trim()
+        .toLowerCase()}`,
     [],
   );
 
@@ -334,16 +356,18 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
       if (previewByKey[key]) return;
       if (inflightPreviewKeysRef.current.has(key)) return;
       inflightPreviewKeysRef.current.add(key);
-      fetchLinkPreview(item.linkAddress).then((meta) => {
-        inflightPreviewKeysRef.current.delete(key);
-        if (cancelled) return;
-        setPreviewByKey((prev) => {
-          if (prev[key]) return prev;
-          return { ...prev, [key]: meta };
+      fetchLinkPreview(item.linkAddress)
+        .then((meta) => {
+          inflightPreviewKeysRef.current.delete(key);
+          if (cancelled) return;
+          setPreviewByKey((prev) => {
+            if (prev[key]) return prev;
+            return { ...prev, [key]: meta };
+          });
+        })
+        .catch(() => {
+          inflightPreviewKeysRef.current.delete(key);
         });
-      }).catch(() => {
-        inflightPreviewKeysRef.current.delete(key);
-      });
     });
     return () => {
       cancelled = true;
@@ -366,7 +390,8 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
       const idx = draftCtx.linkCard?.editingLinkIndex;
       const cell = getFlowdata(draftCtx)?.[r]?.[c];
       const isInline =
-        cell?.ct?.t === 'inlineStr' && Array.isArray((cell as { ct?: { s?: unknown[] } }).ct?.s);
+        cell?.ct?.t === 'inlineStr' &&
+        Array.isArray((cell as { ct?: { s?: unknown[] } }).ct?.s);
       if (list && list.length > 0 && isInline) {
         const targetIdx =
           typeof idx === 'number' && idx >= 0 && idx < list.length ? idx : 0;
@@ -390,7 +415,9 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         draftCtx.luckysheetCellUpdate[1] === c;
       saveHyperlink(draftCtx, r, c, linkText, linkType, linkAddress, {
         applyToSelection: applyToSelection || undefined,
-        cellInput: wasInCellEdit ? refs.cellInput.current ?? undefined : undefined,
+        cellInput: wasInCellEdit
+          ? (refs.cellInput.current ?? undefined)
+          : undefined,
         applySelectionFromModel: !!(applyToSelection && !wasInCellEdit),
       });
       if (!applyToSelection) {
@@ -565,12 +592,13 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
     const singleLink = multi
       ? undefined
       : {
-        linkType,
-        linkAddress: originAddress || linkAddress,
-      };
+          linkType,
+          linkAddress: originAddress || linkAddress,
+        };
     const singleMeta = singleLink
-      ? previewByKey[getPreviewKey(singleLink.linkType, singleLink.linkAddress)] ||
-      fallbackPreview(singleLink.linkAddress)
+      ? previewByKey[
+          getPreviewKey(singleLink.linkType, singleLink.linkAddress)
+        ] || fallbackPreview(singleLink.linkAddress)
       : undefined;
 
     return (
@@ -611,18 +639,20 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                 >
                   {(() => {
                     const meta =
-                      previewByKey[getPreviewKey(item.linkType, item.linkAddress)] ||
-                      fallbackPreview(item.linkAddress);
+                      previewByKey[
+                        getPreviewKey(item.linkType, item.linkAddress)
+                      ] || fallbackPreview(item.linkAddress);
                     const emailLike = isEmailLikeAddress(item.linkAddress);
                     const isSheetLink = item.linkType === 'sheet';
                     return (
                       <div
-                        className={`fortune-link-card__preview-line${emailLike
-                          ? ' fortune-link-card__preview-line--email'
-                          : isSheetLink
-                            ? ' fortune-link-card__preview-line--sheet'
-                            : ''
-                          }`}
+                        className={`fortune-link-card__preview-line${
+                          emailLike
+                            ? ' fortune-link-card__preview-line--email'
+                            : isSheetLink
+                              ? ' fortune-link-card__preview-line--sheet'
+                              : ''
+                        }`}
                       >
                         {isSheetLink ? (
                           <LucideIcon
@@ -649,7 +679,10 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                           />
                         )}
                         <div className="fortune-link-card__preview-text">
-                          <span className="fortune-link-card__link-label" title={meta.title}>
+                          <span
+                            className="fortune-link-card__link-label"
+                            title={meta.title}
+                          >
                             {meta.title}
                           </span>
                           {item.linkType === 'webpage' && meta.urlText && (
@@ -683,16 +716,20 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                       'pencil',
                       () =>
                         setContext((draftCtx) => {
-                          if (draftCtx.linkCard == null || !draftCtx.allowEdit) return;
+                          if (draftCtx.linkCard == null || !draftCtx.allowEdit)
+                            return;
                           const cell = getFlowdata(draftCtx)?.[r]?.[c];
-                          draftCtx.luckysheet_select_save = normalizeSelection(draftCtx, [
-                            {
-                              row: [r, r],
-                              column: [c, c],
-                              row_focus: r,
-                              column_focus: c,
-                            },
-                          ]);
+                          draftCtx.luckysheet_select_save = normalizeSelection(
+                            draftCtx,
+                            [
+                              {
+                                row: [r, r],
+                                column: [c, c],
+                                row_focus: r,
+                                column_focus: c,
+                              },
+                            ],
+                          );
                           draftCtx.luckysheetCellUpdate = [r, c];
                           draftCtx.linkCard.isEditing = true;
                           draftCtx.linkCard.editingLinkIndex = idx;
@@ -704,7 +741,10 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                             idx,
                           );
                           const fullText = getFallbackCellText(cell);
-                          const selectedText = getTextByOffsets(fullText, offsets);
+                          const selectedText = getTextByOffsets(
+                            fullText,
+                            offsets,
+                          );
                           const linkedText = getHyperlinkDisplayTextInCell(
                             cell ?? null,
                             item,
@@ -760,12 +800,13 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                   const isSheetLink = linkType === 'sheet';
                   return (
                     <div
-                      className={`fortune-link-card__preview-line${emailLike
-                        ? ' fortune-link-card__preview-line--email'
-                        : isSheetLink
-                          ? ' fortune-link-card__preview-line--sheet'
-                          : ''
-                        }`}
+                      className={`fortune-link-card__preview-line${
+                        emailLike
+                          ? ' fortune-link-card__preview-line--email'
+                          : isSheetLink
+                            ? ' fortune-link-card__preview-line--sheet'
+                            : ''
+                      }`}
                     >
                       {isSheetLink ? (
                         <LucideIcon
@@ -794,19 +835,31 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                       <div className="fortune-link-card__preview-text">
                         <span
                           className="fortune-link-card__link-label"
-                          title={singleMeta?.title || originAddress || linkAddress}
+                          title={
+                            singleMeta?.title || originAddress || linkAddress
+                          }
                         >
                           {singleMeta?.title ||
-                            getViewLabel(linkType, originAddress || linkAddress, insertLink.openLink)}
+                            getViewLabel(
+                              linkType,
+                              originAddress || linkAddress,
+                              insertLink.openLink,
+                            )}
                         </span>
                         {linkType === 'webpage' &&
                           (singleMeta?.urlText ||
                             (!emailLike && (originAddress || linkAddress))) && (
                             <span
                               className="fortune-link-card__url-label"
-                              title={singleMeta?.urlText || originAddress || linkAddress}
+                              title={
+                                singleMeta?.urlText ||
+                                originAddress ||
+                                linkAddress
+                              }
                             >
-                              {singleMeta?.urlText || (originAddress || linkAddress)}
+                              {singleMeta?.urlText ||
+                                originAddress ||
+                                linkAddress}
                             </span>
                           )}
                       </div>
@@ -827,24 +880,34 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                     setContext((draftCtx) => {
                       if (draftCtx.linkCard != null && draftCtx.allowEdit) {
                         const cell = getFlowdata(draftCtx)?.[r]?.[c];
-                        draftCtx.luckysheet_select_save = normalizeSelection(draftCtx, [
-                          {
-                            row: [r, r],
-                            column: [c, c],
-                            row_focus: r,
-                            column_focus: c,
-                          },
-                        ]);
+                        draftCtx.luckysheet_select_save = normalizeSelection(
+                          draftCtx,
+                          [
+                            {
+                              row: [r, r],
+                              column: [c, c],
+                              row_focus: r,
+                              column_focus: c,
+                            },
+                          ],
+                        );
                         draftCtx.luckysheetCellUpdate = [r, c];
                         draftCtx.linkCard.isEditing = true;
                         draftCtx.linkCard.editingLinkIndex = undefined;
                         draftCtx.linkCard.applyToSelection = true;
-                        const offsets = getSelectionOffsetsForInlineLink(cell, {
-                          linkType,
-                          linkAddress,
-                        }, 0);
+                        const offsets = getSelectionOffsetsForInlineLink(
+                          cell,
+                          {
+                            linkType,
+                            linkAddress,
+                          },
+                          0,
+                        );
                         const fullText = getFallbackCellText(cell);
-                        const selectedText = getTextByOffsets(fullText, offsets);
+                        const selectedText = getTextByOffsets(
+                          fullText,
+                          offsets,
+                        );
                         draftCtx.linkCard.selectionOffsets = offsets;
                         draftCtx.linkCard.originText = selectedText || '';
                         draftCtx.linkCard.linkInsertOffset = offsets?.end;
@@ -910,7 +973,10 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         </SelectTrigger>
         <SelectContent className="fortune-link-type-dropdown">
           {linkTypeList
-            .filter((type: { text: string; value: string }) => type.value !== 'cellrange')
+            .filter(
+              (type: { text: string; value: string }) =>
+                type.value !== 'cellrange',
+            )
             .map((type: { text: string; value: string }) => (
               <SelectItem key={type.value} value={type.value}>
                 {type.text}
@@ -926,20 +992,22 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         <div className="fortune-link-card__icon input-icon">
           <LucideIcon name="ALargeSmall" />
         </div>
-        {true && <TextField
-          ref={linkTextRef}
-          placeholder="Display text"
-          value={linkText}
-          onChange={(e) => setLinkText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              e.stopPropagation();
-              handleInsertLink();
-            }
-          }}
-          className="fortune-link-input"
-        />}
+        {true && (
+          <TextField
+            ref={linkTextRef}
+            placeholder="Display text"
+            value={linkText}
+            onChange={(e) => setLinkText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleInsertLink();
+              }
+            }}
+            className="fortune-link-input"
+          />
+        )}
       </div>
 
       {linkType === 'webpage' && (
@@ -959,8 +1027,9 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
               }
             }}
             onChange={(e) => setLinkAddress(e.target.value)}
-            className={`fortune-link-input ${!linkAddress || isLinkAddressValid.isValid ? '' : 'error-input'
-              }`}
+            className={`fortune-link-input ${
+              !linkAddress || isLinkAddressValid.isValid ? '' : 'error-input'
+            }`}
           />
         </div>
       )}

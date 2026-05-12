@@ -202,7 +202,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
     if (!onChange) {
-      return () => { };
+      return () => {};
     }
 
     return throttle(() => {

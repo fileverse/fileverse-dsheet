@@ -177,7 +177,10 @@ const ContextMenu: React.FC = () => {
 
     setContext(
       (draftCtx) => {
-        const index = getSheetIndex(draftCtx, draftCtx.currentSheetId) as number;
+        const index = getSheetIndex(
+          draftCtx,
+          draftCtx.currentSheetId,
+        ) as number;
         const slen = edIndex - stIndex + 1;
         if (draftCtx.luckysheetfile[index].data?.length! <= slen) {
           showAlert(rightclick.cannotDeleteAllRow, 'ok');
@@ -195,7 +198,14 @@ const ContextMenu: React.FC = () => {
       },
       { deleteRowColOp },
     );
-  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.cannotDeleteAllRow, rightclick.cannotDeleteRowReadOnly]);
+  }, [
+    context.currentSheetId,
+    context.luckysheet_select_save,
+    setContext,
+    showAlert,
+    rightclick.cannotDeleteAllRow,
+    rightclick.cannotDeleteRowReadOnly,
+  ]);
 
   const deleteSelectedColumnRange = useCallback(() => {
     const selection = context.luckysheet_select_save?.[0];
@@ -211,7 +221,10 @@ const ContextMenu: React.FC = () => {
 
     setContext(
       (draftCtx) => {
-        const index = getSheetIndex(draftCtx, draftCtx.currentSheetId) as number;
+        const index = getSheetIndex(
+          draftCtx,
+          draftCtx.currentSheetId,
+        ) as number;
         const slen = edIndex - stIndex + 1;
         if (draftCtx.luckysheetfile[index].data?.[0]?.length! <= slen) {
           showAlert(rightclick.cannotDeleteAllColumn, 'ok');
@@ -229,7 +242,14 @@ const ContextMenu: React.FC = () => {
       },
       { deleteRowColOp },
     );
-  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.cannotDeleteAllColumn, rightclick.cannotDeleteColumnReadOnly]);
+  }, [
+    context.currentSheetId,
+    context.luckysheet_select_save,
+    setContext,
+    showAlert,
+    rightclick.cannotDeleteAllColumn,
+    rightclick.cannotDeleteColumnReadOnly,
+  ]);
 
   const insertSelectedRowRange = useCallback(() => {
     const selection = context.luckysheet_select_save?.[0];
@@ -258,7 +278,14 @@ const ContextMenu: React.FC = () => {
       },
       { insertRowColOp },
     );
-  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.rowOverLimit, rightclick.cannotInsertOnRowReadOnly]);
+  }, [
+    context.currentSheetId,
+    context.luckysheet_select_save,
+    setContext,
+    showAlert,
+    rightclick.rowOverLimit,
+    rightclick.cannotInsertOnRowReadOnly,
+  ]);
 
   const insertSelectedColumnRange = useCallback(() => {
     const selection = context.luckysheet_select_save?.[0];
@@ -287,7 +314,14 @@ const ContextMenu: React.FC = () => {
       },
       { insertRowColOp },
     );
-  }, [context.currentSheetId, context.luckysheet_select_save, setContext, showAlert, rightclick.columnOverLimit, rightclick.cannotInsertOnColumnReadOnly]);
+  }, [
+    context.currentSheetId,
+    context.luckysheet_select_save,
+    setContext,
+    showAlert,
+    rightclick.columnOverLimit,
+    rightclick.cannotInsertOnColumnReadOnly,
+  ]);
 
   const addRowColRightAvobe = (
     type: 'row' | 'column',
@@ -315,14 +349,12 @@ const ContextMenu: React.FC = () => {
     if (type === 'row') {
       const [rowStart, rowEnd] = selection.row;
       insertRowColOp.count = rowEnd - rowStart + 1;
-      insertRowColOp.index =
-        direction === 'lefttop' ? rowStart : rowEnd;
+      insertRowColOp.index = direction === 'lefttop' ? rowStart : rowEnd;
       insertRowColOp.templateSourceRows = _.range(rowStart, rowEnd + 1);
     } else {
       const [colStart, colEnd] = selection.column;
       insertRowColOp.count = colEnd - colStart + 1;
-      insertRowColOp.index =
-        direction === 'lefttop' ? colStart : colEnd;
+      insertRowColOp.index = direction === 'lefttop' ? colStart : colEnd;
       insertRowColOp.templateSourceColumns = _.range(colStart, colEnd + 1);
     }
 
@@ -608,9 +640,7 @@ const ContextMenu: React.FC = () => {
       if (name === 'insert-column') {
         if (selection?.row_select) return null;
         const colSpan =
-          selection != null
-            ? selection.column[1] - selection.column[0] + 1
-            : 1;
+          selection != null ? selection.column[1] - selection.column[0] + 1 : 1;
         const colLeftLabel = rightclick.insertColumnsLeftN.replace(
           '{n}',
           String(colSpan),
@@ -633,9 +663,7 @@ const ContextMenu: React.FC = () => {
         if (!context.contextMenu.headerMenu) return null;
         if (selection?.row_select) return null;
         const colSpan =
-          selection != null
-            ? selection.column[1] - selection.column[0] + 1
-            : 1;
+          selection != null ? selection.column[1] - selection.column[0] + 1 : 1;
         const colRightLabel = rightclick.insertColumnsRightN.replace(
           '{n}',
           String(colSpan),
@@ -1616,78 +1644,78 @@ const ContextMenu: React.FC = () => {
   };
   const shortcutPrimaryItems: ShortcutActionItem[] = isDeleteShortcutMenu
     ? [
-      {
-        key: 'delete-cells-shift-left',
-        label: (
-          <>
-            Delete cells and shift <strong>left</strong>
-          </>
-        ),
-        onClick: () => applyDeleteCellsShift('left'),
-      },
-      {
-        key: 'delete-cells-shift-up',
-        label: (
-          <>
-            Delete cells and shift <strong>up</strong>
-          </>
-        ),
-        onClick: () => applyDeleteCellsShift('up'),
-      },
-    ]
+        {
+          key: 'delete-cells-shift-left',
+          label: (
+            <>
+              Delete cells and shift <strong>left</strong>
+            </>
+          ),
+          onClick: () => applyDeleteCellsShift('left'),
+        },
+        {
+          key: 'delete-cells-shift-up',
+          label: (
+            <>
+              Delete cells and shift <strong>up</strong>
+            </>
+          ),
+          onClick: () => applyDeleteCellsShift('up'),
+        },
+      ]
     : [
-      {
-        key: 'insert-cells-shift-right',
-        label: (
-          <>
-            Insert cells and shift <strong>right</strong>
-          </>
-        ),
-        onClick: () => applyInsertCellsShift('right'),
-      },
-      {
-        key: 'insert-cells-shift-down',
-        label: (
-          <>
-            Insert cells and shift <strong>down</strong>
-          </>
-        ),
-        onClick: () => applyInsertCellsShift('down'),
-      },
-    ];
+        {
+          key: 'insert-cells-shift-right',
+          label: (
+            <>
+              Insert cells and shift <strong>right</strong>
+            </>
+          ),
+          onClick: () => applyInsertCellsShift('right'),
+        },
+        {
+          key: 'insert-cells-shift-down',
+          label: (
+            <>
+              Insert cells and shift <strong>down</strong>
+            </>
+          ),
+          onClick: () => applyInsertCellsShift('down'),
+        },
+      ];
   const shortcutSecondaryItems: ShortcutActionItem[] = isDeleteShortcutMenu
     ? [
-      {
-        key: 'delete-row-range',
-        label: (
-          <>
-            Delete <strong>{deleteRowTargetLabel}</strong>
-          </>
-        ),
-        onClick: deleteSelectedRowRange,
-      },
-      {
-        key: 'delete-column-range',
-        label: (
-          <>
-            Delete <strong>{deleteColumnTargetLabel}</strong>
-          </>
-        ),
-        onClick: deleteSelectedColumnRange,
-      },
-    ]
+        {
+          key: 'delete-row-range',
+          label: (
+            <>
+              Delete <strong>{deleteRowTargetLabel}</strong>
+            </>
+          ),
+          onClick: deleteSelectedRowRange,
+        },
+        {
+          key: 'delete-column-range',
+          label: (
+            <>
+              Delete <strong>{deleteColumnTargetLabel}</strong>
+            </>
+          ),
+          onClick: deleteSelectedColumnRange,
+        },
+      ]
     : [
-      {
-        key: 'insert-row-range',
-        label: insertRowLabel,
-        onClick: insertSelectedRowRange,
-      },
-      {
-        key: 'insert-column-range',
-        label: insertColumnLabel,
-        onClick: insertSelectedColumnRange,
-      },
-    ];
+        {
+          key: 'insert-row-range',
+          label: insertRowLabel,
+          onClick: insertSelectedRowRange,
+        },
+        {
+          key: 'insert-column-range',
+          label: insertColumnLabel,
+          onClick: insertSelectedColumnRange,
+        },
+      ];
   const renderShortcutMenuItems = () => (
     <>
       {shortcutPrimaryItems.map((item) => (
@@ -1698,7 +1726,11 @@ const ContextMenu: React.FC = () => {
         </Menu>
       ))}
       <Divider
-        key={isDeleteShortcutMenu ? 'delete-shortcut-divider' : 'insert-shortcut-divider'}
+        key={
+          isDeleteShortcutMenu
+            ? 'delete-shortcut-divider'
+            : 'insert-shortcut-divider'
+        }
       />
       {shortcutSecondaryItems.map((item) => (
         <Menu key={item.key} onClick={item.onClick}>
@@ -1720,17 +1752,15 @@ const ContextMenu: React.FC = () => {
         top: contextMenu.y,
       }}
     >
-      {isDeleteShortcutMenu || isInsertShortcutMenu ? (
-        renderShortcutMenuItems()
-      ) : context.contextMenu.headerMenu === true ||
-        /* @ts-ignore */
-        context.contextMenu.headerMenu === 'row' ? (
-        settings.headerContextMenu.map((menu, i) => {
-          return getMenuElement(menu, i);
-        })
-      ) : (
-        settings.cellContextMenu.map((menu, i) => getMenuElement(menu, i))
-      )}
+      {isDeleteShortcutMenu || isInsertShortcutMenu
+        ? renderShortcutMenuItems()
+        : context.contextMenu.headerMenu === true ||
+            /* @ts-ignore */
+            context.contextMenu.headerMenu === 'row'
+          ? settings.headerContextMenu.map((menu, i) => {
+              return getMenuElement(menu, i);
+            })
+          : settings.cellContextMenu.map((menu, i) => getMenuElement(menu, i))}
     </div>
   );
 };

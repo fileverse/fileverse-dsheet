@@ -2,13 +2,13 @@
  * Clipboard wire-up: Fortune internal paste is decided first (`fortune-internal-paste`),
  * then HTML table / plain / in-cell edit fallbacks re-use `paste-internals` handlers.
  */
-import { handlePastedTable } from "../paste-table-helpers";
-import type { Context } from "../context";
-import { isAllowEdit } from "../utils";
-import { selectionCache } from "../modules/selection";
-import { sanitizeDuneUrl } from "../modules";
-import clipboard from "../modules/clipboard";
-import { computeFortuneInternalPasteDecision } from "./fortune-internal-paste";
+import { handlePastedTable } from '../paste-table-helpers';
+import type { Context } from '../context';
+import { isAllowEdit } from '../utils';
+import { selectionCache } from '../modules/selection';
+import { sanitizeDuneUrl } from '../modules';
+import clipboard from '../modules/clipboard';
+import { computeFortuneInternalPasteDecision } from './fortune-internal-paste';
 import {
   convertAnyHtmlToTable,
   handleFormulaStringPaste,
@@ -18,7 +18,7 @@ import {
   pasteHandlerOfCutPaste,
   resizePastedCellsToContent,
   shouldHandleNonTableHtml,
-} from "./paste-internals";
+} from './paste-internals';
 
 export function handlePaste(ctx: Context, e: ClipboardEvent) {
   const allowEdit = isAllowEdit(ctx);
@@ -41,20 +41,20 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
     }
 
     if (!clipboardData) return;
-    const text = clipboardData.getData("text/plain");
+    const text = clipboardData.getData('text/plain');
     if (text) {
       parseAsLinkIfUrl(text, ctx);
     }
 
     let txtdata =
-      clipboardData.getData("text/html") || clipboardData.getData("text/plain");
+      clipboardData.getData('text/html') || clipboardData.getData('text/plain');
 
     if (
       pasteValuesOnly &&
-      txtdata.indexOf("fortune-copy-action-table") === -1 &&
-      txtdata.indexOf("fortune-copy-action-span") === -1
+      txtdata.indexOf('fortune-copy-action-table') === -1 &&
+      txtdata.indexOf('fortune-copy-action-span') === -1
     ) {
-      txtdata = clipboardData.getData("text/plain");
+      txtdata = clipboardData.getData('text/plain');
     }
 
     const fortunePaste = computeFortuneInternalPasteDecision(ctx, txtdata);
@@ -70,8 +70,8 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
     }
 
     if (
-      (txtdata.indexOf("fortune-copy-action-table") > -1 ||
-        txtdata.indexOf("fortune-copy-action-span") > -1) &&
+      (txtdata.indexOf('fortune-copy-action-table') > -1 ||
+        txtdata.indexOf('fortune-copy-action-span') > -1) &&
       ctx.luckysheet_copy_save?.copyRange != null &&
       ctx.luckysheet_copy_save.copyRange.length > 0 &&
       internalFortunePaste
@@ -84,7 +84,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
         pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save, pasteValuesOnly);
       }
       resizePastedCellsToContent(ctx);
-    } else if (txtdata.indexOf("fortune-copy-action-image") > -1) {
+    } else if (txtdata.indexOf('fortune-copy-action-image') > -1) {
       // imageCtrl.pasteImgItem();
     } else {
       const shouldHandleAsHtml =
@@ -101,12 +101,12 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
         }
       } else if (
         clipboardData.files.length === 1 &&
-        clipboardData.files[0].type.indexOf("image") > -1
+        clipboardData.files[0].type.indexOf('image') > -1
       ) {
         // imageCtrl.insertImg(clipboardData.files[0]);
       } else {
-        txtdata = clipboardData.getData("text/plain");
-        const isExcelFormula = txtdata.startsWith("=");
+        txtdata = clipboardData.getData('text/plain');
+        const isExcelFormula = txtdata.startsWith('=');
 
         if (isExcelFormula) {
           handleFormulaStringPaste(ctx, txtdata);
@@ -114,8 +114,8 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
           pasteHandler(ctx, txtdata);
 
           const _txtdata =
-            clipboardData.getData("text/html") ||
-            clipboardData.getData("text/plain");
+            clipboardData.getData('text/html') ||
+            clipboardData.getData('text/plain');
           const embedUrl = sanitizeDuneUrl(_txtdata);
           if (embedUrl) {
             const last =
@@ -147,9 +147,9 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
       // @ts-ignore
       clipboardData = window.clipboardData;
     }
-    const text = clipboardData?.getData("text/plain");
+    const text = clipboardData?.getData('text/plain');
     if (text) {
-      document.execCommand("insertText", false, text);
+      document.execCommand('insertText', false, text);
       parseAsLinkIfUrl(text, ctx);
       resizePastedCellsToContent(ctx);
     }
@@ -159,7 +159,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
 export function handlePasteByClick(
   ctx: Context,
   clipboardData: string,
-  triggerType?: string
+  triggerType?: string,
 ) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit || ctx.isFlvReadOnly) return;
@@ -169,7 +169,7 @@ export function handlePasteByClick(
     clipboard.writeHtml(htmlWithPreservedNewlines);
   }
 
-  const textarea = document.querySelector("#fortune-copy-content");
+  const textarea = document.querySelector('#fortune-copy-content');
   const data = textarea?.innerHTML || textarea?.textContent;
   if (!data) return;
 
@@ -184,8 +184,8 @@ export function handlePasteByClick(
   const { internalFortunePaste } = fortunePaste;
 
   if (
-    (data.indexOf("fortune-copy-action-table") > -1 ||
-      data.indexOf("fortune-copy-action-span") > -1) &&
+    (data.indexOf('fortune-copy-action-table') > -1 ||
+      data.indexOf('fortune-copy-action-span') > -1) &&
     ctx.luckysheet_copy_save?.copyRange != null &&
     ctx.luckysheet_copy_save.copyRange.length > 0 &&
     internalFortunePaste
@@ -196,10 +196,10 @@ export function handlePasteByClick(
     } else {
       pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save);
     }
-  } else if (data.indexOf("fortune-copy-action-image") > -1) {
+  } else if (data.indexOf('fortune-copy-action-image') > -1) {
     // imageCtrl.pasteImgItem();
-  } else if (triggerType !== "btn") {
-    const isExcelFormula = clipboardData.startsWith("=");
+  } else if (triggerType !== 'btn') {
+    const isExcelFormula = clipboardData.startsWith('=');
 
     if (isExcelFormula) {
       handleFormulaStringPaste(ctx, clipboardData);

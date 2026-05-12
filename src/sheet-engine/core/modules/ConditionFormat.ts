@@ -1472,7 +1472,10 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
               }
             }
-          } else if (conditionName === 'dateIs' || conditionName === 'dateBefore') {
+          } else if (
+            conditionName === 'dateIs' ||
+            conditionName === 'dateBefore'
+          ) {
             const cva = ruleArr[i].conditionValue;
             for (
               let r = cellrange[s].row[0];
@@ -1854,7 +1857,13 @@ function hasLivePreviewCondition(cr: any): boolean {
   if (!cn) return false;
   if (cn === 'empty' || cn === 'notEmpty') return true;
   if (cn === 'aboveAverage' || cn === 'belowAverage') return true;
-  if (cn === 'duplicateValue' || cn === 'top10' || cn === 'top10_percent' || cn === 'last10' || cn === 'last10_percent') {
+  if (
+    cn === 'duplicateValue' ||
+    cn === 'top10' ||
+    cn === 'top10_percent' ||
+    cn === 'last10' ||
+    cn === 'last10_percent'
+  ) {
     return true;
   }
   if (cn === 'dateIs' || cn === 'dateBefore') {

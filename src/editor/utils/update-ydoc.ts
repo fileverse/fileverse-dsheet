@@ -157,7 +157,9 @@ export const updateYdocSheetData = (
           sheet.set('celldata', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -183,7 +185,9 @@ export const updateYdocSheetData = (
           sheet.set('dataBlockCalcFunction', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -195,7 +199,9 @@ export const updateYdocSheetData = (
           sheet.set('liveQueryList', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -207,7 +213,9 @@ export const updateYdocSheetData = (
           sheet.set('dataVerification', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -219,7 +227,9 @@ export const updateYdocSheetData = (
           sheet.set('hyperlink', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -231,7 +241,9 @@ export const updateYdocSheetData = (
           sheet.set('conditionRules', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -243,7 +255,9 @@ export const updateYdocSheetData = (
           sheet.set('filter_select', cellMap);
         }
 
-        type === 'delete' ? cellMap.delete(key) : setMapValueSafe(cellMap, key, value);
+        type === 'delete'
+          ? cellMap.delete(key)
+          : setMapValueSafe(cellMap, key, value);
         return;
       }
 
@@ -340,13 +354,13 @@ export function ySheetArrayToPlain(
     const iterate =
       sheetMap instanceof Y.Map
         ? (fn: (value: any, key: string) => void) => {
-          sheetMap.forEach(fn);
-        }
+            sheetMap.forEach(fn);
+          }
         : (fn: (value: any, key: string) => void) => {
-          Object.entries(sheetMap as Record<string, any>).forEach(
-            ([key, value]) => fn(value, key),
-          );
-        };
+            Object.entries(sheetMap as Record<string, any>).forEach(
+              ([key, value]) => fn(value, key),
+            );
+          };
 
     iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format

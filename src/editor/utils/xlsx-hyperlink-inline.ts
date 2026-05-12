@@ -39,7 +39,9 @@ export function concatInlineStrRunsText(runs: unknown[]): string {
 }
 
 /** Copy `ct` fields except text container keys (fc/un/s/t) — avoids spreading large `s` arrays. */
-function pickCtPreservedForHyperlinkInline(ct: unknown): Record<string, unknown> {
+function pickCtPreservedForHyperlinkInline(
+  ct: unknown,
+): Record<string, unknown> {
   if (!ct || typeof ct !== 'object' || Array.isArray(ct)) return {};
   const src = ct as Record<string, unknown>;
   const out: Record<string, unknown> = {};
@@ -61,7 +63,10 @@ export function normalizeImportedHyperlinkCellV(
   cellV: Record<string, unknown>,
   hyperlink: HyperlinkEntryLite,
 ): void {
-  const fallbackInlineText = String(cellV.m ?? cellV.v ?? '').replace(/\r\n/g, '\n');
+  const fallbackInlineText = String(cellV.m ?? cellV.v ?? '').replace(
+    /\r\n/g,
+    '\n',
+  );
 
   let mergedText = '';
   let baseRun: Record<string, unknown> | null = null;
@@ -101,8 +106,7 @@ export function normalizeImportedHyperlinkCellV(
       baseRun?.fc != null && String(baseRun.fc).length > 0
         ? baseRun.fc
         : 'rgb(0, 0, 255)',
-    un:
-      baseRun?.un != null && baseRun.un !== 0 ? baseRun.un : 1,
+    un: baseRun?.un != null && baseRun.un !== 0 ? baseRun.un : 1,
     link: {
       linkType: hyperlink.linkType,
       linkAddress: hyperlink.linkAddress,

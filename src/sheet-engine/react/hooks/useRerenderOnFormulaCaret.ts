@@ -19,7 +19,7 @@ export function useRerenderOnFormulaCaret(
 
   useEffect(() => {
     if (!editSessionActive) {
-      return () => { };
+      return () => {};
     }
 
     const onSelectionChange = () => {

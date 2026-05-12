@@ -41,7 +41,12 @@ export const useEditorData = (
   const dataInitialized = useRef<boolean>(false);
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
-  const portalContentProcessed = useRef<boolean>(false);
+  /** Last applied `portalContent` string; reset when `dsheetId` changes. */
+  const lastAppliedPortalContentRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    lastAppliedPortalContentRef.current = null;
+  }, [dsheetId]);
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
@@ -50,24 +55,33 @@ export const useEditorData = (
     liveQueryRefreshRate,
   );
 
-  // Apply portal content if provided (do this before any other initialization)
+  // Apply portal content when it changes (initial load + portal refresh / multi-device sync)
   useEffect(() => {
-    if (
-      !portalContent?.length ||
-      !ydocRef.current ||
-      portalContentProcessed.current
-    ) {
+    if (!portalContent?.length || !ydocRef.current) {
+      return;
+    }
+    if (portalContent === lastAppliedPortalContentRef.current) {
       return;
     }
 
     try {
-      const uint8Array = toUint8Array(portalContent);
+      const incoming = toUint8Array(portalContent);
+      const ydoc = ydocRef.current;
+
+      // Bring `ydoc` toward the target state without re-applying shared history twice.
+      // Parent may send a merged update blob; diffing vs current SV is correct for IDB-hydrated ydocs too.
+      const sv = Y.encodeStateVector(ydoc);
+      const targetDoc = new Y.Doc();
+      Y.applyUpdate(targetDoc, incoming);
+      const delta = Y.encodeStateAsUpdate(targetDoc, sv);
+      targetDoc.destroy();
+
+      if (delta.byteLength > 0) {
+        Y.applyUpdate(ydoc, delta);
+      }
 
       const tempDoc = new Y.Doc();
-      Y.applyUpdate(tempDoc, uint8Array);
-
-      // Merge into main doc
-      Y.applyUpdate(ydocRef.current, uint8Array);
+      Y.applyUpdate(tempDoc, incoming);
 
       const internalDsheetId = [...tempDoc.share.keys()][0];
       // Use main ydoc's sheet array so migration persists; migrating tempDoc's
@@ -87,7 +101,7 @@ export const useEditorData = (
       currentDataRef.current = newSheetData;
       initialiseLiveQueryData(newSheetData);
 
-      portalContentProcessed.current = true;
+      lastAppliedPortalContentRef.current = portalContent;
 
       if (setForceSheetRender) {
         setForceSheetRender((prev) => prev + 1);
@@ -134,10 +148,10 @@ export const useEditorData = (
                   if (cell) {
                     const comment =
                       (commentData as any)?.[
-                      `${sheetKey}_${rowIndex}_${colIndex}`
+                        `${sheetKey}_${rowIndex}_${colIndex}`
                       ] ??
                       (commentData as any)?.[
-                      `${fileIndex}_${rowIndex}_${colIndex}`
+                        `${fileIndex}_${rowIndex}_${colIndex}`
                       ];
                     if (comment) {
                       cell.ps = allowComments

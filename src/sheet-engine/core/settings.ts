@@ -183,12 +183,12 @@ export type Settings = {
   sheetTabContextMenu?: string[];
   filterContextMenu?: string[];
   getCommentCellUI?:
-  | ((
-    row: number,
-    column: number,
-    dragHandler: CommentUIDragFn,
-  ) => React.ReactNode)
-  | null;
+    | ((
+        row: number,
+        column: number,
+        dragHandler: CommentUIDragFn,
+      ) => React.ReactNode)
+    | null;
   generateSheetId?: () => string;
   hooks?: Hooks;
   customToolbarItems?: {
@@ -355,8 +355,8 @@ export const defaultSettings: Required<Settings> = {
   customToolbarItems: [],
   currency: '$',
   getCommentCellUI: null,
-  onDuneChartEmbed: () => { },
-  onSheetCountChange: () => { },
+  onDuneChartEmbed: () => {},
+  onSheetCountChange: () => {},
   isAuthorized: false,
   isFlvReadOnly: false,
   dateBaseLocale: 'uk',

@@ -97,7 +97,7 @@ const FxEditor: React.FC = () => {
       : null;
   const lockedFormulaSearchTop =
     formulaSearchActiveCellKey &&
-      formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
       ? formulaSearchTopLockRef.current.top
       : null;
   const prevCellUpdate = usePrevious<any[]>(context.luckysheetCellUpdate);
@@ -116,7 +116,9 @@ const FxEditor: React.FC = () => {
       formulaSearchTopLockRef.current = null;
       return;
     }
-    if (formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey) {
+    if (
+      formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey
+    ) {
       formulaSearchTopLockRef.current = null;
     }
   }, [formulaSearchActiveCellKey]);
@@ -124,7 +126,9 @@ const FxEditor: React.FC = () => {
   const handleFormulaSearchTopComputed = useCallback(
     (computedTop: number) => {
       if (!formulaSearchActiveCellKey) return;
-      if (formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey)
+      if (
+        formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+      )
         return;
       formulaSearchTopLockRef.current = {
         cellKey: formulaSearchActiveCellKey,
@@ -247,7 +251,11 @@ const FxEditor: React.FC = () => {
     }
 
     refs.globalCache.overwriteCell = false;
-    if (!refs.globalCache.ignoreWriteCell && formulaEditHtml && !preferFormulaHtmlFromMirror) {
+    if (
+      !refs.globalCache.ignoreWriteCell &&
+      formulaEditHtml &&
+      !preferFormulaHtmlFromMirror
+    ) {
       fxInput.innerHTML = formulaEditHtml;
     } else if (!refs.globalCache.ignoreWriteCell && value) {
       fxInput.innerHTML = escapeHTMLTag(escapeScriptTag(value));
@@ -297,7 +305,7 @@ const FxEditor: React.FC = () => {
         setFormulaEditorOwner(draftCtx, 'fx');
         const last =
           draftCtx.luckysheet_select_save![
-          draftCtx.luckysheet_select_save!.length - 1
+            draftCtx.luckysheet_select_save!.length - 1
           ];
 
         const row_index = last.row_focus;
@@ -534,8 +542,8 @@ const FxEditor: React.FC = () => {
             createRangeHightlight(
               draftCtx,
               refs.fxInput.current?.innerHTML ||
-              refs.cellInput.current?.innerHTML ||
-              '',
+                refs.cellInput.current?.innerHTML ||
+                '',
             );
             moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
           });
@@ -700,8 +708,7 @@ const FxEditor: React.FC = () => {
                 draftCtx.luckysheet_select_save != null
                   ? _.cloneDeep(draftCtx.luckysheet_select_save)
                   : undefined;
-              const lastBefore =
-                selSnapshot?.[selSnapshot.length - 1];
+              const lastBefore = selSnapshot?.[selSnapshot.length - 1];
               const wasMulti =
                 !!lastBefore &&
                 (lastBefore.row[0] !== lastBefore.row[1] ||
@@ -718,14 +725,11 @@ const FxEditor: React.FC = () => {
                 draftCtx.luckysheet_select_save = _.cloneDeep(selSnapshot);
                 const lastSel =
                   draftCtx.luckysheet_select_save[
-                  draftCtx.luckysheet_select_save.length - 1
+                    draftCtx.luckysheet_select_save.length - 1
                   ];
                 lastSel.row_focus = lastCellUpdate[0];
                 lastSel.column_focus = lastCellUpdate[1];
-                normalizeSelection(
-                  draftCtx,
-                  draftCtx.luckysheet_select_save,
-                );
+                normalizeSelection(draftCtx, draftCtx.luckysheet_select_save);
                 advancePrimaryCellInLastMultiSelection(draftCtx, !e.shiftKey);
                 // Stay out of edit mode after commit (same as in-cell Enter path).
               } else {
@@ -737,10 +741,7 @@ const FxEditor: React.FC = () => {
                     column_focus: lastCellUpdate[1],
                   },
                 ];
-                normalizeSelection(
-                  draftCtx,
-                  draftCtx.luckysheet_select_save,
-                );
+                normalizeSelection(draftCtx, draftCtx.luckysheet_select_save);
                 moveHighlightCell(draftCtx, 'down', 1, 'rangeOfSelect');
               }
               // $("#luckysheet-rich-text-editor").focus();
@@ -877,15 +878,15 @@ const FxEditor: React.FC = () => {
     if (!isStrictFormula) {
       setContext(
         (draftCtx) => {
-        if (draftCtx.functionCandidates.length > 0) {
-          draftCtx.functionCandidates = [];
-        }
-        if (draftCtx.defaultCandidates.length > 0) {
-          draftCtx.defaultCandidates = [];
-        }
-        if (draftCtx.functionHint) {
-          draftCtx.functionHint = '';
-        }
+          if (draftCtx.functionCandidates.length > 0) {
+            draftCtx.functionCandidates = [];
+          }
+          if (draftCtx.defaultCandidates.length > 0) {
+            draftCtx.defaultCandidates = [];
+          }
+          if (draftCtx.functionHint) {
+            draftCtx.functionHint = '';
+          }
         },
         { noHistory: true },
       );

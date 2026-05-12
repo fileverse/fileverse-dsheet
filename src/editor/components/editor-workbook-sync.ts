@@ -229,13 +229,18 @@ export const createSheetLengthChangeHandler = ({
           toYMapFromObject(sheet.dataBlockCalcFunction),
         );
         ySheet.set('liveQueryList', toYMapFromObject(sheet.liveQueryList));
-        ySheet.set('dataVerification', toYMapFromObject(sheet.dataVerification));
+        ySheet.set(
+          'dataVerification',
+          toYMapFromObject(sheet.dataVerification),
+        );
         ySheet.set('hyperlink', toYMapFromObject(sheet.hyperlink));
         ySheet.set('conditionRules', toYMapFromObject(sheet.conditionRules));
         ySheet.set('filter_select', toYMapFromObject(sheet.filter_select));
         ySheet.set('filter', toYMapFromObject(sheet.filter));
         const conditionFormatArray = new Y.Array<any>();
-        const conditionFormat = Array.isArray(sheet.luckysheet_conditionformat_save)
+        const conditionFormat = Array.isArray(
+          sheet.luckysheet_conditionformat_save,
+        )
           ? sheet.luckysheet_conditionformat_save
           : [];
         conditionFormatArray.insert(0, conditionFormat);

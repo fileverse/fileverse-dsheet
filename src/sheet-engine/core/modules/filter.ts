@@ -9,7 +9,10 @@ import { isRealNull } from './validation';
 import { normalizedAttr } from './cell';
 import { sortDataRange } from './sort';
 import { checkCF, getComputeMap } from './ConditionFormat';
-import { ensureManualHiddenInitialized, rebuildRowHiddenUnion } from './rowVisibility';
+import {
+  ensureManualHiddenInitialized,
+  rebuildRowHiddenUnion,
+} from './rowVisibility';
 
 // 筛选配置状态
 export function labelFilterOptionState(
@@ -119,9 +122,9 @@ export function createFilterOptions(
   ctx: Context,
   luckysheet_filter_save:
     | {
-      row: number[];
-      column: number[];
-    }
+        row: number[];
+        column: number[];
+      }
     | undefined,
   sheetId: string | undefined,
   filterObj?: any,

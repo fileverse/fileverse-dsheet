@@ -1,7 +1,6 @@
-/* eslint-disable no-plusplus */
-import _ from "lodash";
-import { Context, getFlowdata } from "../context";
-import { Cell, CellMatrix, Range, Selection, SingleRange } from "../types";
+import _ from 'lodash';
+import { Context, getFlowdata } from '../context';
+import { Cell, CellMatrix, Range, Selection, SingleRange } from '../types';
 import {
   getSheetIndex,
   indexToColumnChar,
@@ -9,9 +8,9 @@ import {
   processArray,
   getContentInParentheses,
   getNumberFormat,
-} from "../utils";
-import { checkCF, getComputeMap } from "./ConditionFormat";
-import { getFailureText, validateCellData } from "./dataVerification";
+} from '../utils';
+import { checkCF, getComputeMap } from './ConditionFormat';
+import { getFailureText, validateCellData } from './dataVerification';
 import {
   datenum_local,
   formatScientificForComputedNumber,
@@ -24,12 +23,12 @@ import {
   refreshGeneralNumericDisplay,
   shouldUseScientificForComputedNumber,
   update,
-} from "./format";
+} from './format';
 import {
   getCanonicalDateEditFormat,
   getDateEditFormatForCell,
-} from "./date-base-locale";
-import { clearCellError } from "../api";
+} from './date-base-locale';
+import { clearCellError } from '../api';
 import {
   delFunctionGroup,
   execfunction,
@@ -39,17 +38,22 @@ import {
   isTodayNowPureArithmeticDateResult,
   iscelldata,
   suppressFormulaRangeSelectionForInitialEdit,
-} from "./formula";
+} from './formula';
 import {
   convertSpanToShareString,
   getHyperlinksFromInlineSegments,
   isInlineStringCell,
   isInlineStringCT,
-} from "./inline-string";
-import { detectDateFormat, isRealNull, isRealNum, valueIsError } from "./validation";
-import { getCellTextInfo } from "./text";
-import { locale } from "../locale";
-import { spillSortResult } from "./sort";
+} from './inline-string';
+import {
+  detectDateFormat,
+  isRealNull,
+  isRealNum,
+  valueIsError,
+} from './validation';
+import { getCellTextInfo } from './text';
+import { locale } from '../locale';
+import { spillSortResult } from './sort';
 
 // TODO put these in context ref
 // let rangestart = false;
@@ -82,7 +86,7 @@ export function recalcAutoRowHeightForRow(
   for (let col = 0; col < rowData.length; col += 1) {
     const rowCell = rowData[col];
     if (!rowCell) continue;
-    if (!(rowCell?.tb === "2" || isInlineStringCell(rowCell))) continue;
+    if (!(rowCell?.tb === '2' || isInlineStringCell(rowCell))) continue;
 
     const cellWidth = cfg.columnlen?.[col] || ctx.defaultcollen;
     const textInfo = getCellTextInfo(rowCell as Cell, canvas, ctx, {
@@ -111,43 +115,43 @@ export function recalcAutoRowHeightForRow(
 export function normalizedCellAttr(
   cell: Cell,
   attr: keyof Cell,
-  defaultFontSize = 10
+  defaultFontSize = 10,
 ): any {
   const tf = { bl: 1, it: 1, ff: 1, cl: 1, un: 1 };
   let value: any = cell?.[attr];
 
-  if (attr in tf || (attr === "fs" && isInlineStringCell(cell))) {
-    value ||= "0";
-  } else if (["fc", "bg", "bc"].includes(attr)) {
-    if (["fc", "bc"].includes(attr)) {
-      value ||= "#000000";
+  if (attr in tf || (attr === 'fs' && isInlineStringCell(cell))) {
+    value ||= '0';
+  } else if (['fc', 'bg', 'bc'].includes(attr)) {
+    if (['fc', 'bc'].includes(attr)) {
+      value ||= '#000000';
     }
-    if (value?.indexOf("rgba") > -1) {
+    if (value?.indexOf('rgba') > -1) {
       value = rgbToHex(value);
     }
-  } else if (attr.substring(0, 2) === "bs") {
-    value ||= "none";
-  } else if (attr === "ht" || attr === "vt") {
+  } else if (attr.substring(0, 2) === 'bs') {
+    value ||= 'none';
+  } else if (attr === 'ht' || attr === 'vt') {
     // Spreadsheet-style default alignment:
     // - text: left
     // - number/date-time-like numeric cells: right
-    const isExplicitPlainText = (cell as Cell)?.ct?.fa === "@";
+    const isExplicitPlainText = (cell as Cell)?.ct?.fa === '@';
     const isNumericCell =
       !!cell &&
       !isExplicitPlainText &&
-      ((cell as Cell).ct?.t === "n" ||
-        typeof (cell as Cell).v === "number" ||
+      ((cell as Cell).ct?.t === 'n' ||
+        typeof (cell as Cell).v === 'number' ||
         isRealNum((cell as Cell).v) ||
         isRealNum((cell as Cell).m));
-    const defaultValue = attr === "ht" ? (isNumericCell ? "2" : "1") : "0";
+    const defaultValue = attr === 'ht' ? (isNumericCell ? '2' : '1') : '0';
     value = !_.isNil(value) ? value.toString() : defaultValue;
-    if (["0", "1", "2"].indexOf(value.toString()) === -1) {
+    if (['0', '1', '2'].indexOf(value.toString()) === -1) {
       value = defaultValue;
     }
-  } else if (attr === "fs") {
+  } else if (attr === 'fs') {
     value ||= defaultFontSize.toString();
-  } else if (attr === "tb" || attr === "tr") {
-    value ||= "0";
+  } else if (attr === 'tb' || attr === 'tr') {
+    value ||= '0';
   }
 
   return value;
@@ -157,7 +161,7 @@ export function normalizedAttr(
   data: CellMatrix,
   r: number,
   c: number,
-  attr: keyof Cell
+  attr: keyof Cell,
 ): any {
   if (!data || !data[r]) {
     return null;
@@ -168,13 +172,13 @@ export function normalizedAttr(
 }
 
 function newlinesToBr(text: string) {
-  if (!text) return "";
-  return text.replace(/\r\n|\r|\n/g, "<br />");
+  if (!text) return '';
+  return text.replace(/\r\n|\r|\n/g, '<br />');
 }
 
 /** Append `)` for each unmatched `(` when committing a formula (ignores parens inside "..." string literals, `""` escape). */
 function closeUnclosedParenthesesInFormula(formula: string): string {
-  if (!formula.startsWith("=") || formula.length <= 1) return formula;
+  if (!formula.startsWith('=') || formula.length <= 1) return formula;
   const body = formula.slice(1);
   let depth = 0;
   let inString = false;
@@ -194,11 +198,11 @@ function closeUnclosedParenthesesInFormula(formula: string): string {
       inString = true;
       continue;
     }
-    if (ch === "(") depth += 1;
-    else if (ch === ")") depth = Math.max(0, depth - 1);
+    if (ch === '(') depth += 1;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
   }
   if (depth <= 0) return formula;
-  return `${formula}${")".repeat(depth)}`;
+  return `${formula}${')'.repeat(depth)}`;
 }
 
 /**
@@ -208,40 +212,44 @@ function closeUnclosedParenthesesInFormula(formula: string): string {
  */
 function normalizeEditorChildrenToSpans(editor: HTMLDivElement) {
   const hasNonSpanTopLevel = Array.from(editor.childNodes).some(
-    (n) => !(n.nodeType === Node.ELEMENT_NODE && (n as HTMLElement).tagName === "SPAN")
+    (n) =>
+      !(
+        n.nodeType === Node.ELEMENT_NODE &&
+        (n as HTMLElement).tagName === 'SPAN'
+      ),
   );
   if (!hasNonSpanTopLevel) return;
 
-  const out = document.createElement("div");
+  const out = document.createElement('div');
   const appendTextSpan = (text: string) => {
     if (!text) return;
-    const sp = document.createElement("span");
-    sp.className = "luckysheet-input-span";
+    const sp = document.createElement('span');
+    sp.className = 'luckysheet-input-span';
     sp.textContent = text;
     out.appendChild(sp);
   };
   const appendBreakSpan = () => {
-    const sp = document.createElement("span");
-    sp.className = "luckysheet-input-span";
-    sp.appendChild(document.createElement("br"));
+    const sp = document.createElement('span');
+    sp.className = 'luckysheet-input-span';
+    sp.appendChild(document.createElement('br'));
     out.appendChild(sp);
   };
 
   for (const node of Array.from(editor.childNodes)) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
-      if (el.tagName === "SPAN") {
+      if (el.tagName === 'SPAN') {
         out.appendChild(el.cloneNode(true));
         continue;
       }
-      if (el.tagName === "BR") {
+      if (el.tagName === 'BR') {
         appendBreakSpan();
         continue;
       }
-      const text = (el.innerText ?? el.textContent ?? "")
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-      const parts = text.split("\n");
+      const text = (el.innerText ?? el.textContent ?? '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n');
+      const parts = text.split('\n');
       parts.forEach((part, idx) => {
         appendTextSpan(part);
         if (idx < parts.length - 1) appendBreakSpan();
@@ -249,10 +257,10 @@ function normalizeEditorChildrenToSpans(editor: HTMLDivElement) {
       continue;
     }
     if (node.nodeType === Node.TEXT_NODE) {
-      const text = (node.textContent ?? "")
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-      const parts = text.split("\n");
+      const text = (node.textContent ?? '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n');
+      const parts = text.split('\n');
       parts.forEach((part, idx) => {
         appendTextSpan(part);
         if (idx < parts.length - 1) appendBreakSpan();
@@ -267,10 +275,10 @@ export function getCellValue(
   r: number,
   c: number,
   data: CellMatrix,
-  attr?: keyof Cell
+  attr?: keyof Cell,
 ) {
   if (!attr) {
-    attr = "v";
+    attr = 'v';
   }
 
   let d_value;
@@ -296,36 +304,33 @@ export function getCellValue(
     const d = d_value as Cell;
     retv = d[attr];
 
-    if (attr === "f" && !_.isNil(retv)) {
+    if (attr === 'f' && !_.isNil(retv)) {
       const dCell = d as Cell;
       let fForDisplay = String(retv);
       const seg0v = dCell?.ct?.s?.[0]?.v;
       if (
-        typeof seg0v === "string" &&
+        typeof seg0v === 'string' &&
         /[\r\n]/.test(seg0v) &&
-        fForDisplay.startsWith("=")
+        fForDisplay.startsWith('=')
       ) {
         const norm = (s: string) =>
           s
-            .replace(/\u00a0/g, " ")
-            .replace(/\u200b/g, "")
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n")
-            .replace(/\n/g, "");
-        const mirror = seg0v
-          .replace(/\u00a0/g, " ")
-          .replace(/\u200b/g, "");
+            .replace(/\u00a0/g, ' ')
+            .replace(/\u200b/g, '')
+            .replace(/\r\n/g, '\n')
+            .replace(/\r/g, '\n')
+            .replace(/\n/g, '');
+        const mirror = seg0v.replace(/\u00a0/g, ' ').replace(/\u200b/g, '');
         if (norm(mirror) === norm(fForDisplay)) {
           fForDisplay = mirror;
         }
       }
       retv = functionHTMLGenerate(fForDisplay);
-    } else if (attr === "f") {
-      if (d?.ct?.t === "d" && !_.isNil((d as Cell).v)) {
-        const dateFormat = String(d?.ct?.fa || "");
+    } else if (attr === 'f') {
+      if (d?.ct?.t === 'd' && !_.isNil((d as Cell).v)) {
+        const dateFormat = String(d?.ct?.fa || '');
         const hasTime =
-          /\b(h|hh|H|HH|s|ss)\b/.test(dateFormat) ||
-          /AM\/PM/i.test(dateFormat);
+          /\b(h|hh|H|HH|s|ss)\b/.test(dateFormat) || /AM\/PM/i.test(dateFormat);
         retv = update(
           getDateEditFormatForCell(dateFormat, hasTime),
           (d as Cell).v as any,
@@ -333,11 +338,11 @@ export function getCellValue(
       } else {
         retv = (d as Cell).v;
       }
-    } else if (d && d.ct && d.ct.t === "d") {
+    } else if (d && d.ct && d.ct.t === 'd') {
       retv = d.m;
     }
 
-    if (d?.ct && isInlineStringCT(d.ct) && (attr === "v" || attr === "m")) {
+    if (d?.ct && isInlineStringCT(d.ct) && (attr === 'v' || attr === 'm')) {
       retv = newlinesToBr(d.ct.s[0]?.v);
     }
   }
@@ -354,7 +359,7 @@ export function setCellValue(
   r: number,
   c: number,
   d: CellMatrix | null | undefined,
-  v: any
+  v: any,
 ) {
   if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
   if (_.isNil(d)) {
@@ -382,7 +387,7 @@ export function setCellValue(
     } else {
       if (!_.isNil(v.f)) {
         cell.f = v.f;
-      } else if ("f" in cell) {
+      } else if ('f' in cell) {
         delete cell.f;
       }
       if (!_.isNil(v.m)) {
@@ -403,9 +408,7 @@ export function setCellValue(
 
       if (!_.isNil(v.ct)) {
         // Merge so formula mirror `ct.s` does not wipe format (`fa`/`t`) needed to compute `m`.
-        cell.ct = _.isNil(cell.ct)
-          ? v.ct
-          : { ...cell.ct, ...v.ct };
+        cell.ct = _.isNil(cell.ct) ? v.ct : { ...cell.ct, ...v.ct };
       }
       // Preserve horizontal alignment from value object (e.g. when editing, keep number/currency right-aligned)
       if (!_.isNil(v.ht)) {
@@ -426,8 +429,8 @@ export function setCellValue(
       ? (v as Cell).ct!.s
       : null;
   let commaPresent = false;
-  if (vupdate && typeof vupdate === "string" && vupdate.includes(",")) {
-    commaPresent = vupdate.includes(",");
+  if (vupdate && typeof vupdate === 'string' && vupdate.includes(',')) {
+    commaPresent = vupdate.includes(',');
     // Keep user-entered commas intact.
     // - Valid thousand-grouped inputs are parsed downstream by `genarate`.
     // - Invalid/random comma placement should remain text, not coerced to number.
@@ -435,15 +438,15 @@ export function setCellValue(
 
   const cellObj = _.isPlainObject(cell) ? (cell as Cell) : null;
   const isTextFormattedCell =
-    cellObj != null && (cellObj.ct?.fa === "@" || cellObj.qp === 1);
+    cellObj != null && (cellObj.ct?.fa === '@' || cellObj.qp === 1);
   if (
-    typeof vupdate === "string" &&
+    typeof vupdate === 'string' &&
     !isTextFormattedCell &&
     /^[+-]?\d+\.\d+$/.test(vupdate)
   ) {
     const normalizedDecimal = vupdate
-      .replace(/(\.\d*?[1-9])0+$/, "$1")
-      .replace(/\.0+$/, "");
+      .replace(/(\.\d*?[1-9])0+$/, '$1')
+      .replace(/\.0+$/, '');
     if (normalizedDecimal !== vupdate) {
       vupdate = normalizedDecimal;
     }
@@ -482,7 +485,7 @@ export function setCellValue(
   // plain-numeric path that resets `ct` to General — dropping currency and other masks.
   if (
     !_.isNil((cell as Cell).f) &&
-    typeof vupdate === "string" &&
+    typeof vupdate === 'string' &&
     isRealNum(vupdate) &&
     !valueIsError(vupdate)
   ) {
@@ -503,75 +506,72 @@ export function setCellValue(
 
   if (vupdateStr.substr(0, 1) === "'") {
     cell.m = vupdateStr.substr(1);
-    cell.ct = { fa: "@", t: "s" };
+    cell.ct = { fa: '@', t: 's' };
     cell.v = vupdateStr.substr(1);
     cell.qp = 1;
   } else if (cell.qp === 1) {
     cell.m = vupdateStr;
-    cell.ct = { fa: "@", t: "s" };
+    cell.ct = { fa: '@', t: 's' };
     cell.v = vupdateStr;
   } else if (
-    vupdateStr.toUpperCase() === "TRUE" &&
-    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== "@")
+    vupdateStr.toUpperCase() === 'TRUE' &&
+    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== '@')
   ) {
-    cell.m = "TRUE";
-    cell.ct = { fa: "General", t: "b" };
+    cell.m = 'TRUE';
+    cell.ct = { fa: 'General', t: 'b' };
     cell.v = true;
   } else if (
-    vupdateStr.toUpperCase() === "FALSE" &&
-    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== "@")
+    vupdateStr.toUpperCase() === 'FALSE' &&
+    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== '@')
   ) {
-    cell.m = "FALSE";
-    cell.ct = { fa: "General", t: "b" };
+    cell.m = 'FALSE';
+    cell.ct = { fa: 'General', t: 'b' };
     cell.v = false;
   } else if (
-    vupdateStr.substr(-1) === "%" &&
+    vupdateStr.substr(-1) === '%' &&
     isRealNum(vupdateStr.substring(0, vupdateStr.length - 1)) &&
-    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== "@")
+    (_.isNil(cell.ct?.fa) || cell.ct?.fa !== '@')
   ) {
-    cell.ct = { fa: "0%", t: "n" };
+    cell.ct = { fa: '0%', t: 'n' };
     cell.v = vupdateStr.substring(0, vupdateStr.length - 1) / 100;
     cell.m = vupdate;
   } else if (valueIsError(vupdate)) {
     cell.m = vupdateStr;
     // cell.ct = { "fa": "General", "t": "e" };
     if (!_.isNil(cell.ct)) {
-      cell.ct.t = "e";
+      cell.ct.t = 'e';
     } else {
-      cell.ct = { fa: "General", t: "e" };
+      cell.ct = { fa: 'General', t: 'e' };
     }
     cell.v = vupdate;
   } else {
-    if (
-      isSixteenPlusDigitIntegerString(vupdateStr) &&
-      _.isNil(cell.f)
-    ) {
-      const raw = vupdateStr.trim().replace(/,/g, "");
+    if (isSixteenPlusDigitIntegerString(vupdateStr) && _.isNil(cell.f)) {
+      const raw = vupdateStr.trim().replace(/,/g, '');
       cell.m = raw;
       cell.v = raw;
-      if (cell.ct?.fa === "@") {
-        cell.ct = { fa: "@", t: "s" };
+      if (cell.ct?.fa === '@') {
+        cell.ct = { fa: '@', t: 's' };
       } else {
-        cell.ct = { fa: "General", t: "g" };
+        cell.ct = { fa: 'General', t: 'g' };
       }
     } else if (!_.isNil(cell.f) && Array.isArray(vupdate)) {
       // Range spills (e.g. =A1:C1) arrive as matrices. Never run SSF/update with a numeric
       // currency mask on an array — it becomes NaN.00. Ref-format inference is scalar-only.
       // Spilled/matrix results: `Cell['v']` type is scalar-only at compile time, but runtime stores arrays.
-      (cell as Omit<Cell, "v"> & { v?: unknown }).v = vupdate;
+      (cell as Omit<Cell, 'v'> & { v?: unknown }).v = vupdate;
       if (_.isNil(cell.ct)) {
-        cell.ct = { fa: "General", t: "g" };
+        cell.ct = { fa: 'General', t: 'g' };
       } else {
-        cell.ct = { ...cell.ct, fa: "General", t: "g" };
+        cell.ct = { ...cell.ct, fa: 'General', t: 'g' };
         delete cell.ct.dp;
       }
       cell.m = spilledMatrixFormulaDisplay(vupdate);
     } else if (
       !_.isNil(cell.f) &&
-      typeof vupdate === "number" &&
+      typeof vupdate === 'number' &&
       Number.isFinite(vupdate) &&
       !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-        vupdateStr
+        vupdateStr,
       )
     ) {
       cell.v = vupdate;
@@ -579,13 +579,13 @@ export function setCellValue(
       // `fa`/`t`. Single-line commits often pass `ct: {}` so merge can leave `cell.ct` without
       // `fa`, and `update(cell.ct.fa, v)` cannot produce `m`. Default only missing fields.
       if (_.isNil(cell.ct)) {
-        cell.ct = { fa: "General", t: "g" };
+        cell.ct = { fa: 'General', t: 'g' };
       } else {
-        if (cell.ct.fa == null || cell.ct.fa === "") {
-          cell.ct = { ...cell.ct, fa: "General" };
+        if (cell.ct.fa == null || cell.ct.fa === '') {
+          cell.ct = { ...cell.ct, fa: 'General' };
         }
-        if (cell.ct.t == null || cell.ct.t === "") {
-          cell.ct = { ...cell.ct, t: "g" };
+        if (cell.ct.t == null || cell.ct.t === '') {
+          cell.ct = { ...cell.ct, t: 'g' };
         }
       }
 
@@ -594,21 +594,21 @@ export function setCellValue(
       // is still General.
       const numericResultCanUseRefFmt =
         isRealNum(vupdate) &&
-        /^[\d.,]+$/.test(vupdateStr.replace(/\s/g, "")) &&
+        /^[\d.,]+$/.test(vupdateStr.replace(/\s/g, '')) &&
         _.isNil((cell as Cell).qp) &&
-        (cell as Cell).ct?.fa !== "@";
+        (cell as Cell).ct?.fa !== '@';
 
       if (numericResultCanUseRefFmt) {
         const flowdata = getFlowdata(ctx);
-        const args = getContentInParentheses(cell?.f)?.split(",");
+        const args = getContentInParentheses(cell?.f)?.split(',');
         const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
         const formatted = processArray(cellRefs, d, flowdata);
         if (formatted) {
           cell.ct.fa = formatted;
           if (is_date(formatted)) {
-            cell.ct.t = "d";
+            cell.ct.t = 'd';
           } else {
-            cell.ct.t = "n";
+            cell.ct.t = 'n';
           }
         }
       }
@@ -618,7 +618,7 @@ export function setCellValue(
       } else {
         if (shouldUseScientificForComputedNumber(cell.v as number)) {
           cell.m = formatScientificForComputedNumber(cell.v as number);
-        } else if (cell.v.toString().toLowerCase().indexOf("e") > -1) {
+        } else if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
           cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
         } else {
           const v_p = Math.round(cell.v * 1000000000) / 1000000000;
@@ -638,22 +638,22 @@ export function setCellValue(
 
       if (
         isTodayNowPureArithmeticDateResult(cell.f!, cell.v as number) &&
-        (cell.ct?.fa === "General" ||
-          cell.ct?.t === "g" ||
-          (cell.ct?.t === "n" && (!cell.ct?.fa || cell.ct?.fa === "General")))
+        (cell.ct?.fa === 'General' ||
+          cell.ct?.t === 'g' ||
+          (cell.ct?.t === 'n' && (!cell.ct?.fa || cell.ct?.fa === 'General')))
       ) {
         const hasTime = /\bNOW\s*\(/i.test(cell.f!);
         const fa = getCanonicalDateEditFormat(hasTime);
-        cell.ct = { fa, t: "d" };
+        cell.ct = { fa, t: 'd' };
         const vRound = Math.round((cell.v as number) * 1000000000) / 1000000000;
         cell.m = String(update(fa, vRound));
       }
-    } else if (!_.isNil(cell.ct) && cell.ct.fa === "@") {
+    } else if (!_.isNil(cell.ct) && cell.ct.fa === '@') {
       cell.m = vupdateStr;
       cell.v = vupdate;
-    } else if (cell.ct != null && cell.ct.t === "d" && _.isString(vupdate)) {
+    } else if (cell.ct != null && cell.ct.t === 'd' && _.isString(vupdate)) {
       const mask = genarate(vupdate) as any;
-      if (mask?.[1]?.t === "d") {
+      if (mask?.[1]?.t === 'd') {
         if (mask[1].fa === cell.ct.fa) {
           [cell.m, cell.ct, cell.v] = mask;
         } else {
@@ -682,7 +682,7 @@ export function setCellValue(
     } else if (
       !_.isNil(cell.ct) &&
       !_.isNil(cell.ct.fa) &&
-      cell.ct.fa !== "General"
+      cell.ct.fa !== 'General'
     ) {
       let { fa } = cell.ct;
       const enteredEditByTyping =
@@ -691,24 +691,24 @@ export function setCellValue(
         ctx.luckysheetCellUpdate.length > 0 && !enteredEditByTyping;
       const shouldDropPercentFormatForDirectText =
         enteredEditByTyping &&
-        fa.includes("%") &&
-        !vupdateStr.includes("%") &&
+        fa.includes('%') &&
+        !vupdateStr.includes('%') &&
         !isRealNum(vupdate);
       const shouldOverwritePercentFormat =
-        isInPlaceEditSession && fa.includes("%") && !vupdateStr.includes("%");
+        isInPlaceEditSession && fa.includes('%') && !vupdateStr.includes('%');
       if (shouldDropPercentFormatForDirectText) {
         const gen = genarate(vupdate as any);
         if (gen) {
           const [m, ct, vv] = gen;
-          cell.m = m == null ? "" : String(m);
-          cell.ct = ct as Cell["ct"];
-          cell.v = vv as Cell["v"];
+          cell.m = m == null ? '' : String(m);
+          cell.ct = ct as Cell['ct'];
+          cell.v = vv as Cell['v'];
           // Return to default alignment resolution for the new inferred type.
           delete cell.ht;
         } else {
           cell.m = vupdateStr;
           cell.v = vupdate;
-          cell.ct = { fa: "General", t: "s" };
+          cell.ct = { fa: 'General', t: 's' };
           delete cell.ht;
         }
       } else if (shouldOverwritePercentFormat) {
@@ -717,21 +717,21 @@ export function setCellValue(
         if (
           isRealNum(vupdate) &&
           !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-            vupdateStr
+            vupdateStr,
           )
         ) {
-          if (typeof vupdate === "string") {
+          if (typeof vupdate === 'string') {
             const flag = vupdate
-              .split("")
-              .every((ele) => ele === "0" || ele === ".");
+              .split('')
+              .every((ele) => ele === '0' || ele === '.');
             if (flag || /^0+\d/.test(vupdate)) {
               vupdate = parseFloat(vupdate);
             }
           }
           cell.v = vupdate;
           const preserveDp = cell.ct?.dp;
-          cell.ct = { fa: "General", t: "g" };
-          if (preserveDp != null && typeof preserveDp === "number") {
+          cell.ct = { fa: 'General', t: 'g' };
+          if (preserveDp != null && typeof preserveDp === 'number') {
             cell.ct.dp = preserveDp;
           }
           if (v.m) {
@@ -755,13 +755,13 @@ export function setCellValue(
         // Conditions that compared format commas/decimals against input were removed because they
         // incorrectly changed an explicit format (e.g. "#,##0.00") when a plain value like "42" was typed,
         // causing the decimal places to be lost.
-        if (commaPresent && !fa.includes(",")) {
+        if (commaPresent && !fa.includes(',')) {
           fa = getNumberFormat(String(vupdate), commaPresent);
         }
         vupdate = parseFloat(vupdate);
         if (
-          fa.includes("%") &&
-          !vupdateStr.includes("%") &&
+          fa.includes('%') &&
+          !vupdateStr.includes('%') &&
           (!hadDisplayValueBeforeEdit || enteredEditByTyping)
         ) {
           // Empty cell already formatted as percent: treat freshly typed number
@@ -771,9 +771,9 @@ export function setCellValue(
           vupdate /= 100;
         }
         if (cell?.ct) {
-          cell.ct = { ...cell.ct, fa, t: "n" };
+          cell.ct = { ...cell.ct, fa, t: 'n' };
         }
-        let mask: any = update(fa, vupdate);
+        const mask: any = update(fa, vupdate);
 
         if (mask === vupdate) {
           // 若原来单元格格式 应用不了 要更新的值，则获取更新值的 格式
@@ -784,9 +784,9 @@ export function setCellValue(
           );
           if (gen) {
             const [m, ct, v] = gen;
-            cell.m = m == null ? "" : String(m);
-            cell.ct = ct as Cell["ct"];
-            cell.v = v as Cell["v"];
+            cell.m = m == null ? '' : String(m);
+            cell.ct = ct as Cell['ct'];
+            cell.v = v as Cell['v'];
           }
         } else {
           if (v.m) {
@@ -798,17 +798,17 @@ export function setCellValue(
         }
       } else if (
         isCurrencyLikeNumberFormat(fa, locale(ctx).currencyDetail) &&
-        typeof vupdate === "string" &&
-        !vupdateStr.startsWith("=") &&
+        typeof vupdate === 'string' &&
+        !vupdateStr.startsWith('=') &&
         !isRealNum(vupdate)
       ) {
         // Google Sheets–like: text in a currency cell keeps the currency mask so the next numeric
         // entry still formats as currency (do not replace ct via genarate).
         cell.v = vupdateStr;
         cell.m = vupdateStr;
-        cell.ct = { fa, t: "s" };
+        cell.ct = { fa, t: 's' };
       } else {
-        let mask: any = update(fa, vupdate);
+        const mask: any = update(fa, vupdate);
 
         if (mask === vupdate) {
           // 若原来单元格格式 应用不了 要更新的值，则获取更新值的 格式
@@ -819,9 +819,9 @@ export function setCellValue(
           );
           if (gen) {
             const [m, ct, v] = gen;
-            cell.m = m == null ? "" : String(m);
-            cell.ct = ct as Cell["ct"];
-            cell.v = v as Cell["v"];
+            cell.m = m == null ? '' : String(m);
+            cell.ct = ct as Cell['ct'];
+            cell.v = v as Cell['v'];
           }
         } else {
           if (v.m) {
@@ -836,13 +836,13 @@ export function setCellValue(
       if (
         isRealNum(vupdate) &&
         !/^\d{6}(18|19|20)?\d{2}(0[1-9]|1[12])(0[1-9]|[12]\d|3[01])\d{3}(\d|X)$/i.test(
-          vupdate
+          vupdate,
         )
       ) {
-        if (typeof vupdate === "string") {
+        if (typeof vupdate === 'string') {
           const flag = vupdate
-            .split("")
-            .every((ele) => ele === "0" || ele === ".");
+            .split('')
+            .every((ele) => ele === '0' || ele === '.');
           // Convert to number if: all zeros/dots, or has leading zeros that should be stripped
           if (flag || /^0+\d/.test(vupdate)) {
             vupdate = parseFloat(vupdate);
@@ -851,8 +851,8 @@ export function setCellValue(
         cell.v =
           vupdate; /* 备注：如果使用parseFloat，1.1111111111111111会转换为1.1111111111111112 ? */
         const preserveDp = cell.ct?.dp;
-        cell.ct = { fa: "General", t: "g" };
-        if (preserveDp != null && typeof preserveDp === "number") {
+        cell.ct = { fa: 'General', t: 'g' };
+        if (preserveDp != null && typeof preserveDp === 'number') {
           cell.ct.dp = preserveDp;
         }
         if (v.m) {
@@ -901,21 +901,21 @@ export function setCellValue(
   // is still empty; derive it here without touching existing non-empty `m`.
   if (!_.isNil((cell as Cell).f) && isRealNull((cell as Cell).m)) {
     const formulaResult = (cell as Cell).v;
-    if (cell?.ct?.t === "d" && cell?.ct?.fa && !isRealNull(formulaResult)) {
+    if (cell?.ct?.t === 'd' && cell?.ct?.fa && !isRealNull(formulaResult)) {
       (cell as Cell).m = update(cell.ct.fa, formulaResult);
-    } else if (typeof formulaResult === "number") {
+    } else if (typeof formulaResult === 'number') {
       const fa = cell?.ct?.fa;
-      if (fa && fa !== "General" && Number.isFinite(formulaResult)) {
+      if (fa && fa !== 'General' && Number.isFinite(formulaResult)) {
         const vRound = Math.round(formulaResult * 1000000000) / 1000000000;
         (cell as Cell).m = String(update(fa, vRound));
       } else {
         refreshGeneralNumericDisplay(cell as Cell);
       }
-    } else if (typeof formulaResult === "boolean") {
-      (cell as Cell).m = formulaResult ? "TRUE" : "FALSE";
+    } else if (typeof formulaResult === 'boolean') {
+      (cell as Cell).m = formulaResult ? 'TRUE' : 'FALSE';
     } else if (isRealNull(formulaResult)) {
       // Keep `m` present for formulas even when result is null/empty.
-      (cell as Cell).m = "";
+      (cell as Cell).m = '';
     } else {
       (cell as Cell).m = String(formulaResult);
     }
@@ -928,13 +928,13 @@ export function setCellValue(
   if (!_.isNil((cell as Cell).f)) {
     if (incomingFormulaInlineSegments) {
       if (!cell.ct) {
-        cell.ct = { fa: "General", t: "g" };
+        cell.ct = { fa: 'General', t: 'g' };
       }
       cell.ct.s = incomingFormulaInlineSegments;
     } else if (
       cell?.ct &&
       _.isPlainObject(v) &&
-      Object.prototype.hasOwnProperty.call(v, "ct")
+      Object.prototype.hasOwnProperty.call(v, 'ct')
     ) {
       delete (cell as Cell).ct!.s;
     }
@@ -956,13 +956,13 @@ export function getRealCellValue(
   r: number,
   c: number,
   data: CellMatrix,
-  attr?: keyof Cell
+  attr?: keyof Cell,
 ) {
-  let value = getCellValue(r, c, data, "m");
+  let value = getCellValue(r, c, data, 'm');
   if (_.isNil(value)) {
     value = getCellValue(r, c, data, attr);
     if (_.isNil(value)) {
-      const ct = getCellValue(r, c, data, "ct");
+      const ct = getCellValue(r, c, data, 'ct');
       if (isInlineStringCT(ct)) {
         value = ct.s;
       }
@@ -976,10 +976,10 @@ export function mergeBorder(
   ctx: Context,
   d: CellMatrix,
   row_index: number,
-  col_index: number
+  col_index: number,
 ) {
   if (!d || !d[row_index]) {
-    console.warn("Merge info is null", row_index, col_index);
+    console.warn('Merge info is null', row_index, col_index);
     return null;
   }
   const value = d[row_index][col_index];
@@ -988,14 +988,14 @@ export function mergeBorder(
   if (value?.mc) {
     const margeMaindata = value.mc;
     if (!margeMaindata) {
-      console.warn("Merge info is null", row_index, col_index);
+      console.warn('Merge info is null', row_index, col_index);
       return null;
     }
     col_index = margeMaindata.c;
     row_index = margeMaindata.r;
 
     if (_.isNil(d?.[row_index]?.[col_index])) {
-      console.warn("Main merge Cell info is null", row_index, col_index);
+      console.warn('Main merge Cell info is null', row_index, col_index);
       return null;
     }
     const col_rs = d[row_index]?.[col_index]?.mc?.cs;
@@ -1009,7 +1009,7 @@ export function mergeBorder(
       _.isNil(col_rs) ||
       _.isNil(row_rs)
     ) {
-      console.warn("Main merge info is null", mergeMain);
+      console.warn('Main merge info is null', mergeMain);
       return null;
     }
 
@@ -1058,8 +1058,8 @@ export function mergeBorder(
 
     if (_.isNil(row_pre) || _.isNil(col_pre) || _.isNil(row) || _.isNil(col)) {
       console.warn(
-        "Main merge info row_pre or col_pre or row or col is null",
-        mergeMain
+        'Main merge info row_pre or col_pre or row or col is null',
+        mergeMain,
       );
       return null;
     }
@@ -1081,7 +1081,7 @@ function mergeMove(
   top: number,
   height: number,
   left: number,
-  width: number
+  width: number,
 ) {
   const row_st = mc.r;
   const row_ed = mc.r + mc.rs - 1;
@@ -1167,7 +1167,7 @@ export function mergeMoveMain(
   top: number,
   height: number,
   left: number,
-  width: number
+  width: number,
 ) {
   const mergesetting = ctx.config.merge;
 
@@ -1203,7 +1203,7 @@ export function mergeMoveMain(
         top,
         height,
         left,
-        width
+        width,
       );
 
       if (changeparam != null) {
@@ -1222,7 +1222,6 @@ export function mergeMoveMain(
   return [columnseleted, rowseleted, top, height, left, width];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function cancelFunctionrangeSelected(ctx: Context) {
   if (ctx.formulaCache.selectingRangeIndex === -1) {
     ctx.formulaRangeSelect = undefined;
@@ -1253,26 +1252,26 @@ export function cancelNormalSelected(ctx: Context) {
 
 /** Spilled/matrix formula results — not numeric scalars. */
 function isFormulaResultNumericScalar(value: unknown): boolean {
-  if (typeof value === "number") {
+  if (typeof value === 'number') {
     return Number.isFinite(value);
   }
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return false;
   }
-  return /^[\d.,]+$/.test(value.replace(/\s/g, ""));
+  return /^[\d.,]+$/.test(value.replace(/\s/g, ''));
 }
 
 function spilledMatrixFormulaDisplay(matrix: unknown): string {
   if (!Array.isArray(matrix) || matrix.length === 0) {
-    return "";
+    return '';
   }
   const first = matrix[0];
   if (Array.isArray(first) && matrix.every((row) => Array.isArray(row))) {
     return (matrix as unknown[][])
-      .map((row) => row.map((x) => String(x ?? "")).join(", "))
-      .join("; ");
+      .map((row) => row.map((x) => String(x ?? '')).join(', '))
+      .join('; ');
   }
-  return (matrix as unknown[]).map((x) => String(x ?? "")).join(", ");
+  return (matrix as unknown[]).map((x) => String(x ?? '')).join(', ');
 }
 
 // formula.updatecell
@@ -1282,20 +1281,20 @@ export function updateCell(
   c: number,
   $input?: HTMLDivElement | null,
   value?: any,
-  canvas?: CanvasRenderingContext2D
+  canvas?: CanvasRenderingContext2D,
 ) {
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
 
     const rawInputText = $input?.innerText;
-    const normalizedFormulaInputText = (rawInputText || "")
-      .replace(/\u00a0/g, " ")
-      .replace(/\u200b/g, "")
+    const normalizedFormulaInputText = (rawInputText || '')
+      .replace(/\u00a0/g, ' ')
+      .replace(/\u200b/g, '')
       .trimStart();
     const normalizeFormulaExecText = (s: string) =>
-      s.replace(/\u00a0/g, " ").replace(/\u200b/g, "");
+      s.replace(/\u00a0/g, ' ').replace(/\u200b/g, '');
     const normalizeInlineStringLineBreaks = (s: string) =>
-      s.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/\n/g, "\r\n");
+      s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
     /** Keep `fa`/`t` whenever we attach formula mirror `ct.s` so setCellValue can compute `m`. */
     const ensureFormulaCtFormatForMirror = (cellLike: Cell) => {
       if (!cellLike.ct) cellLike.ct = {};
@@ -1304,32 +1303,32 @@ export function updateCell(
         Array.isArray(cellLike.ct.s) &&
         cellLike.ct.s.length > 0
       ) {
-        if (cellLike.ct.fa == null || cellLike.ct.fa === "") {
-          cellLike.ct.fa = "General";
+        if (cellLike.ct.fa == null || cellLike.ct.fa === '') {
+          cellLike.ct.fa = 'General';
         }
-        if (cellLike.ct.t == null || cellLike.ct.t === "") {
-          cellLike.ct.t = "g";
+        if (cellLike.ct.t == null || cellLike.ct.t === '') {
+          cellLike.ct.t = 'g';
         }
       }
     };
-    let autoClosedFormulaSuffix = "";
+    let autoClosedFormulaSuffix = '';
     const getFormulaInlineStringSnapshot = (
       fallbackFormula: string | undefined,
-      suffix = autoClosedFormulaSuffix
+      suffix = autoClosedFormulaSuffix,
     ): string => {
-      const raw = rawInputText ?? "";
+      const raw = rawInputText ?? '';
       if (raw.length > 0) {
         return normalizeInlineStringLineBreaks(
-          normalizeFormulaExecText(raw) + suffix
+          normalizeFormulaExecText(raw) + suffix,
         );
       }
       return normalizeInlineStringLineBreaks(
-        normalizeFormulaExecText(fallbackFormula ?? "")
+        normalizeFormulaExecText(fallbackFormula ?? ''),
       );
     };
     let inputText = rawInputText;
-    if (inputText?.startsWith("=")) {
-      inputText = normalizeFormulaExecText(inputText).replace(/[\r\n]/g, "");
+    if (inputText?.startsWith('=')) {
+      inputText = normalizeFormulaExecText(inputText).replace(/[\r\n]/g, '');
     }
     const inputHtml = $input?.innerHTML;
     const hasFormulaLineBreakInHtml =
@@ -1340,7 +1339,7 @@ export function updateCell(
     const shouldPersistFormulaEditHtml =
       !!inputHtml &&
       !!rawInputText &&
-      normalizedFormulaInputText.startsWith("=") &&
+      normalizedFormulaInputText.startsWith('=') &&
       (hasFormulaLineBreakInHtml || hasFormulaLineBreakInRawText);
 
     const flowdata = getFlowdata(ctx);
@@ -1384,14 +1383,14 @@ export function updateCell(
       ctx.getRefs?.()?.globalCache?.enteredEditByTyping === true;
     const inputLooksLikeOnlySeededPercent =
       enteredEditByTyping &&
-      typeof inputText === "string" &&
-      inputText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim() === "%" &&
-      typeof (curv as any)?.ct?.fa === "string" &&
-      String((curv as any).ct.fa).includes("%");
+      typeof inputText === 'string' &&
+      inputText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() === '%' &&
+      typeof (curv as any)?.ct?.fa === 'string' &&
+      String((curv as any).ct.fa).includes('%');
     if (inputLooksLikeOnlySeededPercent) {
       // Type-to-edit on % cells pre-seeds a trailing "%". If user exits edit
       // without entering any actual value, do not persist that placeholder.
-      inputText = "";
+      inputText = '';
     }
 
     // ctx.old value for hook function
@@ -1399,29 +1398,29 @@ export function updateCell(
 
     const isPrevInline = isInlineStringCell(curv);
     let isCurInline =
-      inputText?.slice(0, 1) !== "=" && inputHtml?.substring(0, 5) === "<span";
+      inputText?.slice(0, 1) !== '=' && inputHtml?.substring(0, 5) === '<span';
 
     let isCopyVal = false;
     if (!isCurInline && inputText && inputText.length > 0) {
       const splitArr = inputText
-        .replace(/\r\n/g, "_x000D_")
-        .replace(/&#13;&#10;/g, "_x000D_")
-        .replace(/\r/g, "_x000D_")
-        .replace(/\n/g, "_x000D_")
-        .split("_x000D_");
-      if (splitArr.length > 1 && inputHtml !== "<br>") {
+        .replace(/\r\n/g, '_x000D_')
+        .replace(/&#13;&#10;/g, '_x000D_')
+        .replace(/\r/g, '_x000D_')
+        .replace(/\n/g, '_x000D_')
+        .split('_x000D_');
+      if (splitArr.length > 1 && inputHtml !== '<br>') {
         isCopyVal = true;
         isCurInline = true;
-        inputText = splitArr.join("\r\n");
+        inputText = splitArr.join('\r\n');
       }
     }
 
     if (curv?.ct && !value && !isCurInline && isPrevInline) {
       delete curv.ct.s;
-      curv.ct.t = "g";
-      curv.ct.fa = "General";
-      curv.tb = "1";
-      value = "";
+      curv.ct.t = 'g';
+      curv.ct.fa = 'General';
+      curv.tb = '1';
+      value = '';
     } else if (isCurInline) {
       if (!_.isPlainObject(curv)) {
         curv = {};
@@ -1431,16 +1430,16 @@ export function updateCell(
 
       if (!curv.ct) {
         curv.ct = {};
-        curv.ct.fa = "General";
-        curv.tb = "1";
+        curv.ct.fa = 'General';
+        curv.tb = '1';
       }
 
-      curv.ct.t = "inlineStr";
+      curv.ct.t = 'inlineStr';
 
       normalizeEditorChildrenToSpans($input!);
       curv.ct.s = convertSpanToShareString(
-        $input!.querySelectorAll("span"),
-        curv
+        $input!.querySelectorAll('span'),
+        curv,
       );
 
       delete curv.fs;
@@ -1461,14 +1460,14 @@ export function updateCell(
 
     // API, we get value from user
     value = value || inputText;
-    if (_.isString(value) && value.startsWith("=")) {
+    if (_.isString(value) && value.startsWith('=')) {
       value = normalizeFormulaExecText(value);
     }
-    if (_.isString(value) && value.startsWith("=") && value.length > 1) {
+    if (_.isString(value) && value.startsWith('=') && value.length > 1) {
       const closedValue = closeUnclosedParenthesesInFormula(value);
       if (
         shouldPersistFormulaEditHtml &&
-        (rawInputText ?? "").startsWith("=") &&
+        (rawInputText ?? '').startsWith('=') &&
         closedValue.length > value.length
       ) {
         autoClosedFormulaSuffix = closedValue.slice(value.length);
@@ -1477,14 +1476,14 @@ export function updateCell(
     } else if (
       _.isPlainObject(value) &&
       _.isString((value as Cell).f) &&
-      (value as Cell).f!.startsWith("=") &&
+      (value as Cell).f!.startsWith('=') &&
       (value as Cell).f!.length > 1
     ) {
       const originalFormula = (value as Cell).f!;
       const closedFormula = closeUnclosedParenthesesInFormula(originalFormula);
       if (
         shouldPersistFormulaEditHtml &&
-        (rawInputText ?? "").startsWith("=") &&
+        (rawInputText ?? '').startsWith('=') &&
         closedFormula.length > originalFormula.length
       ) {
         autoClosedFormulaSuffix = closedFormula.slice(originalFormula.length);
@@ -1512,8 +1511,8 @@ export function updateCell(
     const currentCell = _.isPlainObject(curv) ? (curv as Cell) : null;
     if (
       _.isString(value) &&
-      currentCell?.ct?.t === "d" &&
-      value === getCellValue(r, c, flowdata, "f")
+      currentCell?.ct?.t === 'd' &&
+      value === getCellValue(r, c, flowdata, 'f')
     ) {
       cancelNormalSelected(ctx);
       return;
@@ -1539,13 +1538,13 @@ export function updateCell(
         }
       }
 
-      if (_.isString(value) && value.slice(0, 1) === "=" && value.length > 1) {
+      if (_.isString(value) && value.slice(0, 1) === '=' && value.length > 1) {
       } else if (
         _.isPlainObject(curv) &&
         curv &&
         curv.ct &&
         curv.ct.fa &&
-        curv.ct.fa !== "@" &&
+        curv.ct.fa !== '@' &&
         !isRealNull(value)
       ) {
         delete curv.m; // 更新时间m处理 ， 会实际删除单元格数据的参数（flowdata时已删除）
@@ -1569,7 +1568,7 @@ export function updateCell(
       if (!isCurInline) {
         if (
           _.isString(value) &&
-          value.slice(0, 1) === "=" &&
+          value.slice(0, 1) === '=' &&
           value.length > 1
         ) {
           const v = execfunction(ctx, value, r, c, undefined, undefined, true);
@@ -1597,7 +1596,7 @@ export function updateCell(
           }
 
           // 打进单元格的sparklines的配置串， 报错需要单独处理。
-          if (v.length === 4 && v[3].type === "sparklines") {
+          if (v.length === 4 && v[3].type === 'sparklines') {
             delete curv.m;
             delete curv.v;
 
@@ -1608,7 +1607,7 @@ export function updateCell(
             } else {
               curv.spl = v[3].data;
             }
-          } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+          } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
             dynamicArrayItem = v[3].data;
           }
         }
@@ -1618,7 +1617,7 @@ export function updateCell(
 
           if (
             _.isString(valueFunction) &&
-            valueFunction.slice(0, 1) === "=" &&
+            valueFunction.slice(0, 1) === '=' &&
             valueFunction.length > 1
           ) {
             const v = execfunction(
@@ -1628,7 +1627,7 @@ export function updateCell(
               c,
               undefined,
               undefined,
-              true
+              true,
             );
             isRunExecFunction = false;
             // get v/m/ct
@@ -1656,7 +1655,7 @@ export function updateCell(
             }
 
             // 打进单元格的sparklines的配置串， 报错需要单独处理。
-            if (v.length === 4 && v[3].type === "sparklines") {
+            if (v.length === 4 && v[3].type === 'sparklines') {
               delete curv.m;
               delete curv.v;
 
@@ -1667,7 +1666,7 @@ export function updateCell(
               } else {
                 curv.spl = v[3].data;
               }
-            } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+            } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
               dynamicArrayItem = v[3].data;
             }
           }
@@ -1690,22 +1689,19 @@ export function updateCell(
           delete curv.spl;
 
           // FLV crypto denomination --START--
-          const decemialCount = oldValue?.m?.toString().includes(".")
-            ? oldValue?.m?.toString().split(" ")[0].split(".")[1]?.length
+          const decemialCount = oldValue?.m?.toString().includes('.')
+            ? oldValue?.m?.toString().split(' ')[0].split('.')[1]?.length
             : 0;
-          const coin = oldValue?.m?.toString().split(" ")[1];
+          const coin = oldValue?.m?.toString().split(' ')[1];
           if (
-            typeof curv === "object" &&
+            typeof curv === 'object' &&
             curv?.baseValue &&
             oldValue?.baseCurrencyPrice
           ) {
-            curv.m = `${
-              // eslint-disable-next-line no-unsafe-optional-chaining
-              (
-                parseFloat(value as string) /
-                (oldValue.baseCurrencyPrice as number)
-              ).toFixed(decemialCount || 2)
-              } ${coin}`;
+            curv.m = `${(
+              parseFloat(value as string) /
+              (oldValue.baseCurrencyPrice as number)
+            ).toFixed(decemialCount || 2)} ${coin}`;
             curv.baseValue = value;
           }
           // FLV crypto denomination --END--
@@ -1715,15 +1711,15 @@ export function updateCell(
             // if quotePrefix is 1, cell is force string, cell clear quotePrefix when it is updated
             curv.qp = 0;
             if (curv.ct) {
-              curv.ct.fa = "General";
-              curv.ct.t = "n";
+              curv.ct.fa = 'General';
+              curv.ct.t = 'n';
             }
           }
         }
       }
       value = curv;
     } else {
-      if (_.isString(value) && value.slice(0, 1) === "=" && value.length > 1) {
+      if (_.isString(value) && value.slice(0, 1) === '=' && value.length > 1) {
         const v = execfunction(ctx, value, r, c, undefined, undefined, true);
         isRunExecFunction = false;
         value = {
@@ -1744,27 +1740,27 @@ export function updateCell(
         }
 
         if (isFormulaResultNumericScalar(value.v)) {
-          const args = getContentInParentheses(value?.f)?.split(",");
+          const args = getContentInParentheses(value?.f)?.split(',');
           const cellRefs = args?.map((arg) => arg.trim().toUpperCase());
           const formatted = processArray(cellRefs, d, flowdata);
           if (formatted) {
             const numArg =
-              typeof value.v === "number"
+              typeof value.v === 'number'
                 ? value.v
-                : Number(String(value.v).replace(/,/g, ""));
+                : Number(String(value.v).replace(/,/g, ''));
             value.m = Number.isFinite(numArg)
               ? String(update(formatted, numArg))
               : String(value.v);
             value.ct = {
               ...value.ct,
               fa: formatted,
-              t: is_date(formatted) ? "d" : "n",
+              t: is_date(formatted) ? 'd' : 'n',
             };
           }
         }
 
         // 打进单元格的sparklines的配置串， 报错需要单独处理。
-        if (v.length === 4 && v[3].type === "sparklines") {
+        if (v.length === 4 && v[3].type === 'sparklines') {
           const curCalv = v[3].data;
 
           if (_.isArray(curCalv) && !_.isPlainObject(curCalv[0])) {
@@ -1772,7 +1768,7 @@ export function updateCell(
           } else {
             value.spl = v[3].data;
           }
-        } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+        } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
           dynamicArrayItem = v[3].data;
         }
       }
@@ -1782,7 +1778,7 @@ export function updateCell(
 
         if (
           _.isString(valueFunction) &&
-          valueFunction.slice(0, 1) === "=" &&
+          valueFunction.slice(0, 1) === '=' &&
           valueFunction.length > 1
         ) {
           const v = execfunction(
@@ -1792,7 +1788,7 @@ export function updateCell(
             c,
             undefined,
             undefined,
-            true
+            true,
           );
           isRunExecFunction = false;
           // value = {
@@ -1816,7 +1812,7 @@ export function updateCell(
           }
 
           // 打进单元格的sparklines的配置串， 报错需要单独处理。
-          if (v.length === 4 && v[3].type === "sparklines") {
+          if (v.length === 4 && v[3].type === 'sparklines') {
             const curCalv = v[3].data;
 
             if (_.isArray(curCalv) && !_.isPlainObject(curCalv[0])) {
@@ -1824,7 +1820,7 @@ export function updateCell(
             } else {
               value.spl = v[3].data;
             }
-          } else if (v.length === 4 && v[3].type === "dynamicArrayItem") {
+          } else if (v.length === 4 && v[3].type === 'dynamicArrayItem') {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             dynamicArrayItem = v[3].data;
           }
@@ -1846,32 +1842,32 @@ export function updateCell(
 
     // value maybe an object
     // FLV crypto denomination --START--
-    const decemialCount = oldValue?.m?.toString().includes(".")
-      ? oldValue?.m?.toString().split(" ")[0].split(".")[1]?.length
+    const decemialCount = oldValue?.m?.toString().includes('.')
+      ? oldValue?.m?.toString().split(' ')[0].split('.')[1]?.length
       : 0;
-    const coin = oldValue?.m?.toString().split(" ")[1];
-    if (typeof value === "object" && value.baseValue && !value?.m) {
+    const coin = oldValue?.m?.toString().split(' ')[1];
+    if (typeof value === 'object' && value.baseValue && !value?.m) {
       value.m = `${
         // @ts-expect-error later
-        // eslint-disable-next-line no-unsafe-optional-chaining
+
         (parseFloat(value?.v as string) / oldValue?.baseCurrencyPrice).toFixed(
-          decemialCount || 2
+          decemialCount || 2,
         )
-        } ${coin}`;
+      } ${coin}`;
     }
 
     // FLV crypto denomination --END--
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       value = {
         ct: {
-          fa: "General",
-          t: "g",
+          fa: 'General',
+          t: 'g',
         },
         v: value,
-        tb: "1",
+        tb: '1',
       };
-    } else if (typeof value === "object" && !value.tb) {
-      value.tb = "1";
+    } else if (typeof value === 'object' && !value.tb) {
+      value.tb = '1';
     }
 
     const isValueArray = Array.isArray((value as any)?.v?.[0]);
@@ -1883,22 +1879,22 @@ export function updateCell(
           if (ctx.hooks.afterUpdateCell) {
             const newValue = _.cloneDeep(d[r][c]);
             setTimeout(() =>
-              ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue)
+              ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue),
             );
           }
           ctx.formulaCache.execFunctionGlobalData = null;
           return;
         }
       }
-    } catch (_e) { }
+    } catch (_e) {}
 
     // --- hyperlink support ---
     const hyperlinkKey = `${r}_${c}`;
     const prevHyperlink = sheetFile.hyperlink?.[hyperlinkKey];
     if (
-      typeof value === "object" &&
+      typeof value === 'object' &&
       value &&
-      (value as Cell).ct?.t === "inlineStr"
+      (value as Cell).ct?.t === 'inlineStr'
     ) {
       const links = getHyperlinksFromInlineSegments(value as Cell);
       if (!sheetFile.hyperlink) sheetFile.hyperlink = {};
@@ -1908,14 +1904,14 @@ export function updateCell(
         sheetFile.hyperlink[hyperlinkKey] =
           links.length === 1 ? links[0] : links;
       }
-      if (typeof value === "object" && value && "hl" in (value as any)) {
+      if (typeof value === 'object' && value && 'hl' in (value as any)) {
         delete (value as any).hl;
       }
     } else {
       if (prevHyperlink && sheetFile.hyperlink) {
         delete sheetFile.hyperlink[hyperlinkKey];
       }
-      if (typeof value === "object" && value && "hl" in (value as any)) {
+      if (typeof value === 'object' && value && 'hl' in (value as any)) {
         delete (value as any).hl;
       }
     }
@@ -1944,19 +1940,19 @@ export function updateCell(
     // oldValue = cell before this edit. When content is deleted, new cell may be empty;
     // still recompute row height if the previous cell had wrap (tb "2") or inlineStr.
     const prevHadWrapOrInline =
-      (oldValue?.tb === "2" &&
-        !_.isNil(oldValue?.v) &&
-        oldValue?.v !== "") ||
+      (oldValue?.tb === '2' && !_.isNil(oldValue?.v) && oldValue?.v !== '') ||
       isInlineStringCell(oldValue);
 
     const newCell = d[r][c];
     const newHasWrapOrInline =
-      (newCell?.tb === "2" &&
-        !_.isNil(newCell?.v) &&
-        newCell?.v !== "") ||
+      (newCell?.tb === '2' && !_.isNil(newCell?.v) && newCell?.v !== '') ||
       isInlineStringCell(newCell);
 
-    if ((prevHadWrapOrInline || newHasWrapOrInline) && !cfg.customHeight?.[r] && canvas) {
+    if (
+      (prevHadWrapOrInline || newHasWrapOrInline) &&
+      !cfg.customHeight?.[r] &&
+      canvas
+    ) {
       // 自动换行 — recompute row height (grow/shrink) from wrap + inline cells
       recalcAutoRowHeightForRow(ctx, r, d, canvas);
     }
@@ -2018,7 +2014,7 @@ export function getcellFormula(
   r: number,
   c: number,
   i: string,
-  data?: any
+  data?: any,
 ) {
   let cell;
   if (_.isNil(data)) {
@@ -2074,9 +2070,9 @@ export function getRangetxt(
   ctx: Context,
   sheetId: string,
   range: SingleRange,
-  currentId?: string
+  currentId?: string,
 ) {
-  let sheettxt = "";
+  let sheettxt = '';
 
   if (currentId == null) {
     currentId = ctx.currentSheetId;
@@ -2085,16 +2081,16 @@ export function getRangetxt(
   if (sheetId !== currentId) {
     // sheet名字包含'的，引用时应该替换为''
     const index = getSheetIndex(ctx, sheetId);
-    if (index == null) return "";
+    if (index == null) return '';
     sheettxt = ctx.luckysheetfile[index].name.replace(/'/g, "''");
     // 如果包含除a-z、A-Z、0-9、下划线等以外的字符那么就用单引号包起来
     if (
       // eslint-disable-next-line no-misleading-character-class
       /^[:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD][:A-Z_a-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD\-.0-9\u00B7\u0300-\u036F\u203F-\u2040]*$/.test(
-        sheettxt
+        sheettxt,
       )
     ) {
-      sheettxt += "!";
+      sheettxt += '!';
     } else {
       sheettxt = `'${sheettxt}'!`;
     }
@@ -2107,7 +2103,7 @@ export function getRangetxt(
 
   if (row0 == null && row1 == null) {
     return `${sheettxt + indexToColumnChar(column0)}:${indexToColumnChar(
-      column1
+      column1,
     )}`;
   }
   if (column0 == null && column1 == null) {
@@ -2118,15 +2114,16 @@ export function getRangetxt(
     return sheettxt + indexToColumnChar(column0) + (row0 + 1);
   }
 
-  return `${sheettxt + indexToColumnChar(column0) + (row0 + 1)
-    }:${indexToColumnChar(column1)}${row1 + 1}`;
+  return `${
+    sheettxt + indexToColumnChar(column0) + (row0 + 1)
+  }:${indexToColumnChar(column1)}${row1 + 1}`;
 }
 
 // 把string A1:A2转为选区数组
 export function getRangeByTxt(ctx: Context, txt: string) {
   let range = [];
-  if (txt.indexOf(",") !== -1) {
-    const arr = txt.split(",");
+  if (txt.indexOf(',') !== -1) {
+    const arr = txt.split(',');
     for (let i = 0; i < arr.length; i += 1) {
       if (iscelldata(arr[i])) {
         range.push(getcellrange(ctx, arr[i]));
@@ -2149,13 +2146,14 @@ export function getRangeByTxt(ctx: Context, txt: string) {
  * includes a row digit (A1, B2, 1) or neither does (A:B, whole-column / row-only style).
  */
 function hasMismatchedRowSpecifiersOnColon(txt: string): boolean {
-  const pieces = (txt ?? "").split(",");
+  const pieces = (txt ?? '').split(',');
   for (const raw of pieces) {
     const s = String(raw).trim();
     if (!s) continue;
-    const afterBang = s.lastIndexOf("!") >= 0 ? s.slice(s.lastIndexOf("!") + 1) : s;
-    if (afterBang.indexOf(":") === -1) continue;
-    const seg = afterBang.split(":");
+    const afterBang =
+      s.lastIndexOf('!') >= 0 ? s.slice(s.lastIndexOf('!') + 1) : s;
+    if (afterBang.indexOf(':') === -1) continue;
+    const seg = afterBang.split(':');
     if (seg.length !== 2) continue;
     const [left, right] = seg;
     if (left == null || right == null) return true;
@@ -2175,8 +2173,8 @@ function hasMismatchedRowSpecifiersOnColon(txt: string): boolean {
  * stricter form checks for the conditional-format and range-dialog inputs.
  */
 export function isValidRangeText(ctx: Context, txt: string): boolean {
-  const t = (txt ?? "").trim();
-  if (t === "") return true;
+  const t = (txt ?? '').trim();
+  if (t === '') return true;
   if (hasMismatchedRowSpecifiersOnColon(t)) {
     return false;
   }
@@ -2186,7 +2184,7 @@ export function isValidRangeText(ctx: Context, txt: string): boolean {
 export function isAllSelectedCellsInStatus(
   ctx: Context,
   attr: keyof Cell,
-  status: any
+  status: any,
 ) {
   // editing mode
   if (!_.isEmpty(ctx.luckysheetCellUpdate)) {
@@ -2207,43 +2205,43 @@ export function isAllSelectedCellsInStatus(
     const startEl = toElement(startContainer);
     const endEl = toElement(endContainer);
     const editorRoot =
-      startEl?.closest("#luckysheet-rich-text-editor") ??
-      endEl?.closest("#luckysheet-rich-text-editor") ??
+      startEl?.closest('#luckysheet-rich-text-editor') ??
+      endEl?.closest('#luckysheet-rich-text-editor') ??
       (toElement(range.commonAncestorContainer) as HTMLElement | null);
 
     const isStyleActive = (element: HTMLElement) => {
       const computed = window.getComputedStyle(element);
-      const fontWeight = (computed.fontWeight || "").toLowerCase();
-      const fontStyle = (computed.fontStyle || "").toLowerCase();
+      const fontWeight = (computed.fontWeight || '').toLowerCase();
+      const fontStyle = (computed.fontStyle || '').toLowerCase();
       const textDecorationLine = // Safari support fallback
         // @ts-ignore
         (
           computed.textDecorationLine ||
           computed.textDecoration ||
-          ""
+          ''
         ).toLowerCase();
       const borderBottomWidth = (
-        computed.borderBottomWidth || ""
+        computed.borderBottomWidth || ''
       ).toLowerCase();
 
       if (status === 1) {
-        if (attr === "bl") {
-          if (fontWeight === "bold") return true;
+        if (attr === 'bl') {
+          if (fontWeight === 'bold') return true;
           const n = Number(fontWeight);
           return !Number.isNaN(n) && n >= 600;
         }
-        if (attr === "it") {
-          return fontStyle === "italic" || fontStyle === "oblique";
+        if (attr === 'it') {
+          return fontStyle === 'italic' || fontStyle === 'oblique';
         }
-        if (attr === "cl") {
-          return textDecorationLine.includes("line-through");
+        if (attr === 'cl') {
+          return textDecorationLine.includes('line-through');
         }
-        if (attr === "un") {
+        if (attr === 'un') {
           return (
-            textDecorationLine.includes("underline") ||
-            (borderBottomWidth !== "" &&
-              borderBottomWidth !== "0px" &&
-              borderBottomWidth !== "0")
+            textDecorationLine.includes('underline') ||
+            (borderBottomWidth !== '' &&
+              borderBottomWidth !== '0px' &&
+              borderBottomWidth !== '0')
           );
         }
       }
@@ -2252,7 +2250,7 @@ export function isAllSelectedCellsInStatus(
 
     const selectedElements: HTMLElement[] = [];
     if (editorRoot) {
-      const spans = editorRoot.querySelectorAll("span");
+      const spans = editorRoot.querySelectorAll('span');
       spans.forEach((span) => {
         if (
           span.textContent &&
@@ -2301,22 +2299,22 @@ function applyConditionalFormatComputedStyle(
     style.color = checksCF.textColor;
   }
   if (checksCF.bold) {
-    style.fontWeight = "bold";
+    style.fontWeight = 'bold';
   }
   if (checksCF.italic) {
-    style.fontStyle = "italic";
+    style.fontStyle = 'italic';
   }
   if (checksCF.underline) {
-    const cur = String(style.textDecoration || "").trim();
+    const cur = String(style.textDecoration || '').trim();
     const parts = cur ? cur.split(/\s+/).filter(Boolean) : [];
-    if (!parts.includes("underline")) parts.push("underline");
-    style.textDecoration = parts.join(" ");
+    if (!parts.includes('underline')) parts.push('underline');
+    style.textDecoration = parts.join(' ');
   }
   if (checksCF.strikethrough) {
-    const cur = String(style.textDecoration || "").trim();
+    const cur = String(style.textDecoration || '').trim();
     const parts = cur ? cur.split(/\s+/).filter(Boolean) : [];
-    if (!parts.includes("line-through")) parts.push("line-through");
-    style.textDecoration = parts.join(" ");
+    if (!parts.includes('line-through')) parts.push('line-through');
+    style.textDecoration = parts.join(' ');
   }
 }
 
@@ -2324,7 +2322,7 @@ export function getFontStyleByCell(
   cell: Cell | null | undefined,
   checksAF?: any[],
   checksCF?: any,
-  isCheck = true
+  isCheck = true,
 ) {
   const style: any = {};
   if (!cell) {
@@ -2337,12 +2335,12 @@ export function getFontStyleByCell(
       value = normalizedCellAttr(cell, key);
     }
     const valueNum = Number(value);
-    if (key === "bl" && valueNum !== 0) {
-      style.fontWeight = "bold";
+    if (key === 'bl' && valueNum !== 0) {
+      style.fontWeight = 'bold';
     }
 
-    if (key === "it" && valueNum !== 0) {
-      style.fontStyle = "italic";
+    if (key === 'it' && valueNum !== 0) {
+      style.fontStyle = 'italic';
     }
 
     // if (key === "ff") {
@@ -2355,12 +2353,12 @@ export function getFontStyleByCell(
     //   style += "font-family: " + f + ";";
     // }
 
-    if (key === "fs" && !_.isNil(value)) {
+    if (key === 'fs' && !_.isNil(value)) {
       style.fontSize = `${valueNum}pt`;
     }
 
     if (
-      (key === "fc" && value !== "#000000") ||
+      (key === 'fc' && value !== '#000000') ||
       (checksAF?.length ?? 0) > 0 ||
       checksCF?.textColor
     ) {
@@ -2373,11 +2371,11 @@ export function getFontStyleByCell(
       }
     }
 
-    if (key === "cl" && valueNum !== 0) {
-      style.textDecoration = "line-through";
+    if (key === 'cl' && valueNum !== 0) {
+      style.textDecoration = 'line-through';
     }
 
-    if (key === "un" && (valueNum === 1 || valueNum === 3)) {
+    if (key === 'un' && (valueNum === 1 || valueNum === 3)) {
       // @ts-ignore
       const color = cell._color ?? cell.fc;
       // @ts-ignore
@@ -2393,7 +2391,7 @@ export function getStyleByCell(
   d: CellMatrix,
   r: number,
   c: number,
-  precomputedCfCompute?: ReturnType<typeof getComputeMap>
+  precomputedCfCompute?: ReturnType<typeof getComputeMap>,
 ) {
   let style: any = {};
 
@@ -2418,41 +2416,41 @@ export function getStyleByCell(
   if (!checksCF?.cellColor) {
     if ((checksAF?.length ?? 0) > 1) {
       style.background = `${checksAF[1]}`;
-    } else if ("bg" in cell) {
-      style.background = `${normalizedCellAttr(cell, "bg")}`;
+    } else if ('bg' in cell) {
+      style.background = `${normalizedCellAttr(cell, 'bg')}`;
     }
   }
-  if ("ht" in cell) {
-    const value = normalizedCellAttr(cell, "ht");
+  if ('ht' in cell) {
+    const value = normalizedCellAttr(cell, 'ht');
     if (Number(value) === 0) {
-      style.textAlign = "center";
+      style.textAlign = 'center';
     } else if (Number(value) === 2) {
-      style.textAlign = "right";
-      style.overflowWrap = "anywhere";
+      style.textAlign = 'right';
+      style.overflowWrap = 'anywhere';
     }
   }
 
-  if ("tb" in cell) {
+  if ('tb' in cell) {
     if (Number(cell.tb) === 2) {
-      style.overflowWrap = "anywhere";
+      style.overflowWrap = 'anywhere';
     }
   }
 
-  if ("ff" in cell) {
-    const value = normalizedCellAttr(cell, "ff");
+  if ('ff' in cell) {
+    const value = normalizedCellAttr(cell, 'ff');
     const { fontarray } = locale(ctx);
     const ffIndex = parseInt(value, 10);
     style.fontFamily = Number.isNaN(ffIndex)
       ? value
-      : fontarray[ffIndex] ?? value;
+      : (fontarray[ffIndex] ?? value);
   }
 
-  if ("vt" in cell) {
-    const value = normalizedCellAttr(cell, "vt");
+  if ('vt' in cell) {
+    const value = normalizedCellAttr(cell, 'vt');
     if (Number(value) === 0) {
-      style.alignItems = "center";
+      style.alignItems = 'center';
     } else if (Number(value) === 2) {
-      style.alignItems = "flex-end";
+      style.alignItems = 'flex-end';
     }
   }
   style = _.assign(style, getFontStyleByCell(cell, checksAF, checksCF));
@@ -2464,23 +2462,23 @@ export function getStyleByCell(
 function normalizeInlineStringClipboardStyle(style: Record<string, any>) {
   const decorations = new Set<string>();
   const normalizedStyle: Record<string, any> = {
-    color: style.color || "#000000",
-    fontFamily: style.fontFamily || "Arial",
-    fontSize: style.fontSize || "11pt",
-    fontStyle: style.fontStyle || "normal",
-    fontWeight: style.fontWeight || "400",
+    color: style.color || '#000000',
+    fontFamily: style.fontFamily || 'Arial',
+    fontSize: style.fontSize || '11pt',
+    fontStyle: style.fontStyle || 'normal',
+    fontWeight: style.fontWeight || '400',
   };
 
   const backgroundColor = style.backgroundColor || style.background;
   if (
     backgroundColor &&
-    backgroundColor !== "transparent" &&
-    backgroundColor !== "rgba(0, 0, 0, 0)"
+    backgroundColor !== 'transparent' &&
+    backgroundColor !== 'rgba(0, 0, 0, 0)'
   ) {
     normalizedStyle.backgroundColor = backgroundColor;
   }
 
-  if (typeof style.textDecoration === "string") {
+  if (typeof style.textDecoration === 'string') {
     style.textDecoration
       .split(/\s+/)
       .filter(Boolean)
@@ -2488,24 +2486,24 @@ function normalizeInlineStringClipboardStyle(style: Record<string, any>) {
   }
 
   if (style.borderBottom) {
-    decorations.add("underline");
-    normalizedStyle.textDecorationSkipInk = "none";
+    decorations.add('underline');
+    normalizedStyle.textDecorationSkipInk = 'none';
   }
 
   if (decorations.size > 0) {
-    normalizedStyle.textDecoration = Array.from(decorations).join(" ");
+    normalizedStyle.textDecoration = Array.from(decorations).join(' ');
   }
 
   return normalizedStyle;
 }
 
 function buildClipboardCompatibleInlineRuns(text: string, styleAttr: string) {
-  const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const segments = normalizedText.split("\n");
+  const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const segments = normalizedText.split('\n');
 
   return segments
     .map((segment, index) => {
-      let html = "";
+      let html = '';
 
       if (segment.length > 0) {
         html += `<span style='${styleAttr}'>${segment}</span>`;
@@ -2517,7 +2515,7 @@ function buildClipboardCompatibleInlineRuns(text: string, styleAttr: string) {
 
       return html;
     })
-    .join("");
+    .join('');
 }
 
 export function getInlineStringHTML(
@@ -2528,17 +2526,17 @@ export function getInlineStringHTML(
     useSemanticMarkup?: boolean;
     isRichTextCopy?: boolean;
     inheritedStyle?: Record<string, string>;
-  }
+  },
 ) {
-  const ct = getCellValue(r, c, data, "ct");
+  const ct = getCellValue(r, c, data, 'ct');
   if (isInlineStringCT(ct)) {
     const strings = ct.s;
-    let value = "";
+    let value = '';
     for (let i = 0; i < strings.length; i += 1) {
       const strObj = strings[i];
       if (strObj.v) {
         const baseStyle = {
-          ...(options?.useSemanticMarkup ? options.inheritedStyle ?? {} : {}),
+          ...(options?.useSemanticMarkup ? (options.inheritedStyle ?? {}) : {}),
           ...getFontStyleByCell(strObj),
         };
         const style = options?.useSemanticMarkup
@@ -2547,26 +2545,26 @@ export function getInlineStringHTML(
         // Explicitly set default text styles so Google Sheets preserves
         // mixed rich-text runs instead of inheriting formatting between spans.
         if (!style.fontWeight) {
-          style.fontWeight = "400";
+          style.fontWeight = '400';
         }
         if (!style.fontStyle) {
-          style.fontStyle = "normal";
+          style.fontStyle = 'normal';
         }
         if (!style.fontSize) {
-          style.fontSize = "11pt";
+          style.fontSize = '11pt';
         }
         if (!style.fontFamily) {
-          style.fontFamily = "Arial";
+          style.fontFamily = 'Arial';
         }
         const { link } = strObj as any;
         const segObj = strObj as Record<string, unknown>;
         const linkHasExplicitFc = Object.prototype.hasOwnProperty.call(
           segObj,
-          "fc"
+          'fc',
         );
         const linkHasExplicitUn = Object.prototype.hasOwnProperty.call(
           segObj,
-          "un"
+          'un',
         );
         const unRaw = segObj.un;
         const segmentUnderlineOn =
@@ -2580,27 +2578,27 @@ export function getInlineStringHTML(
         // so we must not re-inject chrome on each edit (see convertSpanToShareString + data-link-plain).
         if (link?.linkType && link?.linkAddress) {
           if (linkHasExplicitFc && !style.color) {
-            style.color = "rgb(0, 0, 255)";
+            style.color = 'rgb(0, 0, 255)';
           }
           if (segmentUnderlineOn) {
             if (options?.useSemanticMarkup) {
-              if (!String(style.textDecoration || "").includes("underline")) {
+              if (!String(style.textDecoration || '').includes('underline')) {
                 style.textDecoration = style.textDecoration
                   ? `${style.textDecoration} underline`
-                  : "underline";
-                style.textDecorationSkipInk = "none";
+                  : 'underline';
+                style.textDecorationSkipInk = 'none';
               }
             } else if (!style.borderBottom) {
-              style.borderBottom = "1px solid rgb(0, 0, 255)";
+              style.borderBottom = '1px solid rgb(0, 0, 255)';
             }
           }
         }
         const styleStr = _.toPairs(style)
-          .filter(([, v]) => !_.isNil(v) && v !== "" && v !== "undefined")
+          .filter(([, v]) => !_.isNil(v) && v !== '' && v !== 'undefined')
           .map(([key, v]) => {
             return `${_.kebabCase(key)}:${_.isNumber(v) ? `${v}px` : v};`;
           })
-          .join(" ");
+          .join(' ');
         const isPlainLinkDecor =
           Boolean(link?.linkType && link?.linkAddress) &&
           !linkHasExplicitFc &&
@@ -2608,13 +2606,13 @@ export function getInlineStringHTML(
         const dataAttrs =
           !options?.useSemanticMarkup && link?.linkType && link?.linkAddress
             ? ` data-link-type='${String(link.linkType).replace(
-              /'/g,
-              "&#39;"
-            )}' data-link-address='${String(link.linkAddress).replace(
-              /'/g,
-              "&#39;"
-            )}'${isPlainLinkDecor ? " data-link-plain='1'" : ""}`
-            : "";
+                /'/g,
+                '&#39;',
+              )}' data-link-address='${String(link.linkAddress).replace(
+                /'/g,
+                '&#39;',
+              )}'${isPlainLinkDecor ? " data-link-plain='1'" : ''}`
+            : '';
         if (options?.isRichTextCopy) {
           if (options?.useSemanticMarkup) {
             value += buildClipboardCompatibleInlineRuns(strObj.v, styleStr);
@@ -2622,8 +2620,8 @@ export function getInlineStringHTML(
             // Convert newlines to <br> so apps that don't honour white-space:pre-wrap
             // (e.g. Google Sheets clipboard parser) still see proper line breaks.
             const segmentText = strObj.v
-              .replace(/\r\n/g, "<br>")
-              .replace(/\n/g, "<br>");
+              .replace(/\r\n/g, '<br>')
+              .replace(/\n/g, '<br>');
             value += `<span class="luckysheet-input-span" index='${i}' style='${styleStr}'${dataAttrs}>${segmentText}</span>`;
           }
         } else {
@@ -2633,53 +2631,53 @@ export function getInlineStringHTML(
     }
     return value;
   }
-  return "";
+  return '';
 }
 
 export function getQKBorder(width: string, type: string, color: string) {
-  let bordertype = "";
+  let bordertype = '';
 
-  if (width.toString().indexOf("pt") > -1) {
+  if (width.toString().indexOf('pt') > -1) {
     const nWidth = parseFloat(width);
 
     if (nWidth < 1) {
     } else if (nWidth < 1.5) {
-      bordertype = "Medium";
+      bordertype = 'Medium';
     } else {
-      bordertype = "Thick";
+      bordertype = 'Thick';
     }
   } else {
     const nWidth = parseFloat(width);
 
     if (nWidth < 2) {
     } else if (nWidth < 3) {
-      bordertype = "Medium";
+      bordertype = 'Medium';
     } else {
-      bordertype = "Thick";
+      bordertype = 'Thick';
     }
   }
 
   let style = 0;
   type = type.toLowerCase();
 
-  if (type === "double") {
+  if (type === 'double') {
     style = 2;
-  } else if (type === "dotted") {
-    if (bordertype === "Medium" || bordertype === "Thick") {
+  } else if (type === 'dotted') {
+    if (bordertype === 'Medium' || bordertype === 'Thick') {
       style = 3;
     } else {
       style = 10;
     }
-  } else if (type === "dashed") {
-    if (bordertype === "Medium" || bordertype === "Thick") {
+  } else if (type === 'dashed') {
+    if (bordertype === 'Medium' || bordertype === 'Thick') {
       style = 4;
     } else {
       style = 9;
     }
-  } else if (type === "solid") {
-    if (bordertype === "Medium") {
+  } else if (type === 'solid') {
+    if (bordertype === 'Medium') {
       style = 8;
-    } else if (bordertype === "Thick") {
+    } else if (bordertype === 'Thick') {
       style = 13;
     } else {
       style = 1;
@@ -2798,7 +2796,7 @@ export function rowlenByRange(
 export function getdatabyselection(
   ctx: Context,
   range: Selection | undefined,
-  sheetId: string
+  sheetId: string,
 ) {
   if (range == null && ctx.luckysheet_select_save) {
     [range] = ctx.luckysheet_select_save;
@@ -2847,11 +2845,11 @@ export function getdatabyselection(
 export function luckysheetUpdateCell(
   ctx: Context,
   row_index: number,
-  col_index: number
+  col_index: number,
 ) {
   const flowdata = getFlowdata(ctx);
   const cell = flowdata?.[row_index]?.[col_index] as { f?: string } | null;
-  if (cell?.f != null && String(cell.f).trim() !== "") {
+  if (cell?.f != null && String(cell.f).trim() !== '') {
     suppressFormulaRangeSelectionForInitialEdit(ctx);
   }
   ctx.luckysheetCellUpdate = [row_index, col_index];
@@ -2888,35 +2886,37 @@ function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
   if (!cell) return cell ?? null;
   const { v: rawValue, m: displayText, f: formula, ct } = cell;
   const keepInlineStringContent =
-    ct?.t === "inlineStr" &&
+    ct?.t === 'inlineStr' &&
     Array.isArray((ct as { s?: unknown[] }).s) &&
     (ct as { s?: unknown[] }).s!.length > 0;
 
   const sanitizedInlineCt = keepInlineStringContent
     ? {
-      ...(ct as { fa?: string; t?: string; tb?: string }),
-      s: ((ct as { s?: Array<Record<string, unknown>> }).s || []).map((seg) => {
-        const cleaned: Record<string, unknown> = {
-          v: String(seg?.v ?? ""),
-        };
-        // Keep hyperlink metadata as content.
-        // For hyperlink runs, preserve link decoration (fc/un) so clear-format
-        // does not remove visible link style (blue + underline).
-        const link = seg?.link as
-          | { linkType?: string; linkAddress?: string }
-          | undefined;
-        if (link?.linkType && link?.linkAddress) {
-          cleaned.link = {
-            linkType: link.linkType,
-            linkAddress: link.linkAddress,
-          };
-          // Keep default hyperlink decoration after clear format.
-          cleaned.fc = "rgb(0, 0, 255)";
-          cleaned.un = 1;
-        }
-        return cleaned;
-      }),
-    }
+        ...(ct as { fa?: string; t?: string; tb?: string }),
+        s: ((ct as { s?: Array<Record<string, unknown>> }).s || []).map(
+          (seg) => {
+            const cleaned: Record<string, unknown> = {
+              v: String(seg?.v ?? ''),
+            };
+            // Keep hyperlink metadata as content.
+            // For hyperlink runs, preserve link decoration (fc/un) so clear-format
+            // does not remove visible link style (blue + underline).
+            const link = seg?.link as
+              | { linkType?: string; linkAddress?: string }
+              | undefined;
+            if (link?.linkType && link?.linkAddress) {
+              cleaned.link = {
+                linkType: link.linkType,
+                linkAddress: link.linkAddress,
+              };
+              // Keep default hyperlink decoration after clear format.
+              cleaned.fc = 'rgb(0, 0, 255)';
+              cleaned.un = 1;
+            }
+            return cleaned;
+          },
+        ),
+      }
     : undefined;
 
   if (
@@ -2940,7 +2940,7 @@ function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
       v: rawValue,
       m: displayText,
       f: formula,
-      ...(ct != null && typeof ct === "object" ? { ct } : {}),
+      ...(ct != null && typeof ct === 'object' ? { ct } : {}),
     };
   }
   return null;
@@ -2972,16 +2972,16 @@ export function clearSelectedCellFormat(ctx: Context) {
       ) {
         if (rowCells[columnIndex] === undefined) continue;
         rowCells[columnIndex] = keepOnlyValueParts(
-          rowCells[columnIndex]
+          rowCells[columnIndex],
         ) as Cell;
         const v = (rowCells[columnIndex] as any) ?? null;
         const key = `${rowIndex}_${columnIndex}`;
         changeMap.set(key, {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key,
           value: { r: rowIndex, c: columnIndex, v },
-          type: v == null ? "delete" : "update",
+          type: v == null ? 'delete' : 'update',
         });
       }
     }
@@ -3014,16 +3014,16 @@ export function clearRowsCellsFormat(ctx: Context) {
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
         if (rowCells[columnIndex] === undefined) continue;
         rowCells[columnIndex] = keepOnlyValueParts(
-          rowCells[columnIndex]
+          rowCells[columnIndex],
         ) as Cell;
         const v = (rowCells[columnIndex] as any) ?? null;
         const key = `${rowIndex}_${columnIndex}`;
         changeMap.set(key, {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key,
           value: { r: rowIndex, c: columnIndex, v },
-          type: v == null ? "delete" : "update",
+          type: v == null ? 'delete' : 'update',
         });
       }
     }
@@ -3060,16 +3060,16 @@ export function clearColumnsCellsFormat(ctx: Context) {
       ) {
         if (rowCells[columnIndex] === undefined) continue;
         rowCells[columnIndex] = keepOnlyValueParts(
-          rowCells[columnIndex]
+          rowCells[columnIndex],
         ) as Cell;
         const v = (rowCells[columnIndex] as any) ?? null;
         const key = `${rowIndex}_${columnIndex}`;
         changeMap.set(key, {
           sheetId: ctx.currentSheetId,
-          path: ["celldata"],
+          path: ['celldata'],
           key,
           value: { r: rowIndex, c: columnIndex, v },
-          type: v == null ? "delete" : "update",
+          type: v == null ? 'delete' : 'update',
         });
       }
     }

@@ -139,8 +139,7 @@ function cfSavedDateRuleSuffix(
     const v0 = String(conditionValue[0]);
     if (v0.startsWith('preset:')) {
       const id = v0.slice(7);
-      const label =
-        (labels[`cfDatePreset_${id}`] as string | undefined) ?? id;
+      const label = (labels[`cfDatePreset_${id}`] as string | undefined) ?? id;
       if (id === 'exact') {
         const ex = String(conditionValue[1] || '').trim();
         return ex ? `${label} ${ex}` : label;
@@ -178,9 +177,7 @@ function collectCfRuleApplyRanges(
   }
   if (Array.isArray(cr) && cr.length > 0) {
     return cr
-      .filter(
-        (x: any) => x?.row?.length === 2 && x?.column?.length === 2,
-      )
+      .filter((x: any) => x?.row?.length === 2 && x?.column?.length === 2)
       .map((x: any) => ({ row: [...x.row], column: [...x.column] }));
   }
   return [];
@@ -223,7 +220,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
   const [italic, setItalic] = useState<boolean>(false);
   const [underline, setUnderline] = useState<boolean>(false);
   const [strikethrough, setStrikethrough] = useState<boolean>(false);
-  const selectionRangeTxt = useMemo(() => getDisplayedRangeTxt(context), [context]);
+  const selectionRangeTxt = useMemo(
+    () => getDisplayedRangeTxt(context),
+    [context],
+  );
 
   useEffect(() => {
     if (create) return;
@@ -297,7 +297,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     const rdType = context.rangeDialog?.type ?? '';
     const rangeT = (context.rangeDialog?.rangeTxt ?? '').trim();
 
-    if (rdType === 'conditionRulesbetween1' || rdType === 'conditionRulesbetween2') {
+    if (
+      rdType === 'conditionRulesbetween1' ||
+      rdType === 'conditionRulesbetween2'
+    ) {
       setContext((ctx) => {
         if (!ctx.rangeDialog) return;
         const rt = ctx.rangeDialog.rangeTxt;
@@ -790,9 +793,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     setEditConditionFormatKey(null);
     setContext((ctx) => {
       const index = getSheetIndex(ctx, ctx.currentSheetId) as number;
-      if (
-        ctx.luckysheetfile[index]?.conditionRules?.editKey !== undefined
-      ) {
+      if (ctx.luckysheetfile[index]?.conditionRules?.editKey !== undefined) {
         ctx.luckysheetfile[index]!.conditionRules!.editKey = null;
       }
     });
@@ -1277,7 +1278,9 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={conditionformat.occurrenceDate} />
+                      <SelectValue
+                        placeholder={conditionformat.occurrenceDate}
+                      />
                     </SelectTrigger>
                     <SelectContent className="condition-rules-select">
                       <SelectItem value="today">
@@ -1347,7 +1350,9 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={conditionformat.occurrenceDate} />
+                      <SelectValue
+                        placeholder={conditionformat.occurrenceDate}
+                      />
                     </SelectTrigger>
                     <SelectContent className="condition-rules-select">
                       <SelectItem value="today">
@@ -1393,21 +1398,21 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
               {DATE_CF_TYPES.has(type) &&
                 !CF_PRESET_DATE_TYPES.has(type) &&
                 type !== 'dateAfter' && (
-                <div className="datepicker-toggle">
-                  <input
-                    type="date"
-                    className="datepicker-input"
-                    value={context.conditionRules.dateValue}
-                    onChange={(e) => {
-                      const { value: v } = e.target;
-                      setContext((ctx) => {
-                        ctx.conditionRules.dateValue = v;
-                      });
-                    }}
-                  />
-                  <span className="datepicker-toggle-button" />
-                </div>
-              )}
+                  <div className="datepicker-toggle">
+                    <input
+                      type="date"
+                      className="datepicker-input"
+                      value={context.conditionRules.dateValue}
+                      onChange={(e) => {
+                        const { value: v } = e.target;
+                        setContext((ctx) => {
+                          ctx.conditionRules.dateValue = v;
+                        });
+                      }}
+                    />
+                    <span className="datepicker-toggle-button" />
+                  </div>
+                )}
               {type === 'duplicateValue' && (
                 <Select
                   value={context.conditionRules.repeatValue}

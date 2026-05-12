@@ -149,8 +149,9 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
 
   return (
     <div
-      className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${from === 'fx' ? 'fx-search' : 'cell-search'
-        }`}
+      className={`flex color-border-default border flex-col luckysheet-formula-search-c-p custom-scroll ${
+        from === 'fx' ? 'fx-search' : 'cell-search'
+      }`}
       id="luckysheet-formula-search-c-p"
       style={{
         top,
@@ -224,8 +225,9 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                   style={{
                     cursor: 'pointer',
                   }}
-                  className={`luckysheet-formula-search-item ${index === 0 ? 'luckysheet-formula-search-item-active' : ''
-                    }`}
+                  className={`luckysheet-formula-search-item ${
+                    index === 0 ? 'luckysheet-formula-search-item-active' : ''
+                  }`}
                 >
                   <div
                     style={{ display: 'flex', justifyContent: 'space-between' }}
@@ -267,10 +269,11 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                           <div
                             style={{
                               borderRadius: '4px',
-                              backgroundColor: `${localStorage.getItem(v.API_KEY)
+                              backgroundColor: `${
+                                localStorage.getItem(v.API_KEY)
                                   ? '#177E23'
                                   : '#e8ebec'
-                                }`,
+                              }`,
                               width: '16px',
                               height: '16px',
                             }}
@@ -306,8 +309,9 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                   <div
                     key={v.n}
                     data-func={v.n}
-                    className={`luckysheet-formula-search-item ${index === 0 ? 'luckysheet-formula-search-item-active' : ''
-                      }`}
+                    className={`luckysheet-formula-search-item ${
+                      index === 0 ? 'luckysheet-formula-search-item-active' : ''
+                    }`}
                   >
                     <div
                       style={{
@@ -352,10 +356,11 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                             <div
                               style={{
                                 borderRadius: '4px',
-                                backgroundColor: `${localStorage.getItem(v.API_KEY)
+                                backgroundColor: `${
+                                  localStorage.getItem(v.API_KEY)
                                     ? '#177E23'
                                     : '#e8ebec'
-                                  }`,
+                                }`,
                                 width: '16px',
                                 height: '16px',
                               }}

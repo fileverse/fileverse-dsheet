@@ -21,11 +21,7 @@ const parseRangeValues = (value: string): string[] => {
 
 const RangeDialog: React.FC = () => {
   const { context, setContext } = useContext(WorkbookContext);
-  const {
-    dataVerification,
-    button,
-    findAndReplace,
-  } = locale(context);
+  const { dataVerification, button, findAndReplace } = locale(context);
   const [rangeValues, setRangeValues] = useState<string[]>(['']);
   const [focusedRangeIndex, setFocusedRangeIndex] = useState<number | null>(
     null,
@@ -102,10 +98,7 @@ const RangeDialog: React.FC = () => {
       const w = el?.offsetWidth ?? 360;
       const h = el?.offsetHeight ?? 200;
       setDialogPosition(
-        clampPosition(
-          (window.innerWidth - w) / 2,
-          window.innerHeight * 0.12,
-        ),
+        clampPosition((window.innerWidth - w) / 2, window.innerHeight * 0.12),
       );
     };
     apply();
@@ -163,9 +156,7 @@ const RangeDialog: React.FC = () => {
     if (!d || e.pointerId !== d.pointerId) return;
     const dx = e.clientX - d.startX;
     const dy = e.clientY - d.startY;
-    setDialogPosition(
-      clampPosition(d.startLeft + dx, d.startTop + dy),
-    );
+    setDialogPosition(clampPosition(d.startLeft + dx, d.startTop + dy));
   };
 
   const onHeaderPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {

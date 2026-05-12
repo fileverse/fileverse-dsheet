@@ -172,7 +172,9 @@ function buildSingleLinkEditorHtml(
   return `<span class="luckysheet-input-span" style="color: rgb(0, 0, 255); border-bottom: 1px solid rgb(0, 0, 255);" data-link-type="${safeType}" data-link-address="${safeAddress}">${escaped}</span>`;
 }
 
-function getCaretCharacterOffsetInEditor(element: HTMLDivElement): number | null {
+function getCaretCharacterOffsetInEditor(
+  element: HTMLDivElement,
+): number | null {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return null;
   const focusNode = sel.focusNode;
@@ -347,7 +349,7 @@ const InputBox: React.FC = () => {
       : null;
   const lockedFormulaSearchTop =
     formulaSearchActiveCellKey &&
-      formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
+    formulaSearchTopLockRef.current?.cellKey === formulaSearchActiveCellKey
       ? formulaSearchTopLockRef.current.top
       : null;
   const isComposingRef = useRef(false);
@@ -375,7 +377,7 @@ const InputBox: React.FC = () => {
       mode?: 'space' | 'commit',
       options?: { preserveCaret?: boolean; deferCaretRestore?: boolean },
     ) => void
-  >(() => { });
+  >(() => {});
   const [linkSelectionHighlightRects, setLinkSelectionHighlightRects] =
     useState<{ left: number; top: number; width: number; height: number }[]>(
       [],
@@ -413,7 +415,9 @@ const InputBox: React.FC = () => {
       formulaSearchTopLockRef.current = null;
       return;
     }
-    if (formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey) {
+    if (
+      formulaSearchTopLockRef.current?.cellKey !== formulaSearchActiveCellKey
+    ) {
       formulaSearchTopLockRef.current = null;
     }
   }, [formulaSearchActiveCellKey]);
@@ -459,7 +463,7 @@ const InputBox: React.FC = () => {
       );
       const activeCell =
         flowdata?.[firstSelectionActiveCell.row_focus!]?.[
-        firstSelectionActiveCell.column_focus!
+          firstSelectionActiveCell.column_focus!
         ];
       // Hyperlink cells can carry blue/underline as cell-level style (especially after import).
       // In edit mode that decorates the entire input box; keep decoration on link spans only.
@@ -556,7 +560,9 @@ const InputBox: React.FC = () => {
           : '';
       const mirrorSegV = cell?.ct?.s?.[0]?.v;
       const ctMirrorMultiline =
-        !!cell?.f && typeof mirrorSegV === 'string' && /[\r\n]/.test(mirrorSegV);
+        !!cell?.f &&
+        typeof mirrorSegV === 'string' &&
+        /[\r\n]/.test(mirrorSegV);
       const formulaEditHtmlMissingBr =
         typeof formulaEditHtml === 'string' &&
         formulaEditHtml.length > 0 &&
@@ -567,9 +573,7 @@ const InputBox: React.FC = () => {
         cell?.ct?.t === 'inlineStr' &&
         Array.isArray(cell.ct.s) &&
         cell.ct.s.some(
-          (seg: any) =>
-            !!seg?.link?.linkType &&
-            !!seg?.link?.linkAddress,
+          (seg: any) => !!seg?.link?.linkType && !!seg?.link?.linkAddress,
         );
       const cellHyperlink = getCellHyperlink(context, row_index, col_index);
       const overwrite = refs.globalCache.overwriteCell;
@@ -602,7 +606,11 @@ const InputBox: React.FC = () => {
       ) {
         inputRef.current.innerHTML = formulaEditHtml;
         wroteEditorFromStoredCell = true;
-      } else if (!refs.globalCache.ignoreWriteCell && inputRef.current && value) {
+      } else if (
+        !refs.globalCache.ignoreWriteCell &&
+        inputRef.current &&
+        value
+      ) {
         if (
           cellHyperlink?.linkType &&
           cellHyperlink?.linkAddress &&
@@ -631,7 +639,10 @@ const InputBox: React.FC = () => {
         wroteEditorFromStoredCell = true;
       }
       refs.globalCache.ignoreWriteCell = false;
-      if ((isInlineStringCell(cell as any) && inlineCellHasLinkRuns) || wroteSingleHydratedLinkSpan) {
+      if (
+        (isInlineStringCell(cell as any) && inlineCellHasLinkRuns) ||
+        wroteSingleHydratedLinkSpan
+      ) {
         ensureTrailingPlainSpanAfterLinkedTail(inputRef.current);
       }
       if (inputRef.current) {
@@ -772,7 +783,12 @@ const InputBox: React.FC = () => {
         caretLinkCardRafRef.current = 0;
       }
     };
-  }, [context.luckysheetCellUpdate, refs.cellInput, refs.globalCache, setContext]);
+  }, [
+    context.luckysheetCellUpdate,
+    refs.cellInput,
+    refs.globalCache,
+    setContext,
+  ]);
 
   // Clear type-to-edit flag after all useLayoutEffect runs in this commit (including
   // React Strict Mode's second layout pass). Clearing inside layout let the second
@@ -1033,8 +1049,7 @@ const InputBox: React.FC = () => {
       if (!isFormulaMode) return;
 
       const fsr = ctx.formulaCache.func_selectedrange;
-      const fsrOk =
-        fsr?.row?.length === 2 && fsr?.column?.length === 2;
+      const fsrOk = fsr?.row?.length === 2 && fsr?.column?.length === 2;
       // Do not drive `rangeSetValue` from `luckysheet_select_save` when the formula
       // range lives in `func_selectedrange` (keyboard nav, or active mouse range drag).
       const preferFuncRange =
@@ -1046,9 +1061,9 @@ const InputBox: React.FC = () => {
       const refRange = preferFuncRange
         ? { row: fsr!.row, column: fsr!.column }
         : {
-          row: currentSelection.row,
-          column: currentSelection.column,
-        };
+            row: currentSelection.row,
+            column: currentSelection.column,
+          };
 
       // Point rangechangeindex at the ref under/near the caret — not always the
       // last span (e.g. `=,A4` with caret between `=` and `,` must not replace A4).
@@ -1126,7 +1141,8 @@ const InputBox: React.FC = () => {
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0) return false;
         const range = sel.getRangeAt(0);
-        if (!range.collapsed || !editor.contains(range.startContainer)) return false;
+        if (!range.collapsed || !editor.contains(range.startContainer))
+          return false;
 
         const placeCaretInFreshPlainSpanAfter = (anchorSpan: HTMLElement) => {
           const typingSpan = document.createElement('span');
@@ -1336,8 +1352,8 @@ const InputBox: React.FC = () => {
             createRangeHightlight(
               draftCtx,
               refs.cellInput.current?.innerHTML ||
-              refs.fxInput.current?.innerHTML ||
-              '',
+                refs.fxInput.current?.innerHTML ||
+                '',
             );
             moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
           });
@@ -1654,74 +1670,71 @@ const InputBox: React.FC = () => {
     ],
   );
 
-  const onBeforeInput = useCallback(
-    (e: React.FormEvent<HTMLDivElement>) => {
-      const ie = e.nativeEvent as InputEvent;
-      if (ie?.isComposing) return;
-      if (!ie || ie.inputType !== 'insertText' || !ie.data) return;
-      const editor = inputRef.current;
-      if (!editor) return;
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return;
-      const range = sel.getRangeAt(0);
-      if (!range.collapsed || !editor.contains(range.startContainer)) return;
+  const onBeforeInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
+    const ie = e.nativeEvent as InputEvent;
+    if (ie?.isComposing) return;
+    if (!ie || ie.inputType !== 'insertText' || !ie.data) return;
+    const editor = inputRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!range.collapsed || !editor.contains(range.startContainer)) return;
 
-      const placeCaretInFreshPlainSpanAfter = (anchorSpan: HTMLElement) => {
-        const typingSpan = document.createElement('span');
-        typingSpan.className = 'luckysheet-input-span';
-        const textNode = document.createTextNode('');
-        typingSpan.appendChild(textNode);
-        anchorSpan.insertAdjacentElement('afterend', typingSpan);
+    const placeCaretInFreshPlainSpanAfter = (anchorSpan: HTMLElement) => {
+      const typingSpan = document.createElement('span');
+      typingSpan.className = 'luckysheet-input-span';
+      const textNode = document.createTextNode('');
+      typingSpan.appendChild(textNode);
+      anchorSpan.insertAdjacentElement('afterend', typingSpan);
 
-        const out = document.createRange();
-        out.setStart(textNode, 0);
-        out.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(out);
-      };
+      const out = document.createRange();
+      out.setStart(textNode, 0);
+      out.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(out);
+    };
 
-      const tryMoveOutOfLinkedTail = () => {
-        if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
-          const node = range.startContainer as HTMLElement;
-          const idx = range.startOffset - 1;
-          const prev = idx >= 0 ? node.childNodes[idx] : null;
-          if (
-            prev instanceof HTMLElement &&
-            prev.tagName === 'SPAN' &&
-            prev.dataset?.linkType &&
-            prev.dataset?.linkAddress
-          ) {
-            placeCaretInFreshPlainSpanAfter(prev);
-            return true;
-          }
+    const tryMoveOutOfLinkedTail = () => {
+      if (range.startContainer.nodeType === Node.ELEMENT_NODE) {
+        const node = range.startContainer as HTMLElement;
+        const idx = range.startOffset - 1;
+        const prev = idx >= 0 ? node.childNodes[idx] : null;
+        if (
+          prev instanceof HTMLElement &&
+          prev.tagName === 'SPAN' &&
+          prev.dataset?.linkType &&
+          prev.dataset?.linkAddress
+        ) {
+          placeCaretInFreshPlainSpanAfter(prev);
+          return true;
         }
-        let span: HTMLElement | null =
-          range.startContainer instanceof HTMLElement
-            ? range.startContainer
-            : range.startContainer.parentElement;
-        while (span && span !== editor && span.tagName !== 'SPAN') {
-          span = span.parentElement;
-        }
-        if (!span || span === editor || span.tagName !== 'SPAN') return false;
-        if (!span.dataset?.linkType || !span.dataset?.linkAddress) return false;
+      }
+      let span: HTMLElement | null =
+        range.startContainer instanceof HTMLElement
+          ? range.startContainer
+          : range.startContainer.parentElement;
+      while (span && span !== editor && span.tagName !== 'SPAN') {
+        span = span.parentElement;
+      }
+      if (!span || span === editor || span.tagName !== 'SPAN') return false;
+      if (!span.dataset?.linkType || !span.dataset?.linkAddress) return false;
 
-        const pre = document.createRange();
-        pre.selectNodeContents(span);
-        pre.setEnd(range.startContainer, range.startOffset);
-        const caretOffsetInSpan = pre.toString().length;
-        if (caretOffsetInSpan !== (span.textContent ?? '').length) return false;
+      const pre = document.createRange();
+      pre.selectNodeContents(span);
+      pre.setEnd(range.startContainer, range.startOffset);
+      const caretOffsetInSpan = pre.toString().length;
+      if (caretOffsetInSpan !== (span.textContent ?? '').length) return false;
 
-        placeCaretInFreshPlainSpanAfter(span);
-        return true;
-      };
+      placeCaretInFreshPlainSpanAfter(span);
+      return true;
+    };
 
-      if (!tryMoveOutOfLinkedTail()) return;
-      // Only relocate caret out of the linked tail; let native beforeinput/input
-      // perform the text insertion once. Manual execCommand insertion here can
-      // double-apply text in some multiline selection states after Cmd/Alt+Enter.
-    },
-    [],
-  );
+    if (!tryMoveOutOfLinkedTail()) return;
+    // Only relocate caret out of the linked tail; let native beforeinput/input
+    // perform the text insertion once. Manual execCommand insertion here can
+    // double-apply text in some multiline selection states after Cmd/Alt+Enter.
+  }, []);
 
   const handleHideShowHint = () => {
     const searchElFx = document.getElementsByClassName('fx-search')?.[0];
@@ -1782,8 +1795,9 @@ const InputBox: React.FC = () => {
           if (m) {
             const token = m[1];
             const trailingAdjust = mode === 'space' ? 1 : 0;
-            let tokenStart =
-              lineStart + (lineBeforeCaret.length - trailingAdjust - token.length);
+            const tokenStart =
+              lineStart +
+              (lineBeforeCaret.length - trailingAdjust - token.length);
             let tokenEnd = tokenStart + token.length;
             while (
               tokenEnd > tokenStart &&
@@ -1808,7 +1822,10 @@ const InputBox: React.FC = () => {
       let appliedLinkViaApplyLink = false;
       const caretBefore = getCaretCharacterOffsetInEditor(editor);
       for (const item of found) {
-        if (!setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)) continue;
+        if (
+          !setSelectionByCharacterOffsetInEditor(editor, item.start, item.end)
+        )
+          continue;
         const selNow = window.getSelection();
         if (!selNow || selNow.rangeCount === 0) continue;
         const rangeNow = selNow.getRangeAt(0);
@@ -1839,11 +1856,14 @@ const InputBox: React.FC = () => {
               .replace(/\u00a0/g, ' ')
               .replace(/\u200b/g, '')
               .trim();
-            if (editorPlain === normalizedUrl && normalizedSelected === normalizedUrl) {
-              editor.innerHTML = buildSingleLinkEditorHtml(
-                editorPlain,
-                { linkType: 'webpage', linkAddress: item.url },
-              );
+            if (
+              editorPlain === normalizedUrl &&
+              normalizedSelected === normalizedUrl
+            ) {
+              editor.innerHTML = buildSingleLinkEditorHtml(editorPlain, {
+                linkType: 'webpage',
+                linkAddress: item.url,
+              });
               continue;
             }
           }
@@ -1878,7 +1898,11 @@ const InputBox: React.FC = () => {
       }
       const restoreOffset = caretBefore ?? normalized.length;
       const restoreCaret = () =>
-        setSelectionByCharacterOffsetInEditor(editor, restoreOffset, restoreOffset);
+        setSelectionByCharacterOffsetInEditor(
+          editor,
+          restoreOffset,
+          restoreOffset,
+        );
       restoreCaret();
       if (shouldDeferRestore) {
         requestAnimationFrame(restoreCaret);
@@ -1937,7 +1961,8 @@ const InputBox: React.FC = () => {
         ) {
           setContext(
             (draftCtx) => {
-              if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save)) return;
+              if (!isAllowEdit(draftCtx, draftCtx.luckysheet_select_save))
+                return;
               rangeHightlightselected(draftCtx, cellEl);
             },
             { noHistory: true },
@@ -2062,7 +2087,7 @@ const InputBox: React.FC = () => {
       const sel = window.getSelection();
       const text =
         sel && !sel.isCollapsed ? sel.toString() : e.currentTarget.innerText;
-      navigator.clipboard?.writeText(text).catch(() => { });
+      navigator.clipboard?.writeText(text).catch(() => {});
     },
     [context.luckysheetCellUpdate],
   );
@@ -2439,7 +2464,9 @@ const InputBox: React.FC = () => {
 
   // Helper function to extract function name from input text
   const getFunctionNameFromInput = useCallback(() => {
-    const inputText = normalizeFormulaGateText(inputRef?.current?.innerText || '');
+    const inputText = normalizeFormulaGateText(
+      inputRef?.current?.innerText || '',
+    );
     const formulaText = inputText.trimStart();
     if (!startsWithFormula(formulaText)) return null;
 
@@ -2481,7 +2508,14 @@ const InputBox: React.FC = () => {
     if (!showCellFormulaChrome) return;
     const text = (inputRef.current?.innerText || '').replace(/\u200b/g, '');
     if (!/=|\(|[A-Za-z]/.test(text)) return;
-  }, [showCellFormulaChrome, showSearchHint, functionName, fn, context.functionHint, context]);
+  }, [
+    showCellFormulaChrome,
+    showSearchHint,
+    functionName,
+    fn,
+    context.functionHint,
+    context,
+  ]);
 
   const inputBoxBaseSelection =
     isInputBoxActive && firstSelectionActiveCell
@@ -2517,14 +2551,14 @@ const InputBox: React.FC = () => {
         style={
           inputBoxBaseSelection
             ? {
-              position: 'relative',
-              minWidth: inputBoxBaseSelection.width,
-              minHeight: inputBoxBaseSelection.height,
-              ...inputBoxStyle,
-              ...(cellEditorExtendRight
-                ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }
-                : {}),
-            }
+                position: 'relative',
+                minWidth: inputBoxBaseSelection.width,
+                minHeight: inputBoxBaseSelection.height,
+                ...inputBoxStyle,
+                ...(cellEditorExtendRight
+                  ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }
+                  : {}),
+              }
             : { position: 'relative' }
         }
       >

@@ -6,7 +6,11 @@ import { CellMatrix, Rect, Cell } from '../types';
 import { colLocation, rowLocation } from './location';
 import { getSheetIndex, isAllowEdit, isAllowEditReadOnly } from '../utils';
 import { getBorderInfoCompute } from './border';
-import { formatMForNumericCellAvoidingGsRules, genarate, update } from './format';
+import {
+  formatMForNumericCellAvoidingGsRules,
+  genarate,
+  update,
+} from './format';
 import * as formula from './formula';
 import { isRealNum, isNumericCellType } from './validation';
 import { CFSplitRange } from './ConditionFormat';
@@ -2396,7 +2400,9 @@ export function updateDropCell(ctx: Context) {
                   cell.m = cell.v.toString();
                 } else {
                   if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
-                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
+                    cell.m = formatMForNumericCellAvoidingGsRules(
+                      cell.v as number,
+                    );
                   } else {
                     let mask;
                     if (cell.ct?.fa === '##0.00') {
@@ -2522,7 +2528,9 @@ export function updateDropCell(ctx: Context) {
                   cell.m = cell.v.toString();
                 } else {
                   if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
-                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
+                    cell.m = formatMForNumericCellAvoidingGsRules(
+                      cell.v as number,
+                    );
                   } else {
                     const mask = genarate(
                       Math.round((cell.v as number) * 1000000000) / 1000000000,
@@ -2644,7 +2652,9 @@ export function updateDropCell(ctx: Context) {
                   cell.m = cell.v.toString();
                 } else {
                   if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
-                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
+                    cell.m = formatMForNumericCellAvoidingGsRules(
+                      cell.v as number,
+                    );
                   } else {
                     const mask = genarate(
                       Math.round((cell.v as number) * 1000000000) / 1000000000,
@@ -2756,7 +2766,9 @@ export function updateDropCell(ctx: Context) {
                   cell.m = cell.v.toString();
                 } else {
                   if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
-                    cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
+                    cell.m = formatMForNumericCellAvoidingGsRules(
+                      cell.v as number,
+                    );
                   } else {
                     const mask = genarate(
                       Math.round((cell.v as number) * 1000000000) / 1000000000,

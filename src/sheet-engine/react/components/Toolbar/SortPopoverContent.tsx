@@ -157,14 +157,18 @@ const SortPopoverContent: React.FC<{
               submenu === 'sheet' ? runSortSheet(true) : runSortRange(true)
             }
           >
-            <span>{submenu === 'sheet' ? sortSheetLabelAZ : sortRangeLabelAZ}</span>
+            <span>
+              {submenu === 'sheet' ? sortSheetLabelAZ : sortRangeLabelAZ}
+            </span>
           </Option>
           <Option
             onClick={() =>
               submenu === 'sheet' ? runSortSheet(false) : runSortRange(false)
             }
           >
-            <span>{submenu === 'sheet' ? sortSheetLabelZA : sortRangeLabelZA}</span>
+            <span>
+              {submenu === 'sheet' ? sortSheetLabelZA : sortRangeLabelZA}
+            </span>
           </Option>
         </div>
       )}
