@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useCallback, useContext, useEffect, useRef } from 'react';
 import {
   getFlowdata,
   onCommentBoxMoveStart,
@@ -30,6 +30,56 @@ const NotationBoxes: React.FC = () => {
       });
     }
   }, [flowdata, setContext]);
+
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseOverCommentBoxRef = useRef<boolean>(false);
+  const focusInsideCommentBoxRef = useRef<boolean>(false);
+
+  const cancelDismiss = useCallback(() => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleDismiss = useCallback(() => {
+    if (mouseOverCommentBoxRef.current || focusInsideCommentBoxRef.current) {
+      return;
+    }
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+    }
+    dismissTimerRef.current = setTimeout(() => {
+      dismissTimerRef.current = null;
+      setContext((draft) => {
+        draft.editingCommentBox = undefined;
+      });
+    }, 2000);
+  }, [setContext]);
+
+  useEffect(() => {
+    if (!context.editingCommentBox) {
+      cancelDismiss();
+      return;
+    }
+    scheduleDismiss();
+  }, [context.editingCommentBox, scheduleDismiss, cancelDismiss]);
+
+  useEffect(() => () => cancelDismiss(), [cancelDismiss]);
+
+  useEffect(() => {
+    if (!context.editingCommentBox) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      cancelDismiss();
+      setContext((draft) => {
+        draft.editingCommentBox = undefined;
+      });
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [context.editingCommentBox, setContext, cancelDismiss]);
 
   const handleMouseDownEvent =
     (r: number, c: number, rc: string, commentId: string) =>
@@ -81,7 +131,7 @@ const NotationBoxes: React.FC = () => {
               id={commentId}
               style={{
                 position: 'absolute',
-                left,
+                left: left - 17,
                 top,
                 zIndex: isEditing ? 500 : 400,
                 boxShadow: '0 1px 1px #0000002e,0 4px 8px #0000001a',
@@ -89,6 +139,47 @@ const NotationBoxes: React.FC = () => {
               onMouseDown={(e) => {
                 e.stopPropagation();
               }}
+              onMouseEnter={
+                isEditing
+                  ? () => {
+                      mouseOverCommentBoxRef.current = true;
+                      cancelDismiss();
+                    }
+                  : undefined
+              }
+              onMouseLeave={
+                isEditing
+                  ? () => {
+                      mouseOverCommentBoxRef.current = false;
+                      if (!focusInsideCommentBoxRef.current) {
+                        scheduleDismiss();
+                      }
+                    }
+                  : undefined
+              }
+              onFocus={
+                isEditing
+                  ? () => {
+                      focusInsideCommentBoxRef.current = true;
+                      cancelDismiss();
+                    }
+                  : undefined
+              }
+              onBlur={
+                isEditing
+                  ? (e) => {
+                      if (
+                        e.currentTarget.contains(e.relatedTarget as Node | null)
+                      ) {
+                        return;
+                      }
+                      focusInsideCommentBoxRef.current = false;
+                      if (!mouseOverCommentBoxRef.current) {
+                        scheduleDismiss();
+                      }
+                    }
+                  : undefined
+              }
             >
               {/* <div className="luckysheet-postil-dialog-move">
                 {["t", "r", "b", "l"].map((v) => (
