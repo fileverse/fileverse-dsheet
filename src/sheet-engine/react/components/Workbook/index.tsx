@@ -27,6 +27,8 @@ import {
   handlePasteByClick,
   update, // formatting helper
   loadLocale,
+  defaultLuckysheetSelectRanges,
+  updateContextWithSheetData,
 } from '@sheet-engine/core';
 import {
   normalizeDateBaseLocale,
@@ -902,26 +904,12 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             ) {
               draftCtx.luckysheet_select_save = sheet.luckysheet_select_save;
             }
-            if (draftCtx.luckysheet_select_save?.length === 0) {
-              if (
-                data?.[0]?.[0]?.mc &&
-                !_.isNil(data?.[0]?.[0]?.mc?.rs) &&
-                !_.isNil(data?.[0]?.[0]?.mc?.cs)
-              ) {
-                draftCtx.luckysheet_select_save = [
-                  {
-                    row: [0, data[0][0].mc.rs - 1],
-                    column: [0, data[0][0].mc.cs - 1],
-                  },
-                ];
-              } else {
-                draftCtx.luckysheet_select_save = [
-                  {
-                    row: [0, 0],
-                    column: [0, 0],
-                  },
-                ];
-              }
+            if (
+              !mergedSettings.suppressInitialCellSelection &&
+              !draftCtx.luckysheet_select_save?.length
+            ) {
+              draftCtx.luckysheet_select_save =
+                defaultLuckysheetSelectRanges(data);
             }
 
             draftCtx.config = _.isNil(sheet.config) ? {} : sheet.config;
@@ -963,6 +951,15 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             } else {
               draftCtx.showGridLines = true;
             }
+
+            const finalData = draftCtx.luckysheetfile[sheetIdx]?.data ?? data;
+            if (
+              finalData &&
+              finalData.length > 0 &&
+              draftCtx.luckysheet_select_save?.length
+            ) {
+              updateContextWithSheetData(draftCtx, finalData);
+            }
           },
           { noHistory: true },
         );
@@ -989,6 +986,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       mergedSettings.columnHeaderHeight,
       mergedSettings.addRows,
       mergedSettings.currency,
+      mergedSettings.suppressInitialCellSelection,
     ]);
 
     const isMac = navigator.platform.toUpperCase().includes('MAC');

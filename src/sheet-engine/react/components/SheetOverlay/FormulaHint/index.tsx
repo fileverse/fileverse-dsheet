@@ -26,20 +26,24 @@ const FormulaHint = (props: any) => {
   const fn = functionName
     ? context.formulaCache.functionlistMap[functionName]
     : context.formulaCache.functionlistMap[context?.functionHint || ''];
-  const [API_KEY, setAPI_KEY] = useState(localStorage.getItem(fn?.API_KEY));
-  const [showAPInput, setShowAPInput] = useState(!API_KEY);
-  const [isKeyAdded, setApiKeyAdded] = useState(
-    !!localStorage.getItem(fn?.API_KEY),
-  );
+  const [API_KEY, setAPI_KEY] = useState('');
+  const [showAPInput, setShowAPInput] = useState(true);
+  const [isKeyAdded, setApiKeyAdded] = useState(false);
   const formulaExpand = localStorage.getItem('formula-expand') === 'true';
   const [showFunctionBody, setShouldShowFunctionBody] = useState(formulaExpand);
 
   useEffect(() => {
-    if (fn) {
-      setApiKeyAdded(!!localStorage.getItem(fn?.API_KEY));
-      setAPI_KEY(localStorage.getItem(fn?.API_KEY) || '');
-      setShowAPInput(!localStorage.getItem(fn?.API_KEY));
+    if (!fn) return;
+    if (!fn.API_KEY) {
+      setAPI_KEY('');
+      setApiKeyAdded(false);
+      setShowAPInput(false);
+      return;
     }
+    const stored = localStorage.getItem(fn.API_KEY);
+    setAPI_KEY(stored ?? '');
+    setApiKeyAdded(Boolean(stored));
+    setShowAPInput(stored === null);
   }, [fn]);
   const apiKeyPlaceholder: Record<string, string> = {
     ETHERSCAN_API_KEY: 'Etherscan API key',
@@ -409,7 +413,7 @@ const FormulaHint = (props: any) => {
                     className="luckysheet-formula-help-content-api"
                     style={{
                       borderLeft: `4px solid ${
-                        isKeyAdded ? '#177E23' : '#fb923c'
+                        isKeyAdded ? '#177E23' : '#e8ebec'
                       }`,
                       backgroundColor: 'white',
                       padding: '8px',
@@ -436,7 +440,7 @@ const FormulaHint = (props: any) => {
                       >
                         {isKeyAdded
                           ? 'API key provided'
-                          : 'API key is required'}
+                          : 'API key (optional)'}
                       </h3>
                       <LucideIcon
                         name={showAPInput ? 'ChevronUp' : 'ChevronDown'}
@@ -457,8 +461,8 @@ const FormulaHint = (props: any) => {
                           className="fortune-formula-hint__para fortune-formula-hint__para--api text-body-sm color-text-default"
                           data-testid="formula-hint-para-api"
                         >
-                          {`This function requires an API key. Please paste it below and
-                  press 'Ok'.`}
+                          {`Some providers need an API key for higher limits. You can
+                  paste one below or leave the field empty and press 'Ok' to continue without a key.`}
                         </p>
                         <div className="w-full">
                           <TextField
@@ -477,10 +481,9 @@ const FormulaHint = (props: any) => {
                               onClick={() => {
                                 // @ts-ignore
                                 localStorage.setItem(fn.API_KEY, API_KEY);
-                                setApiKeyAdded(true);
+                                setApiKeyAdded(Boolean(API_KEY));
                                 setShowAPInput(false);
                               }}
-                              disabled={!API_KEY}
                               className="fortune-formula-hint__cta min-w-[80px]"
                               data-testid="formula-hint-cta-ok"
                             >

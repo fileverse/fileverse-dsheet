@@ -74,6 +74,8 @@ export interface DsheetProps {
   isCollaborative?: boolean;
   selectedTemplate?: string;
   onboardingComplete?: boolean;
+  /** When `onboardingComplete` is omitted, read `localStorage.getItem(key)==='true'` (default key `onboardingComplete`). */
+  onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandlerType;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;

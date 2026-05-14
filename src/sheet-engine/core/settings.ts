@@ -205,6 +205,8 @@ export type Settings = {
   isAuthorized?: boolean;
   isFlvReadOnly?: boolean;
   dateBaseLocale?: DateBaseLocale;
+  /** When true, do not auto-select A1 on load (e.g. onboarding modal runs first). */
+  suppressInitialCellSelection?: boolean;
 };
 
 export const defaultSettings: Required<Settings> = {
@@ -360,4 +362,5 @@ export const defaultSettings: Required<Settings> = {
   isAuthorized: false,
   isFlvReadOnly: false,
   dateBaseLocale: 'uk',
+  suppressInitialCellSelection: false,
 };

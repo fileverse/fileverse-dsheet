@@ -44,6 +44,15 @@ import {
 type OnboardingHandler = OnboardingHandlerType;
 type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
+function readBooleanFromLocalStorage(key: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(key) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 interface EditorWorkbookProps {
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
@@ -53,6 +62,7 @@ interface EditorWorkbookProps {
   allowComments?: boolean;
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
+  onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
@@ -79,6 +89,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   allowComments = false,
   toggleTemplateSidebar,
   onboardingComplete,
+  onboardingCompleteLocalStorageKey,
   onboardingHandler,
   dataBlockApiKeyHandler,
   exportDropdownOpen = false,
@@ -109,6 +120,16 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     handleLiveQuery,
     setIsDataLoaded,
   } = useEditor();
+
+  const onboardingLsKey =
+    onboardingCompleteLocalStorageKey ?? 'onboardingComplete';
+
+  const effectiveOnboardingComplete = useMemo(() => {
+    if (typeof onboardingComplete === 'boolean') {
+      return onboardingComplete;
+    }
+    return readBooleanFromLocalStorage(onboardingLsKey);
+  }, [onboardingComplete, onboardingLsKey]);
 
   // const { setIsDataLoaded } = useEditorData();
 
@@ -218,6 +239,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
+        suppressInitialCellSelection={
+          !effectiveOnboardingComplete && !!onboardingHandler
+        }
         // @ts-ignore
         data={data}
         toolbarItems={toolbarItems}
@@ -273,7 +297,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               column,
               newValue,
               sheetEditorRef: refObj,
-              onboardingComplete,
+              onboardingComplete: effectiveOnboardingComplete,
               // @ts-ignore
               setFetchingURLData,
               onboardingHandler,
@@ -402,7 +426,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     forceSheetRender,
     isReadOnly,
     toggleTemplateSidebar,
-    onboardingComplete,
+    effectiveOnboardingComplete,
+    onboardingCompleteLocalStorageKey,
     onboardingHandler,
     dataBlockApiKeyHandler,
     dsheetId,

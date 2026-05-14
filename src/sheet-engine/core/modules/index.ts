@@ -125,6 +125,7 @@ export {
   seletedHighlistByindex,
   selectTitlesMap,
   selectTitlesRange,
+  defaultLuckysheetSelectRanges,
   normalizeSelection,
   syncPrimaryCellActiveFromSelection,
   selectionIsExactlyOneMergeBlock,

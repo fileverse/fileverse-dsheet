@@ -36,6 +36,7 @@ const EditorContent = ({
   allowComments,
   toggleTemplateSidebar,
   onboardingComplete,
+  onboardingCompleteLocalStorageKey,
   onboardingHandler,
   dataBlockApiKeyHandler,
   isTemplateOpen,
@@ -73,6 +74,7 @@ const EditorContent = ({
   exportDropdownOpen: boolean;
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onboardingComplete?: boolean;
+  onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   storeApiKey?: (apiKeyName: string) => void;
@@ -233,6 +235,9 @@ const EditorContent = ({
             isReadOnly={isReadOnly}
             toggleTemplateSidebar={toggleTemplateSidebar}
             onboardingComplete={onboardingComplete}
+            onboardingCompleteLocalStorageKey={
+              onboardingCompleteLocalStorageKey
+            }
             onboardingHandler={onboardingHandler}
             dataBlockApiKeyHandler={dataBlockApiKeyHandler}
             exportDropdownOpen={exportDropdownOpen}
@@ -273,6 +278,7 @@ const SpreadsheetEditor = ({
   isTemplateOpen,
   enableWebrtc,
   onboardingComplete,
+  onboardingCompleteLocalStorageKey,
   onboardingHandler,
   commentData,
   getCommentCellUI,
@@ -332,6 +338,9 @@ const SpreadsheetEditor = ({
         isReadOnly={isReadOnly}
         toggleTemplateSidebar={toggleTemplateSidebar}
         onboardingComplete={onboardingComplete}
+        onboardingCompleteLocalStorageKey={
+          onboardingCompleteLocalStorageKey
+        }
         onboardingHandler={onboardingHandler as OnboardingHandler}
         dataBlockApiKeyHandler={
           dataBlockApiKeyHandler as DataBlockApiKeyHandler

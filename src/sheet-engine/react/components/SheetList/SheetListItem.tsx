@@ -2,7 +2,10 @@ import {
   Sheet,
   cancelNormalSelected,
   cancelActiveImgItem,
+  getSheetIndex,
+  defaultLuckysheetSelectRanges,
 } from '@sheet-engine/core';
+import _ from 'lodash';
 import { LucideIcon } from '@fileverse/ui';
 import React, { useContext, useEffect, useRef } from 'react';
 import WorkbookContext from '../../context';
@@ -15,7 +18,7 @@ type Props = {
 };
 
 const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
-  const { context, setContext, refs } = useContext(WorkbookContext);
+  const { context, setContext, refs, settings } = useContext(WorkbookContext);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -30,11 +33,33 @@ const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         draftCtx.scrollLeft = 0;
         draftCtx.scrollTop = 0;
         draftCtx.luckysheet_select_status = false;
-        draftCtx.luckysheet_select_save = undefined;
+        if (settings.suppressInitialCellSelection) {
+          draftCtx.luckysheet_select_save = undefined;
+        } else {
+          const sheetIdx = getSheetIndex(draftCtx, draftCtx.currentSheetId);
+          const sh =
+            sheetIdx != null ? draftCtx.luckysheetfile[sheetIdx] : undefined;
+          if (sh) {
+            if (!_.isEmpty(sh.luckysheet_select_save)) {
+              draftCtx.luckysheet_select_save = sh.luckysheet_select_save;
+            } else {
+              draftCtx.luckysheet_select_save = defaultLuckysheetSelectRanges(
+                sh.data,
+              );
+            }
+          } else {
+            draftCtx.luckysheet_select_save = undefined;
+          }
+        }
       }
       draftCtx.luckysheet_selection_range = [];
     });
-  }, [context.currentSheetId, context.sheetScrollRecord, setContext]);
+  }, [
+    context.currentSheetId,
+    context.sheetScrollRecord,
+    setContext,
+    settings.suppressInitialCellSelection,
+  ]);
 
   return (
     <div
