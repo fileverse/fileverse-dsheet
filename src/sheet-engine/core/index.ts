@@ -139,6 +139,7 @@ export {
   scrollToHighlightCell,
   selectTitlesMap,
   selectTitlesRange,
+  defaultLuckysheetSelectRanges,
   normalizeSelection,
   syncPrimaryCellActiveFromSelection,
   selectionIsExactlyOneMergeBlock,

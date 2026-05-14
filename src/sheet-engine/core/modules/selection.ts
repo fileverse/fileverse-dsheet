@@ -1,5 +1,11 @@
 import _, { isPlainObject } from 'lodash';
-import type { Sheet as SheetType, Freezen, Range, Selection } from '../types';
+import type {
+  Sheet as SheetType,
+  Freezen,
+  Range,
+  Selection,
+  CellMatrix,
+} from '../types';
 import { Context, getFlowdata } from '../context';
 import {
   getCellValue,
@@ -312,6 +318,25 @@ export function snapSheetSelectionFocusToCellPreserveMultiRange(
     ];
     normalizeSelection(ctx, ctx.luckysheet_select_save);
   }
+}
+
+/** Default selection (A1, or top-left merge block) when a sheet has no `luckysheet_select_save`. */
+export function defaultLuckysheetSelectRanges(
+  data: CellMatrix | null | undefined,
+): Selection[] {
+  if (
+    data?.[0]?.[0]?.mc &&
+    !_.isNil(data[0][0].mc?.rs) &&
+    !_.isNil(data[0][0].mc?.cs)
+  ) {
+    return [
+      {
+        row: [0, data[0][0].mc!.rs - 1],
+        column: [0, data[0][0].mc!.cs - 1],
+      },
+    ];
+  }
+  return [{ row: [0, 0], column: [0, 0] }];
 }
 
 export function normalizeSelection(

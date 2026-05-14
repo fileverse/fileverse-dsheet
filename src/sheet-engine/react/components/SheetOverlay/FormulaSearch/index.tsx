@@ -263,7 +263,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                           text={
                             localStorage.getItem(v.API_KEY)
                               ? 'API Key added'
-                              : 'API key required'
+                              : 'API key optional'
                           }
                         >
                           <div
@@ -350,7 +350,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                             text={
                               localStorage.getItem(v.API_KEY)
                                 ? 'API Key added'
-                                : 'API Key required'
+                                : 'API key optional'
                             }
                           >
                             <div
