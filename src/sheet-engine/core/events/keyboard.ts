@@ -75,6 +75,46 @@ function getActiveFormulaEditorForKeyboardGuard(): HTMLElement | null {
   );
 }
 
+/** US QWERTY Cmd/Ctrl+; — physical semicolon key (no Option). */
+function isUsInsertDateShortcut(e: KeyboardEvent): boolean {
+  return (
+    (e.metaKey || e.ctrlKey) &&
+    !e.shiftKey &&
+    !e.altKey &&
+    e.code === 'Semicolon'
+  );
+}
+
+/** AZERTY typed ";" is Shift+, — works for Cmd+; and Cmd+Option+;. */
+function isAzertyInsertDateShortcut(e: KeyboardEvent): boolean {
+  return (e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Comma';
+}
+
+/**
+ * On AZERTY the "M" key shares the US semicolon physical key; Cmd+Option there
+ * is reserved for host-app shortcuts, not insert-date.
+ */
+function isAzertyCmdOptionPhysicalSemicolonKey(e: KeyboardEvent): boolean {
+  return e.altKey && !e.shiftKey && e.code === 'Semicolon';
+}
+
+function isInsertDateShortcut(e: KeyboardEvent): boolean {
+  if (!(e.metaKey || e.ctrlKey)) return false;
+  if (isAzertyInsertDateShortcut(e)) return true;
+  if (isAzertyCmdOptionPhysicalSemicolonKey(e)) return false;
+  return isUsInsertDateShortcut(e);
+}
+
+/** US QWERTY Cmd/Ctrl+Shift+; — insert time. */
+function isUsInsertTimeShortcut(e: KeyboardEvent): boolean {
+  return (
+    (e.metaKey || e.ctrlKey) &&
+    e.shiftKey &&
+    !e.altKey &&
+    e.code === 'Semicolon'
+  );
+}
+
 /**
  * While editing a formula, keyboard range navigation must be blocked unless the
  * caret is currently at a syntactically valid insertion slot.
@@ -1003,11 +1043,11 @@ export async function handleGlobalKeyDown(
     e.stopPropagation();
     return;
   }
-  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'Semicolon') {
+  if (isInsertDateShortcut(e)) {
     fillDate(ctx);
     handledFlvShortcut = true;
   }
-  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Semicolon') {
+  if (isUsInsertTimeShortcut(e)) {
     fillTime(ctx);
     handledFlvShortcut = true;
   }
