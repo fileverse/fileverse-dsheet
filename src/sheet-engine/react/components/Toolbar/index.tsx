@@ -2166,7 +2166,7 @@ const Toolbar: React.FC<{
       />
       <div className="fortune-toolbar-left">
         {settings.customToolbarItems
-          .filter((n) => n.key === 'import-export')
+          .filter((n) => n.key === 'import-export' || n.key === 'export-only')
           .map((n) => {
             return (
               <CustomButton
@@ -2258,7 +2258,10 @@ const Toolbar: React.FC<{
         )}
         {settings.customToolbarItems
           .filter(
-            (n) => n.key !== 'import-export' && n.key !== 'Smart Contract',
+            (n) =>
+              n.key !== 'import-export' &&
+              n.key !== 'export-only' &&
+              n.key !== 'Smart Contract',
           )
           .map((n) => {
             return (

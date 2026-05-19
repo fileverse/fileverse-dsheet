@@ -70,6 +70,7 @@ export interface DsheetProps {
   enableWebrtc?: boolean;
   portalContent?: string;
   isReadOnly?: boolean;
+  allowSheetDownload?: boolean;
   isTemplateOpen?: boolean;
   isCollaborative?: boolean;
   selectedTemplate?: string;

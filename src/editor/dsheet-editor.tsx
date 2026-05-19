@@ -33,6 +33,7 @@ const EditorContent = ({
   setShowFetchURLModal,
   renderNavbar,
   isReadOnly,
+  allowSheetDownload,
   allowComments,
   toggleTemplateSidebar,
   onboardingComplete,
@@ -58,6 +59,7 @@ const EditorContent = ({
   DsheetProps,
   | 'renderNavbar'
   | 'isReadOnly'
+  | 'allowSheetDownload'
   | 'allowComments'
   | 'toggleTemplateSidebar'
   | 'selectedTemplate'
@@ -233,6 +235,7 @@ const EditorContent = ({
             commentData={commentData}
             getCommentCellUI={getCommentCellUI}
             isReadOnly={isReadOnly}
+            allowSheetDownload={allowSheetDownload}
             toggleTemplateSidebar={toggleTemplateSidebar}
             onboardingComplete={onboardingComplete}
             onboardingCompleteLocalStorageKey={
@@ -266,6 +269,7 @@ const EditorContent = ({
 const SpreadsheetEditor = ({
   isCollaborative = false,
   isReadOnly = false,
+  allowSheetDownload,
   allowComments = false,
   renderNavbar,
   enableIndexeddbSync,
@@ -336,6 +340,7 @@ const SpreadsheetEditor = ({
         setShowFetchURLModal={setShowFetchURLModal}
         setInputFetchURLDataBlock={setInputFetchURLDataBlock}
         isReadOnly={isReadOnly}
+        allowSheetDownload={allowSheetDownload}
         toggleTemplateSidebar={toggleTemplateSidebar}
         onboardingComplete={onboardingComplete}
         onboardingCompleteLocalStorageKey={
