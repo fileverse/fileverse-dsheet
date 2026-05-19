@@ -4,6 +4,7 @@ import React, { ChangeEventHandler } from 'react';
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import { CustomButton } from './../components/import-button-ui';
+import { ReadOnlyExportButton } from '../components/read-only-export-button';
 import { SmartContractButton } from '../components/smart-contract';
 
 import { IconButton } from '@fileverse/ui';
@@ -184,6 +185,76 @@ export const getCustomToolbarItems = ({
         />
       ),
       onClick: toggleTemplateSidebar,
+    },
+  ];
+};
+
+type ReadOnlyExportDeps = {
+  setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  handleExportToXLSX: (
+    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+    ydocRef: React.RefObject<Y.Doc | null>,
+    dsheetId: string,
+    getDocumentTitle?: (dsheetId: string) => Promise<string>,
+  ) => void;
+  handleExportToCSV: (
+    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+    ydocRef: React.RefObject<Y.Doc | null>,
+    dsheetId: string,
+    getDocumentTitle?: (dsheetId: string) => Promise<string>,
+  ) => void;
+  handleExportToJSON: (
+    sheetEditorRef: React.RefObject<WorkbookInstance | null>,
+    ydocRef: React.RefObject<Y.Doc | null>,
+    dsheetId: string,
+  ) => void;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  ydocRef: React.RefObject<Y.Doc | null>;
+  dsheetId: string;
+  getDocumentTitle?: (dsheetId: string) => Promise<string>;
+};
+
+export const getReadOnlyCustomToolbarItems = ({
+  setExportDropdownOpen,
+  handleExportToXLSX,
+  handleExportToCSV,
+  handleExportToJSON,
+  sheetEditorRef,
+  ydocRef,
+  dsheetId,
+  getDocumentTitle,
+}: ReadOnlyExportDeps) => {
+  return [
+    {
+      key: 'export-only',
+      tooltip: 'Download',
+      onClick: () => {
+        setExportDropdownOpen((prev) => !prev);
+      },
+      icon: (
+        <ReadOnlyExportButton
+          setExportDropdownOpen={setExportDropdownOpen}
+          handleExportToXLSX={() =>
+            handleExportToXLSX(
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              getDocumentTitle,
+            )
+          }
+          handleExportToCSV={() =>
+            handleExportToCSV(
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              getDocumentTitle,
+            )
+          }
+          handleExportToJSON={() =>
+            handleExportToJSON(sheetEditorRef, ydocRef, dsheetId)
+          }
+        />
+      ),
     },
   ];
 };

@@ -8,7 +8,10 @@ import {
   HEADER_CONTEXT_MENU_ITEMS,
   DEFAULT_SHEET_DATA,
 } from '../constants/shared-constants';
-import { getCustomToolbarItems } from '../utils/custom-toolbar-item';
+import {
+  getCustomToolbarItems,
+  getReadOnlyCustomToolbarItems,
+} from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
 import {
   afterUpdateCell,
@@ -59,6 +62,7 @@ interface EditorWorkbookProps {
   setFetchingURLData?: (fetching: boolean) => void;
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
   isReadOnly?: boolean;
+  allowSheetDownload?: boolean;
   allowComments?: boolean;
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
@@ -86,6 +90,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   setShowFetchURLModal,
   setFetchingURLData,
   isReadOnly = false,
+  allowSheetDownload = false,
   allowComments = false,
   toggleTemplateSidebar,
   onboardingComplete,
@@ -257,8 +262,20 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         defaultColWidth={104}
         defaultRowHeight={23}
         customToolbarItems={
-          !isReadOnly
-            ? getCustomToolbarItems({
+          isReadOnly
+            ? allowSheetDownload
+              ? getReadOnlyCustomToolbarItems({
+                  setExportDropdownOpen,
+                  handleExportToXLSX,
+                  handleExportToCSV,
+                  handleExportToJSON,
+                  sheetEditorRef,
+                  ydocRef,
+                  dsheetId,
+                  getDocumentTitle,
+                })
+              : []
+            : getCustomToolbarItems({
                 handleContentPortal: handleOnChangePortalUpdate,
                 setShowSmartContractModal,
                 getDocumentTitle,
@@ -278,7 +295,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
                 toggleTemplateSidebar,
                 setShowFetchURLModal,
               })
-            : []
         }
         hooks={{
           afterUpdateCell: (
@@ -425,6 +441,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   }, [
     forceSheetRender,
     isReadOnly,
+    allowSheetDownload,
     toggleTemplateSidebar,
     effectiveOnboardingComplete,
     onboardingCompleteLocalStorageKey,

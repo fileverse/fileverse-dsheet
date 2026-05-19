@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@fileverse/ui';
 
+import { ExportMenuSection } from './export-menu-section';
 import './import-button.scss';
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 
@@ -136,53 +137,12 @@ export const CustomButton = ({
         sideOffset={4}
         data-testid="export-import-popover-content"
       >
-        <div
-          onClick={() => setIsOpen(false)}
-          className="p-2 color-text-default dsheet-export-section"
-          data-testid="export-section"
-        >
-          <h2
-            className="dsheet-heading dsheet-heading--section text-helper-text-sm color-text-secondary pl-2"
-            data-testid="export-heading"
-          >
-            Export
-          </h2>
-          <button
-            type="button"
-            onClick={() => handleExportToJSON()}
-            className="dsheet-btn dsheet-btn--export-json hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
-            data-testid="export-json-button"
-          >
-            <LucideIcon name="FileImport" className="w-[17px] h-[17px]" />
-            <span className="dsheet-text dsheet-text--body text-body-sm">
-              Export to .json
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleExportToXLSX()}
-            className="dsheet-btn dsheet-btn--export-xlsx hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
-            data-testid="export-xlsx-button"
-          >
-            <LucideIcon name="FileImport" className="w-[17px] h-[17px]" />
-            <span className="dsheet-text dsheet-text--body text-body-sm">
-              Export to .xlsx
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleExportToCSV()}
-            className="dsheet-btn dsheet-btn--export-csv hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition"
-            data-testid="export-csv-button"
-          >
-            <LucideIcon name="FileImport" className="w-[17px] h-[17px]" />
-            <span className="dsheet-text dsheet-text--body text-body-sm">
-              Export to .csv
-            </span>
-          </button>
-        </div>
+        <ExportMenuSection
+          handleExportToJSON={handleExportToJSON}
+          handleExportToXLSX={handleExportToXLSX}
+          handleExportToCSV={handleExportToCSV}
+          onItemClick={() => setIsOpen(false)}
+        />
         <div
           className="p-2 color-text-default dsheet-import-section"
           data-testid="import-section"
