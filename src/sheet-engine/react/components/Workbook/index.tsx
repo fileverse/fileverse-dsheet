@@ -953,11 +953,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             }
 
             const finalData = draftCtx.luckysheetfile[sheetIdx]?.data ?? data;
-            if (
-              finalData &&
-              finalData.length > 0 &&
-              draftCtx.luckysheet_select_save?.length
-            ) {
+            if (finalData && finalData.length > 0) {
               updateContextWithSheetData(draftCtx, finalData);
             }
           },
