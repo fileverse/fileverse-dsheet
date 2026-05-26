@@ -413,6 +413,8 @@ export type GlobalCache = {
   };
   /** Live column right edge (px) while dragging column resize; not in Immer context. */
   colResizeLiveRightPx?: number;
+  /** Live row bottom edge (px) while dragging row resize; not in Immer context. */
+  rowResizeLiveBottomPx?: number;
 };
 
 export type SingleRange = { row: number[]; column: number[] };

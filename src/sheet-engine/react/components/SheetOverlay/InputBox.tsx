@@ -335,6 +335,15 @@ function focusColWidthFromLiveRight(
   return Math.max(0, liveRightPx - col_pre - 1);
 }
 
+function focusRowHeightFromLiveBottom(
+  visibledatarow: number[],
+  focusRow: number,
+  liveBottomPx: number,
+): number {
+  const row_pre = focusRow <= 0 ? 0 : visibledatarow[focusRow - 1];
+  return Math.max(0, liveBottomPx - row_pre - 1);
+}
+
 /** Width/height for the in-cell editor; tracks layout and live column resize without cloning selection. */
 function useEditCellBoxDimensions(
   context: Context,
@@ -400,13 +409,57 @@ function useEditCellBoxDimensions(
     };
   }, [colResizeActive, focusCol, globalCache]);
 
+  const resizingRow = context.luckysheet_rows_change_size_start?.[1];
+  const rowResizeActive =
+    editing &&
+    !!context.luckysheet_rows_change_size &&
+    typeof resizingRow === 'number' &&
+    typeof focusRow === 'number' &&
+    resizingRow === focusRow;
+
+  const [liveHeight, setLiveHeight] = useState<number | null>(null);
+  const visRowsRef = useRef(context.visibledatarow);
+  visRowsRef.current = context.visibledatarow;
+
+  useEffect(() => {
+    if (!rowResizeActive) {
+      setLiveHeight(null);
+      return;
+    }
+    let raf = 0;
+    let last = -1;
+    const tick = () => {
+      const liveBottom = globalCache.rowResizeLiveBottomPx;
+      if (typeof liveBottom === 'number' && typeof focusRow === 'number') {
+        const h = focusRowHeightFromLiveBottom(
+          visRowsRef.current,
+          focusRow,
+          liveBottom,
+        );
+        if (h !== last) {
+          last = h;
+          setLiveHeight(h);
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      setLiveHeight(null);
+    };
+  }, [rowResizeActive, focusRow, globalCache]);
+
   return useMemo(() => {
     if (!editing || !firstSelection) return null;
     const width =
       colResizeActive && liveWidth != null
         ? liveWidth
         : (layoutWidth ?? firstSelection.width ?? 0);
-    const height = layoutHeight ?? firstSelection.height ?? 0;
+    const height =
+      rowResizeActive && liveHeight != null
+        ? liveHeight
+        : (layoutHeight ?? firstSelection.height ?? 0);
     return { width, height };
   }, [
     editing,
@@ -414,6 +467,8 @@ function useEditCellBoxDimensions(
     colResizeActive,
     liveWidth,
     layoutWidth,
+    rowResizeActive,
+    liveHeight,
     layoutHeight,
   ]);
 }

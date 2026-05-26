@@ -2528,6 +2528,8 @@ export function mouseRender(
       scrollY.scrollTop -
       window.scrollY;
     if (y < rect.height + ctx.scrollTop - 20) {
+      // Match mouseup commit (`y + 3`); stored on globalCache to avoid Immer churn.
+      globalCache.rowResizeLiveBottomPx = y + 3;
       const changeSizeLine = container.querySelector(
         '.fortune-change-size-line',
       );
@@ -4206,6 +4208,7 @@ export function handleOverlayMouseUp(
 
   // 改变行高
   if (ctx.luckysheet_rows_change_size) {
+    delete globalCache.rowResizeLiveBottomPx;
     ctx.luckysheet_rows_change_size = false;
 
     // $("#fortune-change-size-line").hide();
@@ -4291,6 +4294,11 @@ export function handleOverlayMouseUp(
     const idx = getSheetIndex(ctx, ctx.currentSheetId);
     if (idx == null) return;
     ctx.luckysheetfile[idx].config = ctx.config;
+
+    const flowdataAfterRowResize = getFlowdata(ctx);
+    if (flowdataAfterRowResize) {
+      updateContextWithSheetData(ctx, flowdataAfterRowResize);
+    }
 
     // server.saveParam("cg", ctx.currentSheetId, cfg.rowlen, {
     //   k: "rowlen",
@@ -5570,7 +5578,7 @@ export function handleRowSizeHandleMouseDown(
     israngeseleciton(ctx)
   )
     return;
-  ctx.luckysheetCellUpdate = [];
+  // Keep in-cell edit open while resizing (do not clear luckysheetCellUpdate).
 
   // let mouse = mouseposition(event.pageX, event.pageY);
   const { scrollLeft } = ctx;
@@ -5586,8 +5594,10 @@ export function handleRowSizeHandleMouseDown(
   const row = row_location[1];
   const row_index = row_location[2];
 
+  delete globalCache.rowResizeLiveBottomPx;
   ctx.luckysheet_rows_change_size = true;
   ctx.luckysheet_scroll_status = true;
+  globalCache.rowResizeLiveBottomPx = row;
   const changeSizeLine = workbookContainer.querySelector(
     '.fortune-change-size-line',
   );
