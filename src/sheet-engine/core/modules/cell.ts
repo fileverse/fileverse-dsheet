@@ -616,12 +616,12 @@ export function setCellValue(
       if (cell.v === Infinity || cell.v === -Infinity) {
         cell.m = cell.v.toString();
       } else {
-        if (shouldUseScientificForComputedNumber(cell.v as number)) {
-          cell.m = formatScientificForComputedNumber(cell.v as number);
-        } else if (cell.v.toString().toLowerCase().indexOf('e') > -1) {
+        const v_p = Math.round((cell.v as number) * 1000000000) / 1000000000;
+        if (shouldUseScientificForComputedNumber(v_p)) {
+          cell.m = formatScientificForComputedNumber(v_p);
+        } else if ((cell.v as number).toString().toLowerCase().indexOf('e') > -1) {
           cell.m = formatMForNumericCellAvoidingGsRules(cell.v as number);
         } else {
-          const v_p = Math.round(cell.v * 1000000000) / 1000000000;
           if (_.isNil(cell.ct)) {
             const mask = genarate(v_p);
             if (mask != null) {
@@ -631,8 +631,6 @@ export function setCellValue(
             const mask = update(cell.ct.fa!, v_p);
             cell.m = mask.toString();
           }
-
-          // cell.m = mask[0].toString();
         }
       }
 
