@@ -43,7 +43,11 @@ function getBorderFix() {
 }
 
 function hasCellDisplayContent(cell: any) {
-  return !_.isEmpty(cell?.v) || _.isEmpty(cell?.m) || isInlineStringCell(cell);
+  return (
+    cell?.v != null ||
+    (typeof cell?.m === 'string' && cell.m.length > 0) ||
+    isInlineStringCell(cell)
+  );
 }
 
 function setLineDash(
