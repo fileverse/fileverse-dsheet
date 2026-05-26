@@ -43,6 +43,7 @@ import {
   applyLinkToSelection,
   getCellHyperlink,
 } from '@sheet-engine/core';
+import type { Context, GlobalCache } from '@sheet-engine/core';
 import React, {
   useContext,
   useEffect,
@@ -306,6 +307,117 @@ function setSelectionByCharacterOffsetInEditor(
   return true;
 }
 
+type EditSelectionLike = {
+  row?: number[];
+  column?: number[];
+  row_focus?: number;
+  column_focus?: number;
+  width?: number;
+  height?: number;
+};
+
+function focusColWidthFromVisible(
+  visibledatacolumn: number[],
+  focusCol: number,
+): number {
+  const col_f = visibledatacolumn[focusCol];
+  const col_pre = focusCol <= 0 ? 0 : visibledatacolumn[focusCol - 1];
+  if (col_f == null) return 0;
+  return Math.max(0, col_f - col_pre - 1);
+}
+
+function focusColWidthFromLiveRight(
+  visibledatacolumn: number[],
+  focusCol: number,
+  liveRightPx: number,
+): number {
+  const col_pre = focusCol <= 0 ? 0 : visibledatacolumn[focusCol - 1];
+  return Math.max(0, liveRightPx - col_pre - 1);
+}
+
+/** Width/height for the in-cell editor; tracks layout and live column resize without cloning selection. */
+function useEditCellBoxDimensions(
+  context: Context,
+  firstSelection: EditSelectionLike | undefined,
+  globalCache: GlobalCache,
+): { width: number; height: number } | null {
+  const editing = (context.luckysheetCellUpdate?.length ?? 0) > 0;
+  const focusCol =
+    firstSelection?.column_focus ?? firstSelection?.column?.[0];
+  const focusRow = firstSelection?.row_focus ?? firstSelection?.row?.[0];
+
+  const layoutWidth = useMemo(() => {
+    if (!editing || typeof focusCol !== 'number') return null;
+    return focusColWidthFromVisible(context.visibledatacolumn, focusCol);
+  }, [editing, focusCol, context.visibledatacolumn]);
+
+  const layoutHeight = useMemo(() => {
+    if (!editing || typeof focusRow !== 'number') return null;
+    const row_f = context.visibledatarow[focusRow];
+    const row_pre = focusRow <= 0 ? 0 : context.visibledatarow[focusRow - 1];
+    if (row_f == null) return firstSelection?.height ?? 0;
+    return Math.max(0, row_f - row_pre - 1);
+  }, [editing, focusRow, context.visibledatarow, firstSelection?.height]);
+
+  const resizingCol = context.luckysheet_cols_change_size_start?.[1];
+  const colResizeActive =
+    editing &&
+    !!context.luckysheet_cols_change_size &&
+    typeof resizingCol === 'number' &&
+    typeof focusCol === 'number' &&
+    resizingCol === focusCol;
+
+  const [liveWidth, setLiveWidth] = useState<number | null>(null);
+  const visColsRef = useRef(context.visibledatacolumn);
+  visColsRef.current = context.visibledatacolumn;
+
+  useEffect(() => {
+    if (!colResizeActive) {
+      setLiveWidth(null);
+      return;
+    }
+    let raf = 0;
+    let last = -1;
+    const tick = () => {
+      const liveRight = globalCache.colResizeLiveRightPx;
+      if (typeof liveRight === 'number' && typeof focusCol === 'number') {
+        const w = focusColWidthFromLiveRight(
+          visColsRef.current,
+          focusCol,
+          liveRight,
+        );
+        if (w !== last) {
+          last = w;
+          setLiveWidth(w);
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      setLiveWidth(null);
+    };
+  }, [colResizeActive, focusCol, globalCache]);
+
+  return useMemo(() => {
+    if (!editing || !firstSelection) return null;
+    const width =
+      colResizeActive && liveWidth != null
+        ? liveWidth
+        : (layoutWidth ?? firstSelection.width ?? 0);
+    const height = layoutHeight ?? firstSelection.height ?? 0;
+    return { width, height };
+  }, [
+    editing,
+    firstSelection,
+    colResizeActive,
+    liveWidth,
+    layoutWidth,
+    layoutHeight,
+  ]);
+}
+
 const InputBox: React.FC = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
   const inputRef = useRef<HTMLDivElement | null>(null);
@@ -343,6 +455,11 @@ const InputBox: React.FC = () => {
   const [cellEditorExtendRight, setCellEditorExtendRight] = useState(false);
   const row_index = firstSelection?.row_focus!;
   const col_index = firstSelection?.column_focus!;
+  const editCellBoxSize = useEditCellBoxDimensions(
+    context,
+    firstSelection,
+    refs.globalCache,
+  );
   const formulaSearchActiveCellKey =
     !_.isEmpty(context.luckysheetCellUpdate) && firstSelection
       ? `${context.currentSheetId}:${firstSelection.row_focus}:${firstSelection.column_focus}`
@@ -2405,11 +2522,7 @@ const InputBox: React.FC = () => {
       setCellEditorExtendRight(false);
       return;
     }
-    const baseSel =
-      isInputBoxActive && firstSelectionActiveCell
-        ? firstSelectionActiveCell
-        : firstSelection;
-    const cellW = baseSel?.width;
+    const cellW = editCellBoxSize?.width;
     if (cellW == null || !inputRef.current) {
       setCellEditorExtendRight(false);
       return;
@@ -2419,9 +2532,7 @@ const InputBox: React.FC = () => {
   }, [
     editorLayoutTick,
     context.luckysheetCellUpdate.length,
-    isInputBoxActive,
-    firstSelectionActiveCell,
-    firstSelection,
+    editCellBoxSize?.width,
     context.zoomRatio,
   ]);
 
@@ -2517,11 +2628,6 @@ const InputBox: React.FC = () => {
     context,
   ]);
 
-  const inputBoxBaseSelection =
-    isInputBoxActive && firstSelectionActiveCell
-      ? firstSelectionActiveCell
-      : firstSelection;
-
   return (
     <div
       className="luckysheet-input-box"
@@ -2549,11 +2655,11 @@ const InputBox: React.FC = () => {
         className="luckysheet-input-box-inner"
         onMouseDown={onInputBoxInnerMouseDown}
         style={
-          inputBoxBaseSelection
+          editCellBoxSize
             ? {
                 position: 'relative',
-                minWidth: inputBoxBaseSelection.width,
-                minHeight: inputBoxBaseSelection.height,
+                minWidth: editCellBoxSize.width,
+                minHeight: editCellBoxSize.height,
                 ...inputBoxStyle,
                 ...(cellEditorExtendRight
                   ? { paddingRight: 2 + CELL_EDIT_INPUT_EXTRA_RIGHT_PX }

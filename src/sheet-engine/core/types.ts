@@ -411,6 +411,8 @@ export type GlobalCache = {
     scrollTop?: number;
     scrollLeft?: number;
   };
+  /** Live column right edge (px) while dragging column resize; not in Immer context. */
+  colResizeLiveRightPx?: number;
 };
 
 export type SingleRange = { row: number[]; column: number[] };
