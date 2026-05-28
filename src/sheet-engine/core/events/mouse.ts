@@ -1,6 +1,10 @@
 import _ from 'lodash';
 import { Freezen } from '..';
-import { Context, getFlowdata } from '../context';
+import {
+  Context,
+  getFlowdata,
+  updateContextWithSheetData,
+} from '../context';
 import {
   cancelActiveImgItem,
   cancelPaintModel,
@@ -2500,6 +2504,8 @@ export function mouseRender(
       scrollX.scrollLeft -
       window.scrollX;
     if (x < rect.width + ctx.scrollLeft - 100) {
+      // Match mouseup commit (`x + 3`); stored on globalCache to avoid Immer churn.
+      globalCache.colResizeLiveRightPx = x + 3;
       const changeSizeLine = container.querySelector(
         '.fortune-change-size-line',
       );
@@ -2522,6 +2528,8 @@ export function mouseRender(
       scrollY.scrollTop -
       window.scrollY;
     if (y < rect.height + ctx.scrollTop - 20) {
+      // Match mouseup commit (`y + 3`); stored on globalCache to avoid Immer churn.
+      globalCache.rowResizeLiveBottomPx = y + 3;
       const changeSizeLine = container.querySelector(
         '.fortune-change-size-line',
       );
@@ -4200,6 +4208,7 @@ export function handleOverlayMouseUp(
 
   // 改变行高
   if (ctx.luckysheet_rows_change_size) {
+    delete globalCache.rowResizeLiveBottomPx;
     ctx.luckysheet_rows_change_size = false;
 
     // $("#fortune-change-size-line").hide();
@@ -4286,6 +4295,11 @@ export function handleOverlayMouseUp(
     if (idx == null) return;
     ctx.luckysheetfile[idx].config = ctx.config;
 
+    const flowdataAfterRowResize = getFlowdata(ctx);
+    if (flowdataAfterRowResize) {
+      updateContextWithSheetData(ctx, flowdataAfterRowResize);
+    }
+
     // server.saveParam("cg", ctx.currentSheetId, cfg.rowlen, {
     //   k: "rowlen",
     // });
@@ -4301,6 +4315,7 @@ export function handleOverlayMouseUp(
 
   // 改变列宽
   if (ctx.luckysheet_cols_change_size) {
+    delete globalCache.colResizeLiveRightPx;
     ctx.luckysheet_cols_change_size = false;
 
     const { scrollLeft } = ctx;
@@ -4389,6 +4404,11 @@ export function handleOverlayMouseUp(
     const idx = getSheetIndex(ctx, ctx.currentSheetId);
     if (idx == null) return;
     ctx.luckysheetfile[idx].config = ctx.config;
+
+    const flowdataAfterColResize = getFlowdata(ctx);
+    if (flowdataAfterColResize) {
+      updateContextWithSheetData(ctx, flowdataAfterColResize);
+    }
 
     // server.saveParam("cg", ctx.currentSheetId, cfg.columnlen, {
     //   k: "columnlen",
@@ -5423,7 +5443,7 @@ export function handleColSizeHandleMouseDown(
   cancelActiveImgItem(ctx, globalCache);
   // }
 
-  ctx.luckysheetCellUpdate = [];
+  // Keep in-cell edit open while resizing (do not clear luckysheetCellUpdate).
 
   // let mouse = mouseposition(event.pageX, event.pageY);
   const { scrollLeft } = ctx;
@@ -5439,8 +5459,10 @@ export function handleColSizeHandleMouseDown(
   const col = col_location[1];
   const col_index = col_location[2];
 
+  delete globalCache.colResizeLiveRightPx;
   ctx.luckysheet_cols_change_size = true;
   ctx.luckysheet_scroll_status = true;
+  globalCache.colResizeLiveRightPx = col;
   const changeSizeLine = workbookContainer.querySelector(
     '.fortune-change-size-line',
   );
@@ -5556,7 +5578,7 @@ export function handleRowSizeHandleMouseDown(
     israngeseleciton(ctx)
   )
     return;
-  ctx.luckysheetCellUpdate = [];
+  // Keep in-cell edit open while resizing (do not clear luckysheetCellUpdate).
 
   // let mouse = mouseposition(event.pageX, event.pageY);
   const { scrollLeft } = ctx;
@@ -5572,8 +5594,10 @@ export function handleRowSizeHandleMouseDown(
   const row = row_location[1];
   const row_index = row_location[2];
 
+  delete globalCache.rowResizeLiveBottomPx;
   ctx.luckysheet_rows_change_size = true;
   ctx.luckysheet_scroll_status = true;
+  globalCache.rowResizeLiveBottomPx = row;
   const changeSizeLine = workbookContainer.querySelector(
     '.fortune-change-size-line',
   );
