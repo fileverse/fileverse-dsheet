@@ -1,4 +1,4 @@
-import React, { useCallback, useContext, useEffect, useRef } from 'react';
+import React, { useContext, useEffect, useRef } from 'react';
 import {
   getFlowdata,
   onCommentBoxMoveStart,
@@ -7,6 +7,15 @@ import {
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext from '../../context';
+
+const POINTER_CLICK_MAX_MOVE_PX = 5;
+
+function isScrollInteractionTarget(target: Node | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return !!target.closest(
+    '.luckysheet-scrollbar-x, .luckysheet-scrollbar-y, .luckysheet-scrollbar-ltr',
+  );
+}
 
 const NotationBoxes: React.FC = () => {
   const { context, setContext, refs, settings } = useContext(WorkbookContext);
@@ -31,75 +40,111 @@ const NotationBoxes: React.FC = () => {
     }
   }, [flowdata, setContext]);
 
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mouseOverCommentBoxRef = useRef<boolean>(false);
-  const focusInsideCommentBoxRef = useRef<boolean>(false);
-
-  const cancelDismiss = useCallback(() => {
-    if (dismissTimerRef.current) {
-      clearTimeout(dismissTimerRef.current);
-      dismissTimerRef.current = null;
-    }
-  }, []);
-
-  const scheduleDismiss = useCallback(() => {
-    if (mouseOverCommentBoxRef.current || focusInsideCommentBoxRef.current) {
-      return;
-    }
-    if (dismissTimerRef.current) {
-      clearTimeout(dismissTimerRef.current);
-    }
-    dismissTimerRef.current = setTimeout(() => {
-      dismissTimerRef.current = null;
-      setContext((draft) => {
-        draft.editingCommentBox = undefined;
-      });
-    }, 2000);
-  }, [setContext]);
+  const commentBoxElementsByRcRef = useRef<Record<string, HTMLDivElement | null>>(
+    {},
+  );
 
   useEffect(() => {
-    if (!context.editingCommentBox) {
-      cancelDismiss();
-      return;
-    }
-    scheduleDismiss();
-  }, [context.editingCommentBox, scheduleDismiss, cancelDismiss]);
-
-  useEffect(() => () => cancelDismiss(), [cancelDismiss]);
-
-  useEffect(() => {
-    if (!context.editingCommentBox) return;
+    if (!context.editingCommentBox && !context.hoveredCommentBox) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      cancelDismiss();
       setContext((draft) => {
         draft.editingCommentBox = undefined;
+        draft.hoveredCommentBox = undefined;
       });
       e.stopPropagation();
     };
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [context.editingCommentBox, setContext, cancelDismiss]);
+  }, [context.editingCommentBox, context.hoveredCommentBox, setContext]);
+
+  useEffect(() => {
+    if (!context.editingCommentBox && !context.hoveredCommentBox) return;
+
+    let pendingOutsidePointer = false;
+    let downX = 0;
+    let downY = 0;
+
+    const isInsideCommentBox = (target: Node | null) => {
+      if (!target) return false;
+      return Object.values(commentBoxElementsByRcRef.current).some((box) =>
+        box?.contains(target),
+      );
+    };
+
+    const dismissCommentBoxes = () => {
+      setContext((draft) => {
+        draft.editingCommentBox = undefined;
+        draft.hoveredCommentBox = undefined;
+      });
+    };
+
+    const onPointerDownCapture = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (
+        !target ||
+        isInsideCommentBox(target) ||
+        isScrollInteractionTarget(target)
+      ) {
+        pendingOutsidePointer = false;
+        return;
+      }
+
+      pendingOutsidePointer = true;
+      downX = e.clientX;
+      downY = e.clientY;
+    };
+
+    const onPointerUpCapture = (e: PointerEvent) => {
+      if (!pendingOutsidePointer) return;
+      pendingOutsidePointer = false;
+
+      const target = e.target as Node | null;
+      if (isInsideCommentBox(target) || isScrollInteractionTarget(target)) {
+        return;
+      }
+
+      const dx = e.clientX - downX;
+      const dy = e.clientY - downY;
+      if (
+        dx * dx + dy * dy >
+        POINTER_CLICK_MAX_MOVE_PX * POINTER_CLICK_MAX_MOVE_PX
+      ) {
+        return;
+      }
+
+      dismissCommentBoxes();
+    };
+
+    window.addEventListener('pointerdown', onPointerDownCapture, true);
+    window.addEventListener('pointerup', onPointerUpCapture, true);
+    window.addEventListener('pointercancel', onPointerUpCapture, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDownCapture, true);
+      window.removeEventListener('pointerup', onPointerUpCapture, true);
+      window.removeEventListener('pointercancel', onPointerUpCapture, true);
+    };
+  }, [context.editingCommentBox, context.hoveredCommentBox, setContext]);
 
   const handleMouseDownEvent =
     (r: number, c: number, rc: string, commentId: string) =>
-    (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-      const { nativeEvent } = e;
-      // @ts-ignore
-      setContext((draftContext) => {
-        if (flowdata) {
-          setEditingComment(draftContext, flowdata, r, c);
-        }
-      });
-      onCommentBoxMoveStart(
-        context,
-        refs.globalCache,
-        nativeEvent,
-        { r, c, rc },
-        commentId,
-      );
-      e.stopPropagation();
-    };
+      (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+        const { nativeEvent } = e;
+        // @ts-ignore
+        setContext((draftContext) => {
+          if (flowdata) {
+            setEditingComment(draftContext, flowdata, r, c);
+          }
+        });
+        onCommentBoxMoveStart(
+          context,
+          refs.globalCache,
+          nativeEvent,
+          { r, c, rc },
+          commentId,
+        );
+        e.stopPropagation();
+      };
   return (
     <div id="luckysheet-postil-showBoxs">
       {_.concat(
@@ -129,6 +174,9 @@ const NotationBoxes: React.FC = () => {
             />
             <div
               id={commentId}
+              ref={(el) => {
+                commentBoxElementsByRcRef.current[rc] = el;
+              }}
               style={{
                 position: 'absolute',
                 left: left - 17,
@@ -139,47 +187,6 @@ const NotationBoxes: React.FC = () => {
               onMouseDown={(e) => {
                 e.stopPropagation();
               }}
-              onMouseEnter={
-                isEditing
-                  ? () => {
-                      mouseOverCommentBoxRef.current = true;
-                      cancelDismiss();
-                    }
-                  : undefined
-              }
-              onMouseLeave={
-                isEditing
-                  ? () => {
-                      mouseOverCommentBoxRef.current = false;
-                      if (!focusInsideCommentBoxRef.current) {
-                        scheduleDismiss();
-                      }
-                    }
-                  : undefined
-              }
-              onFocus={
-                isEditing
-                  ? () => {
-                      focusInsideCommentBoxRef.current = true;
-                      cancelDismiss();
-                    }
-                  : undefined
-              }
-              onBlur={
-                isEditing
-                  ? (e) => {
-                      if (
-                        e.currentTarget.contains(e.relatedTarget as Node | null)
-                      ) {
-                        return;
-                      }
-                      focusInsideCommentBoxRef.current = false;
-                      if (!mouseOverCommentBoxRef.current) {
-                        scheduleDismiss();
-                      }
-                    }
-                  : undefined
-              }
             >
               {/* <div className="luckysheet-postil-dialog-move">
                 {["t", "r", "b", "l"].map((v) => (

@@ -1,5 +1,5 @@
 import { RefObject, useContext, useEffect } from 'react';
-import { removeEditingComment, mouseRender } from '@sheet-engine/core';
+import { mouseRender } from '@sheet-engine/core';
 import WorkbookContext from '../../context';
 
 export const useSmoothScroll = (
@@ -50,9 +50,6 @@ export const useSmoothScroll = (
     }
 
     function handleWheelEvent(event: WheelEvent) {
-      setContext((ctx) => {
-        removeEditingComment(ctx, refs.globalCache);
-      });
       const isPointerInSearchDialog =
         !!refs?.globalCache?.searchDialog?.mouseEnter;
       const hasFilterContextMenuOpen = context.filterContextMenu != null;
