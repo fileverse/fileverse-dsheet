@@ -62,7 +62,10 @@ export const useEditorSync = (
       await persistenceRef.current.destroy();
     }
 
-    persistenceRef.current = new IndexeddbPersistence(dsheetId, ydocRef.current);
+    persistenceRef.current = new IndexeddbPersistence(
+      dsheetId,
+      ydocRef.current,
+    );
 
     persistenceRef.current.once('synced', () => {
       setSyncStatus('synced');
@@ -70,9 +73,11 @@ export const useEditorSync = (
 
       // Connect to collab server after IDB has replayed local history
       if (collabEnabled && collaboration?.enabled) {
-        connect(
-          (collaboration as Extract<CollaborationProps, { enabled: true }>).connection,
-        );
+        const collabFull = collaboration as Extract<
+          CollaborationProps,
+          { enabled: true }
+        >;
+        connect(collabFull.connection);
       }
     });
 
@@ -98,7 +103,10 @@ export const useEditorSync = (
       try {
         initialiseEditorIndexedDB();
       } catch (error) {
-        console.error('[DSheet] Error setting up IndexedDB persistence:', error);
+        console.error(
+          '[DSheet] Error setting up IndexedDB persistence:',
+          error,
+        );
         setSyncStatus('error');
       }
     } else {
@@ -108,7 +116,8 @@ export const useEditorSync = (
       // No IDB — connect to collab directly
       if (collabEnabled && collaboration?.enabled) {
         connect(
-          (collaboration as Extract<CollaborationProps, { enabled: true }>).connection,
+          (collaboration as Extract<CollaborationProps, { enabled: true }>)
+            .connection,
         );
       }
     }
@@ -125,6 +134,23 @@ export const useEditorSync = (
       isSyncedRef.current = false;
     };
   }, [dsheetId, enableIndexeddbSync, isReadOnly]);
+
+  // Set local awareness user state once awareness is initialised
+  useEffect(() => {
+    if (!awareness || !collabEnabled || !collaboration?.enabled) return;
+    const session = (
+      collaboration as Extract<CollaborationProps, { enabled: true }>
+    ).session;
+    awareness.setLocalStateField('user', {
+      name: session.username,
+      color:
+        session.color ??
+        '#' +
+        Math.floor(Math.random() * 0xffffff)
+          .toString(16)
+          .padStart(6, '0'),
+    });
+  }, [awareness, collabEnabled]);
 
   return {
     ydocRef,

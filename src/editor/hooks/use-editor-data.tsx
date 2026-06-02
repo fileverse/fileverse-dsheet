@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Sheet } from '@sheet-engine/react';
 import { WorkbookInstance } from '@sheet-engine/react';
@@ -33,6 +34,7 @@ export const useEditorData = (
   liveQueryRefreshRate?: number,
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   allowComments?: boolean,
+  hasCollabContentInitialised?: boolean,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -148,10 +150,10 @@ export const useEditorData = (
                   if (cell) {
                     const comment =
                       (commentData as any)?.[
-                      `${sheetKey}_${rowIndex}_${colIndex}`
+                        `${sheetKey}_${rowIndex}_${colIndex}`
                       ] ??
                       (commentData as any)?.[
-                      `${fileIndex}_${rowIndex}_${colIndex}`
+                        `${fileIndex}_${rowIndex}_${colIndex}`
                       ];
                     if (comment) {
                       cell.ps = allowComments
@@ -211,6 +213,41 @@ export const useEditorData = (
     allowComments,
     syncStatus,
   ]);
+
+  // Initialize sheet data once Socket.IO collab sync reaches 'ready' for the first time.
+  // The ydoc already contains the merged server state at this point.
+  useEffect(() => {
+    if (!hasCollabContentInitialised || !ydocRef.current || !dsheetId) return;
+    if (dataInitialized.current) return;
+
+    try {
+      const sheetArray = ydocRef.current.getArray(dsheetId);
+      migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
+
+      // @ts-ignore
+      const plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map>);
+      currentDataRef.current = plain;
+      initialiseLiveQueryData(plain);
+
+      const dataBlockList: { [key: string]: any } = {};
+      plain.forEach((sheet: Sheet) => {
+        if (sheet?.id && sheet?.dataBlockCalcFunction) {
+          dataBlockList[sheet.id] = { ...sheet.dataBlockCalcFunction };
+        }
+      });
+      // @ts-ignore
+      setDataBlockCalcFunction?.(dataBlockList);
+
+      dataInitialized.current = true;
+      setIsDataLoaded(true);
+
+      if (setForceSheetRender) {
+        setForceSheetRender((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error('[DSheet] Error initialising collab sheet data:', error);
+    }
+  }, [hasCollabContentInitialised]);
 
   // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
   useEffect(() => {

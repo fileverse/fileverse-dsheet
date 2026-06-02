@@ -13,6 +13,7 @@ import {
   getReadOnlyCustomToolbarItems,
 } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
+import { useCollabAwareness } from '../hooks/use-collab-awareness';
 import {
   afterUpdateCell,
   SmartContractQueryHandler,
@@ -124,7 +125,10 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     updateDocumentTitle,
     handleLiveQuery,
     setIsDataLoaded,
+    awareness,
   } = useEditor();
+
+  useCollabAwareness(awareness, sheetEditorRef);
 
   const onboardingLsKey =
     onboardingCompleteLocalStorageKey ?? 'onboardingComplete';
@@ -432,6 +436,13 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           afterColRowChanges: handleAfterColRowChanges,
           afterShowGridLinesChange: () => {
             syncCurrentSheetField(syncContext, 'showGridLines');
+          },
+          afterSelectionChange: (sheetId: string, selection: import('../../sheet-engine/core/types').Selection) => {
+            if (!awareness) return;
+            const r = selection.row_focus ?? selection.row?.[0];
+            const c = selection.column_focus ?? selection.column?.[0];
+            if (r == null || c == null) return;
+            awareness.setLocalStateField('cell', { r, c, sheetId });
           },
         }}
         onDuneChartEmbed={onDuneChartEmbed}

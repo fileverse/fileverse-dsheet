@@ -29,6 +29,7 @@ export interface CollabConnectionConfig {
 /** Session metadata — changes to these update awareness, NOT reconnect */
 export interface CollabSessionMeta {
   username: string;
+  color?: string;
   isEns?: boolean;
 }
 

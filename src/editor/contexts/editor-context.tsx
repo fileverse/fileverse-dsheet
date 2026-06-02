@@ -222,7 +222,13 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     hasCollabContentInitialised,
     awareness,
     terminateSession,
-  } = useEditorSync(dsheetId, enableIndexeddbSync, isReadOnly, collaboration, onCollabUpdate);
+  } = useEditorSync(
+    dsheetId,
+    enableIndexeddbSync,
+    isReadOnly,
+    collaboration,
+    onCollabUpdate,
+  );
 
   useMemo(() => {
     if (!editorStateRef) return;
