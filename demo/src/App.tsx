@@ -33,15 +33,15 @@ function App() {
     return id;
   });
 
-  // --- Persistence state ---
+  // --- Persistence — use ref so saves don't trigger App re-render ---
   const [title, setTitle] = useState('Untitled');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const isSavedRef = useRef(false);
 
   const handleSheetChange = useCallback(
     (_updateData: unknown, encodedUpdate?: string) => {
       if (encodedUpdate) {
         localStorage.setItem(`dsheet-content-${dsheetId}`, encodedUpdate);
-        setLastSavedAt(Date.now());
+        isSavedRef.current = true;
       }
     },
     [dsheetId],
@@ -126,7 +126,6 @@ function App() {
     setCollabEnabled(true);
 
     const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${newCollabId}#key=${privateKeyBase64}`;
-
     await navigator.clipboard.writeText(inviteUrl).catch(() => {});
     console.log('[DSheet] Collaboration invite URL:', inviteUrl);
 
@@ -165,9 +164,7 @@ function App() {
         contractAddress: collabExtras.contractAddress,
         ownerAddress: collabExtras.ownerAddress,
       },
-      session: {
-        username,
-      },
+      session: { username },
       services: {
         commitToStorage: undefined,
         fetchFromStorage: undefined,
@@ -176,58 +173,28 @@ function App() {
         onStateChange: (state: CollabState) => {
           console.log('[DSheet] collab state:', state);
           if (state.status === 'syncing') {
-            setCollabStatus(
-              state.hasUnmergedPeerUpdates ? 'merging' : 'syncing',
-            );
+            setCollabStatus(state.hasUnmergedPeerUpdates ? 'merging' : 'syncing');
           } else {
             setCollabStatus(state.status);
           }
-
           if (state.status === 'syncing' && state.hasUnmergedPeerUpdates) {
-            toast({
-              title: 'Syncing new changes from peers',
-              variant: 'info',
-              toastType: 'mini',
-              iconType: 'icon',
-            });
+            toast({ title: 'Syncing new changes from peers', variant: 'info', toastType: 'mini', iconType: 'icon' });
           } else if (state.status === 'reconnecting') {
-            toast({
-              title: `Reconnecting (${state.attempt}/${state.maxAttempts})...`,
-              variant: 'warning',
-              toastType: 'mini',
-              iconType: 'icon',
-            });
+            toast({ title: `Reconnecting (${state.attempt}/${state.maxAttempts})...`, variant: 'warning', toastType: 'mini', iconType: 'icon' });
           } else if (state.status === 'error') {
-            toast({
-              title: 'Collaboration error',
-              description: state.error.message,
-              variant: 'error',
-              iconType: 'icon',
-            });
+            toast({ title: 'Collaboration error', description: state.error.message, variant: 'error', iconType: 'icon' });
           }
         },
         onError: (error) => {
           console.error('[DSheet] collab error:', error);
-          toast({
-            title: 'Collaboration error',
-            description: error.message,
-            variant: 'error',
-            iconType: 'icon',
-          });
+          toast({ title: 'Collaboration error', description: error.message, variant: 'error', iconType: 'icon' });
         },
       },
     };
-  }, [
-    collabEnabled,
-    collaborationId,
-    collabRoomKey,
-    collabIsOwner,
-    collabExtras,
-    username,
-  ]);
+  }, [collabEnabled, collaborationId, collabRoomKey, collabIsOwner, collabExtras, username]);
 
-  // --- Navbar ---
-  const renderNavbar = (): JSX.Element => {
+  // --- Navbar (memoized — stable reference, no re-renders from collab/save state) ---
+  const renderNavbar = useCallback((): JSX.Element => {
     return (
       <>
         <div className="flex items-center gap-[12px]">
@@ -246,7 +213,7 @@ function App() {
             icon="BadgeCheck"
             className="h-6 rounded !border !color-border-default color-text-secondary text-[12px] font-normal hidden xl:flex"
           >
-            {lastSavedAt ? 'Saved' : 'Local only'}
+            Saved locally
           </Tag>
 
           {collabEnabled && (
@@ -266,16 +233,10 @@ function App() {
               key="navbar-more-actions"
               align="center"
               sideOffset={10}
-              anchorTrigger={
-                <IconButton icon={'EllipsisVertical'} variant="ghost" size="md" />
-              }
+              anchorTrigger={<IconButton icon={'EllipsisVertical'} variant="ghost" size="md" />}
               content={
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3">
-                  <Button
-                    variant={'ghost'}
-                    onClick={() => {}}
-                    className="flex justify-start gap-2"
-                  >
+                  <Button variant={'ghost'} onClick={() => {}} className="flex justify-start gap-2">
                     <LucideIcon name="Share2" size="sm" />
                     Share
                   </Button>
@@ -283,26 +244,16 @@ function App() {
               }
             />
           ) : (
-            <IconButton
-              variant={'ghost'}
-              icon="Share2"
-              className="flex xl:hidden"
-              size="md"
-            />
+            <IconButton variant={'ghost'} icon="Share2" className="flex xl:hidden" size="md" />
           )}
 
-          {/* Collaboration toggle */}
           {!collabEnabled ? (
             <IconButton
               variant={'ghost'}
               disabled={!isOwnerEdSecretSet}
               icon="Users"
               size="md"
-              title={
-                isOwnerEdSecretSet
-                  ? 'Start collaboration'
-                  : 'Set VITE_OWNER_ED_SECRET in demo/.env to enable'
-              }
+              title={isOwnerEdSecretSet ? 'Start collaboration' : 'Set VITE_OWNER_ED_SECRET in demo/.env to enable'}
               onClick={onStartCollaboration}
             />
           ) : (
@@ -310,14 +261,7 @@ function App() {
               key="collab-actions"
               align="center"
               sideOffset={10}
-              anchorTrigger={
-                <IconButton
-                  icon={'Users'}
-                  variant="ghost"
-                  size="md"
-                  title={`Collab: ${collabStatus}`}
-                />
-              }
+              anchorTrigger={<IconButton icon={'Users'} variant="ghost" size="md" title={`Collab: ${collabStatus}`} />}
               content={
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3 min-w-[180px]">
                   <p className="text-xs text-gray-500 px-2 py-1">
@@ -332,12 +276,7 @@ function App() {
                       onClick={async () => {
                         const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${collaborationId}#key=${collabRoomKey}`;
                         await navigator.clipboard.writeText(inviteUrl).catch(() => {});
-                        toast({
-                          title: 'Invite link copied',
-                          variant: 'success',
-                          toastType: 'mini',
-                          iconType: 'icon',
-                        });
+                        toast({ title: 'Invite link copied', variant: 'success', toastType: 'mini', iconType: 'icon' });
                       }}
                       className="flex justify-start gap-2"
                     >
@@ -358,12 +297,7 @@ function App() {
             />
           )}
 
-          <Button
-            toggleLeftIcon={true}
-            leftIcon="Share2"
-            variant={'ghost'}
-            className="!min-w-[90px] !px-0 hidden xl:flex"
-          >
+          <Button toggleLeftIcon={true} leftIcon="Share2" variant={'ghost'} className="!min-w-[90px] !px-0 hidden xl:flex">
             Share
           </Button>
           <div className="flex gap-2 px-2 justify-center items-center">
@@ -376,7 +310,7 @@ function App() {
         </div>
       </>
     );
-  };
+  }, [title, collabEnabled, collabStatus, collabIsOwner, collaborationId, collabRoomKey, username, isMediaMax1280px, isOwnerEdSecretSet]);
 
   const [isNewSheet, setIsNewSheet] = useState(false);
 
@@ -386,30 +320,30 @@ function App() {
   }, []);
 
   // @ts-expect-error demo proxy
-  window.NEXT_PUBLIC_PROXY_BASE_URL =
-    'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
-
-  const EditorPage = () => (
-    <div>
-      <Toaster position="bottom-right" duration={3000} />
-      <DSheetEditor
-        isReadOnly={false}
-        renderNavbar={renderNavbar}
-        dsheetId={dsheetId}
-        onChange={handleSheetChange}
-        sheetEditorRef={sheetEditorRef}
-        enableIndexeddbSync={true}
-        isAuthorized={false}
-        isNewSheet={isNewSheet}
-        collaboration={collaboration}
-      />
-    </div>
-  );
+  window.NEXT_PUBLIC_PROXY_BASE_URL = 'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
 
   return (
     <Router>
       <Routes>
-        <Route path="*" element={<EditorPage />} />
+        <Route
+          path="*"
+          element={
+            <div>
+              <Toaster position="bottom-right" duration={3000} />
+              <DSheetEditor
+                isReadOnly={false}
+                renderNavbar={renderNavbar}
+                dsheetId={dsheetId}
+                onChange={handleSheetChange}
+                sheetEditorRef={sheetEditorRef}
+                enableIndexeddbSync={true}
+                isAuthorized={false}
+                isNewSheet={isNewSheet}
+                collaboration={collaboration}
+              />
+            </div>
+          }
+        />
       </Routes>
     </Router>
   );

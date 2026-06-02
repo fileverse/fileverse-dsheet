@@ -55,6 +55,19 @@ export const useEditorSync = (
     ignoredOrigins: [persistenceRef],
   });
 
+  // Stable ref to connect so the collab effect doesn't recreate on every render
+  const connectRef = useRef(connect);
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  // Always-current refs for collab state — read inside async/event callbacks
+  // to avoid stale closures (e.g. once('synced') capturing collab=false at mount)
+  const collabEnabledRef = useRef(collabEnabled);
+  const collaborationRef = useRef(collaboration);
+  collabEnabledRef.current = collabEnabled;
+  collaborationRef.current = collaboration;
+
   const initialiseEditorIndexedDB = useCallback(async () => {
     if (!ydocRef.current) return;
 
@@ -62,22 +75,18 @@ export const useEditorSync = (
       await persistenceRef.current.destroy();
     }
 
-    persistenceRef.current = new IndexeddbPersistence(
-      dsheetId,
-      ydocRef.current,
-    );
+    persistenceRef.current = new IndexeddbPersistence(dsheetId, ydocRef.current);
 
     persistenceRef.current.once('synced', () => {
       setSyncStatus('synced');
       isSyncedRef.current = true;
 
-      // Connect to collab server after IDB has replayed local history
-      if (collabEnabled && collaboration?.enabled) {
-        const collabFull = collaboration as Extract<
-          CollaborationProps,
-          { enabled: true }
-        >;
-        connect(collabFull.connection);
+      // Read from refs — not from the closure — so we always get the value
+      // at fire time, not at callback-creation time. Fixes the collaborator
+      // race where collabEnabled becomes true after mount but before IDB sync.
+      if (collabEnabledRef.current && collaborationRef.current?.enabled) {
+        const collabFull = collaborationRef.current as Extract<CollaborationProps, { enabled: true }>;
+        connectRef.current(collabFull.connection);
       }
     });
 
@@ -85,8 +94,14 @@ export const useEditorSync = (
       console.error('[DSheet] IndexedDB persistence error:', err);
       setSyncStatus('error');
     });
-  }, [dsheetId, collabEnabled, connect]);
+  // Intentionally excludes collabEnabled/connect — changing those must NOT
+  // destroy the ydoc. The separate collabEnabled effect handles late connects.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dsheetId]);
 
+  // Main effect: only runs when dsheetId/enableIndexeddbSync/isReadOnly changes.
+  // Does NOT include collabEnabled — starting/stopping collaboration must not
+  // destroy and recreate the ydoc (data loss).
   useEffect(() => {
     if (!ydocRef.current) {
       ydocRef.current = new Y.Doc();
@@ -103,23 +118,12 @@ export const useEditorSync = (
       try {
         initialiseEditorIndexedDB();
       } catch (error) {
-        console.error(
-          '[DSheet] Error setting up IndexedDB persistence:',
-          error,
-        );
+        console.error('[DSheet] Error setting up IndexedDB persistence:', error);
         setSyncStatus('error');
       }
     } else {
       setSyncStatus('synced');
       isSyncedRef.current = true;
-
-      // No IDB — connect to collab directly
-      if (collabEnabled && collaboration?.enabled) {
-        connect(
-          (collaboration as Extract<CollaborationProps, { enabled: true }>)
-            .connection,
-        );
-      }
     }
 
     return () => {
@@ -133,22 +137,31 @@ export const useEditorSync = (
       }
       isSyncedRef.current = false;
     };
-  }, [dsheetId, enableIndexeddbSync, isReadOnly, initialiseEditorIndexedDB]);
+  }, [dsheetId, enableIndexeddbSync, isReadOnly]);
+
+  // Separate effect: connect to collab when collaboration is enabled AFTER the
+  // ydoc/IDB is already synced (e.g. user clicks "Start Collaboration").
+  // Does NOT touch the ydoc — just calls connect() on the live ydoc.
+  useEffect(() => {
+    if (!collabEnabled || !collaboration?.enabled) return;
+    // If IDB hasn't synced yet, the once('synced') handler above will connect.
+    // Only call connect() here when IDB is already synced (late enable).
+    if (!isSyncedRef.current) return;
+
+    const collabFull = collaboration as Extract<CollaborationProps, { enabled: true }>;
+    connectRef.current(collabFull.connection);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collabEnabled]);
 
   // Set local awareness user state once awareness is initialised
   useEffect(() => {
     if (!awareness || !collabEnabled || !collaboration?.enabled) return;
-    const session = (
-      collaboration as Extract<CollaborationProps, { enabled: true }>
-    ).session;
+    const session = (collaboration as Extract<CollaborationProps, { enabled: true }>).session;
     awareness.setLocalStateField('user', {
       name: session.username,
       color:
         session.color ??
-        '#' +
-          Math.floor(Math.random() * 0xffffff)
-            .toString(16)
-            .padStart(6, '0'),
+        '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'),
     });
   }, [awareness, collabEnabled]);
 
