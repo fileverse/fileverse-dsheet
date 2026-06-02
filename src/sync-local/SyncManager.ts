@@ -199,7 +199,7 @@ export class SyncManager {
       await this.syncLatestCommit(initialUpdate);
 
       // Yield to allow React to render the unmerged-updates toast
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Verify socket is still alive after sync
       if (!this.socketClient?.isConnected) {
@@ -314,17 +314,17 @@ export class SyncManager {
       ?.sendUpdate({ update: encrypted })
       .then((response) => {
         if (!response?.status) {
-          console.error(
-            'SyncManager: server rejected update',
-            response?.error,
-          );
+          console.error('SyncManager: server rejected update', response?.error);
           return;
         }
         const updateId = response?.data?.id;
         if (updateId) {
           this.uncommittedUpdatesIdList.push(updateId);
         }
-        if (this.isOwner && this.uncommittedUpdatesIdList.length >= COMMIT_THRESHOLD) {
+        if (
+          this.isOwner &&
+          this.uncommittedUpdatesIdList.length >= COMMIT_THRESHOLD
+        ) {
           this.processCommit().catch((err) => {
             console.error('SyncManager: auto-commit failed', err);
           });
@@ -624,16 +624,11 @@ export class SyncManager {
       // clientID after refresh).  The pre-sync initialUpdate would be
       // stale — it lacks the server content that was just merged in,
       // causing peers to miss parent items for subsequent typing ops.
-      const postSyncUpdate = fromUint8Array(
-        Y.encodeStateAsUpdate(this.ydoc),
-      );
+      const postSyncUpdate = fromUint8Array(Y.encodeStateAsUpdate(this.ydoc));
 
       // Owner: commit local contents if enough uncommitted updates
       if (this.isOwner) {
-        await this.commitLocalContents(
-          uncommittedChangesId,
-          postSyncUpdate,
-        );
+        await this.commitLocalContents(uncommittedChangesId, postSyncUpdate);
       } else {
         await this.broadcastLocalContents(postSyncUpdate);
       }
@@ -761,7 +756,10 @@ export class SyncManager {
         await this.processNextUpdate();
 
         // If owner and enough uncommitted updates, commit
-        if (this.isOwner && this.uncommittedUpdatesIdList.length >= COMMIT_THRESHOLD) {
+        if (
+          this.isOwner &&
+          this.uncommittedUpdatesIdList.length >= COMMIT_THRESHOLD
+        ) {
           await this.processCommit();
         }
       }
@@ -917,6 +915,7 @@ export class SyncManager {
     if (!this.ydoc) return;
 
     let update: Uint8Array;
+
     try {
       update = cryptoUtils.decryptData(this.roomKeyBytes!, encrypted);
     } catch (err) {
@@ -925,6 +924,7 @@ export class SyncManager {
     }
 
     try {
+      console.log('applyRemoteYjsUpdate update', update);
       Y.applyUpdate(this.ydoc, update, 'remote');
     } catch (err) {
       console.error(
@@ -935,6 +935,7 @@ export class SyncManager {
     }
     try {
       if (this.onLocalUpdate && typeof this.onLocalUpdate === 'function') {
+        console.log('applyRemoteYjsUpdate onLocalUpdate', this.onLocalUpdate);
         this.onLocalUpdate(
           fromUint8Array(Y.encodeStateAsUpdate(this.ydoc)),
           fromUint8Array(update),

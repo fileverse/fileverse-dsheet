@@ -159,7 +159,6 @@ function App() {
       },
       on: {
         onStateChange: (state: CollabState) => {
-          console.log('[DSheet collab] state:', state);
           if (state.status === 'syncing') {
             setCollabStatus(state.hasUnmergedPeerUpdates ? 'merging' : 'syncing');
           } else {

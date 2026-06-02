@@ -67,7 +67,7 @@ export const useYjsSetup = ({
     ydoc: ydocRef.current!,
     services,
     callbacks,
-    onLocalUpdate: (_fullState: string, _chunk: string) => {
+    onLocalUpdate: () => {
       onRemoteUpdateRef.current?.();
     },
     ignoredOrigins: [persistenceRef],
@@ -80,7 +80,8 @@ export const useYjsSetup = ({
     if (collabState.status !== 'idle') return;
 
     connect(
-      (collaboration as Extract<CollaborationProps, { enabled: true }>).connection,
+      (collaboration as Extract<CollaborationProps, { enabled: true }>)
+        .connection,
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collabEnabled, syncStatus]);

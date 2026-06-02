@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Sheet } from '@sheet-engine/react';
 import { WorkbookInstance } from '@sheet-engine/react';
+import { jfrefreshgrid } from '@sheet-engine/core';
 import { toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
@@ -8,6 +9,56 @@ import { useLiveQuery } from './live-query/use-live-query';
 import { DataBlockApiKeyHandlerType } from '../types';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 import { migrateSheetArrayIfNeeded } from '../utils/migrate-new-yjs';
+
+type CelldataEntry = { r: number; c: number; v: unknown };
+
+/**
+ * Patch sparse Yjs celldata into an existing sheet snapshot (keeps the live `data` grid).
+ * Applying sparse `celldata` alone via updateSheet() rebuilds the matrix from only patched
+ * cells and clears everything else.
+ */
+function mergeYdocCelldataIntoSheets(
+  baseSheets: Sheet[],
+  ydocSheets: Sheet[],
+): Sheet[] {
+  const patchesBySheetId = new Map<string, CelldataEntry[]>();
+  for (const sheet of ydocSheets) {
+    const id = sheet?.id as string | undefined;
+    if (!id || !sheet.celldata?.length) continue;
+    patchesBySheetId.set(id, sheet.celldata as CelldataEntry[]);
+  }
+  if (patchesBySheetId.size === 0) return baseSheets;
+
+  const merged = baseSheets.map((sheet) => {
+    const id = sheet?.id as string | undefined;
+    if (!id) return sheet;
+    const patches = patchesBySheetId.get(id);
+    if (!patches?.length) return sheet;
+
+    const data: unknown[][] = Array.isArray(sheet.data)
+      ? sheet.data.map((row) => (Array.isArray(row) ? [...row] : []))
+      : [];
+
+    for (const cell of patches) {
+      const { r, c, v } = cell;
+      if (typeof r !== 'number' || typeof c !== 'number') continue;
+      while (data.length <= r) data.push([]);
+      while (data[r].length <= c) data[r].push(null);
+      data[r][c] = v;
+    }
+
+    patchesBySheetId.delete(id);
+    return { ...sheet, data: data as Sheet['data'] };
+  });
+
+  for (const [id, patches] of patchesBySheetId) {
+    const ydocSheet = ydocSheets.find((s) => s.id === id);
+    if (!ydocSheet) continue;
+    merged.push(mergeYdocCelldataIntoSheets([], [ydocSheet])[0] ?? ydocSheet);
+  }
+
+  return merged;
+}
 
 /**
  * Hook for managing sheet data
@@ -238,62 +289,159 @@ export const useEditorData = (
     }
   }, [dsheetId, isReadOnly, syncStatus]);
 
-  // Attach listener for YJS data changes
-  useEffect(() => {
-    if (!ydocRef.current || !dsheetId) return;
-    const sheetArray = ydocRef.current.getArray(dsheetId);
+  /** Optional hook after remote Yjs state is applied to `currentDataRef` (e.g. portal persist). */
+  const onRemoteWorkbookAppliedRef = useRef<(() => void) | undefined>(
+    undefined,
+  );
 
-    // Update local state when YJS array changes
-    const observerCallback = (
-      _event: Y.YArrayEvent<any>,
-      transaction: Y.Transaction,
-    ) => {
-      // Only react to remote Yjs updates. Local edits are already reflected in Workbook state,
-      // and rebuilding a full plain snapshot on every local transaction is expensive.
-      if (transaction.local || isUpdatingRef.current) return;
+  /**
+   * Rebuild the plain sheet snapshot from Yjs and remount Workbook.
+   * Used for collaboration (nested celldata Y.Map edits do not fire Y.Array observers).
+   */
+  const refreshWorkbookFromRemoteYdoc = useCallback(
+    (options?: { onApplied?: () => void }) => {
+      if (options?.onApplied) {
+        onRemoteWorkbookAppliedRef.current = options.onApplied;
+      }
 
       remoteUpdateRef.current = true;
 
-      // Debounce the re-render to prevent multiple quick updates
       if (debounceTimerRef.current !== null) {
         window.clearTimeout(debounceTimerRef.current);
       }
 
       debounceTimerRef.current = window.setTimeout(() => {
-        // Keep `currentDataRef` aligned with Yjs before forcing a Workbook remount.
-        // Otherwise `EditorWorkbook` re-inits from a stale plain snapshot (e.g. formula
-        // cells cleared on import) and wipes values that were just written by recalc + ydoc.
-        const isEditingCell =
-          (sheetEditorRef.current?.getWorkbookContext?.()?.luckysheetCellUpdate
-            ?.length ?? 0) > 0;
+        const ydoc = ydocRef.current;
+        if (!ydoc || !dsheetId) {
+          debounceTimerRef.current = null;
+          return;
+        }
+
+        let ydocPlain: Sheet[] = [];
         try {
-          const plain = ySheetArrayToPlain(sheetArray as any);
-          currentDataRef.current = plain;
+          const sheetArray = ydoc.getArray(dsheetId);
+          ydocPlain = ySheetArrayToPlain(sheetArray as any);
         } catch (e) {
           console.error(
-            '[DSheet] ySheetArrayToPlain after ydoc observe failed',
+            '[DSheet] refreshWorkbookFromRemoteYdoc: ySheetArrayToPlain failed',
             e,
           );
+          debounceTimerRef.current = null;
+          return;
         }
-        // Avoid forcing a full Workbook remount while in-cell editing is active.
-        // Remounting mid-edit can temporarily re-apply stale cell styles (e.g. alignment)
-        // and cause a visible flicker.
-        if (!isEditingCell && setForceSheetRender) {
+
+        const workbook = sheetEditorRef.current;
+        const baseSheets =
+          (workbook?.getAllSheets?.() as Sheet[] | undefined) ??
+          currentDataRef.current ??
+          [];
+        const merged = mergeYdocCelldataIntoSheets(baseSheets, ydocPlain);
+        currentDataRef.current = merged;
+        initialiseLiveQueryData(merged);
+
+        let patchedViaSetCellValue = 0;
+        const canPatchCells = Boolean(
+          workbook && typeof workbook.setCellValue === 'function',
+        );
+
+        if (canPatchCells) {
+          try {
+            console.log(
+              'refreshWorkbookFromRemoteYdoc setCellValue',
+              ydocPlain,
+            );
+            for (const sheet of ydocPlain) {
+              const sheetId = sheet.id as string | undefined;
+              if (!sheetId) continue;
+              for (const cell of sheet.celldata ?? []) {
+                if (typeof cell.r !== 'number' || typeof cell.c !== 'number') {
+                  continue;
+                }
+                workbook!.setCellValue(
+                  cell.r,
+                  cell.c,
+                  cell.v,
+                  { id: sheetId },
+                  false,
+                );
+                patchedViaSetCellValue += 1;
+              }
+            }
+            const live = workbook?.getAllSheets?.() as Sheet[] | undefined;
+            if (live?.length) {
+              currentDataRef.current = live;
+            }
+            const setContext = workbook?.getWorkbookSetContext?.();
+            if (setContext) {
+              setContext((draftCtx) => {
+                try {
+                  jfrefreshgrid(draftCtx, null, undefined, false);
+                } catch {
+                  // Best-effort canvas repaint after remote cell patches.
+                }
+              });
+            }
+          } catch (e) {
+            console.error(
+              '[DSheet] refreshWorkbookFromRemoteYdoc: setCellValue patch failed',
+              e,
+            );
+            if (typeof workbook?.updateSheet === 'function') {
+              workbook.updateSheet(merged);
+            } else if (setForceSheetRender) {
+              setForceSheetRender((prev) => prev + 1);
+            }
+          }
+        } else if (typeof workbook?.updateSheet === 'function') {
+          try {
+            workbook.updateSheet(merged);
+          } catch (e) {
+            console.error(
+              '[DSheet] refreshWorkbookFromRemoteYdoc: updateSheet failed, remounting',
+              e,
+            );
+            if (setForceSheetRender) {
+              setForceSheetRender((prev) => prev + 1);
+            }
+          }
+        } else if (setForceSheetRender) {
           setForceSheetRender((prev) => prev + 1);
         }
+
+        onRemoteWorkbookAppliedRef.current?.();
+        onRemoteWorkbookAppliedRef.current = undefined;
         debounceTimerRef.current = null;
-      }, 50); // 50ms debounce
+      }, 50);
+    },
+    [
+      ydocRef,
+      dsheetId,
+      setForceSheetRender,
+      initialiseLiveQueryData,
+      sheetEditorRef,
+    ],
+  );
+
+  // React to remote collab applies (including nested celldata Y.Map changes).
+  useEffect(() => {
+    const ydoc = ydocRef.current;
+    if (!ydoc || !dsheetId) return;
+
+    const onYdocUpdate = (_update: Uint8Array, origin: unknown) => {
+      if (origin !== 'remote') return;
+      console.log('onYdocUpdate remote');
+      refreshWorkbookFromRemoteYdoc();
     };
 
-    sheetArray.observe(observerCallback);
-
+    ydoc.on('update', onYdocUpdate);
     return () => {
-      sheetArray.unobserve(observerCallback);
+      ydoc.off('update', onYdocUpdate);
       if (debounceTimerRef.current !== null) {
         window.clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
       }
     };
-  }, [ydocRef, dsheetId, setForceSheetRender, sheetEditorRef]);
+  }, [ydocRef, dsheetId, refreshWorkbookFromRemoteYdoc]);
 
   // Handle changes to the sheet
   const handleChange = useCallback(
@@ -324,5 +472,6 @@ export const useEditorData = (
     handleChange,
     handleLiveQuery,
     initialiseLiveQueryData,
+    refreshWorkbookFromRemoteYdoc,
   };
 };

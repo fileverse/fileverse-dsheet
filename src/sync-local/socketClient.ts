@@ -342,8 +342,6 @@ export class SocketClient {
       roomKey: this.roomKey,
     });
 
-    console.log('response', response);
-
     // Check statusCode FIRST — only proceed for 200
     if (response.statusCode !== 200) {
       const message =
@@ -435,6 +433,7 @@ export class SocketClient {
 
       // Server broadcast listeners
       this._socket.on('/document/content_update', (data) => {
+        console.log('document/content_update data', data);
         config.onContentUpdate(data);
       });
 

@@ -208,7 +208,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
     if (!onChange) {
-      return () => {};
+      return () => { };
     }
 
     return throttle(() => {
@@ -243,6 +243,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     handleLiveQuery,
     initialiseLiveQueryData,
     setIsDataLoaded,
+    refreshWorkbookFromRemoteYdoc,
   } = useEditorData(
     ydocRef,
     dsheetId,
@@ -261,6 +262,13 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     allowComments,
   );
 
+  const handleRemoteCollabUpdate = useCallback(() => {
+    console.log('handleRemoteCollabUpdate');
+    refreshWorkbookFromRemoteYdoc({
+      onApplied: handleOnChangePortalUpdate,
+    });
+  }, [refreshWorkbookFromRemoteYdoc, handleOnChangePortalUpdate]);
+
   // Initialize collaboration
   const {
     disconnect: disconnectCollab,
@@ -274,7 +282,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     persistenceRef,
     syncStatus,
     collaboration,
-    onRemoteUpdate: handleOnChangePortalUpdate,
+    onRemoteUpdate: handleRemoteCollabUpdate,
   });
 
   // Force re-render when data changes
