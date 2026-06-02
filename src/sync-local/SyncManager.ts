@@ -48,13 +48,13 @@ export class SyncManager {
   private readonly MAX_QUEUE_SIZE = 5;
   private _awarenessUpdateHandler:
     | ((
-        changes: {
-          added: number[];
-          updated: number[];
-          removed: number[];
-        },
-        origin: any,
-      ) => void)
+      changes: {
+        added: number[];
+        updated: number[];
+        removed: number[];
+      },
+      origin: any,
+    ) => void)
     | null = null;
 
   // --- Config (from constructor) ---
@@ -300,6 +300,7 @@ export class SyncManager {
    * ACK callback handles updateId tracking and auto-commit asynchronously.
    */
   private sendUpdateBatch(): void {
+    console.log('sendUpdateBatch updateQueue', this.updateQueue);
     if (this.updateQueue.length === 0 || !this.roomKey || !this.isConnected) {
       return;
     }
@@ -308,11 +309,15 @@ export class SyncManager {
     this.updateQueue = [];
 
     const merged = Y.mergeUpdates(updates);
+    console.log('sendUpdateBatch merged', merged);
     const encrypted = cryptoUtils.encryptData(this.roomKeyBytes!, merged);
+
+    console.log('sendUpdateBatch encrypted', encrypted);
 
     this.socketClient
       ?.sendUpdate({ update: encrypted })
       .then((response) => {
+        console.log('sendUpdateBatch response', response);
         if (!response?.status) {
           console.error('SyncManager: server rejected update', response?.error);
           return;
@@ -899,6 +904,8 @@ export class SyncManager {
       return;
     }
 
+    console.log('handleRemoteContentUpdate payload', payload);
+
     this.applyRemoteYjsUpdate(payload.data, payload.id);
 
     if (this.isOwner && !this.isProcessing && this.isReady) {
@@ -912,11 +919,14 @@ export class SyncManager {
   }
 
   private applyRemoteYjsUpdate(encrypted: string, id?: string): void {
+    console.log('applyRemoteYjsUpdate encrypted', encrypted);
     if (!this.ydoc) return;
 
     let update: Uint8Array;
     try {
       update = cryptoUtils.decryptData(this.roomKeyBytes!, encrypted);
+      console.log
+      console.log('applyRemoteYjsUpdate update', update);
     } catch (err) {
       console.warn('SyncManager: failed to decrypt update, skipping', err);
       return;
@@ -924,6 +934,7 @@ export class SyncManager {
 
     try {
       Y.applyUpdate(this.ydoc, update, 'remote');
+      console.log('applyRemoteYjsUpdate applied', update);
     } catch (err) {
       console.error(
         'SyncManager: failed to apply remote Yjs update, skipping',

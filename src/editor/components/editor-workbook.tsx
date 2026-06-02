@@ -101,7 +101,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -269,36 +269,36 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           isReadOnly
             ? allowSheetDownload
               ? getReadOnlyCustomToolbarItems({
-                  setExportDropdownOpen,
-                  handleExportToXLSX,
-                  handleExportToCSV,
-                  handleExportToJSON,
-                  sheetEditorRef,
-                  ydocRef,
-                  dsheetId,
-                  getDocumentTitle,
-                })
-              : []
-            : getCustomToolbarItems({
-                handleContentPortal: handleOnChangePortalUpdate,
-                setShowSmartContractModal,
-                getDocumentTitle,
-                updateDocumentTitle,
                 setExportDropdownOpen,
-                handleCSVUpload,
-                // @ts-ignore
-                handleXLSXUpload,
                 handleExportToXLSX,
                 handleExportToCSV,
                 handleExportToJSON,
                 sheetEditorRef,
                 ydocRef,
                 dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
+                getDocumentTitle,
               })
+              : []
+            : getCustomToolbarItems({
+              handleContentPortal: handleOnChangePortalUpdate,
+              setShowSmartContractModal,
+              getDocumentTitle,
+              updateDocumentTitle,
+              setExportDropdownOpen,
+              handleCSVUpload,
+              // @ts-ignore
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
         }
         hooks={{
           afterUpdateCell: (
@@ -392,6 +392,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             });
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
+            console.log('updateCellYdoc changes', changes);
+
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,

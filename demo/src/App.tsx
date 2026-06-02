@@ -126,7 +126,7 @@ function App() {
     setCollabEnabled(true);
 
     const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${newCollabId}&sheet=${dsheetId}#key=${privateKeyBase64}`;
-    await navigator.clipboard.writeText(inviteUrl).catch(() => {});
+    await navigator.clipboard.writeText(inviteUrl).catch(() => { });
     console.log('[DSheet] Collaboration invite URL:', inviteUrl);
 
     toast({
@@ -193,6 +193,9 @@ function App() {
     };
   }, [collabEnabled, collaborationId, collabRoomKey, collabIsOwner, collabExtras, username]);
 
+
+  console.log('collaboration', { collaboration });
+
   // --- Navbar (memoized — stable reference, no re-renders from collab/save state) ---
   const renderNavbar = useCallback((): JSX.Element => {
     return (
@@ -218,9 +221,8 @@ function App() {
 
           {collabEnabled && (
             <Tag
-              className={`h-6 rounded hidden xl:flex text-[12px] font-normal ${
-                collabStatus === 'ready' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-              }`}
+              className={`h-6 rounded hidden xl:flex text-[12px] font-normal ${collabStatus === 'ready' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                }`}
             >
               {collabStatus === 'ready' ? '● Live' : `● ${collabStatus}`}
             </Tag>
@@ -236,7 +238,7 @@ function App() {
               anchorTrigger={<IconButton icon={'EllipsisVertical'} variant="ghost" size="md" />}
               content={
                 <div className="flex flex-col gap-1 p-2 w-fit shadow-elevation-3">
-                  <Button variant={'ghost'} onClick={() => {}} className="flex justify-start gap-2">
+                  <Button variant={'ghost'} onClick={() => { }} className="flex justify-start gap-2">
                     <LucideIcon name="Share2" size="sm" />
                     Share
                   </Button>
@@ -275,7 +277,7 @@ function App() {
                       variant={'ghost'}
                       onClick={async () => {
                         const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${collaborationId}&sheet=${dsheetId}#key=${collabRoomKey}`;
-                        await navigator.clipboard.writeText(inviteUrl).catch(() => {});
+                        await navigator.clipboard.writeText(inviteUrl).catch(() => { });
                         toast({ title: 'Invite link copied', variant: 'success', toastType: 'mini', iconType: 'icon' });
                       }}
                       className="flex justify-start gap-2"

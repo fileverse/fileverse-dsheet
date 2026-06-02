@@ -50,6 +50,8 @@ export const useEditorSync = (
     services: collabServices,
     callbacks: collabCallbacks,
     onLocalUpdate: (fullState, chunk) => {
+      console.log('onLocalUpdate fullState', fullState);
+      console.log('onLocalUpdate chunk', chunk);
       onCollabUpdateRef.current?.(fullState, chunk);
     },
     ignoredOrigins: [persistenceRef],
@@ -94,9 +96,9 @@ export const useEditorSync = (
       console.error('[DSheet] IndexedDB persistence error:', err);
       setSyncStatus('error');
     });
-  // Intentionally excludes collabEnabled/connect — changing those must NOT
-  // destroy the ydoc. The separate collabEnabled effect handles late connects.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally excludes collabEnabled/connect — changing those must NOT
+    // destroy the ydoc. The separate collabEnabled effect handles late connects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dsheetId]);
 
   // Main effect: only runs when dsheetId/enableIndexeddbSync/isReadOnly changes.
@@ -150,7 +152,7 @@ export const useEditorSync = (
 
     const collabFull = collaboration as Extract<CollaborationProps, { enabled: true }>;
     connectRef.current(collabFull.connection);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collabEnabled]);
 
   // Set local awareness user state once awareness is initialised
