@@ -69,12 +69,10 @@ export interface DsheetProps {
   onChange?: (updateData: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   username?: string;
-  enableWebrtc?: boolean;
   portalContent?: string;
   isReadOnly?: boolean;
   allowSheetDownload?: boolean;
   isTemplateOpen?: boolean;
-  isCollaborative?: boolean;
   selectedTemplate?: string;
   onboardingComplete?: boolean;
   /** When `onboardingComplete` is omitted, read `localStorage.getItem(key)==='true'` (default key `onboardingComplete`). */

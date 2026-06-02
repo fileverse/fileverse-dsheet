@@ -20,7 +20,6 @@ import {
   updateRowIndices,
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
-import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 import type { CollaborationProps, CollabState } from '../../sync-local/types';
 import type { Awareness } from 'y-protocols/awareness';
@@ -57,15 +56,8 @@ export interface EditorContextType {
   forceSheetRender: number;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
 
-  // Legacy WebRTC collaboration (deprecated)
-  activeUsers: string[];
-  collaborationStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
-
   // Sync status
   syncStatus: 'initializing' | 'syncing' | 'synced' | 'error';
-
-  // For compatibility with types
-  isCollaborative?: boolean;
 
   // Socket.IO collaboration
   collabState?: CollabState;
@@ -94,12 +86,10 @@ interface EditorProviderProps {
   username?: string;
   portalContent?: string;
   enableIndexeddbSync?: boolean;
-  enableWebrtc?: boolean;
   isReadOnly?: boolean;
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
-  isCollaborative?: boolean;
   commentData?: object;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
@@ -120,12 +110,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   username = 'Anonymous',
   portalContent = '',
   enableIndexeddbSync = true,
-  enableWebrtc = true,
   isReadOnly = false,
   allowComments = false,
   onChange,
   externalEditorRef,
-  isCollaborative = false,
   collaboration,
   commentData,
   isAuthorized,
@@ -294,14 +282,6 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     allowComments,
   );
 
-  // Initialize collaboration
-  const { collaborationStatus, activeUsers } = useEditorCollaboration(
-    ydocRef.current,
-    dsheetId,
-    username,
-    enableWebrtc,
-  );
-
   // Force re-render when data changes
   useEffect(() => {
     // If data is loaded from persistence but the sheet isn't rendered yet
@@ -340,10 +320,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       setIsDataLoaded,
       forceSheetRender,
       setForceSheetRender,
-      activeUsers,
-      collaborationStatus,
       syncStatus,
-      isCollaborative,
       isAuthorized,
       refreshIndexedDB,
       handleLiveQuery,
@@ -376,10 +353,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     loading,
     forceSheetRender,
     setForceSheetRender,
-    activeUsers,
-    collaborationStatus,
     syncStatus,
-    isCollaborative,
     isAuthorized,
     handleLiveQuery,
     initialiseLiveQueryData,

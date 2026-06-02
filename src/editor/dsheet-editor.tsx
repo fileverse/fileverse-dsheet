@@ -276,7 +276,6 @@ const EditorContent = ({
  * @returns The SpreadsheetEditor component
  */
 const SpreadsheetEditor = ({
-  isCollaborative = false,
   isReadOnly = false,
   allowSheetDownload,
   allowComments = false,
@@ -289,7 +288,6 @@ const SpreadsheetEditor = ({
   selectedTemplate,
   toggleTemplateSidebar,
   isTemplateOpen,
-  enableWebrtc,
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
@@ -328,12 +326,10 @@ const SpreadsheetEditor = ({
       username={username}
       portalContent={portalContent}
       enableIndexeddbSync={enableIndexeddbSync}
-      enableWebrtc={enableWebrtc}
       isReadOnly={isReadOnly}
       allowComments={allowComments}
       onChange={onChange}
       externalEditorRef={externalSheetEditorRef}
-      isCollaborative={isCollaborative}
       collaboration={collaboration}
       commentData={commentData}
       isAuthorized={isAuthorized}
@@ -354,9 +350,7 @@ const SpreadsheetEditor = ({
         allowSheetDownload={allowSheetDownload}
         toggleTemplateSidebar={toggleTemplateSidebar}
         onboardingComplete={onboardingComplete}
-        onboardingCompleteLocalStorageKey={
-          onboardingCompleteLocalStorageKey
-        }
+        onboardingCompleteLocalStorageKey={onboardingCompleteLocalStorageKey}
         onboardingHandler={onboardingHandler as OnboardingHandler}
         dataBlockApiKeyHandler={
           dataBlockApiKeyHandler as DataBlockApiKeyHandler
