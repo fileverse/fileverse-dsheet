@@ -15,6 +15,7 @@ import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
 import { PermissionChip } from './components/permission-chip';
+import { CollabStatusChip } from './components/collab-status-chip';
 
 import '@sheet-engine/react/index.css';
 import './styles/index.css';
@@ -94,6 +95,7 @@ const EditorContent = ({
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
     setSelectedTemplate: contextSetSelectedTemplate,
+    collabState,
   } = useEditor();
 
   // Initialize template button functionality
@@ -225,6 +227,13 @@ const EditorContent = ({
               data-testid="dsheet-permission-chip-wrap"
             >
               <PermissionChip allowComments={allowComments || false} />
+            </div>
+          )}
+
+          {/* Collab status chip - only visible when collaboration is active */}
+          {collabState && collabState.status !== 'idle' && (
+            <div className="absolute top-2 left-4 z-20">
+              <CollabStatusChip state={collabState} />
             </div>
           )}
 
