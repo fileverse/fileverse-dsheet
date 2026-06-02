@@ -125,7 +125,7 @@ function App() {
     setCollabExtras(extras);
     setCollabEnabled(true);
 
-    const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${newCollabId}#key=${privateKeyBase64}`;
+    const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${newCollabId}&sheet=${dsheetId}#key=${privateKeyBase64}`;
     await navigator.clipboard.writeText(inviteUrl).catch(() => {});
     console.log('[DSheet] Collaboration invite URL:', inviteUrl);
 
@@ -274,7 +274,7 @@ function App() {
                     <Button
                       variant={'ghost'}
                       onClick={async () => {
-                        const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${collaborationId}#key=${collabRoomKey}`;
+                        const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${collaborationId}&sheet=${dsheetId}#key=${collabRoomKey}`;
                         await navigator.clipboard.writeText(inviteUrl).catch(() => {});
                         toast({ title: 'Invite link copied', variant: 'success', toastType: 'mini', iconType: 'icon' });
                       }}
