@@ -1,17 +1,16 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import { useSyncManager } from '../../sync-local/useSyncManager';
+import type { CollaborationProps } from '../../sync-local/types';
 
-/**
- * Hook for setting up YJS document and persistence
- * Handles initialization of YJS document and optional IndexedDB persistence
- */
 export const useEditorSync = (
   dsheetId: string,
   enableIndexeddbSync = true,
   isReadOnly = false,
+  collaboration?: CollaborationProps,
+  onCollabUpdate?: (fullState: string, updateChunk: string) => void,
 ) => {
-  // References for YJS document and persistence
   const ydocRef = useRef<Y.Doc | null>(null);
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
   const [syncStatus, setSyncStatus] = useState<
@@ -19,35 +18,71 @@ export const useEditorSync = (
   >('initializing');
   const isSyncedRef = useRef<boolean>(false);
 
-  const initialiseEditorIndexedDB = async () => {
-    if (!ydocRef.current) {
-      return;
-    }
+  // Eager init — must exist before useSyncManager is called (hooks can't be conditional)
+  if (!ydocRef.current) {
+    ydocRef.current = new Y.Doc();
+  }
+
+  const collabEnabled = collaboration?.enabled === true;
+  const collabServices = collabEnabled
+    ? (collaboration as Extract<CollaborationProps, { enabled: true }>).services
+    : undefined;
+  const collabCallbacks = collabEnabled
+    ? (collaboration as Extract<CollaborationProps, { enabled: true }>).on
+    : undefined;
+
+  // Stable ref so SyncManager closure never captures a stale onCollabUpdate identity
+  const onCollabUpdateRef = useRef(onCollabUpdate);
+  useEffect(() => {
+    onCollabUpdateRef.current = onCollabUpdate;
+  }, [onCollabUpdate]);
+
+  const {
+    connect,
+    isReady: isCollabReady,
+    isSyncing: isCollabSyncing,
+    terminateSession,
+    awareness,
+    hasCollabContentInitialised,
+    state: collabState,
+  } = useSyncManager({
+    ydoc: ydocRef.current,
+    services: collabServices,
+    callbacks: collabCallbacks,
+    onLocalUpdate: (fullState, chunk) => {
+      onCollabUpdateRef.current?.(fullState, chunk);
+    },
+    ignoredOrigins: [persistenceRef],
+  });
+
+  const initialiseEditorIndexedDB = useCallback(async () => {
+    if (!ydocRef.current) return;
+
     if (persistenceRef.current) {
-      // If persistence already
       await persistenceRef.current.destroy();
     }
-    persistenceRef.current = new IndexeddbPersistence(
-      dsheetId,
-      ydocRef.current,
-    );
 
-    // Listen for sync events
+    persistenceRef.current = new IndexeddbPersistence(dsheetId, ydocRef.current);
+
     persistenceRef.current.once('synced', () => {
       setSyncStatus('synced');
       isSyncedRef.current = true;
+
+      // Connect to collab server after IDB has replayed local history
+      if (collabEnabled && collaboration?.enabled) {
+        connect(
+          (collaboration as Extract<CollaborationProps, { enabled: true }>).connection,
+        );
+      }
     });
 
-    // Handle sync errors
     persistenceRef.current.on('error', (err: Error) => {
       console.error('[DSheet] IndexedDB persistence error:', err);
       setSyncStatus('error');
     });
-  };
+  }, [dsheetId, collabEnabled, connect]);
 
-  // Initialize YJS document and persistence
   useEffect(() => {
-    // Create new YJS document if it doesn't exist yet
     if (!ydocRef.current) {
       ydocRef.current = new Y.Doc();
     }
@@ -58,24 +93,26 @@ export const useEditorSync = (
       return;
     }
 
-    // Set up IndexedDB persistence if enabled
     if (enableIndexeddbSync && dsheetId) {
       setSyncStatus('syncing');
       try {
         initialiseEditorIndexedDB();
       } catch (error) {
-        console.error(
-          '[DSheet] Error setting up IndexedDB persistence:',
-          error,
-        );
+        console.error('[DSheet] Error setting up IndexedDB persistence:', error);
         setSyncStatus('error');
       }
     } else {
       setSyncStatus('synced');
       isSyncedRef.current = true;
+
+      // No IDB — connect to collab directly
+      if (collabEnabled && collaboration?.enabled) {
+        connect(
+          (collaboration as Extract<CollaborationProps, { enabled: true }>).connection,
+        );
+      }
     }
 
-    // Cleanup function
     return () => {
       if (persistenceRef.current) {
         persistenceRef.current.destroy();
@@ -95,5 +132,12 @@ export const useEditorSync = (
     syncStatus,
     isSyncedRef,
     refreshIndexedDB: initialiseEditorIndexedDB,
+    // collab
+    collabState,
+    isCollabReady,
+    isCollabSyncing,
+    terminateSession,
+    awareness,
+    hasCollabContentInitialised,
   };
 };

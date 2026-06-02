@@ -5,6 +5,7 @@ import * as Y from 'yjs';
 import { Cell } from '@sheet-engine/react';
 import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
+import { CollaborationProps } from '../sync-local/types';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -66,6 +67,7 @@ export interface DsheetProps {
   enableIndexeddbSync?: boolean;
   dsheetId: string;
   onChange?: (updateData: SheetUpdateData, encodedUpdate?: string) => void;
+  collaboration?: CollaborationProps;
   username?: string;
   enableWebrtc?: boolean;
   portalContent?: string;

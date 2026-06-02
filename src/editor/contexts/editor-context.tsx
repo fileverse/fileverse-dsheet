@@ -22,6 +22,8 @@ import {
 } from '../utils/update-index-after-drag';
 import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
+import type { CollaborationProps, CollabState } from '../../sync-local/types';
+import type { Awareness } from 'y-protocols/awareness';
 
 // Define the shape of the context
 export interface EditorContextType {
@@ -55,7 +57,7 @@ export interface EditorContextType {
   forceSheetRender: number;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
 
-  // Collaboration
+  // Legacy WebRTC collaboration (deprecated)
   activeUsers: string[];
   collaborationStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -64,6 +66,14 @@ export interface EditorContextType {
 
   // For compatibility with types
   isCollaborative?: boolean;
+
+  // Socket.IO collaboration
+  collabState?: CollabState;
+  isCollabReady?: boolean;
+  isCollabSyncing?: boolean;
+  hasCollabContentInitialised?: boolean;
+  awareness?: Awareness | null;
+  terminateSession?: () => void;
 
   handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
 }
@@ -87,6 +97,7 @@ interface EditorProviderProps {
   enableWebrtc?: boolean;
   isReadOnly?: boolean;
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
+  collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   isCollaborative?: boolean;
   commentData?: object;
@@ -115,6 +126,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   onChange,
   externalEditorRef,
   isCollaborative = false,
+  collaboration,
   commentData,
   isAuthorized,
   editorStateRef,
@@ -187,9 +199,30 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [updateDataBlockCalcFunctionAfterRowDrag]);
 
-  // Initialize YJS document and persistence
-  const { ydocRef, persistenceRef, syncStatus, isSyncedRef, refreshIndexedDB } =
-    useEditorSync(dsheetId, enableIndexeddbSync, isReadOnly);
+  // onCollabUpdate: called by SyncManager when remote update arrives or local update is persisted.
+  // Re-uses existing onChange signature — encodedUpdate carries the full ydoc state blob.
+  const onCollabUpdate = useCallback(
+    (fullState: string, _chunk: string) => {
+      if (!onChange) return;
+      onChange({ data: currentDataRef.current }, fullState);
+    },
+    [onChange],
+  );
+
+  // Initialize YJS document, persistence, and optional Socket.IO collab transport
+  const {
+    ydocRef,
+    persistenceRef,
+    syncStatus,
+    isSyncedRef,
+    refreshIndexedDB,
+    collabState,
+    isCollabReady,
+    isCollabSyncing,
+    hasCollabContentInitialised,
+    awareness,
+    terminateSession,
+  } = useEditorSync(dsheetId, enableIndexeddbSync, isReadOnly, collaboration, onCollabUpdate);
 
   useMemo(() => {
     if (!editorStateRef) return;
@@ -311,6 +344,13 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       initialiseLiveQueryData,
       isReadOnly,
       handleOnChangePortalUpdate,
+      // Socket.IO collab
+      collabState,
+      isCollabReady,
+      isCollabSyncing,
+      hasCollabContentInitialised,
+      awareness,
+      terminateSession,
     };
   }, [
     setIsDataLoaded,
@@ -338,6 +378,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     handleLiveQuery,
     initialiseLiveQueryData,
     isReadOnly,
+    collabState,
+    isCollabReady,
+    isCollabSyncing,
+    hasCollabContentInitialised,
+    awareness,
+    terminateSession,
   ]);
 
   return (
