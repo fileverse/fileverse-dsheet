@@ -133,7 +133,7 @@ export const useEditorSync = (
       }
       isSyncedRef.current = false;
     };
-  }, [dsheetId, enableIndexeddbSync, isReadOnly]);
+  }, [dsheetId, enableIndexeddbSync, isReadOnly, initialiseEditorIndexedDB]);
 
   // Set local awareness user state once awareness is initialised
   useEffect(() => {
@@ -146,9 +146,9 @@ export const useEditorSync = (
       color:
         session.color ??
         '#' +
-        Math.floor(Math.random() * 0xffffff)
-          .toString(16)
-          .padStart(6, '0'),
+          Math.floor(Math.random() * 0xffffff)
+            .toString(16)
+            .padStart(6, '0'),
     });
   }, [awareness, collabEnabled]);
 

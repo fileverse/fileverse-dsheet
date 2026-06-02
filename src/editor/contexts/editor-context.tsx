@@ -187,15 +187,25 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [updateDataBlockCalcFunctionAfterRowDrag]);
 
-  // onCollabUpdate: called by SyncManager when remote update arrives or local update is persisted.
-  // Re-uses existing onChange signature — encodedUpdate carries the full ydoc state blob.
-  const onCollabUpdate = useCallback(
-    (fullState: string, _chunk: string) => {
-      if (!onChange) return;
-      onChange({ data: currentDataRef.current }, fullState);
-    },
-    [onChange],
-  );
+  // Stable pointer to the latest sheet data — populated by useEditorData below.
+  // Declared here so onCollabUpdate (which feeds into useEditorSync) can reference it
+  // without causing a TDZ issue or stale closure.
+  const currentDataForCollabRef = useRef<Sheet[]>([]);
+
+  const onCollabUpdateRef = useRef(onChange);
+  useEffect(() => {
+    onCollabUpdateRef.current = onChange;
+  }, [onChange]);
+
+  // onCollabUpdate: called by SyncManager when a remote update arrives.
+  // Stable function — uses refs so it never needs to be recreated.
+  const onCollabUpdate = useCallback((fullState: string, _chunk: string) => {
+    if (!onCollabUpdateRef.current) return;
+    onCollabUpdateRef.current(
+      { data: currentDataForCollabRef.current },
+      fullState,
+    );
+  }, []);
 
   // Initialize YJS document, persistence, and optional Socket.IO collab transport
   const {
@@ -229,7 +239,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
     if (!onChange) {
-      return () => {};
+      return () => { };
     }
 
     return throttle(() => {
@@ -281,6 +291,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     dataBlockApiKeyHandler,
     allowComments,
   );
+
+  // Keep the stable collab ref in sync with the live currentDataRef
+  currentDataForCollabRef.current = currentDataRef.current;
 
   // Force re-render when data changes
   useEffect(() => {

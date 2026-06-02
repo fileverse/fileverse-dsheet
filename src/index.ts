@@ -10,6 +10,18 @@ export { loadLocale } from '@sheet-engine/core';
 // Types
 export type { ErrorMessageHandlerReturnType } from './editor/types';
 export type { WorkbookInstance } from '@sheet-engine/react';
+export type {
+  CollaborationProps,
+  CollabConnectionConfig,
+  CollabSessionMeta,
+  CollabServices,
+  CollabCallbacks,
+  CollabState,
+  CollabStatus,
+  CollabError,
+  CollabErrorCode,
+  CollabUser,
+} from './sync-local/types';
 
 // Constants
 export {
