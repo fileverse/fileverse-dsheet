@@ -458,7 +458,6 @@ export class SocketClient {
       });
 
       this._socket.on('ping', (data) => {
-        console.log('SocketAPI: ping event', data);
         this._socket?.emit('pong', { message: 'pong' });
       });
 

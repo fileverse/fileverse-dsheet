@@ -50,8 +50,6 @@ export const useEditorSync = (
     services: collabServices,
     callbacks: collabCallbacks,
     onLocalUpdate: (fullState, chunk) => {
-      console.log('onLocalUpdate fullState', fullState);
-      console.log('onLocalUpdate chunk', chunk);
       onCollabUpdateRef.current?.(fullState, chunk);
     },
     ignoredOrigins: [persistenceRef],

@@ -127,7 +127,6 @@ function App() {
 
     const inviteUrl = `${window.location.origin}${window.location.pathname}?collaborationId=${newCollabId}&sheet=${dsheetId}#key=${privateKeyBase64}`;
     await navigator.clipboard.writeText(inviteUrl).catch(() => { });
-    console.log('[DSheet] Collaboration invite URL:', inviteUrl);
 
     toast({
       title: 'Collaboration started',
@@ -171,7 +170,6 @@ function App() {
       },
       on: {
         onStateChange: (state: CollabState) => {
-          console.log('[DSheet] collab state:', state);
           if (state.status === 'syncing') {
             setCollabStatus(state.hasUnmergedPeerUpdates ? 'merging' : 'syncing');
           } else {
@@ -194,7 +192,6 @@ function App() {
   }, [collabEnabled, collaborationId, collabRoomKey, collabIsOwner, collabExtras, username]);
 
 
-  console.log('collaboration', { collaboration });
 
   // --- Navbar (memoized — stable reference, no re-renders from collab/save state) ---
   const renderNavbar = useCallback((): JSX.Element => {

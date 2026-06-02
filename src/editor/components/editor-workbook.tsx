@@ -392,7 +392,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             });
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
-            console.log('updateCellYdoc changes', changes);
 
             updateYdocSheetData(
               ydocRef.current,
