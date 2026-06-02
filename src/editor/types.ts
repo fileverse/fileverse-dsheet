@@ -5,6 +5,7 @@ import * as Y from 'yjs';
 import { Cell } from '@sheet-engine/react';
 import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
+import type { CollaborationProps } from '../sync-local/types';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -98,6 +99,8 @@ export interface DsheetProps {
   handleSmartContractQuery?: SmartContractQueryHandler;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
+  /** When provided and enabled, connects to the sync-local WebSocket collaboration server. */
+  collaboration?: CollaborationProps;
 }
 export type BaseError = {
   message: string;
@@ -151,3 +154,5 @@ export type ErrorMessageHandlerReturnType =
   | InvalidApiKeyError
   | CustomError
   | DefaultError;
+
+export type { CollaborationProps } from '../sync-local/types';

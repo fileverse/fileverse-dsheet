@@ -65,3 +65,16 @@ export {
   api,
 } from '@sheet-engine/core';
 export type { PatchOptions } from '@sheet-engine/core';
+
+// Collaboration types (for typing the `collaboration` prop)
+export type {
+  CollaborationProps,
+  CollabConnectionConfig,
+  CollabSessionMeta,
+  CollabServices,
+  CollabCallbacks,
+  CollabState,
+  CollabStatus,
+  CollabError,
+  CollabErrorCode,
+} from './sync-local/types';

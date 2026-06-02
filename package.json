@@ -49,6 +49,8 @@
   },
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.29",
+    "@stablelib/ed25519": "^2.0.2",
+    "@ucans/ucans": "^0.12.0",
     "@fileverse-dev/formulajs": "^4.4.53",
     "@fileverse/ui": "^5.0.0",
     "@tippyjs/react": "^4.2.6",
@@ -75,6 +77,7 @@
     "y-protocols": "^1.0.6",
     "y-webrtc": "^10.3.0",
     "y-websocket": "^3.0.0",
+    "socket.io-client": "^4.7.5",
     "yjs": "^13.6.15"
   },
   "devDependencies": {
@@ -104,5 +107,8 @@
     "tailwindcss": "^3.4.3",
     "typescript": "^5.2.2",
     "vite": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@fileverse/crypto": ">=0.0.21"
   }
 }

@@ -13,6 +13,13 @@ export const useEditorSync = (
 ) => {
   // References for YJS document and persistence
   const ydocRef = useRef<Y.Doc | null>(null);
+
+  // Eagerly create ydoc so useSyncManager can consume it on first render.
+  // Mirrors the pattern useSyncManager uses for its own managerRef.
+  if (!ydocRef.current) {
+    ydocRef.current = new Y.Doc();
+  }
+
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
   const [syncStatus, setSyncStatus] = useState<
     'initializing' | 'syncing' | 'synced' | 'error'

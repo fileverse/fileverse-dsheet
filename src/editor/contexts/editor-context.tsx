@@ -20,8 +20,10 @@ import {
   updateRowIndices,
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
-import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
+import { useYjsSetup } from '../hooks/use-yjs-setup';
+import type { CollaborationProps, CollabState } from '../../sync-local/types';
+import type { Awareness } from 'y-protocols/awareness.js';
 
 // Define the shape of the context
 export interface EditorContextType {
@@ -55,9 +57,11 @@ export interface EditorContextType {
   forceSheetRender: number;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
 
-  // Collaboration
-  activeUsers: string[];
-  collaborationStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
+  // Collaboration (sync-local WebSocket)
+  collabState: CollabState;
+  collabAwareness: Awareness | null;
+  terminateCollab: () => void;
+  disconnectCollab: () => void;
 
   // Sync status
   syncStatus: 'initializing' | 'syncing' | 'synced' | 'error';
@@ -93,6 +97,7 @@ interface EditorProviderProps {
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
+  collaboration?: CollaborationProps;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
@@ -106,10 +111,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   updateDocumentTitle,
   children,
   dsheetId,
-  username = 'Anonymous',
+  username: _username = 'Anonymous',
   portalContent = '',
   enableIndexeddbSync = true,
-  enableWebrtc = true,
+  enableWebrtc: _enableWebrtc = true,
+  collaboration,
   isReadOnly = false,
   allowComments = false,
   onChange,
@@ -256,12 +262,20 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   );
 
   // Initialize collaboration
-  const { collaborationStatus, activeUsers } = useEditorCollaboration(
-    ydocRef.current,
-    dsheetId,
-    username,
-    enableWebrtc,
-  );
+  const {
+    disconnect: disconnectCollab,
+    terminateSession: terminateCollab,
+    awareness: collabAwareness,
+    hasCollabContentInitialised,
+    collabState,
+    collabEnabled,
+  } = useYjsSetup({
+    ydocRef,
+    persistenceRef,
+    syncStatus,
+    collaboration,
+    onRemoteUpdate: handleOnChangePortalUpdate,
+  });
 
   // Force re-render when data changes
   useEffect(() => {
@@ -272,11 +286,17 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   }, [isDataLoaded, syncStatus]);
 
   // Loading state is based on data loading, sync status, and data availability in read-only mode
+  const collabContentLoading =
+    collabEnabled &&
+    !hasCollabContentInitialised &&
+    collabState.status !== 'error' &&
+    collabState.status !== 'terminated';
+
   const loading =
     !isDataLoaded ||
     syncStatus === 'initializing' ||
     syncStatus === 'syncing' ||
-    // In read-only mode, continue showing the loading state if we have no data yet
+    collabContentLoading ||
     (isReadOnly &&
       (!currentDataRef.current || currentDataRef.current.length === 0));
 
@@ -301,8 +321,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       setIsDataLoaded,
       forceSheetRender,
       setForceSheetRender,
-      activeUsers,
-      collaborationStatus,
+      collabState,
+      collabAwareness,
+      terminateCollab,
+      disconnectCollab,
       syncStatus,
       isCollaborative,
       isAuthorized,
@@ -330,8 +352,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     loading,
     forceSheetRender,
     setForceSheetRender,
-    activeUsers,
-    collaborationStatus,
+    collabState,
+    collabAwareness,
     syncStatus,
     isCollaborative,
     isAuthorized,
