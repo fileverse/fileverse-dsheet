@@ -280,9 +280,13 @@ export const useEditorData = (
     if (!ydocRef.current || !dsheetId) return;
     const sheetArray = ydocRef.current.getArray(dsheetId);
 
-    // Update local state when YJS array changes
+    // Update local state when YJS data changes.
+    // observeDeep (not observe) is required so that nested Y.Map mutations —
+    // e.g. celldata.set('0_0', value) inside a sheet Y.Map — also trigger a
+    // re-render. observe only fires for top-level array insertions/deletions
+    // (tab add/remove) and would silently miss all remote cell edits.
     const observerCallback = (
-      _event: Y.YArrayEvent<any>,
+      _events: Y.YEvent<any>[],
       transaction: Y.Transaction,
     ) => {
       // Only react to remote Yjs updates. Local edits are already reflected in Workbook state,
@@ -322,10 +326,10 @@ export const useEditorData = (
       }, 50); // 50ms debounce
     };
 
-    sheetArray.observe(observerCallback);
+    sheetArray.observeDeep(observerCallback);
 
     return () => {
-      sheetArray.unobserve(observerCallback);
+      sheetArray.unobserveDeep(observerCallback);
       if (debounceTimerRef.current !== null) {
         window.clearTimeout(debounceTimerRef.current);
       }
