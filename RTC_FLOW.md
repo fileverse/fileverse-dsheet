@@ -245,6 +245,45 @@ Server broadcasts '/document/content_update' to room
               → if isOwner: push id to uncommittedUpdatesIdList
 ```
 
+`Y.applyUpdate` mutates the ydoc, which triggers the `observeDeep` callback registered in `use-editor-data.tsx`. The callback skips local-origin transactions and routes the update through one of two paths:
+
+#### Surgical path (small cell edits, no remount)
+
+For remote updates where all events are cell-data changes and the total changed-cell count is ≤ `SURGICAL_CELL_LIMIT` (50):
+
+```
+observerCallback fires (origin = 'remote')
+  → classify events:
+       path=[sheetIdx, 'celldata'] → CellBatch (r/c key → action + value)
+       path=[sheetIdx, metaKey]   → SheetMetaUpdate (name/order/color/…)
+       isSheetTabArrayChange()     → hasStructural = true
+       anything else               → hasStructural = true
+  → totalCells ≤ 50 && !hasStructural && sheetEditorRef.current exists
+       → for each CellBatch:
+            changedKeys.forEach((key) → sheetEditorRef.current.setCellValue(r, c, value, {id: sheetId}, false))
+            ← callAfterUpdate=false prevents writing value back into ydoc (no loop)
+       → if sheetMetaUpdates present:
+            sheetEditorRef.current.setSheetName(name, {id: sheetId})
+       → currentDataRef.current = ySheetArrayToPlain(sheetArray)  ← sync snapshot, no re-render
+```
+
+No `setForceSheetRender` call → no Workbook remount → **no flicker**.
+
+#### Remount path (structural changes or large batches)
+
+Falls back to debounced full remount when:
+- Any event is structural (tab insert/delete or unknown path)
+- `totalCells > SURGICAL_CELL_LIMIT`
+- `sheetEditorRef.current` is null
+
+```
+  → debounce 50ms → setForceSheetRender(prev + 1)
+       ← guarded: skipped if user is mid-cell-edit (luckysheetCellUpdate.length > 0)
+       ← currentDataRef.current synced from ydoc before remount to avoid stale snapshot
+```
+
+**`SURGICAL_SHEET_META_KEYS`** — sheet-level fields that can be applied without a remount: `name`, `order`, `status`, `showGridLines`. `color` and `hide` are in the set for classification purposes but trigger a remount because no imperative `WorkbookInstance` API exists for them.
+
 ### 8. Commit Flow (owner only)
 
 Commits are IPFS snapshots of the full ydoc state. They reduce uncommitted update count on the server.
@@ -447,6 +486,8 @@ type CollabState =
 | `COMMIT_THRESHOLD` | 100 | Uncommitted updates before auto-commit |
 | `FLUSH_INTERVAL_MS` | 50ms | Update batching window |
 | `MAX_QUEUE_SIZE` | 5 | Immediate flush if queue reaches this |
+| `SURGICAL_CELL_LIMIT` | 50 | Max changed cells for surgical (no-remount) remote apply; larger batches fall back to full Workbook remount |
+| Remount debounce | 50ms | Delay before `setForceSheetRender` fires on structural/large-batch remote updates |
 | Socket reconnection attempts | 3 | `reconnectionAttempts` in socket.io config |
 | Socket reconnection delay | 1500ms | `reconnectionDelay` |
 | Socket timeout | 6000ms | `timeout` (transport layer) |
@@ -476,6 +517,13 @@ type CollabState =
 1. Socket.IO fires `reconnect` → server sends `/server/handshake` → `onHandshakeSuccess` fires again → `handleReconnection()`.
 2. If `_status !== 'reconnecting'` on the second `onHandshakeSuccess`, we send `SOCKET_DROPPED` first. This protects against double-transitions.
 3. `connectSocket` resolves the outer promise only once (`settled` flag). Subsequent handshakes go through the reconnect path.
+
+### "Remote cell updates cause visible flicker"
+Flicker = full Workbook remount firing on every peer keystroke. Remounts happen when the surgical path is bypassed:
+1. `sheetEditorRef.current` is null (workbook not yet mounted) → remount is the only option; resolve by ensuring `EditorWorkbook` is mounted before RTC connects.
+2. `totalCells > SURGICAL_CELL_LIMIT` (paste / import / formula recalc) → intentional fallback; large batches are cheaper as one remount than N `setCellValue` calls.
+3. An event path was unrecognised → `hasStructural = true`. Add a `console.log(event.path)` in the observer to identify the unclassified event and extend the classifier if needed.
+4. `setCellValue` is missing on `sheetEditorRef.current` → the workbook API surface changed; check the `ISheetEditor` interface.
 
 ### "Commit never happens (demo)"
 `services.commitToStorage` is `undefined` in the demo. `commitLocalContents` and `processCommit` both return early with a `console.debug`. This is by design — the demo accumulates all updates as uncommitted on the server.

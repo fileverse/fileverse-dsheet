@@ -280,13 +280,42 @@ export const useEditorData = (
     if (!ydocRef.current || !dsheetId) return;
     const sheetArray = ydocRef.current.getArray(dsheetId);
 
+    // How many cell changes to handle surgically before falling back to a full remount.
+    // Large batches (paste, import, formula recalc) are cheaper as a single remount
+    // than N individual setContext calls.
+    const SURGICAL_CELL_LIMIT = 50;
+
+    /** Top-level sheet Y.Map fields that can be applied without a Workbook remount. */
+    const SURGICAL_SHEET_META_KEYS = new Set([
+      'name',
+      'order',
+      'status',
+      'color',
+      'hide',
+      'showGridLines',
+    ]);
+
+    /** True only when a sheet tab is inserted/removed on the top-level Y.Array. */
+    const isSheetTabArrayChange = (event: Y.YEvent<any>): boolean => {
+      const path = event.path;
+      if (path.length !== 1 || typeof path[0] !== 'number') return false;
+      if (!(event.target instanceof Y.Array)) return false;
+      try {
+        return event.delta.some(
+          (op) => op.insert !== undefined || op.delete !== undefined,
+        );
+      } catch {
+        return false;
+      }
+    };
+
     // Update local state when YJS data changes.
     // observeDeep (not observe) is required so that nested Y.Map mutations —
     // e.g. celldata.set('0_0', value) inside a sheet Y.Map — also trigger a
     // re-render. observe only fires for top-level array insertions/deletions
     // (tab add/remove) and would silently miss all remote cell edits.
     const observerCallback = (
-      _events: Y.YEvent<any>[],
+      events: Y.YEvent<any>[],
       transaction: Y.Transaction,
     ) => {
       // Only react to remote Yjs updates. Local edits are already reflected in Workbook state,
@@ -295,35 +324,237 @@ export const useEditorData = (
 
       remoteUpdateRef.current = true;
 
-      // Debounce the re-render to prevent multiple quick updates
-      if (debounceTimerRef.current !== null) {
-        window.clearTimeout(debounceTimerRef.current);
+      // --- Classify events: cell-only vs structural ---
+      type CellBatch = {
+        sheetId: string;
+        celldataMap: Y.Map<any>;
+        changedKeys: Map<string, { action: string }>;
+      };
+      const cellBatches: CellBatch[] = [];
+      const sheetMetaUpdates = new Map<
+        string,
+        { sheetId: string; sheetMap: Y.Map<any>; changedKeys: string[] }
+      >();
+      const indexOnlyEvents: Y.YEvent<any>[] = [];
+      let hasStructural = false;
+      const sheetsArr = sheetArray.toArray();
+
+      for (const event of events) {
+        const path = event.path;
+        // path = [sheetArrayIndex, 'celldata'] for a Y.Map cell change
+        if (
+          path.length === 2 &&
+          path[1] === 'celldata' &&
+          typeof path[0] === 'number'
+        ) {
+          const sheetMap = sheetsArr[path[0] as number];
+          if (!(sheetMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          const sheetId = sheetMap.get('id') as string;
+          const celldataMap = sheetMap.get('celldata');
+          if (!(celldataMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          cellBatches.push({
+            sheetId,
+            celldataMap,
+            changedKeys: (event as Y.YMapEvent<any>).changes.keys,
+          });
+        } else if (
+          path.length === 2 &&
+          typeof path[0] === 'number' &&
+          typeof path[1] === 'string' &&
+          SURGICAL_SHEET_META_KEYS.has(path[1])
+        ) {
+          const sheetMap = sheetsArr[path[0] as number];
+          if (!(sheetMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          const sheetId = sheetMap.get('id') as string;
+          if (!sheetId) {
+            hasStructural = true;
+            continue;
+          }
+          sheetMetaUpdates.set(sheetId, {
+            sheetId,
+            sheetMap,
+            changedKeys: [path[1] as string],
+          });
+        } else if (isSheetTabArrayChange(event)) {
+          hasStructural = true;
+        } else if (path.length === 1 && typeof path[0] === 'number') {
+          const sheetMap = sheetsArr[path[0] as number];
+          if (sheetMap instanceof Y.Map) {
+            const changedKeys = Array.from(
+              (event as Y.YMapEvent<any>).keys.keys(),
+            );
+            if (
+              changedKeys.length > 0 &&
+              changedKeys.every((k) => SURGICAL_SHEET_META_KEYS.has(k))
+            ) {
+              // color/hide have no imperative WorkbookInstance API — must remount.
+              if (changedKeys.some((k) => k === 'color' || k === 'hide')) {
+                hasStructural = true;
+                continue;
+              }
+              const sheetId = sheetMap.get('id') as string;
+              if (sheetId) {
+                const existing = sheetMetaUpdates.get(sheetId);
+                sheetMetaUpdates.set(sheetId, {
+                  sheetId,
+                  sheetMap,
+                  changedKeys: existing
+                    ? [...existing.changedKeys, ...changedKeys]
+                    : changedKeys,
+                });
+                continue;
+              }
+            }
+          }
+          // Bubbling [sheetIndex] alongside nested celldata — resolved after the loop.
+          indexOnlyEvents.push(event);
+          continue;
+        } else {
+          hasStructural = true;
+        }
       }
 
-      debounceTimerRef.current = window.setTimeout(() => {
-        // Keep `currentDataRef` aligned with Yjs before forcing a Workbook remount.
-        // Otherwise `EditorWorkbook` re-inits from a stale plain snapshot (e.g. formula
-        // cells cleared on import) and wipes values that were just written by recalc + ydoc.
-        const isEditingCell =
-          (sheetEditorRef.current?.getWorkbookContext?.()?.luckysheetCellUpdate
-            ?.length ?? 0) > 0;
+      for (const event of indexOnlyEvents) {
+        if (cellBatches.length > 0 || sheetMetaUpdates.size > 0) continue;
+        const changedKeys = Array.from((event as Y.YMapEvent<any>).keys.keys());
+        if (changedKeys.length === 0) continue;
+        hasStructural = true;
+      }
+
+      const totalCells = cellBatches.reduce(
+        (n, b) => n + b.changedKeys.size,
+        0,
+      );
+
+      const applyRemoteSheetMeta = () => {
+        const orderList: Record<string, number> = {};
+        let hasOrderChange = false;
+
+        for (const { sheetId, sheetMap, changedKeys } of sheetMetaUpdates.values()) {
+          if (changedKeys.includes('name')) {
+            const name = sheetMap.get('name');
+            if (typeof name === 'string') {
+              sheetEditorRef.current?.setSheetName?.(name, { id: sheetId });
+            }
+          }
+          if (changedKeys.includes('order')) {
+            const order = sheetMap.get('order');
+            if (typeof order === 'number') {
+              orderList[sheetId] = order;
+              hasOrderChange = true;
+            }
+          }
+        }
+
+        if (hasOrderChange) {
+          sheetEditorRef.current?.setSheetOrder?.(orderList);
+        }
+      };
+
+      // --- Fall back to remount for structural changes or large cell batches ---
+      if (
+        hasStructural ||
+        totalCells > SURGICAL_CELL_LIMIT ||
+        !sheetEditorRef.current
+      ) {
+        if (debounceTimerRef.current !== null) {
+          window.clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = window.setTimeout(() => {
+          // Keep `currentDataRef` aligned with Yjs before forcing a Workbook remount.
+          // Otherwise `EditorWorkbook` re-inits from a stale plain snapshot (e.g. formula
+          // cells cleared on import) and wipes values that were just written by recalc + ydoc.
+          const isEditingCell =
+            (sheetEditorRef.current?.getWorkbookContext?.()
+              ?.luckysheetCellUpdate?.length ?? 0) > 0;
+          try {
+            const plain = ySheetArrayToPlain(sheetArray as any);
+            currentDataRef.current = plain;
+          } catch (e) {
+            console.error(
+              '[DSheet] ySheetArrayToPlain after ydoc observe failed',
+              e,
+            );
+          }
+          // Avoid forcing a full Workbook remount while in-cell editing is active.
+          // Remounting mid-edit can temporarily re-apply stale cell styles (e.g. alignment)
+          // and cause a visible flicker.
+          if (!isEditingCell && setForceSheetRender) {
+            setForceSheetRender((prev) => prev + 1);
+          }
+          debounceTimerRef.current = null;
+        }, 50);
+        return;
+      }
+
+      if (sheetMetaUpdates.size > 0) {
+        applyRemoteSheetMeta();
+      }
+
+      if (totalCells === 0 && sheetMetaUpdates.size > 0) {
         try {
           const plain = ySheetArrayToPlain(sheetArray as any);
           currentDataRef.current = plain;
         } catch (e) {
           console.error(
-            '[DSheet] ySheetArrayToPlain after ydoc observe failed',
+            '[DSheet] ySheetArrayToPlain after remote sheet meta failed',
             e,
           );
         }
-        // Avoid forcing a full Workbook remount while in-cell editing is active.
-        // Remounting mid-edit can temporarily re-apply stale cell styles (e.g. alignment)
-        // and cause a visible flicker.
-        if (!isEditingCell && setForceSheetRender) {
-          setForceSheetRender((prev) => prev + 1);
+        return;
+      }
+
+      // --- Surgical path: imperative per-cell updates, zero Workbook remount ---
+      // callAfterUpdate=false prevents afterUpdateCell hook from writing the
+      // remote value back into ydoc, which would create an update loop.
+      for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
+        changedKeys.forEach(({ action }, key) => {
+          const sep = key.lastIndexOf('_');
+          const r = parseInt(key.slice(0, sep), 10);
+          const c = parseInt(key.slice(sep + 1), 10);
+
+          if (action === 'delete') {
+            sheetEditorRef.current?.setCellValue(
+              r,
+              c,
+              null,
+              { id: sheetId },
+              false,
+            );
+          } else {
+            const cellObj = celldataMap.get(key);
+            sheetEditorRef.current?.setCellValue(
+              r,
+              c,
+              cellObj ?? null,
+              { id: sheetId },
+              false,
+            );
+          }
+        });
+      }
+
+      // Keep currentDataRef aligned (no re-render triggered here)
+      if (totalCells > 0 || sheetMetaUpdates.size > 0) {
+        try {
+          const plain = ySheetArrayToPlain(sheetArray as any);
+          currentDataRef.current = plain;
+        } catch (e) {
+          console.error(
+            '[DSheet] ySheetArrayToPlain after surgical remote update failed',
+            e,
+          );
         }
-        debounceTimerRef.current = null;
-      }, 50); // 50ms debounce
+      }
     };
 
     sheetArray.observeDeep(observerCallback);
