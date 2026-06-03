@@ -58,6 +58,8 @@ import { useDialog } from '../../hooks/useDialog';
 import DropDownList from '../DataVerification/DropdownList';
 import IframeBoxs from '../IFrameBoxs/iFrameBoxs';
 import ErrorBoxes from '../ErrorState';
+import ensLogo from '../../../../editor/assets/ens.svg';
+import verifiedMark from '../../../../editor/assets/verified-mark.png';
 
 /**
  * Cell to outline as "primary" for multi-cell ranges: `context.primaryCellActive`, else
@@ -1172,13 +1174,21 @@ const SheetOverlay: React.FC = () => {
                 c - 1 === -1 ? 0 : context.visibledatacolumn[c - 1];
               const row = context.visibledatarow[r];
               const col = context.visibledatacolumn[c];
-              const width = col - col_pre - 1;
-              const height = row - row_pre - 1;
-              const usernameStyle = {
-                maxWidth: width + 1,
-                backgroundColor: color,
-              };
-              _.set(usernameStyle, r === 0 ? 'top' : 'bottom', height);
+              const width = col - col_pre;
+              const height = row - row_pre;
+              const usernameStyle: React.CSSProperties = presence.isEns
+                ? {
+                    backgroundColor: '#fff',
+                    color,
+                    border: `2px solid ${color}`,
+                    left: width - 2,
+                    bottom: height - 2,
+                  }
+                : {
+                    backgroundColor: color,
+                    left: width - 2,
+                    bottom: height - 2,
+                  };
 
               return (
                 <div
@@ -1186,18 +1196,36 @@ const SheetOverlay: React.FC = () => {
                   className="fortune-presence-selection"
                   style={{
                     left: col_pre,
-                    top: row_pre - 2,
+                    top: row_pre,
                     width,
                     height,
                     borderColor: color,
-                    borderWidth: 1,
+                    borderWidth: 2,
                   }}
                 >
                   <div
-                    className="fortune-presence-username"
+                    className={`fortune-presence-username${presence.isEns ? ' fortune-presence-username--ens' : ''}`}
                     style={usernameStyle}
                   >
-                    {presence.username}
+                    {presence.isEns ? (
+                      <>
+                        <img
+                          src={ensLogo}
+                          className="fortune-presence-ens-logo"
+                          alt=""
+                        />
+                        <span className="fortune-presence-ens-name">
+                          {presence.username}
+                        </span>
+                        <img
+                          src={verifiedMark}
+                          className="fortune-presence-ens-tick"
+                          alt=""
+                        />
+                      </>
+                    ) : (
+                      presence.username
+                    )}
                   </div>
                 </div>
               );

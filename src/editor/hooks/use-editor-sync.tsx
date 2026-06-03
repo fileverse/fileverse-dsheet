@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
+import { ENS_PRESENCE_COLOR } from '../../sync-local/constants';
 
 export const useEditorSync = (
   dsheetId: string,
@@ -75,7 +76,10 @@ export const useEditorSync = (
       await persistenceRef.current.destroy();
     }
 
-    persistenceRef.current = new IndexeddbPersistence(dsheetId, ydocRef.current);
+    persistenceRef.current = new IndexeddbPersistence(
+      dsheetId,
+      ydocRef.current,
+    );
 
     persistenceRef.current.once('synced', () => {
       setSyncStatus('synced');
@@ -85,7 +89,10 @@ export const useEditorSync = (
       // at fire time, not at callback-creation time. Fixes the collaborator
       // race where collabEnabled becomes true after mount but before IDB sync.
       if (collabEnabledRef.current && collaborationRef.current?.enabled) {
-        const collabFull = collaborationRef.current as Extract<CollaborationProps, { enabled: true }>;
+        const collabFull = collaborationRef.current as Extract<
+          CollaborationProps,
+          { enabled: true }
+        >;
         connectRef.current(collabFull.connection);
       }
     });
@@ -118,7 +125,10 @@ export const useEditorSync = (
       try {
         initialiseEditorIndexedDB();
       } catch (error) {
-        console.error('[DSheet] Error setting up IndexedDB persistence:', error);
+        console.error(
+          '[DSheet] Error setting up IndexedDB persistence:',
+          error,
+        );
         setSyncStatus('error');
       }
     } else {
@@ -148,7 +158,10 @@ export const useEditorSync = (
     // Only call connect() here when IDB is already synced (late enable).
     if (!isSyncedRef.current) return;
 
-    const collabFull = collaboration as Extract<CollaborationProps, { enabled: true }>;
+    const collabFull = collaboration as Extract<
+      CollaborationProps,
+      { enabled: true }
+    >;
     connectRef.current(collabFull.connection);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collabEnabled]);
@@ -156,14 +169,43 @@ export const useEditorSync = (
   // Set local awareness user state once awareness is initialised
   useEffect(() => {
     if (!awareness || !collabEnabled || !collaboration?.enabled) return;
-    const session = (collaboration as Extract<CollaborationProps, { enabled: true }>).session;
+    const session = (
+      collaboration as Extract<CollaborationProps, { enabled: true }>
+    ).session;
     awareness.setLocalStateField('user', {
       name: session.username,
-      color:
-        session.color ??
-        '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'),
+      color: session.isEns
+        ? ENS_PRESENCE_COLOR
+        : (session.color ??
+          '#' +
+          Math.floor(Math.random() * 0xffffff)
+            .toString(16)
+            .padStart(6, '0')),
+      isEns: session.isEns ?? false,
     });
   }, [awareness, collabEnabled]);
+
+  const isEnsSession =
+    collabEnabled && collaboration?.enabled
+      ? (collaboration as Extract<CollaborationProps, { enabled: true }>)
+        .session.isEns
+      : undefined;
+
+  // Re-publish awareness when ENS status resolves asynchronously
+  useEffect(() => {
+    if (!awareness || !collabEnabled || !collaboration?.enabled) return;
+    const session = (
+      collaboration as Extract<CollaborationProps, { enabled: true }>
+    ).session;
+    if (!session.isEns) return;
+    const localState = awareness.getLocalState();
+    awareness.setLocalStateField('user', {
+      ...(localState?.user ?? {}),
+      color: ENS_PRESENCE_COLOR,
+      isEns: true,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awareness, collabEnabled, isEnsSession]);
 
   return {
     ydocRef,

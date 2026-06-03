@@ -2,10 +2,17 @@ import { useEffect, useRef } from 'react';
 import { removeAwarenessStates } from 'y-protocols/awareness.js';
 import type { Awareness } from 'y-protocols/awareness';
 import { WorkbookInstance } from '@sheet-engine/react';
+import { ENS_PRESENCE_COLOR } from '../../sync-local/constants';
 
 const COLLAB_COLORS = [
-  '#E91E63', '#9C27B0', '#3F51B5', '#00BCD4',
-  '#009688', '#FF5722', '#795548', '#607D8B',
+  '#30bced',
+  '#6eeb83',
+  '#fa69d1',
+  '#ecd444',
+  '#ee6352',
+  '#db3041',
+  '#0ad7f2',
+  '#1bff39',
 ];
 
 function colorForClient(clientId: number): string {
@@ -40,6 +47,7 @@ export const useCollabAwareness = (
         username: string;
         userId: string;
         color: string;
+        isEns: boolean;
         selection: { r: number; c: number };
       }[] = [];
 
@@ -47,11 +55,15 @@ export const useCollabAwareness = (
         if (clientId === localClientId) return;
         if (!state.user || !state.cell) return;
 
+        const isEns = !!state.user.isEns;
         presences.push({
           sheetId: state.cell.sheetId,
           username: state.user.name ?? 'Anonymous',
           userId: String(clientId),
-          color: state.user.color ?? colorForClient(clientId),
+          color: isEns
+            ? ENS_PRESENCE_COLOR
+            : (state.user.color ?? colorForClient(clientId)),
+          isEns,
           selection: { r: state.cell.r, c: state.cell.c },
         });
       });
