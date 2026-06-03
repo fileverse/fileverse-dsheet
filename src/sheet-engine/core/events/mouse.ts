@@ -22,8 +22,8 @@ import {
   onImageMoveEnd,
   onImageResize,
   onImageResizeEnd,
+  getCommentBoxByRC,
   removeEditingComment,
-  // overShowComment,
   removeOverShowComment,
   rangeDrag,
   onFormulaRangeDragEnd,
@@ -94,7 +94,8 @@ export function handleGlobalWheel(
   scrollbarX: HTMLDivElement,
   scrollbarY: HTMLDivElement,
 ) {
-  removeEditingComment(ctx, cache);
+  // Do NOT clear editingCommentBox on wheel scroll — the pinned popup
+  // should survive scrolling and only close on click-elsewhere or Escape.
   if (cache.searchDialog?.mouseEnter && ctx.showSearch && ctx.showReplace)
     return;
   if (ctx.filterContextMenu != null) return;
@@ -289,6 +290,12 @@ export function handleCellAreaMouseDown(
   if (margeset) {
     [row_pre, row, row_index, row_index_ed] = margeset.row;
     [col_pre, col, col_index, col_index_ed] = margeset.column;
+  }
+
+  // Pin the comment popup when clicking a cell that has a comment.
+  // Runs before any canOpenEditor guard so it works in read-only / viewer mode.
+  if (flowdata[row_index]?.[col_index]?.ps) {
+    ctx.editingCommentBox = getCommentBoxByRC(ctx, flowdata, row_index, col_index);
   }
 
   showLinkCard(ctx, row_index, col_index, undefined, false, true);
@@ -3566,8 +3573,28 @@ export function handleOverlayMouseMove(
   const col_index = col_location[2];
   // console.log('mousemove row_index:', row_index, 'col_index:', col_index);
 
-  // overShowComment(ctx, e, scrollX, scrollY, container); // 有批注显示
-  editComment(ctx, globalCache, row_index, col_index);
+  // Hover comment popup: use the already-computed row/col so coordinates always match.
+  // Keep the popup alive while the mouse is physically over its DOM element
+  // (the popup is positioned beside the cell, so the mouse briefly leaves the cell
+  // as it travels to the popup).
+  {
+    const fd = getFlowdata(ctx);
+    if (fd) {
+      const rc = `${row_index}_${col_index}`;
+      const hasComment = !!fd[row_index]?.[col_index]?.ps;
+      const hoveredPopupEl = ctx.hoveredCommentBox
+        ? document.getElementById(`comment-box-${ctx.hoveredCommentBox.rc}`)
+        : null;
+      const isOverHoveredPopup = hoveredPopupEl?.contains(e.target as Node) ?? false;
+      if (!isOverHoveredPopup) {
+        if (!hasComment || ctx.editingCommentBox?.rc === rc) {
+          ctx.hoveredCommentBox = undefined;
+        } else if (ctx.hoveredCommentBox?.rc !== rc) {
+          ctx.hoveredCommentBox = getCommentBoxByRC(ctx, fd, row_index, col_index);
+        }
+      }
+    }
+  }
   overShowError(ctx, e, scrollX, scrollY, container);
   onSearchDialogMove(globalCache, e);
   onRangeSelectionModalMove(globalCache, e);

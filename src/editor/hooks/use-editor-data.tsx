@@ -143,16 +143,30 @@ export const useEditorData = (
             files.forEach((file: any, fileIndex: number) => {
               const sheetKey =
                 (file?.id ?? fileIndex)?.toString?.() ?? String(fileIndex);
+              // Comment keys are built as `${sheet.order}_${row}_${col}` in the
+              // host app. `file.order` is the correct primary identifier.
+              // `file.id` (UUID) and `fileIndex` (array position) are kept as
+              // fallbacks for legacy keys.
+              const sheetOrder =
+                typeof file?.order === 'number' ? file.order : fileIndex;
+
+              const getComment = (rowIndex: number, colIndex: number) =>
+                // Primary: UUID-based key (new, immutable)
+                (commentData as any)?.[
+                  `${sheetKey}_${rowIndex}_${colIndex}`
+                ] ??
+                // Legacy: order-based key (old, breaks on reorder)
+                (commentData as any)?.[
+                  `${sheetOrder}_${rowIndex}_${colIndex}`
+                ] ??
+                // Very-old: array-index fallback
+                (commentData as any)?.[`${fileIndex}_${rowIndex}_${colIndex}`];
+
+              // Active sheet: dense data grid
               file.data?.forEach((row: any, rowIndex: number) => {
-                row.forEach((cell: any, colIndex: number) => {
+                row?.forEach((cell: any, colIndex: number) => {
                   if (cell) {
-                    const comment =
-                      (commentData as any)?.[
-                      `${sheetKey}_${rowIndex}_${colIndex}`
-                      ] ??
-                      (commentData as any)?.[
-                      `${fileIndex}_${rowIndex}_${colIndex}`
-                      ];
+                    const comment = getComment(rowIndex, colIndex);
                     if (comment) {
                       cell.ps = allowComments
                         ? CELL_COMMENT_DEFAULT_VALUE
@@ -163,6 +177,19 @@ export const useEditorData = (
                   }
                 });
               });
+
+              // Inactive sheets: sparse celldata. initSheetData() converts
+              // celldata → data on activation, so ps set here carries through.
+              if (!file.data && file.celldata) {
+                (file.celldata as any[]).forEach((cellEntry: any) => {
+                  if (!cellEntry?.v) return;
+                  const comment = getComment(cellEntry.r, cellEntry.c);
+                  cellEntry.v.ps =
+                    comment && allowComments
+                      ? CELL_COMMENT_DEFAULT_VALUE
+                      : undefined;
+                });
+              }
             });
           });
         }
@@ -170,9 +197,16 @@ export const useEditorData = (
         if (sheetEditorRef.current === null && syncStatus === 'synced') {
           const updatedSheets = currentData.map((sheet, index) => {
             const sheetKey = (sheet as any)?.id?.toString?.() ?? String(index);
+            const sheetOrder =
+              typeof (sheet as any)?.order === 'number'
+                ? (sheet as any).order
+                : index;
             const updatedCelldata = (sheet.celldata || []).map((cell: any) => {
               const comment =
+                // Primary: UUID-based key (new, immutable)
                 (commentData as any)?.[`${sheetKey}_${cell.r}_${cell.c}`] ??
+                // Legacy: order-based key
+                (commentData as any)?.[`${sheetOrder}_${cell.r}_${cell.c}`] ??
                 (commentData as any)?.[`${index}_${cell.r}_${cell.c}`];
               if (!cell?.v) return cell;
               return {

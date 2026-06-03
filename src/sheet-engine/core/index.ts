@@ -187,6 +187,7 @@ export {
   drawArrow,
   setEditingComment,
   removeEditingComment,
+  removeOverShowComment,
   newComment,
   editComment,
   deleteComment,

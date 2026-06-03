@@ -1,0 +1,687 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "title",
+      "type": "text",
+      "x": 80, "y": 20, "width": 1760, "height": 40,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "Presence System Architecture — fileverse-dsheet",
+      "fontSize": 28, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "Presence System Architecture — fileverse-dsheet",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "sec-local",
+      "type": "rectangle",
+      "x": 80, "y": 90, "width": 410, "height": 640,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "#dbeafe",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 40, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "sec-local-label",
+      "type": "text",
+      "x": 97, "y": 100, "width": 380, "height": 20,
+      "angle": 0, "strokeColor": "#1d4ed8", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "LOCAL USER  (EditorWorkbook)",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "LOCAL USER  (EditorWorkbook)",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "sec-transport",
+      "type": "rectangle",
+      "x": 530, "y": 90, "width": 680, "height": 640,
+      "angle": 0, "strokeColor": "#7c3aed", "backgroundColor": "#ede9fe",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 40, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "sec-transport-label",
+      "type": "text",
+      "x": 548, "y": 100, "width": 650, "height": 20,
+      "angle": 0, "strokeColor": "#6d28d9", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "useEditorCollaboration  +  y-webrtc  (Awareness Transport)",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "useEditorCollaboration  +  y-webrtc  (Awareness Transport)",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "sec-render",
+      "type": "rectangle",
+      "x": 1260, "y": 90, "width": 570, "height": 640,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "#dcfce7",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 40, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "sec-render-label",
+      "type": "text",
+      "x": 1278, "y": 100, "width": 540, "height": 20,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "SheetOverlay  —  Remote Rendering",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "SheetOverlay  —  Remote Rendering",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n1",
+      "type": "rectangle",
+      "x": 115, "y": 170, "width": 250, "height": 70,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n1-text",
+      "type": "text",
+      "x": 127, "y": 188, "width": 226, "height": 40,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "User selects a cell\n(e.g. clicks A3)",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "User selects a cell\n(e.g. clicks A3)",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n2",
+      "type": "rectangle",
+      "x": 115, "y": 315, "width": 250, "height": 85,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n2-text",
+      "type": "text",
+      "x": 127, "y": 330, "width": 226, "height": 55,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "afterSelectionChange\nhook fires\n(Workbook hooks)",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "afterSelectionChange\nhook fires\n(Workbook hooks)",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n3",
+      "type": "rectangle",
+      "x": 115, "y": 475, "width": 250, "height": 70,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n3-text",
+      "type": "text",
+      "x": 127, "y": 493, "width": 226, "height": 40,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "broadcastSelection\n(sheetId, r, c)",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "broadcastSelection\n(sheetId, r, c)",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n4",
+      "type": "rectangle",
+      "x": 565, "y": 170, "width": 330, "height": 100,
+      "angle": 0, "strokeColor": "#7c3aed", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n4-text",
+      "type": "text",
+      "x": 577, "y": 185, "width": 306, "height": 75,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "awareness.setLocalStateField\n• 'user': { name, color, userId }\n• 'selection': { sheetId, r, c }",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "awareness.setLocalStateField\n• 'user': { name, color, userId }\n• 'selection': { sheetId, r, c }",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n5",
+      "type": "rectangle",
+      "x": 642, "y": 365, "width": 210, "height": 80,
+      "angle": 0, "strokeColor": "#5b21b6", "backgroundColor": "#7c3aed",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n5-text",
+      "type": "text",
+      "x": 652, "y": 378, "width": 190, "height": 55,
+      "angle": 0, "strokeColor": "#ffffff", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "WebRTC Provider\n(y-webrtc)\nroom = dsheetId",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "WebRTC Provider\n(y-webrtc)\nroom = dsheetId",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n6",
+      "type": "rectangle",
+      "x": 560, "y": 535, "width": 340, "height": 115,
+      "angle": 0, "strokeColor": "#7c3aed", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n6-text",
+      "type": "text",
+      "x": 572, "y": 548, "width": 316, "height": 90,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "handleAwarenessUpdate()\n→ diff prev ↔ current states\n→ joined / moved → addPresences()\n→ left room → removePresences()",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "handleAwarenessUpdate()\n→ diff prev ↔ current states\n→ joined / moved → addPresences()\n→ left room → removePresences()",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n7",
+      "type": "rectangle",
+      "x": 1290, "y": 165, "width": 500, "height": 130,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n7-text",
+      "type": "text",
+      "x": 1302, "y": 178, "width": 476, "height": 105,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "sheetEditorRef.current.addPresences([{\n  sheetId: string,\n  username: string,\n  userId?: string,\n  color: string,\n  selection: { r: number, c: number }\n}])",
+      "fontSize": 13, "fontFamily": 3, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "sheetEditorRef.current.addPresences([{\n  sheetId: string,\n  username: string,\n  userId?: string,\n  color: string,\n  selection: { r: number, c: number }\n}])",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n8",
+      "type": "rectangle",
+      "x": 1290, "y": 390, "width": 500, "height": 75,
+      "angle": 0, "strokeColor": "#dc2626", "backgroundColor": "#ffffff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n8-text",
+      "type": "text",
+      "x": 1302, "y": 403, "width": 476, "height": 50,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "sheetEditorRef.current.removePresences([\n  { username: string, userId?: string }\n])",
+      "fontSize": 13, "fontFamily": 3, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "sheetEditorRef.current.removePresences([\n  { username: string, userId?: string }\n])",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "n9",
+      "type": "rectangle",
+      "x": 1290, "y": 555, "width": 500, "height": 130,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "#f0fdf4",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "n9-label",
+      "type": "text",
+      "x": 1302, "y": 562, "width": 476, "height": 20,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "SheetOverlay renders  (built-in UI — no new component needed)",
+      "fontSize": 12, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "SheetOverlay renders  (built-in UI — no new component needed)",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "n9-text",
+      "type": "text",
+      "x": 1302, "y": 582, "width": 476, "height": 90,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "fortune-presence-selection  (div)\n• border color = presence.color\n• username chip = presence.username\n• positioned at cell (r, c)\n• filtered by currentSheetId",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "fortune-presence-selection  (div)\n• border color = presence.color\n• username chip = presence.username\n• positioned at cell (r, c)\n• filtered by currentSheetId",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "a1",
+      "type": "arrow",
+      "x": 240, "y": 240, "width": 1, "height": 75,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[0,75]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+
+    {
+      "id": "a2",
+      "type": "arrow",
+      "x": 240, "y": 400, "width": 1, "height": 75,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[0,75]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+
+    {
+      "id": "a3",
+      "type": "arrow",
+      "x": 365, "y": 510, "width": 200, "height": 290,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "dashed",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[90,0],[90,-290],[200,-290]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+    {
+      "id": "a3-label",
+      "type": "text",
+      "x": 410, "y": 500, "width": 120, "height": 20,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "broadcasts",
+      "fontSize": 12, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "broadcasts",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "a4",
+      "type": "arrow",
+      "x": 730, "y": 270, "width": 17, "height": 95,
+      "angle": 0, "strokeColor": "#7c3aed", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[17,0],[17,95]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+
+    {
+      "id": "a5",
+      "type": "arrow",
+      "x": 747, "y": 445, "width": 17, "height": 90,
+      "angle": 0, "strokeColor": "#7c3aed", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[-17,0],[-17,90]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+
+    {
+      "id": "a6",
+      "type": "arrow",
+      "x": 900, "y": 592, "width": 390, "height": 362,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "dashed",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[90,0],[90,-362],[390,-362]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+    {
+      "id": "a6-label",
+      "type": "text",
+      "x": 1050, "y": 218, "width": 160, "height": 20,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "joined / moved",
+      "fontSize": 12, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "joined / moved",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "a7",
+      "type": "arrow",
+      "x": 900, "y": 592, "width": 390, "height": 165,
+      "angle": 0, "strokeColor": "#dc2626", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "dashed",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[165,0],[165,-165],[390,-165]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+    {
+      "id": "a7-label",
+      "type": "text",
+      "x": 1060, "y": 410, "width": 120, "height": 20,
+      "angle": 0, "strokeColor": "#dc2626", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "left room",
+      "fontSize": 12, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "left room",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "a8",
+      "type": "arrow",
+      "x": 1540, "y": 295, "width": 1, "height": 260,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[0,260]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+
+    {
+      "id": "a9",
+      "type": "arrow",
+      "x": 1540, "y": 465, "width": 1, "height": 90,
+      "angle": 0, "strokeColor": "#dc2626", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 2},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "points": [[0,0],[0,90]],
+      "lastCommittedPoint": null,
+      "startBinding": null, "endBinding": null,
+      "startArrowhead": null, "endArrowhead": "arrow"
+    },
+
+    {
+      "id": "awareness-box",
+      "type": "rectangle",
+      "x": 490, "y": 762, "width": 820, "height": 110,
+      "angle": 0, "strokeColor": "#b45309", "backgroundColor": "#fef9c3",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "awareness-label",
+      "type": "text",
+      "x": 502, "y": 768, "width": 300, "height": 20,
+      "angle": 0, "strokeColor": "#92400e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "Awareness state shape (per clientID)",
+      "fontSize": 12, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "Awareness state shape (per clientID)",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "awareness-text",
+      "type": "text",
+      "x": 502, "y": 788, "width": 796, "height": 75,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "Map<clientID, {\n  user:      { name: string, color: string, userId?: string },\n  selection: { sheetId: string, r: number, c: number }   ← broadcast on every cell click\n}>",
+      "fontSize": 13, "fontFamily": 3, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "Map<clientID, {\n  user:      { name: string, color: string, userId?: string },\n  selection: { sheetId: string, r: number, c: number }   ← broadcast on every cell click\n}>",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "filemap-bg",
+      "type": "rectangle",
+      "x": 80, "y": 905, "width": 1750, "height": 380,
+      "angle": 0, "strokeColor": "#94a3b8", "backgroundColor": "#f8fafc",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "filemap-header",
+      "type": "text",
+      "x": 97, "y": 915, "width": 300, "height": 24,
+      "angle": 0, "strokeColor": "#374151", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "FILE CHANGE MAP",
+      "fontSize": 15, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "FILE CHANGE MAP",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "file1-box",
+      "type": "rectangle",
+      "x": 100, "y": 948, "width": 510, "height": 305,
+      "angle": 0, "strokeColor": "#2563eb", "backgroundColor": "#eff6ff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "file1-title",
+      "type": "text",
+      "x": 112, "y": 958, "width": 486, "height": 40,
+      "angle": 0, "strokeColor": "#1d4ed8", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "use-editor-collaboration.tsx  [MAJOR]",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "use-editor-collaboration.tsx  [MAJOR]",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "file1-text",
+      "type": "text",
+      "x": 112, "y": 980, "width": 486, "height": 260,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "+ params: sheetEditorRef, userId?\n+ persist userColor in ref (stable across re-renders)\n+ return broadcastSelection(sheetId, r, c)\n    → calls awareness.setLocalStateField('selection')\n+ handleAwarenessUpdate():\n    → skip local clientID\n    → build Presence[] from remote states\n    → diff prevPresencesRef ↔ newPresenceMap\n    → joined / moved → addPresences(presences)\n    → left room → removePresences(arr)\n    → update prevPresencesRef\n+ return activeUsers as ActiveUser[]\n    { name: string, color: string, userId?: string }",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "+ params: sheetEditorRef, userId?\n+ persist userColor in ref (stable across re-renders)\n+ return broadcastSelection(sheetId, r, c)\n    → calls awareness.setLocalStateField('selection')\n+ handleAwarenessUpdate():\n    → skip local clientID\n    → build Presence[] from remote states\n    → diff prevPresencesRef ↔ newPresenceMap\n    → joined / moved → addPresences(presences)\n    → left room → removePresences(arr)\n    → update prevPresencesRef\n+ return activeUsers as ActiveUser[]\n    { name: string, color: string, userId?: string }",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "file2-box",
+      "type": "rectangle",
+      "x": 660, "y": 948, "width": 490, "height": 305,
+      "angle": 0, "strokeColor": "#7c3aed", "backgroundColor": "#f5f3ff",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "file2-title",
+      "type": "text",
+      "x": 672, "y": 958, "width": 466, "height": 20,
+      "angle": 0, "strokeColor": "#6d28d9", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "editor-context.tsx  [MINOR]",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "editor-context.tsx  [MINOR]",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "file2-text",
+      "type": "text",
+      "x": 672, "y": 980, "width": 466, "height": 260,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "+ EditorContextType:\n    activeUsers: ActiveUser[]  (was string[])\n    broadcastSelection: (sheetId, r, c) => void\n\n+ EditorProviderProps:\n    userId?: string\n\n+ useEditorCollaboration() call:\n    pass sheetEditorRef\n    pass userId\n    destructure broadcastSelection\n\n+ contextValue:\n    add broadcastSelection\n    updated activeUsers type",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "+ EditorContextType:\n    activeUsers: ActiveUser[]  (was string[])\n    broadcastSelection: (sheetId, r, c) => void\n\n+ EditorProviderProps:\n    userId?: string\n\n+ useEditorCollaboration() call:\n    pass sheetEditorRef\n    pass userId\n    destructure broadcastSelection\n\n+ contextValue:\n    add broadcastSelection\n    updated activeUsers type",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "file3-box",
+      "type": "rectangle",
+      "x": 1200, "y": 948, "width": 590, "height": 305,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "#f0fdf4",
+      "fillStyle": "solid", "strokeWidth": 2, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": {"type": 3},
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false
+    },
+    {
+      "id": "file3-title",
+      "type": "text",
+      "x": 1212, "y": 958, "width": 566, "height": 20,
+      "angle": 0, "strokeColor": "#15803d", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "editor-workbook.tsx  [MINOR]",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "editor-workbook.tsx  [MINOR]",
+      "lineHeight": 1.25
+    },
+    {
+      "id": "file3-text",
+      "type": "text",
+      "x": 1212, "y": 980, "width": 566, "height": 260,
+      "angle": 0, "strokeColor": "#1e1e1e", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "+ consume broadcastSelection from useEditor()\n\n+ add to Workbook hooks:\n\naftSelectionChange: (sheetId, selection) => {\n  if (selection?.row.length && selection.column.length) {\n    broadcastSelection(\n      sheetId,\n      selection.row_focus ?? selection.row[0],\n      selection.column_focus ?? selection.column[0]\n    );\n  }\n}\n\nNOTE: this hook already exists in Workbook/index.tsx\n— just wire it to awareness.",
+      "fontSize": 13, "fontFamily": 2, "textAlign": "left",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "+ consume broadcastSelection from useEditor()\n\n+ add to Workbook hooks:\n\naftSelectionChange: (sheetId, selection) => {\n  if (selection?.row.length && selection.column.length) {\n    broadcastSelection(\n      sheetId,\n      selection.row_focus ?? selection.row[0],\n      selection.column_focus ?? selection.column[0]\n    );\n  }\n}\n\nNOTE: this hook already exists in Workbook/index.tsx\n— just wire it to awareness.",
+      "lineHeight": 1.25
+    },
+
+    {
+      "id": "also-needed-label",
+      "type": "text",
+      "x": 80, "y": 1298, "width": 1750, "height": 20,
+      "angle": 0, "strokeColor": "#374151", "backgroundColor": "transparent",
+      "fillStyle": "solid", "strokeWidth": 1, "strokeStyle": "solid",
+      "roughness": 0, "opacity": 100, "groupIds": [], "roundness": null,
+      "isDeleted": false, "boundElements": [], "link": null, "locked": false,
+      "text": "Also: add userId? to DsheetProps (types.ts)  •  add ActiveUser type to types.ts  •  pass userId through dsheet-editor.tsx → EditorProvider",
+      "fontSize": 12, "fontFamily": 2, "textAlign": "center",
+      "verticalAlign": "top", "containerId": null,
+      "originalText": "Also: add userId? to DsheetProps (types.ts)  •  add ActiveUser type to types.ts  •  pass userId through dsheet-editor.tsx → EditorProvider",
+      "lineHeight": 1.25
+    }
+  ],
+  "appState": {
+    "gridSize": null,
+    "viewBackgroundColor": "#ffffff"
+  },
+  "files": {}
+}
