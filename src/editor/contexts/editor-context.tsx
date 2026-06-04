@@ -236,6 +236,13 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [editorStateRef]);
 
+  // Expose terminateSession on the external workbook ref so host apps can
+  // call sheetEditorRef.current?.terminateSession() to end the relay session.
+  useMemo(() => {
+    if (!externalEditorRef?.current || !terminateSession) return;
+    (externalEditorRef.current as any).terminateSession = terminateSession;
+  }, [externalEditorRef, terminateSession]);
+
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
     if (!onChange) {

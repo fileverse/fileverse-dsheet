@@ -2,24 +2,24 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "2.0.33",
+  "version": "2.0.33-rtc-a",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
     ".": {
       "import": "./dist/index.es.js",
-      "default": "./dist/index.es.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.es.js"
     },
     "./constants": {
       "import": "./dist/constants.js",
-      "default": "./dist/constants.js",
-      "types": "./dist/constants.d.ts"
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
     },
     "./formula": {
       "import": "./dist/formula.js",
-      "default": "./dist/formula.js",
-      "types": "./dist/formula.d.ts"
+      "types": "./dist/formula.d.ts",
+      "default": "./dist/formula.js"
     },
     "./styles": "./dist/style.css",
     "./types": "./dist/editor/types.d.ts"
@@ -34,7 +34,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "dev:link": "npm run build && cp -r dist/* ../dsheets.new/node_modules/@fileverse-dev/dsheet/dist/ && echo '✓ Copied to dsheets.new'",
+    "dev:link": "npm run build && cp -r dist/* ../dsheets.new/node_modules/@fileverse-dev/dsheet/dist/ && echo '\u2713 Copied to dsheets.new'",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview"
   },
