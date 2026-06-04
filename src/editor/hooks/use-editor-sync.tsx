@@ -149,6 +149,8 @@ export const useEditorSync = (
   // Separate effect: connect to collab when collaboration is enabled AFTER the
   // ydoc/IDB is already synced (e.g. user clicks "Start Collaboration").
   // Does NOT touch the ydoc — just calls connect() on the live ydoc.
+  // Cleanup disconnects the socket when collabEnabled flips back to false
+  // (owner clicks Stop) so edits stop flowing between peers.
   useEffect(() => {
     if (!collabEnabled || !collaboration?.enabled) return;
     // If IDB hasn't synced yet, the once('synced') handler above will connect.
@@ -160,6 +162,13 @@ export const useEditorSync = (
       { enabled: true }
     >;
     connectRef.current(collabFull.connection);
+
+    return () => {
+      // collabEnabled went false → tear down the socket connection.
+      // terminateSession (owner) broadcasts SESSION_TERMINATED to joiners
+      // before disconnecting; disconnect (joiner) just drops the socket.
+      terminateSession();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collabEnabled]);
 

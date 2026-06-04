@@ -238,10 +238,14 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   // Expose terminateSession on the external workbook ref so host apps can
   // call sheetEditorRef.current?.terminateSession() to end the relay session.
-  useMemo(() => {
-    if (!externalEditorRef?.current || !terminateSession) return;
-    (externalEditorRef.current as any).terminateSession = terminateSession;
-  }, [externalEditorRef, terminateSession]);
+  // Runs every commit (no deps) so we re-attach as soon as the Workbook's
+  // useImperativeHandle populates externalEditorRef.current — mutating a ref
+  // does not trigger re-renders, so a deps-watched effect would miss it.
+  useEffect(() => {
+    if (externalEditorRef?.current && terminateSession) {
+      (externalEditorRef.current as any).terminateSession = terminateSession;
+    }
+  });
 
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {

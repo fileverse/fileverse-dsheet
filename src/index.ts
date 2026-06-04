@@ -1,5 +1,6 @@
 // Main component
 export { default as DSheetEditor } from './editor/dsheet-editor';
+export { default as DSheetSkeleton } from './editor/components/skeleton-loader';
 
 // Utilities
 export { formulaResponseUiSync } from './editor/utils/formula-ui-sync';
