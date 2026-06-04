@@ -99,10 +99,12 @@ The ddoc client need not change: the server defaults missing `appType` to `'ddoc
 
 Nothing is enforced as required, so ordering is low-risk:
 
-1. Deploy the server (optional field + default + guard) — fully backward compatible; deployed ddoc clients keep working.
+1. Deploy the server (optional field + default + guard) — fully backward compatible; deployed ddoc clients keep working. **Operational note:** this adds `{ appType, createdAt }` indexes to the live, ddoc-populated `DocumentUpdate` and `DocumentCommit` collections. They are declared `{ background: true }`, so the build is non-blocking, but it is still an index build over production data — schedule/monitor accordingly.
 2. Run the backfill: `tsx src/scripts/backfill-apptype.ts` — sets `appType: 'ddoc'` on existing rows missing it (safe; all current data is ddoc).
 3. Ship the dsheet client (§4) sending `appType: 'dsheet'` — its first release.
 4. *(Optional, low priority)* ship the ddoc client (§4.4) sending `appType: 'ddoc'`.
+
+> Ongoing legacy raw-WebSocket writes are safe without any client change: that handler persists through the same Mongoose models (`createUpdate` / `createCommit` / `createSession`), so the `default: 'ddoc'` tags them automatically.
 
 ## 6. Testing
 
