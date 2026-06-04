@@ -35,6 +35,7 @@ export const useEditorData = (
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
   allowComments?: boolean,
   hasCollabContentInitialised?: boolean,
+  collabEnabled = false,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
@@ -43,11 +44,11 @@ export const useEditorData = (
   const dataInitialized = useRef<boolean>(false);
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
-  /** Last applied `portalContent` string; reset when `dsheetId` changes. */
-  const lastAppliedPortalContentRef = useRef<string | null>(null);
+  /** True once portalContent has been applied; reset when `dsheetId` changes. */
+  const portalContentAppliedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    lastAppliedPortalContentRef.current = null;
+    portalContentAppliedRef.current = false;
   }, [dsheetId]);
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
@@ -57,14 +58,13 @@ export const useEditorData = (
     liveQueryRefreshRate,
   );
 
-  // Apply portal content when it changes (initial load + portal refresh / multi-device sync)
+  // Apply portal content once on first load. Skipped entirely when RTC collaboration
+  // is active — SyncManager.syncLatestCommit is the sole source of truth in that case,
+  // matching the behaviour of initialContent in fileverse-ddoc.
   useEffect(() => {
-    if (!portalContent?.length || !ydocRef.current) {
-      return;
-    }
-    if (portalContent === lastAppliedPortalContentRef.current) {
-      return;
-    }
+    if (collabEnabled) return;
+    if (!portalContent?.length || !ydocRef.current) return;
+    if (portalContentAppliedRef.current) return;
 
     try {
       const incoming = toUint8Array(portalContent);
@@ -103,7 +103,7 @@ export const useEditorData = (
       currentDataRef.current = newSheetData;
       initialiseLiveQueryData(newSheetData);
 
-      lastAppliedPortalContentRef.current = portalContent;
+      portalContentAppliedRef.current = true;
 
       if (setForceSheetRender) {
         setForceSheetRender((prev) => prev + 1);
@@ -124,7 +124,7 @@ export const useEditorData = (
     } catch (error) {
       console.error('[DSheet] Error processing portal content:', error);
     }
-  }, [portalContent]);
+  }, [portalContent, collabEnabled]);
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
@@ -217,7 +217,9 @@ export const useEditorData = (
   // Initialize sheet data once Socket.IO collab sync reaches 'ready' for the first time.
   // The ydoc already contains the merged server state at this point.
   useEffect(() => {
-    if (!hasCollabContentInitialised || !ydocRef.current || !dsheetId) return;
+    if (!hasCollabContentInitialised || !ydocRef.current || !dsheetId) {
+      return;
+    }
     if (dataInitialized.current) return;
 
     try {
@@ -263,6 +265,11 @@ export const useEditorData = (
           return;
         }
 
+        // RTC session: collabInit hydrates currentDataRef after sync — don't claim init here.
+        if (collabEnabled) {
+          return;
+        }
+
         const sheetArray = ydocRef.current?.getArray(dsheetId);
         const currentData = Array.from(sheetArray || []) as Sheet[];
         initialiseLiveQueryData(currentData);
@@ -273,7 +280,7 @@ export const useEditorData = (
 
       initializeWithDefaultData();
     }
-  }, [dsheetId, isReadOnly, syncStatus]);
+  }, [dsheetId, isReadOnly, syncStatus, collabEnabled]);
 
   // Attach listener for YJS data changes
   useEffect(() => {
@@ -439,7 +446,11 @@ export const useEditorData = (
         const orderList: Record<string, number> = {};
         let hasOrderChange = false;
 
-        for (const { sheetId, sheetMap, changedKeys } of sheetMetaUpdates.values()) {
+        for (const {
+          sheetId,
+          sheetMap,
+          changedKeys,
+        } of sheetMetaUpdates.values()) {
           if (changedKeys.includes('name')) {
             const name = sheetMap.get('name');
             if (typeof name === 'string') {

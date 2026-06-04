@@ -4,7 +4,6 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
 import { presenceColor } from '../../constants';
-
 export const useEditorSync = (
   dsheetId: string,
   enableIndexeddbSync = true,

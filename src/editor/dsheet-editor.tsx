@@ -15,8 +15,6 @@ import { EditorWorkbook } from './components/editor-workbook';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
 import { PermissionChip } from './components/permission-chip';
-import { CollabStatusChip } from './components/collab-status-chip';
-
 import '@sheet-engine/react/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
@@ -88,6 +86,8 @@ const EditorContent = ({
 }) => {
   const {
     loading,
+    syncStatus,
+    collabEnabled,
     sheetEditorRef,
     currentDataRef,
     ydocRef,
@@ -95,7 +95,6 @@ const EditorContent = ({
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
     setSelectedTemplate: contextSetSelectedTemplate,
-    collabState,
   } = useEditor();
 
   // Initialize template button functionality
@@ -167,27 +166,38 @@ const EditorContent = ({
   };
 
   useEffect(() => {
-    if (isNewSheet) {
-      ydocRef.current?.transact(() => {
-        const sheetArray = ydocRef.current?.getArray(dsheetId);
+    if (!isNewSheet || !ydocRef.current || !dsheetId) return;
+
+    // Collaboration + IndexedDB must hydrate before an empty ydoc means "brand new".
+    if (collabEnabled) return;
+    if (syncStatus !== 'synced') return;
+
+    ydocRef.current.transact(() => {
+      const sheetArray = ydocRef.current?.getArray(dsheetId);
+      //@ts-ignore
+      const sData: any = [];
+      if (sheetArray?.toArray().length === 0 && ydocRef.current) {
+        DEFAULT_SHEET_DATA.forEach((sheet, index) => {
+          const id = crypto.randomUUID();
+          sheet = {
+            ...sheet,
+            id,
+          };
+          sheetArray?.insert(0, [plainSheetToYMap(sheet, index)]);
+          sData.push(sheet);
+        });
         //@ts-ignore
-        const sData: any = [];
-        if (sheetArray?.toArray().length === 0 && ydocRef.current) {
-          DEFAULT_SHEET_DATA.forEach((sheet, index) => {
-            const id = crypto.randomUUID();
-            sheet = {
-              ...sheet,
-              id,
-            };
-            sheetArray?.insert(0, [plainSheetToYMap(sheet, index)]);
-            sData.push(sheet);
-          });
-          //@ts-ignore
-          currentDataRef.current = sData;
-        }
-      });
-    }
-  }, [isNewSheet, shouldRenderSheet, loading]);
+        currentDataRef.current = sData;
+      }
+    });
+  }, [
+    isNewSheet,
+    syncStatus,
+    collabEnabled,
+    dsheetId,
+    ydocRef,
+    currentDataRef,
+  ]);
 
   return (
     <div

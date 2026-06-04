@@ -23,7 +23,6 @@ import {
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 import type { CollaborationProps, CollabState } from '../../sync-local/types';
 import type { Awareness } from 'y-protocols/awareness';
-
 // Define the shape of the context
 export interface EditorContextType {
   setIsDataLoaded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -60,6 +59,7 @@ export interface EditorContextType {
   syncStatus: 'initializing' | 'syncing' | 'synced' | 'error';
 
   // Socket.IO collaboration
+  collabEnabled?: boolean;
   collabState?: CollabState;
   isCollabReady?: boolean;
   isCollabSyncing?: boolean;
@@ -297,6 +297,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     liveQueryRefreshRate,
     dataBlockApiKeyHandler,
     allowComments,
+    hasCollabContentInitialised,
+    collaboration?.enabled === true,
   );
 
   // Keep the stable collab ref in sync with the live currentDataRef
@@ -348,6 +350,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       isReadOnly,
       handleOnChangePortalUpdate,
       // Socket.IO collab
+      collabEnabled: collaboration?.enabled === true,
       collabState,
       isCollabReady,
       isCollabSyncing,
@@ -378,6 +381,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     handleLiveQuery,
     initialiseLiveQueryData,
     isReadOnly,
+    collaboration?.enabled,
     collabState,
     isCollabReady,
     isCollabSyncing,
