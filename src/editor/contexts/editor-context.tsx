@@ -21,7 +21,11 @@ import {
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
-import type { CollaborationProps, CollabState } from '../../sync-local/types';
+import type {
+  CollaborationProps,
+  CollabState,
+  CollabUser,
+} from '../../sync-local/types';
 import type { Awareness } from 'y-protocols/awareness';
 // Define the shape of the context
 export interface EditorContextType {
@@ -66,6 +70,10 @@ export interface EditorContextType {
   hasCollabContentInitialised?: boolean;
   awareness?: Awareness | null;
   terminateSession?: () => void;
+  onCollaboratorsChange?: (collaborators: CollabUser[]) => void;
+  /** Attach collab methods to the WorkbookInstance — must be called from a
+   * callback ref so we re-attach every time Workbook regenerates its handle. */
+  augmentEditorRef?: (instance: WorkbookInstance | null) => void;
 
   handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
 }
@@ -236,16 +244,44 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [editorStateRef]);
 
-  // Expose terminateSession on the external workbook ref so host apps can
-  // call sheetEditorRef.current?.terminateSession() to end the relay session.
-  // Runs every commit (no deps) so we re-attach as soon as the Workbook's
-  // useImperativeHandle populates externalEditorRef.current — mutating a ref
-  // does not trigger re-renders, so a deps-watched effect would miss it.
+  // Imperatively update the local collaborator's display name in awareness and
+  // re-broadcast so peers see the new name (mirrors ddoc's
+  // editorRef.current.updateCollaboratorName). Preserves color/isEns/cell.
+  const updateCollaboratorName = useCallback(
+    (name: string) => {
+      if (!awareness) return;
+      const local = awareness.getLocalState();
+      const prevUser = (local?.user as Record<string, unknown>) || {};
+      awareness.setLocalStateField('user', {
+        ...prevUser,
+        name,
+      });
+    },
+    [awareness],
+  );
+
+  // Attach terminateSession + updateCollaboratorName to whatever
+  // WorkbookInstance the ref currently holds. The Workbook's
+  // useImperativeHandle re-generates the ref's .current object on every render
+  // it does (cursor/context changes, etc.), so a parent useEffect can't
+  // reliably re-attach — instead editor-workbook uses this via a callback ref
+  // that fires every time Workbook writes the ref.
+  const augmentEditorRef = useCallback(
+    (instance: WorkbookInstance | null) => {
+      if (!instance) return;
+      if (terminateSession) {
+        (instance as any).terminateSession = terminateSession;
+      }
+      (instance as any).updateCollaboratorName = updateCollaboratorName;
+    },
+    [terminateSession, updateCollaboratorName],
+  );
+
+  // Also re-attach when terminateSession/updateCollaboratorName identities
+  // change (e.g. awareness becomes available). Safe no-op if .current is null.
   useEffect(() => {
-    if (externalEditorRef?.current && terminateSession) {
-      (externalEditorRef.current as any).terminateSession = terminateSession;
-    }
-  });
+    if (externalEditorRef?.current) augmentEditorRef(externalEditorRef.current);
+  }, [augmentEditorRef, externalEditorRef]);
 
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
@@ -361,6 +397,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       hasCollabContentInitialised,
       awareness,
       terminateSession,
+      onCollaboratorsChange:
+        collaboration?.enabled === true
+          ? collaboration.on?.onCollaboratorsChange
+          : undefined,
+      augmentEditorRef,
     };
   }, [
     setIsDataLoaded,
@@ -392,6 +433,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     hasCollabContentInitialised,
     awareness,
     terminateSession,
+    collaboration,
+    augmentEditorRef,
   ]);
 
   return (

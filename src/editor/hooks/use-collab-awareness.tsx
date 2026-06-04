@@ -3,21 +3,77 @@ import { removeAwarenessStates } from 'y-protocols/awareness.js';
 import type { Awareness } from 'y-protocols/awareness';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { COLLAB_PRESENCE_COLORS, presenceColor } from '../../constants';
+import type { CollabUser } from '../../sync-local/types';
 
 /**
  * Reads remote cursor positions from Yjs awareness and keeps Fortune sheet's
  * native presence list in sync. Fortune renders colored cell borders + username
  * labels automatically via context.presences[].
+ *
+ * Also emits the full collaborator list (including the local user) via
+ * `onCollaboratorsChange` so host apps can render navbar chips. This mirrors
+ * ddoc's editor-layer awareness handler, which maps awareness.states →
+ * `{ clientId, ...user }` and fires on every awareness update + once on mount.
  */
 export const useCollabAwareness = (
   awareness: Awareness | null | undefined,
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
+  onCollaboratorsChange?: (collaborators: CollabUser[]) => void,
 ) => {
   const colorRef = useRef(
     COLLAB_PRESENCE_COLORS[
     Math.floor(Math.random() * COLLAB_PRESENCE_COLORS.length)
     ],
   );
+
+  // Keep the callback in a ref so the awareness effect doesn't re-subscribe
+  // whenever the host passes a new function identity.
+  const onCollaboratorsChangeRef = useRef(onCollaboratorsChange);
+  onCollaboratorsChangeRef.current = onCollaboratorsChange;
+
+  // Tracks the last emitted roster signature so we only notify the host when
+  // the *set of people* changes (join / leave / rename) — NOT on every cursor
+  // move or awareness heartbeat. Emitting on every update would re-render the
+  // host tree continuously, wiping Fortune's imperatively-added presences
+  // (remote cursors would vanish until the next cell change re-broadcast).
+  const lastRosterSigRef = useRef<string>('');
+
+  // Emit collaborator list (incl. local user) only when the roster changes.
+  useEffect(() => {
+    if (!awareness) return;
+
+    const emitCollaborators = () => {
+      const collaborators: CollabUser[] = [];
+      awareness.getStates().forEach((state, clientId) => {
+        const user = state?.user;
+        if (!user || !user.name) return;
+        collaborators.push({
+          clientId,
+          name: user.name,
+          color: user.color || '#3DA5F4',
+        });
+      });
+
+      // Signature excludes cursor position so cursor moves don't re-notify.
+      const sig = collaborators
+        .map((c) => `${c.clientId}:${c.name}:${c.color}`)
+        .sort()
+        .join('|');
+      if (sig === lastRosterSigRef.current) return;
+      lastRosterSigRef.current = sig;
+
+      onCollaboratorsChangeRef.current?.(collaborators);
+    };
+
+    awareness.on('update', emitCollaborators);
+    emitCollaborators(); // fire once so local user shows immediately
+
+    return () => {
+      awareness.off('update', emitCollaborators);
+      lastRosterSigRef.current = '';
+      onCollaboratorsChangeRef.current?.([]);
+    };
+  }, [awareness]);
 
   // Sync remote awareness states → Fortune addPresences / removePresences
   useEffect(() => {
@@ -82,8 +138,25 @@ export const useCollabAwareness = (
 
     awareness.on('change', handleChange);
 
-    // Periodically remove awareness states that haven't been updated within
-    const STALE_TIMEOUT_MS = 10000;
+    // Heartbeat: re-broadcast our own awareness state on a fixed cadence so
+    // that connected-but-idle peers keep each other "fresh". Without this, a
+    // peer who isn't moving their cursor stops sending awareness updates and
+    // would be wrongly pruned by the stale-timeout below — their cursor would
+    // vanish until they next touch a cell. setLocalState always bumps the
+    // awareness clock, forcing an 'update' → socket broadcast.
+    const HEARTBEAT_MS = 5000;
+    const heartbeatInterval = setInterval(() => {
+      const local = awareness.getLocalState();
+      if (local) {
+        // Spread to a new object so the clock advances and a broadcast fires.
+        awareness.setLocalState({ ...local });
+      }
+    }, HEARTBEAT_MS);
+
+    // Only prune a peer once they've missed several heartbeats (i.e. they are
+    // genuinely gone, not merely idle). With a 5s heartbeat, a 30s window means
+    // ~6 consecutive misses before removal — robust against transient hiccups.
+    const STALE_TIMEOUT_MS = 30000;
     const staleCleanupInterval = setInterval(() => {
       const now = Date.now();
       const stale: number[] = [];
@@ -103,6 +176,7 @@ export const useCollabAwareness = (
     }, 5000);
 
     return () => {
+      clearInterval(heartbeatInterval);
       clearInterval(staleCleanupInterval);
       awareness.off('change', handleChange);
 
