@@ -183,6 +183,19 @@ export const useEditorSync = (
         .session.isEns
       : undefined;
 
+  const prevCollabStatusRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevCollabStatusRef.current;
+    prevCollabStatusRef.current = collabState?.status;
+
+    if (collabState?.status === 'ready' && prev === 'syncing' && awareness) {
+      const localState = awareness.getLocalState();
+      if (localState?.user) {
+        awareness.setLocalStateField('user', localState.user);
+      }
+    }
+  }, [collabState?.status, awareness]);
+
   // Re-publish awareness when ENS status resolves asynchronously
   useEffect(() => {
     if (!awareness || !collabEnabled || !collaboration?.enabled) return;

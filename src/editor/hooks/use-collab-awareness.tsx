@@ -23,9 +23,22 @@ export const useCollabAwareness = (
   useEffect(() => {
     if (!awareness) return;
 
-    const handleChange = () => {
+    const handleChange = ({
+      removed,
+    }: {
+      added: number[];
+      updated: number[];
+      removed: number[];
+    }) => {
       const workbook = sheetEditorRef.current;
       if (!workbook) return;
+
+      // Explicitly remove departed clients from Fortune before re-reading states.
+      if (removed.length > 0) {
+        workbook.removePresences(
+          removed.map((id) => ({ userId: String(id), username: '' })),
+        );
+      }
 
       const states = awareness.getStates();
       const localClientId = awareness.clientID;
@@ -69,7 +82,28 @@ export const useCollabAwareness = (
 
     awareness.on('change', handleChange);
 
+    // Periodically remove awareness states that haven't been updated within
+    const STALE_TIMEOUT_MS = 10000;
+    const staleCleanupInterval = setInterval(() => {
+      const now = Date.now();
+      const stale: number[] = [];
+      awareness.meta.forEach(
+        (meta: { clock: number; lastUpdated: number }, clientId: number) => {
+          if (
+            clientId !== awareness.clientID &&
+            now - meta.lastUpdated > STALE_TIMEOUT_MS
+          ) {
+            stale.push(clientId);
+          }
+        },
+      );
+      if (stale.length > 0) {
+        removeAwarenessStates(awareness, stale, 'timeout');
+      }
+    }, 5000);
+
     return () => {
+      clearInterval(staleCleanupInterval);
       awareness.off('change', handleChange);
 
       // Remove local state so other peers stop seeing this cursor

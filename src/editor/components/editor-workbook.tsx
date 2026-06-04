@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { ComponentProps, useCallback, useEffect, useMemo } from 'react';
+import React, {
+  ComponentProps,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { Workbook } from '@sheet-engine/react';
 import { Cell } from '@sheet-engine/react';
 import {
@@ -127,6 +133,11 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     setIsDataLoaded,
     awareness,
   } = useEditor();
+
+  const awarenessRef = useRef(awareness);
+  useEffect(() => {
+    awarenessRef.current = awareness;
+  }, [awareness]);
 
   useCollabAwareness(awareness, sheetEditorRef);
 
@@ -392,7 +403,6 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             });
           },
           updateCellYdoc: (changes: SheetChangePath[]) => {
-
             updateYdocSheetData(
               ydocRef.current,
               dsheetId,
@@ -438,12 +448,16 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           afterShowGridLinesChange: () => {
             syncCurrentSheetField(syncContext, 'showGridLines');
           },
-          afterSelectionChange: (sheetId: string, selection: import('../../sheet-engine/core/types').Selection) => {
-            if (!awareness) return;
+          afterSelectionChange: (
+            sheetId: string,
+            selection: import('../../sheet-engine/core/types').Selection,
+          ) => {
+            const aw = awarenessRef.current;
+            if (!aw) return;
             const r = selection.row_focus ?? selection.row?.[0];
             const c = selection.column_focus ?? selection.column?.[0];
             if (r == null || c == null) return;
-            awareness.setLocalStateField('cell', { r, c, sheetId });
+            aw.setLocalStateField('cell', { r, c, sheetId });
           },
         }}
         onDuneChartEmbed={onDuneChartEmbed}
