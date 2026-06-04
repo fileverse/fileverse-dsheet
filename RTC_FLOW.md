@@ -247,6 +247,48 @@ Server broadcasts '/document/content_update' to room
 
 `Y.applyUpdate` mutates the ydoc, which triggers the `observeDeep` callback registered in `use-editor-data.tsx`. The callback skips local-origin transactions and routes the update through one of two paths:
 
+---
+
+### Remote Update Merging: Surgical vs Remount
+
+#### Plain-language summary
+
+When your peer edits a cell, that change arrives as an encrypted blob, gets decrypted, and is applied to the shared Yjs document. At that point the app has two ways to show it in the spreadsheet:
+
+1. **Surgical (fast, no flicker):** If the update only touches ≤ 50 individual cells and doesn't add/remove sheets, the app calls `setCellValue` directly on the live spreadsheet instance — like typing into the cell yourself. The spreadsheet component never re-renders; only the affected cells update. This is the happy path for normal typing and editing.
+
+2. **Remount (slow, may flicker):** If the update touches more than 50 cells (e.g. a paste, import, or formula recalc) or restructures sheets (add/delete/rename tab), the app increments a counter that tells React to tear down and rebuild the entire Workbook component. The full ydoc state is read fresh before the rebuild so nothing is stale. This is debounced by 50ms and is skipped while the local user is actively typing in a cell.
+
+The threshold of 50 cells (`SURGICAL_CELL_LIMIT`) is the break-even point: 50 individual `setCellValue` calls is cheaper than one full remount; 51+ is not.
+
+#### Technical explanation
+
+On every remote ydoc update, `observeDeep` fires and classifies each changed Y.Map/Y.Array event by its path:
+
+| Event path | Classification |
+|---|---|
+| `[sheetIdx, 'celldata']` | `CellBatch` — keyed by `r_c`, carries new cell value |
+| `[sheetIdx, metaKey]` (name/order/…) | `SheetMetaUpdate` |
+| isSheetTabArrayChange() | `hasStructural = true` |
+| anything else | `hasStructural = true` |
+
+**Surgical gate:** `totalCells ≤ SURGICAL_CELL_LIMIT (50) && !hasStructural && sheetEditorRef.current != null`
+
+If the gate passes:
+- Each `CellBatch` → `sheetEditorRef.current.setCellValue(r, c, value, {id}, false)`. The `callAfterUpdate=false` flag prevents the Fortune sheet from writing the value back into the ydoc, breaking any infinite loop.
+- Supported meta updates (name, order, status, showGridLines) → `sheetEditorRef.current.setSheetName(...)`.
+- `currentDataRef.current` is synced from ydoc without triggering a re-render.
+- `setForceSheetRender` is **never called** → no Workbook remount → no flicker.
+
+If the gate fails (structural change or `totalCells > 50`):
+- 50ms debounce fires `setForceSheetRender(prev + 1)`.
+- Guard: skipped if `luckysheetCellUpdate.length > 0` (user mid-edit in a cell).
+- `currentDataRef.current` is synced from ydoc before the remount to prevent stale snapshot.
+
+`SURGICAL_SHEET_META_KEYS` defines which sheet-level fields qualify for surgical apply: `name`, `order`, `status`, `showGridLines`. `color` and `hide` are classified but fall back to remount — no imperative `WorkbookInstance` API exists for them.
+
+---
+
 #### Surgical path (small cell edits, no remount)
 
 For remote updates where all events are cell-data changes and the total changed-cell count is ≤ `SURGICAL_CELL_LIMIT` (50):
