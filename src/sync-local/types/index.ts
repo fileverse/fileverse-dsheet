@@ -136,6 +136,7 @@ export enum ServerErrorCode {
   NOT_AUTHENTICATED = 'NOT_AUTHENTICATED',
   DB_ERROR = 'DB_ERROR',
   INTERNAL_ERROR = 'INTERNAL_ERROR',
+  APP_MISMATCH = 'APP_MISMATCH',
 }
 
 export interface AckResponse<T = Record<string, any>> {
@@ -197,6 +198,8 @@ export interface RoomMember {
   role: 'owner' | 'editor';
 }
 
+export type AppType = 'ddoc' | 'dsheet';
+
 export interface IAuthArgs {
   collaborationToken: string;
   documentId: string;
@@ -205,4 +208,5 @@ export interface IAuthArgs {
   contractAddress?: string;
   sessionDid?: string;
   roomInfo?: string;
+  appType?: AppType;
 }

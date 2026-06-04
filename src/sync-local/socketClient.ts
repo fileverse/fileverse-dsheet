@@ -10,7 +10,10 @@ import {
   CommitResponse,
   IAuthArgs,
   AckResponse,
+  ServerErrorCode,
 } from './types';
+
+const APP_TYPE = 'dsheet' as const;
 import { generateKeyPairFromSeed } from '@stablelib/ed25519';
 import { fromUint8Array, toUint8Array } from 'js-base64';
 import { crypto } from './crypto';
@@ -322,6 +325,7 @@ export class SocketClient {
       collaborationToken: token,
       sessionDid: this.collaborationKeyPair?.did(),
       documentId: this.roomId,
+      appType: APP_TYPE,
     };
 
     if (this.roomInfo)
@@ -344,10 +348,12 @@ export class SocketClient {
 
     // Check statusCode FIRST — only proceed for 200
     if (response.statusCode !== 200) {
-      const message =
-        (response?.error || 'Unknown error') +
-        `, statusCode: ${response?.statusCode}`;
-      const error = new Error(message);
+      const errorMessage =
+        response?.errorCode === ServerErrorCode.APP_MISMATCH
+          ? 'This link belongs to a different Fileverse app'
+          : (response?.error || 'Unknown error') +
+            `, statusCode: ${response?.statusCode}`;
+      const error = new Error(errorMessage);
       config.onHandShakeError(error, response.statusCode);
       return;
     }
