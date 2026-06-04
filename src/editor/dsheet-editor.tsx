@@ -230,13 +230,6 @@ const EditorContent = ({
             </div>
           )}
 
-          {/* Collab status chip - only visible when collaboration is active */}
-          {collabState && collabState.status !== 'idle' && (
-            <div className="absolute top-2 left-4 z-20">
-              <CollabStatusChip state={collabState} />
-            </div>
-          )}
-
           <EditorWorkbook
             setShowFetchURLModal={setShowFetchURLModal}
             setFetchingURLData={setFetchingURLData}

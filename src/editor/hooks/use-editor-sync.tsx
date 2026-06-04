@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
-import { ENS_PRESENCE_COLOR } from '../../sync-local/constants';
+import { presenceColor } from '../../constants';
 
 export const useEditorSync = (
   dsheetId: string,
@@ -24,13 +24,11 @@ export const useEditorSync = (
     ydocRef.current = new Y.Doc();
   }
 
-  const collabEnabled = collaboration?.enabled === true;
-  const collabServices = collabEnabled
-    ? (collaboration as Extract<CollaborationProps, { enabled: true }>).services
-    : undefined;
-  const collabCallbacks = collabEnabled
-    ? (collaboration as Extract<CollaborationProps, { enabled: true }>).on
-    : undefined;
+  const activeCollab =
+    collaboration?.enabled === true ? collaboration : undefined;
+  const collabEnabled = activeCollab != null;
+  const collabServices = activeCollab?.services;
+  const collabCallbacks = activeCollab?.on;
 
   // Stable ref so SyncManager closure never captures a stale onCollabUpdate identity
   const onCollabUpdateRef = useRef(onCollabUpdate);
@@ -174,13 +172,7 @@ export const useEditorSync = (
     ).session;
     awareness.setLocalStateField('user', {
       name: session.username,
-      color: session.isEns
-        ? ENS_PRESENCE_COLOR
-        : (session.color ??
-          '#' +
-          Math.floor(Math.random() * 0xffffff)
-            .toString(16)
-            .padStart(6, '0')),
+      color: presenceColor(session.isEns, session.color),
       isEns: session.isEns ?? false,
     });
   }, [awareness, collabEnabled]);
@@ -201,7 +193,7 @@ export const useEditorSync = (
     const localState = awareness.getLocalState();
     awareness.setLocalStateField('user', {
       ...(localState?.user ?? {}),
-      color: ENS_PRESENCE_COLOR,
+      color: presenceColor(session.isEns),
       isEns: true,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

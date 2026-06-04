@@ -2,22 +2,7 @@ import { useEffect, useRef } from 'react';
 import { removeAwarenessStates } from 'y-protocols/awareness.js';
 import type { Awareness } from 'y-protocols/awareness';
 import { WorkbookInstance } from '@sheet-engine/react';
-import { ENS_PRESENCE_COLOR } from '../../sync-local/constants';
-
-const COLLAB_COLORS = [
-  '#30bced',
-  '#6eeb83',
-  '#fa69d1',
-  '#ecd444',
-  '#ee6352',
-  '#db3041',
-  '#0ad7f2',
-  '#1bff39',
-];
-
-function colorForClient(clientId: number): string {
-  return COLLAB_COLORS[clientId % COLLAB_COLORS.length];
-}
+import { COLLAB_PRESENCE_COLORS, presenceColor } from '../../constants';
 
 /**
  * Reads remote cursor positions from Yjs awareness and keeps Fortune sheet's
@@ -29,7 +14,9 @@ export const useCollabAwareness = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
 ) => {
   const colorRef = useRef(
-    COLLAB_COLORS[Math.floor(Math.random() * COLLAB_COLORS.length)],
+    COLLAB_PRESENCE_COLORS[
+    Math.floor(Math.random() * COLLAB_PRESENCE_COLORS.length)
+    ],
   );
 
   // Sync remote awareness states → Fortune addPresences / removePresences
@@ -60,9 +47,7 @@ export const useCollabAwareness = (
           sheetId: state.cell.sheetId,
           username: state.user.name ?? 'Anonymous',
           userId: String(clientId),
-          color: isEns
-            ? ENS_PRESENCE_COLOR
-            : (state.user.color ?? colorForClient(clientId)),
+          color: presenceColor(isEns, state.user.color, clientId),
           isEns,
           selection: { r: state.cell.r, c: state.cell.c },
         });
