@@ -71,9 +71,6 @@ export interface EditorContextType {
   awareness?: Awareness | null;
   terminateSession?: () => void;
   onCollaboratorsChange?: (collaborators: CollabUser[]) => void;
-  /** Attach collab methods to the WorkbookInstance — must be called from a
-   * callback ref so we re-attach every time Workbook regenerates its handle. */
-  augmentEditorRef?: (instance: WorkbookInstance | null) => void;
 
   handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
 }
@@ -101,6 +98,8 @@ interface EditorProviderProps {
   commentData?: object;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
+    terminateSession?: () => void;
+    updateCollaboratorName?: (name: string) => void;
   } | null>;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
@@ -236,14 +235,6 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     onCollabUpdate,
   );
 
-  useMemo(() => {
-    if (!editorStateRef) return;
-    editorStateRef.current = {
-      ...editorStateRef.current,
-      refreshIndexedDB,
-    };
-  }, [editorStateRef]);
-
   // Imperatively update the local collaborator's display name in awareness and
   // re-broadcast so peers see the new name (mirrors ddoc's
   // editorRef.current.updateCollaboratorName). Preserves color/isEns/cell.
@@ -260,28 +251,68 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     [awareness],
   );
 
-  // Attach terminateSession + updateCollaboratorName to whatever
-  // WorkbookInstance the ref currently holds. The Workbook's
-  // useImperativeHandle re-generates the ref's .current object on every render
-  // it does (cursor/context changes, etc.), so a parent useEffect can't
-  // reliably re-attach — instead editor-workbook uses this via a callback ref
-  // that fires every time Workbook writes the ref.
-  const augmentEditorRef = useCallback(
-    (instance: WorkbookInstance | null) => {
-      if (!instance) return;
-      if (terminateSession) {
-        (instance as any).terminateSession = terminateSession;
-      }
-      (instance as any).updateCollaboratorName = updateCollaboratorName;
-    },
-    [terminateSession, updateCollaboratorName],
-  );
-
-  // Also re-attach when terminateSession/updateCollaboratorName identities
-  // change (e.g. awareness becomes available). Safe no-op if .current is null.
+  // Keep refreshIndexedDB on the host-owned editorStateRef (existing behavior).
   useEffect(() => {
-    if (externalEditorRef?.current) augmentEditorRef(externalEditorRef.current);
-  }, [augmentEditorRef, externalEditorRef]);
+    if (!editorStateRef) return;
+    editorStateRef.current = {
+      ...editorStateRef.current,
+      refreshIndexedDB,
+    };
+  }, [editorStateRef, refreshIndexedDB]);
+
+  // Always-fresh refs for our collab methods so the .current setter below
+  // captures the latest closures without re-running.
+  const terminateSessionRef = useRef(terminateSession);
+  terminateSessionRef.current = terminateSession;
+  const updateCollaboratorNameRef = useRef(updateCollaboratorName);
+  updateCollaboratorNameRef.current = updateCollaboratorName;
+
+  // Intercept the externalEditorRef's `.current` setter so EVERY write made by
+  // Workbook's useImperativeHandle (which regenerates the WorkbookInstance
+  // object on each render) re-attaches our collab methods. This way:
+  //   - typing/cursor behavior is untouched (we pass sheetEditorRef directly
+  //     to <Workbook ref=...> as before — no callback ref).
+  //   - sheetEditorRef.current always has .terminateSession + .updateCollaboratorName.
+  useEffect(() => {
+    if (!externalEditorRef) return;
+    let _current = externalEditorRef.current;
+    // Attach methods to the value already present on first install too.
+    if (_current) {
+      (_current as any).terminateSession = terminateSessionRef.current;
+      (_current as any).updateCollaboratorName =
+        updateCollaboratorNameRef.current;
+    }
+    try {
+      Object.defineProperty(externalEditorRef, 'current', {
+        configurable: true,
+        get() {
+          return _current;
+        },
+        set(v) {
+          if (v) {
+            (v as any).terminateSession = terminateSessionRef.current;
+            (v as any).updateCollaboratorName =
+              updateCollaboratorNameRef.current;
+          }
+          _current = v;
+        },
+      });
+    } catch {
+      // Some hosts may pass a frozen ref — fall back to one-shot attach above.
+    }
+    return () => {
+      // Restore plain property on unmount so we don't trap a stale closure.
+      try {
+        Object.defineProperty(externalEditorRef, 'current', {
+          configurable: true,
+          writable: true,
+          value: _current,
+        });
+      } catch {
+        // ignore
+      }
+    };
+  }, [externalEditorRef]);
 
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
@@ -401,7 +432,6 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         collaboration?.enabled === true
           ? collaboration.on?.onCollaboratorsChange
           : undefined,
-      augmentEditorRef,
     };
   }, [
     setIsDataLoaded,
@@ -434,7 +464,6 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     awareness,
     terminateSession,
     collaboration,
-    augmentEditorRef,
   ]);
 
   return (

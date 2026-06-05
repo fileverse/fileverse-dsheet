@@ -133,20 +133,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     setIsDataLoaded,
     awareness,
     onCollaboratorsChange,
-    augmentEditorRef,
   } = useEditor();
-
-  // Callback ref that fires every time Workbook regenerates its imperative
-  // handle. We write through to the original sheetEditorRef AND re-attach
-  // collab methods (terminateSession / updateCollaboratorName) — otherwise
-  // they'd be wiped on every Workbook re-render (cursor moves, etc.).
-  const workbookCallbackRef = useCallback(
-    (instance: any) => {
-      sheetEditorRef.current = instance;
-      augmentEditorRef?.(instance);
-    },
-    [sheetEditorRef, augmentEditorRef],
-  );
 
   const awarenessRef = useRef(awareness);
   useEffect(() => {
@@ -272,7 +259,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         isFlvReadOnly={isReadOnly}
         isAuthorized={isAuthorized}
         key={workbookKey}
-        ref={workbookCallbackRef}
+        ref={sheetEditorRef}
         suppressInitialCellSelection={
           !effectiveOnboardingComplete && !!onboardingHandler
         }
