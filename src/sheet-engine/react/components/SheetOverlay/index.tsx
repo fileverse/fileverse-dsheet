@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useState,
 } from 'react';
 import './index.css';
 import {
@@ -39,6 +40,9 @@ import {
   expandCellRectForMerge,
   seletedHighlistByindex,
   selectionIsExactlyOneMergeBlock,
+  rowLocation,
+  colLocation,
+  fixPositionOnFrozenCells,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import WorkbookContext, { SetContextOptions } from '../../context';
@@ -118,6 +122,7 @@ function cfRuleHoverHighlightHcStyle(hex: string) {
 const SheetOverlay: React.FC = () => {
   const { context, setContext, settings, refs } = useContext(WorkbookContext);
   const { info, rightclick } = locale(context);
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
 
   const flowdataForQuickSearchDeps = getFlowdata(context);
 
@@ -423,6 +428,22 @@ const SheetOverlay: React.FC = () => {
           containerRef.current!,
           refs.fxInput.current,
         );
+
+        const containerMain = document.getElementsByClassName('fortune-cell-area')[0] as HTMLDivElement;
+        const rect = containerMain?.getBoundingClientRect();
+        if (rect) {
+          const mouseX = nativeEvent.pageX - rect.left - window.scrollX;
+          const mouseY = nativeEvent.pageY - rect.top - window.scrollY;
+          const _x = mouseX + draftCtx.scrollLeft;
+          const _y = mouseY + draftCtx.scrollTop;
+          const freeze = refs.globalCache.freezen?.[draftCtx.currentSheetId];
+          const { x, y } = fixPositionOnFrozenCells(freeze, _x, _y, mouseX, mouseY);
+          const row = rowLocation(y, draftCtx.visibledatarow)[2];
+          const col = colLocation(x, draftCtx.visibledatacolumn)[2];
+          setHoveredCell((prev) =>
+            prev?.row === row && prev?.col === col ? prev : { row, col },
+          );
+        }
       });
     },
     [
@@ -1205,7 +1226,10 @@ const SheetOverlay: React.FC = () => {
                 >
                   <div
                     className={`fortune-presence-username${presence.isEns ? ' fortune-presence-username--ens' : ''}`}
-                    style={usernameStyle}
+                    style={{
+                      ...usernameStyle,
+                      opacity: hoveredCell?.row === r && hoveredCell?.col === c ? 1 : 0,
+                    }}
                   >
                     {presence.isEns ? (
                       <>
