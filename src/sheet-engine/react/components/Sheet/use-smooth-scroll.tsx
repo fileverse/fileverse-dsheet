@@ -1,11 +1,17 @@
-import { RefObject, useContext, useEffect } from 'react';
-import { removeEditingComment, mouseRender } from '@sheet-engine/core';
+import { RefObject, useContext, useEffect, useRef } from 'react';
+import { mouseRender } from '@sheet-engine/core';
 import WorkbookContext from '../../context';
 
 export const useSmoothScroll = (
   scrollContainerRef: RefObject<HTMLDivElement | null>,
 ) => {
   const { context, refs, setContext } = useContext(WorkbookContext);
+
+  // Always reflects the latest editingCommentBox from the previous render.
+  // Readable inside native event handlers BEFORE React processes the current
+  // batch of setContext calls (so it still holds the pre-mousedown value).
+  const editingCommentBoxRef = useRef(context.editingCommentBox);
+  editingCommentBoxRef.current = context.editingCommentBox;
 
   function handleScroll(
     scrollContainer: HTMLElement,
@@ -50,9 +56,9 @@ export const useSmoothScroll = (
     }
 
     function handleWheelEvent(event: WheelEvent) {
-      setContext((ctx) => {
-        removeEditingComment(ctx, refs.globalCache);
-      });
+      // Do NOT clear any comment popups on scroll — both hover and pinned popups
+      // must survive scrolling. They are positioned inside the scrollable cell area
+      // and move with the sheet content automatically.
       const isPointerInSearchDialog =
         !!refs?.globalCache?.searchDialog?.mouseEnter;
       const hasFilterContextMenuOpen = context.filterContextMenu != null;
@@ -97,6 +103,8 @@ export const useSmoothScroll = (
   ) {
     let isDragging = false;
     let hasDragged = false;
+    // Saved before handleCellAreaMouseDown clears it — restored when drag is confirmed.
+    let savedPinnedBox: typeof context.editingCommentBox = undefined;
     let startX = 0;
     let startY = 0;
     let lastX = 0;
@@ -196,6 +204,9 @@ export const useSmoothScroll = (
 
       isDragging = true;
       hasDragged = false;
+      // Capture pinned popup before React processes handleCellAreaMouseDown's setContext.
+      // At this point in the event cycle the ref still holds the pre-mousedown value.
+      savedPinnedBox = editingCommentBoxRef.current;
       scrollDirection = 'none'; // Reset scroll direction
       startX = e.clientX;
       startY = e.clientY;
@@ -244,6 +255,15 @@ export const useSmoothScroll = (
         if (!hasDragged) {
           hasDragged = true;
           containerEl.style.cursor = 'grabbing';
+          // Drag confirmed — restore the pinned comment popup that
+          // handleCellAreaMouseDown cleared on mousedown.
+          if (savedPinnedBox) {
+            setContext((ctx) => {
+              if (!ctx.editingCommentBox) {
+                ctx.editingCommentBox = savedPinnedBox;
+              }
+            });
+          }
         }
         if (absMovedX > absMovedY * DIRECTION_LOCK_THRESHOLD) {
           scrollDirection = 'horizontal';

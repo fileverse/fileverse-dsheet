@@ -193,6 +193,7 @@ export {
   showComments,
   showHideComment,
   showHideAllComments,
+  getCommentBoxByRC,
   onCommentBoxMoveStart,
   onCommentBoxMove,
   onCommentBoxMoveEnd,
