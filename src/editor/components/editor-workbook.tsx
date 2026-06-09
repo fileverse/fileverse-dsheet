@@ -133,6 +133,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     setIsDataLoaded,
     awareness,
     onCollaboratorsChange,
+    collabEnabled,
   } = useEditor();
 
   const awarenessRef = useRef(awareness);
@@ -257,6 +258,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       // @ts-ignore
       <Workbook
         isFlvReadOnly={isReadOnly}
+        isRTCActive={collabEnabled}
         isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
