@@ -134,7 +134,11 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     awareness,
     onCollaboratorsChange,
     collabEnabled,
+    collabIsOwner,
+    remoteUpdateRef,
   } = useEditor();
+
+  const localUserEditRef = useRef(false);
 
   const awarenessRef = useRef(awareness);
   useEffect(() => {
@@ -315,6 +319,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
             })
         }
         hooks={{
+          onLocalCellEdit: () => {
+            localUserEditRef.current = true;
+          },
           afterUpdateCell: (
             row: number,
             column: number,
@@ -343,7 +350,12 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               dataBlockCalcFunction,
               handleSmartContractQuery,
               handleLiveQueryData: handleLiveQuery,
+              collabEnabled,
+              collabIsOwner,
+              remoteUpdateRef,
+              localUserEditRef,
             });
+            localUserEditRef.current = false;
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           sheetLengthChange: handleSheetLengthChange,

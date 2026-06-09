@@ -41,9 +41,12 @@ export const useEditorData = (
   const [isDataLoaded, setIsDataLoaded] = useState<boolean>(false);
   const currentDataRef = useRef<Sheet[]>([]);
   const remoteUpdateRef = useRef<boolean>(false);
+  const remoteApplyClearTimerRef = useRef<number | null>(null);
   const dataInitialized = useRef<boolean>(false);
   const isUpdatingRef = useRef<boolean>(false);
   const debounceTimerRef = useRef<number | null>(null);
+  /** While true, skip surgical applies — workbook is stale vs incoming Yjs sheet ids. */
+  const structuralRemountPendingRef = useRef<boolean>(false);
   /** True once portalContent has been applied; reset when `dsheetId` changes. */
   const portalContentAppliedRef = useRef<boolean>(false);
 
@@ -56,6 +59,31 @@ export const useEditorData = (
     dataBlockApiKeyHandler,
     enableLiveQuery,
     liveQueryRefreshRate,
+  );
+
+  const holdRemoteApplyLock = useCallback((ms: number) => {
+    remoteUpdateRef.current = true;
+    if (remoteApplyClearTimerRef.current !== null) {
+      window.clearTimeout(remoteApplyClearTimerRef.current);
+    }
+    remoteApplyClearTimerRef.current = window.setTimeout(() => {
+      remoteUpdateRef.current = false;
+      remoteApplyClearTimerRef.current = null;
+    }, ms);
+  }, []);
+
+  const syncDataBlockCalcFromPlain = useCallback(
+    (plain: Sheet[]) => {
+      if (!setDataBlockCalcFunction) return;
+      const dataBlockList: { [key: string]: any } = {};
+      plain.forEach((sheet: Sheet) => {
+        if (sheet?.id && sheet?.dataBlockCalcFunction) {
+          dataBlockList[sheet.id] = { ...sheet.dataBlockCalcFunction };
+        }
+      });
+      setDataBlockCalcFunction(dataBlockList);
+    },
+    [setDataBlockCalcFunction],
   );
 
   // Apply portal content once on first load. Skipped entirely when RTC collaboration
@@ -442,6 +470,55 @@ export const useEditorData = (
         0,
       );
 
+      const workbookSheetIds = new Set(
+        sheetEditorRef.current
+          ?.getWorkbookContext?.()
+          ?.luckysheetfile?.map((s) => s.id)
+          .filter(Boolean) ?? [],
+      );
+      const remoteSheetIds = [
+        ...cellBatches.map((b) => b.sheetId),
+        ...sheetMetaUpdates.keys(),
+      ];
+      const hasUnknownSheet = remoteSheetIds.some(
+        (id) => id && !workbookSheetIds.has(id),
+      );
+
+      const scheduleStructuralRemount = () => {
+        structuralRemountPendingRef.current = true;
+        holdRemoteApplyLock(4000);
+        if (debounceTimerRef.current !== null) {
+          window.clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = window.setTimeout(() => {
+          const isEditingCell =
+            (sheetEditorRef.current?.getWorkbookContext?.()
+              ?.luckysheetCellUpdate?.length ?? 0) > 0;
+          try {
+            const plain = ySheetArrayToPlain(sheetArray as any);
+            currentDataRef.current = plain;
+            syncDataBlockCalcFromPlain(plain);
+          } catch (e) {
+            console.error(
+              '[DSheet] ySheetArrayToPlain after ydoc observe failed',
+              e,
+            );
+          }
+          if (!isEditingCell && setForceSheetRender) {
+            setForceSheetRender((prev) => prev + 1);
+          }
+          structuralRemountPendingRef.current = false;
+          debounceTimerRef.current = null;
+        }, 50);
+      };
+
+      const needsStructuralRemount =
+        hasStructural ||
+        hasUnknownSheet ||
+        structuralRemountPendingRef.current ||
+        totalCells > SURGICAL_CELL_LIMIT ||
+        !sheetEditorRef.current;
+
       const applyRemoteSheetMeta = () => {
         const orderList: Record<string, number> = {};
         let hasOrderChange = false;
@@ -451,59 +528,43 @@ export const useEditorData = (
           sheetMap,
           changedKeys,
         } of sheetMetaUpdates.values()) {
-          if (changedKeys.includes('name')) {
-            const name = sheetMap.get('name');
-            if (typeof name === 'string') {
-              sheetEditorRef.current?.setSheetName?.(name, { id: sheetId });
+          try {
+            if (changedKeys.includes('name')) {
+              const name = sheetMap.get('name');
+              if (typeof name === 'string') {
+                sheetEditorRef.current?.setSheetName?.(name, { id: sheetId });
+              }
             }
-          }
-          if (changedKeys.includes('order')) {
-            const order = sheetMap.get('order');
-            if (typeof order === 'number') {
-              orderList[sheetId] = order;
-              hasOrderChange = true;
+            if (changedKeys.includes('order')) {
+              const order = sheetMap.get('order');
+              if (typeof order === 'number') {
+                orderList[sheetId] = order;
+                hasOrderChange = true;
+              }
             }
+          } catch (error) {
+            console.warn(
+              '[DSheet] Skipped remote sheet meta apply — workbook not ready',
+              { sheetId, error },
+            );
           }
         }
 
         if (hasOrderChange) {
-          sheetEditorRef.current?.setSheetOrder?.(orderList);
+          try {
+            sheetEditorRef.current?.setSheetOrder?.(orderList);
+          } catch (error) {
+            console.warn(
+              '[DSheet] Skipped remote sheet order apply — workbook not ready',
+              error,
+            );
+          }
         }
       };
 
       // --- Fall back to remount for structural changes or large cell batches ---
-      if (
-        hasStructural ||
-        totalCells > SURGICAL_CELL_LIMIT ||
-        !sheetEditorRef.current
-      ) {
-        if (debounceTimerRef.current !== null) {
-          window.clearTimeout(debounceTimerRef.current);
-        }
-        debounceTimerRef.current = window.setTimeout(() => {
-          // Keep `currentDataRef` aligned with Yjs before forcing a Workbook remount.
-          // Otherwise `EditorWorkbook` re-inits from a stale plain snapshot (e.g. formula
-          // cells cleared on import) and wipes values that were just written by recalc + ydoc.
-          const isEditingCell =
-            (sheetEditorRef.current?.getWorkbookContext?.()
-              ?.luckysheetCellUpdate?.length ?? 0) > 0;
-          try {
-            const plain = ySheetArrayToPlain(sheetArray as any);
-            currentDataRef.current = plain;
-          } catch (e) {
-            console.error(
-              '[DSheet] ySheetArrayToPlain after ydoc observe failed',
-              e,
-            );
-          }
-          // Avoid forcing a full Workbook remount while in-cell editing is active.
-          // Remounting mid-edit can temporarily re-apply stale cell styles (e.g. alignment)
-          // and cause a visible flicker.
-          if (!isEditingCell && setForceSheetRender) {
-            setForceSheetRender((prev) => prev + 1);
-          }
-          debounceTimerRef.current = null;
-        }, 50);
+      if (needsStructuralRemount) {
+        scheduleStructuralRemount();
         return;
       }
 
@@ -512,6 +573,7 @@ export const useEditorData = (
       }
 
       if (totalCells === 0 && sheetMetaUpdates.size > 0) {
+        holdRemoteApplyLock(500);
         try {
           const plain = ySheetArrayToPlain(sheetArray as any);
           currentDataRef.current = plain;
@@ -527,28 +589,36 @@ export const useEditorData = (
       // --- Surgical path: imperative per-cell updates, zero Workbook remount ---
       // callAfterUpdate=false prevents afterUpdateCell hook from writing the
       // remote value back into ydoc, which would create an update loop.
+      holdRemoteApplyLock(totalCells > 20 ? 1500 : 800);
       for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
         changedKeys.forEach(({ action }, key) => {
           const sep = key.lastIndexOf('_');
           const r = parseInt(key.slice(0, sep), 10);
           const c = parseInt(key.slice(sep + 1), 10);
 
-          if (action === 'delete') {
-            sheetEditorRef.current?.setCellValue(
-              r,
-              c,
-              null,
-              { id: sheetId },
-              false,
-            );
-          } else {
-            const cellObj = celldataMap.get(key);
-            sheetEditorRef.current?.setCellValue(
-              r,
-              c,
-              cellObj ?? null,
-              { id: sheetId },
-              false,
+          try {
+            if (action === 'delete') {
+              sheetEditorRef.current?.setCellValue(
+                r,
+                c,
+                null,
+                { id: sheetId },
+                false,
+              );
+            } else {
+              const cellObj = celldataMap.get(key);
+              sheetEditorRef.current?.setCellValue(
+                r,
+                c,
+                cellObj ?? null,
+                { id: sheetId },
+                false,
+              );
+            }
+          } catch (error) {
+            console.warn(
+              '[DSheet] Skipped remote cell apply — workbook not ready',
+              { sheetId, r, c, error },
             );
           }
         });
@@ -575,14 +645,23 @@ export const useEditorData = (
       if (debounceTimerRef.current !== null) {
         window.clearTimeout(debounceTimerRef.current);
       }
+      if (remoteApplyClearTimerRef.current !== null) {
+        window.clearTimeout(remoteApplyClearTimerRef.current);
+      }
     };
-  }, [ydocRef, dsheetId, setForceSheetRender, sheetEditorRef]);
+  }, [
+    ydocRef,
+    dsheetId,
+    setForceSheetRender,
+    sheetEditorRef,
+    holdRemoteApplyLock,
+    syncDataBlockCalcFromPlain,
+  ]);
 
   // Handle changes to the sheet
   const handleChange = useCallback(
     (_data: Sheet[]) => {
       if (remoteUpdateRef.current) {
-        remoteUpdateRef.current = false;
         return;
       }
 

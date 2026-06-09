@@ -168,8 +168,11 @@ export function setCellValue(
     }
   }
 
-  if (callAfterUpdate && ctx.hooks.afterUpdateCell) {
-    ctx.hooks.afterUpdateCell?.(row, column, null, value);
+  if (callAfterUpdate) {
+    ctx.hooks.onLocalCellEdit?.();
+    if (ctx.hooks.afterUpdateCell) {
+      ctx.hooks.afterUpdateCell?.(row, column, null, value);
+    }
   }
 }
 

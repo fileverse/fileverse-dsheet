@@ -64,6 +64,7 @@ export interface EditorContextType {
 
   // Socket.IO collaboration
   collabEnabled?: boolean;
+  collabIsOwner?: boolean;
   collabState?: CollabState;
   isCollabReady?: boolean;
   isCollabSyncing?: boolean;
@@ -392,6 +393,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     (isReadOnly &&
       (!currentDataRef.current || currentDataRef.current.length === 0));
 
+  const collabIsOwner = useMemo(() => {
+    if (collaboration?.enabled !== true) return true;
+    return collaboration.connection.isOwner;
+  }, [collaboration]);
+
   // Create the context value
   const contextValue: EditorContextType = useMemo(() => {
     return {
@@ -422,6 +428,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       handleOnChangePortalUpdate,
       // Socket.IO collab
       collabEnabled: collaboration?.enabled === true,
+      collabIsOwner,
       collabState,
       isCollabReady,
       isCollabSyncing,
@@ -457,6 +464,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     initialiseLiveQueryData,
     isReadOnly,
     collaboration?.enabled,
+    collabIsOwner,
     collabState,
     isCollabReady,
     isCollabSyncing,
