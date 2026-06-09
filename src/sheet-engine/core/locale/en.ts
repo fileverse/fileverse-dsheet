@@ -11183,7 +11183,7 @@ export default {
     { name: 'Kuwaiti Dinar', pos: 'before', value: 'din', geckoId: 'kwd' },
     { name: 'Sri Lanka Rupee', pos: 'before', value: 'Rs', geckoId: 'lkr' },
     { name: 'Myanmar Kyat', pos: 'before', value: 'K', geckoId: 'mmk' },
-    { name: 'Mexican Peso', pos: 'before', value: 'MX$', geckoId: 'mxn' },
+    { name: 'Mexican Peso', pos: 'before', value: 'MXN', geckoId: 'mxn' },
     { name: 'Malaysian Ringgit', pos: 'before', value: 'RM', geckoId: 'myr' },
     { name: 'Nigerian Naira', pos: 'before', value: '₦', geckoId: 'ngn' },
     { name: 'Norwegian Krone', pos: 'after', value: 'kr', geckoId: 'nok' },
@@ -11215,7 +11215,7 @@ export default {
     },
     {
       text: 'Currency',
-      value: `${currency}#,##0.00`,
+      value: `"${currency}"#,##0.00`,
       example: `${currency}1,200.09`,
     },
     { text: '', value: 'split', example: '' },

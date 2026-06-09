@@ -17,6 +17,7 @@ import {
   getSelectionCharacterOffsets,
 } from './cursor';
 import {
+  buildFiatCurrencyFormat,
   datenum_local,
   is_date,
   MAX_GENERAL_AUTO_DP,
@@ -1137,7 +1138,13 @@ export function handleCurrencyFormat(ctx: Context, cellInput: HTMLDivElement) {
 
   const currency = ctx.currency || '¥';
 
-  updateFormat(ctx, cellInput, flowdata, 'ct', `${currency} #,##0.00`);
+  updateFormat(
+    ctx,
+    cellInput,
+    flowdata,
+    'ct',
+    buildFiatCurrencyFormat(currency, 2),
+  );
 }
 
 export function handlePercentageFormat(

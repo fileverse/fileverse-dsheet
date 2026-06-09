@@ -3,6 +3,7 @@ import {
   cancelNormalSelected,
   getSheetIndex,
   isNumericCellType,
+  buildFiatCurrencyFormat,
   locale,
   update,
 } from '@sheet-engine/core';
@@ -58,9 +59,10 @@ export const FormatSearch: React.FC<{
       const index = getSheetIndex(ctx, ctx.currentSheetId);
       if (_.isNil(index)) return;
       const selectedFormat = toolbarFormat[selectedFormatIndex].value;
-      const formatString = `${selectedFormat} #,##0.${'0'.repeat(
-        decimalPlace,
-      )}`;
+      const formatString =
+        type === 'currency'
+          ? buildFiatCurrencyFormat(selectedFormat, decimalPlace)
+          : `${selectedFormat} #,##0.${'0'.repeat(decimalPlace)}`;
       _.forEach(ctx.luckysheet_select_save, (selection) => {
         for (let r = selection.row[0]; r <= selection.row[1]; r += 1) {
           for (let c = selection.column[0]; c <= selection.column[1]; c += 1) {

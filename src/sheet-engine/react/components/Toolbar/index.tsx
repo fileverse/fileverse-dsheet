@@ -78,6 +78,7 @@ import DuneChartsInputModal from '../DuneChartsInputModal/DuneChartsInputModal';
 import MoreItemsContaier from './MoreItemsContainer';
 import CryptoDenominationSelector from '../CryptoDenominationSelector';
 import { getGroupedCurrencyOptions, CRYPTO_OPTIONS } from '../../constants';
+import { buildFiatCurrencyFormat } from '@sheet-engine/core';
 import { convertCellsToCrypto } from '../../utils/convertCellsToCrypto';
 import { updateCellsDecimalFormat } from '../../utils/updateCellsDecimalFormat';
 import { FunctionList } from './FunctionList/FunctionListButton';
@@ -383,7 +384,10 @@ export const CurrencySelector = ({
                                   setContext((ctx) => {
                                     const d = getFlowdata(ctx);
                                     if (d == null) return;
-                                    const formatString = `${opt.value} #,##0.${'0'.repeat(decimals)}`;
+                                    const formatString = buildFiatCurrencyFormat(
+                                      opt.value,
+                                      decimals,
+                                    );
                                     updateFormat(
                                       ctx,
                                       refs.cellInput.current!,

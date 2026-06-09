@@ -84,6 +84,7 @@ export const getFiatGeckoId = (
       return 'kwd';
     case 'K':
       return 'mmk';
+    case 'MXN':
     case 'MX$':
     case 'PO$':
       return 'mxn';
