@@ -20,9 +20,13 @@ import {
   updateRowIndices,
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
-import { useEditorCollaboration } from '../hooks/use-editor-collaboration';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
-
+import type {
+  CollaborationProps,
+  CollabState,
+  CollabUser,
+} from '../../sync-local/types';
+import type { Awareness } from 'y-protocols/awareness';
 // Define the shape of the context
 export interface EditorContextType {
   setIsDataLoaded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -55,15 +59,19 @@ export interface EditorContextType {
   forceSheetRender: number;
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
 
-  // Collaboration
-  activeUsers: string[];
-  collaborationStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
-
   // Sync status
   syncStatus: 'initializing' | 'syncing' | 'synced' | 'error';
 
-  // For compatibility with types
-  isCollaborative?: boolean;
+  // Socket.IO collaboration
+  collabEnabled?: boolean;
+  collabIsOwner?: boolean;
+  collabState?: CollabState;
+  isCollabReady?: boolean;
+  isCollabSyncing?: boolean;
+  hasCollabContentInitialised?: boolean;
+  awareness?: Awareness | null;
+  terminateSession?: () => void;
+  onCollaboratorsChange?: (collaborators: CollabUser[]) => void;
 
   handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
 }
@@ -84,14 +92,15 @@ interface EditorProviderProps {
   username?: string;
   portalContent?: string;
   enableIndexeddbSync?: boolean;
-  enableWebrtc?: boolean;
   isReadOnly?: boolean;
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
+  collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
-  isCollaborative?: boolean;
   commentData?: object;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
+    terminateSession?: () => void;
+    updateCollaboratorName?: (name: string) => void;
   } | null>;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
@@ -109,12 +118,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   username = 'Anonymous',
   portalContent = '',
   enableIndexeddbSync = true,
-  enableWebrtc = true,
   isReadOnly = false,
   allowComments = false,
   onChange,
   externalEditorRef,
-  isCollaborative = false,
+  collaboration,
   commentData,
   isAuthorized,
   editorStateRef,
@@ -187,22 +195,130 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [updateDataBlockCalcFunctionAfterRowDrag]);
 
-  // Initialize YJS document and persistence
-  const { ydocRef, persistenceRef, syncStatus, isSyncedRef, refreshIndexedDB } =
-    useEditorSync(dsheetId, enableIndexeddbSync, isReadOnly);
+  // Stable pointer to the latest sheet data — populated by useEditorData below.
+  // Declared here so onCollabUpdate (which feeds into useEditorSync) can reference it
+  // without causing a TDZ issue or stale closure.
+  const currentDataForCollabRef = useRef<Sheet[]>([]);
 
-  useMemo(() => {
+  const onCollabUpdateRef = useRef(onChange);
+  useEffect(() => {
+    onCollabUpdateRef.current = onChange;
+  }, [onChange]);
+
+  // onCollabUpdate: called by SyncManager when a remote update arrives.
+  // Stable function — uses refs so it never needs to be recreated.
+  const onCollabUpdate = useCallback((fullState: string, _chunk: string) => {
+    if (!onCollabUpdateRef.current) return;
+    onCollabUpdateRef.current(
+      { data: currentDataForCollabRef.current },
+      fullState,
+    );
+  }, []);
+
+  // Initialize YJS document, persistence, and optional Socket.IO collab transport
+  const {
+    ydocRef,
+    persistenceRef,
+    syncStatus,
+    isSyncedRef,
+    refreshIndexedDB,
+    collabState,
+    isCollabReady,
+    isCollabSyncing,
+    hasCollabContentInitialised,
+    awareness,
+    terminateSession,
+  } = useEditorSync(
+    dsheetId,
+    enableIndexeddbSync,
+    isReadOnly,
+    collaboration,
+    onCollabUpdate,
+  );
+
+  // Imperatively update the local collaborator's display name in awareness and
+  // re-broadcast so peers see the new name (mirrors ddoc's
+  // editorRef.current.updateCollaboratorName). Preserves color/isEns/cell.
+  const updateCollaboratorName = useCallback(
+    (name: string) => {
+      if (!awareness) return;
+      const local = awareness.getLocalState();
+      const prevUser = (local?.user as Record<string, unknown>) || {};
+      awareness.setLocalStateField('user', {
+        ...prevUser,
+        name,
+      });
+    },
+    [awareness],
+  );
+
+  // Keep refreshIndexedDB on the host-owned editorStateRef (existing behavior).
+  useEffect(() => {
     if (!editorStateRef) return;
     editorStateRef.current = {
       ...editorStateRef.current,
       refreshIndexedDB,
     };
-  }, [editorStateRef]);
+  }, [editorStateRef, refreshIndexedDB]);
+
+  // Always-fresh refs for our collab methods so the .current setter below
+  // captures the latest closures without re-running.
+  const terminateSessionRef = useRef(terminateSession);
+  terminateSessionRef.current = terminateSession;
+  const updateCollaboratorNameRef = useRef(updateCollaboratorName);
+  updateCollaboratorNameRef.current = updateCollaboratorName;
+
+  // Intercept the externalEditorRef's `.current` setter so EVERY write made by
+  // Workbook's useImperativeHandle (which regenerates the WorkbookInstance
+  // object on each render) re-attaches our collab methods. This way:
+  //   - typing/cursor behavior is untouched (we pass sheetEditorRef directly
+  //     to <Workbook ref=...> as before — no callback ref).
+  //   - sheetEditorRef.current always has .terminateSession + .updateCollaboratorName.
+  useEffect(() => {
+    if (!externalEditorRef) return;
+    let _current = externalEditorRef.current;
+    // Attach methods to the value already present on first install too.
+    if (_current) {
+      (_current as any).terminateSession = terminateSessionRef.current;
+      (_current as any).updateCollaboratorName =
+        updateCollaboratorNameRef.current;
+    }
+    try {
+      Object.defineProperty(externalEditorRef, 'current', {
+        configurable: true,
+        get() {
+          return _current;
+        },
+        set(v) {
+          if (v) {
+            (v as any).terminateSession = terminateSessionRef.current;
+            (v as any).updateCollaboratorName =
+              updateCollaboratorNameRef.current;
+          }
+          _current = v;
+        },
+      });
+    } catch {
+      // Some hosts may pass a frozen ref — fall back to one-shot attach above.
+    }
+    return () => {
+      // Restore plain property on unmount so we don't trap a stale closure.
+      try {
+        Object.defineProperty(externalEditorRef, 'current', {
+          configurable: true,
+          writable: true,
+          value: _current,
+        });
+      } catch {
+        // ignore
+      }
+    };
+  }, [externalEditorRef]);
 
   // Wrapper for onChange to handle type compatibility
   const handleOnChangePortalUpdate = useMemo(() => {
     if (!onChange) {
-      return () => {};
+      return () => { };
     }
 
     return throttle(() => {
@@ -253,15 +369,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     liveQueryRefreshRate,
     dataBlockApiKeyHandler,
     allowComments,
+    hasCollabContentInitialised,
+    collaboration?.enabled === true,
   );
 
-  // Initialize collaboration
-  const { collaborationStatus, activeUsers } = useEditorCollaboration(
-    ydocRef.current,
-    dsheetId,
-    username,
-    enableWebrtc,
-  );
+  // Keep the stable collab ref in sync with the live currentDataRef
+  currentDataForCollabRef.current = currentDataRef.current;
 
   // Force re-render when data changes
   useEffect(() => {
@@ -279,6 +392,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     // In read-only mode, continue showing the loading state if we have no data yet
     (isReadOnly &&
       (!currentDataRef.current || currentDataRef.current.length === 0));
+
+  const collabIsOwner = useMemo(() => {
+    if (collaboration?.enabled !== true) return true;
+    return collaboration.connection.isOwner;
+  }, [collaboration]);
 
   // Create the context value
   const contextValue: EditorContextType = useMemo(() => {
@@ -301,16 +419,26 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       setIsDataLoaded,
       forceSheetRender,
       setForceSheetRender,
-      activeUsers,
-      collaborationStatus,
       syncStatus,
-      isCollaborative,
       isAuthorized,
       refreshIndexedDB,
       handleLiveQuery,
       initialiseLiveQueryData,
       isReadOnly,
       handleOnChangePortalUpdate,
+      // Socket.IO collab
+      collabEnabled: collaboration?.enabled === true,
+      collabIsOwner,
+      collabState,
+      isCollabReady,
+      isCollabSyncing,
+      hasCollabContentInitialised,
+      awareness,
+      terminateSession,
+      onCollaboratorsChange:
+        collaboration?.enabled === true
+          ? collaboration.on?.onCollaboratorsChange
+          : undefined,
     };
   }, [
     setIsDataLoaded,
@@ -330,14 +458,20 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     loading,
     forceSheetRender,
     setForceSheetRender,
-    activeUsers,
-    collaborationStatus,
     syncStatus,
-    isCollaborative,
     isAuthorized,
     handleLiveQuery,
     initialiseLiveQueryData,
     isReadOnly,
+    collaboration?.enabled,
+    collabIsOwner,
+    collabState,
+    isCollabReady,
+    isCollabSyncing,
+    hasCollabContentInitialised,
+    awareness,
+    terminateSession,
+    collaboration,
   ]);
 
   return (

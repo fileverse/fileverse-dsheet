@@ -2,6 +2,20 @@ import { Cell, WorkbookInstance } from '@sheet-engine/react';
 import { SmartContractQueryHandler } from './after-update-cell';
 import { isSmartContractResponse } from './smart-contract-query-handler';
 import { smartContractQueryHandlerFunction } from './smart-contract-query-handler';
+
+const safeGetCellValue = (
+  sheetEditorRef: React.RefObject<WorkbookInstance | null> | undefined,
+  row: number | undefined,
+  column: number | undefined,
+): unknown => {
+  try {
+    if (row == null || column == null) return undefined;
+    return sheetEditorRef?.current?.getCellValue(row, column);
+  } catch {
+    return undefined;
+  }
+};
+
 /**
  * Dynamically executes a function from a string representation
  *
@@ -42,16 +56,16 @@ export const executeStringFunction = async ({
     const args = ar.map((arg: string) => {
       if (isCellRangeReference(arg)) {
         const cells = cellRangeToRowCol(arg);
-        const values = cells?.map((cell) => {
-          return sheetEditorRef?.current?.getCellValue(cell?.row, cell?.column);
-        });
+        const values = cells?.map((cell) =>
+          safeGetCellValue(sheetEditorRef, cell?.row, cell?.column),
+        );
         return values;
       }
       if (isCellReference(arg)) {
         const cell = cellReferenceToRowCol(arg);
 
-        const value = sheetEditorRef?.current?.getCellValue(
-          // @ts-expect-error
+        const value = safeGetCellValue(
+          sheetEditorRef,
           cell?.row,
           cell?.column,
         );

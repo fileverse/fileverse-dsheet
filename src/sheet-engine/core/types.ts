@@ -107,6 +107,7 @@ export type Presence = {
   username: string;
   userId?: string;
   color: string;
+  isEns?: boolean;
   selection: {
     r: number;
     c: number;

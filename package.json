@@ -2,24 +2,24 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "2.0.34",
+  "version": "2.0.34-rtc",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
     ".": {
       "import": "./dist/index.es.js",
-      "default": "./dist/index.es.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.es.js"
     },
     "./constants": {
       "import": "./dist/constants.js",
-      "default": "./dist/constants.js",
-      "types": "./dist/constants.d.ts"
+      "types": "./dist/constants.d.ts",
+      "default": "./dist/constants.js"
     },
     "./formula": {
       "import": "./dist/formula.js",
-      "default": "./dist/formula.js",
-      "types": "./dist/formula.d.ts"
+      "types": "./dist/formula.d.ts",
+      "default": "./dist/formula.js"
     },
     "./styles": "./dist/style.css",
     "./types": "./dist/editor/types.d.ts"
@@ -50,8 +50,13 @@
   "dependencies": {
     "@fileverse-dev/dsheets-templates": "^0.0.29",
     "@fileverse-dev/formulajs": "^4.4.53",
+    "@fileverse/crypto": "^0.0.22",
     "@fileverse/ui": "^5.0.0",
+    "@noble/ciphers": "^2.2.0",
+    "@noble/curves": "^2.2.0",
+    "@stablelib/ed25519": "^2.1.0",
     "@tippyjs/react": "^4.2.6",
+    "@ucans/ucans": "^0.12.0",
     "classnames": "^2.5.1",
     "dayjs": "^1.11.0",
     "exceljs": "^4.4.0",
@@ -65,6 +70,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "regenerator-runtime": "^0.14.1",
+    "socket.io-client": "^4.8.3",
     "tailwindcss-animate": "^1.0.7",
     "tiny-emitter": "^2.1.0",
     "uuid": "^8.3.2",
@@ -73,8 +79,6 @@
     "xlsx-js-style": "^1.2.0",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
-    "y-webrtc": "^10.3.0",
-    "y-websocket": "^3.0.0",
     "yjs": "^13.6.15"
   },
   "devDependencies": {

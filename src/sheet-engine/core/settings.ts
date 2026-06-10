@@ -27,6 +27,8 @@ export type Hooks = {
   updateCellYdoc?: (changes: SheetChangePath[]) => void;
   updateAllCell?: (sheetId: string) => void;
   beforeUpdateCell?: (r: number, c: number, value: any) => boolean;
+  /** Clears RTC remote-apply lock so local edits can run data-block formulas. */
+  onLocalCellEdit?: () => void;
   afterUpdateCell?: (
     row: number,
     column: number,
@@ -205,6 +207,7 @@ export type Settings = {
   onSheetCountChange?: (count: number) => void;
   isAuthorized?: boolean;
   isFlvReadOnly?: boolean;
+  isRTCActive?: boolean;
   dateBaseLocale?: DateBaseLocale;
   /** When true, do not auto-select A1 on load (e.g. onboarding modal runs first). */
   suppressInitialCellSelection?: boolean;
@@ -362,6 +365,7 @@ export const defaultSettings: Required<Settings> = {
   onSheetCountChange: () => {},
   isAuthorized: false,
   isFlvReadOnly: false,
+  isRTCActive: false,
   dateBaseLocale: 'uk',
   suppressInitialCellSelection: false,
 };
