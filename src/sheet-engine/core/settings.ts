@@ -189,6 +189,7 @@ export type Settings = {
         row: number,
         column: number,
         dragHandler: CommentUIDragFn,
+        isHover?: boolean,
       ) => React.ReactNode)
     | null;
   generateSheetId?: () => string;
