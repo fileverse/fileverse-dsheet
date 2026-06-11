@@ -162,8 +162,8 @@ const RowHeader: React.FC = () => {
       const clickedRowIndex = getRowIndexClicked(e.pageY, headerEl);
       if (clickedRowIndex < 0) return;
 
-      const sel = api.getSelection(context);
-      const lastSelectedCol = sel?.[0].column?.[1];
+      const sel = context.luckysheet_select_save;
+      const lastSelectedCol = sel?.[0]?.column?.[1];
       let data = getFlowdata(context);
       if (!data) data = [];
 
@@ -175,6 +175,7 @@ const RowHeader: React.FC = () => {
         });
       }
       if (
+        e.shiftKey ||
         !allRowSel ||
         (allRowSel && sel && clickedRowIndex < sel?.[0].row[0]) ||
         // @ts-expect-error: `sel?.[0].row` may be missing in some selection shapes.
@@ -218,6 +219,8 @@ const RowHeader: React.FC = () => {
       refs.globalCache,
       context.visibledatarow,
       context.currentSheetId,
+      context.luckysheet_select_save,
+      context.isFlvReadOnly,
       setContext,
       getRowIndexClicked,
       isRowDoubleClicked,
