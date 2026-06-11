@@ -78,10 +78,8 @@ import DuneChartsInputModal from '../DuneChartsInputModal/DuneChartsInputModal';
 import MoreItemsContaier from './MoreItemsContainer';
 import CryptoDenominationSelector from '../CryptoDenominationSelector';
 import { getGroupedCurrencyOptions, CRYPTO_OPTIONS } from '../../constants';
-import {
-  convertCellsToCrypto,
-  getFiatSymbol,
-} from '../../utils/convertCellsToCrypto';
+import { buildFiatCurrencyFormat } from '@sheet-engine/core';
+import { convertCellsToCrypto } from '../../utils/convertCellsToCrypto';
 import { updateCellsDecimalFormat } from '../../utils/updateCellsDecimalFormat';
 import { FunctionList } from './FunctionList/FunctionListButton';
 import SortPopoverContent from './SortPopoverContent';
@@ -382,13 +380,14 @@ export const CurrencySelector = ({
                                     decimals,
                                   });
                                 } else {
-                                  setSelectedFiat(opt.value);
+                                  setSelectedFiat(opt.geckoId || opt.value);
                                   setContext((ctx) => {
                                     const d = getFlowdata(ctx);
                                     if (d == null) return;
-                                    const formatString = `${getFiatSymbol(
+                                    const formatString = buildFiatCurrencyFormat(
                                       opt.value,
-                                    )} #,##0.${'0'.repeat(decimals)}`;
+                                      decimals,
+                                    );
                                     updateFormat(
                                       ctx,
                                       refs.cellInput.current!,
@@ -396,6 +395,28 @@ export const CurrencySelector = ({
                                       'ct',
                                       formatString,
                                     );
+                                    if (opt.geckoId) {
+                                      const selections =
+                                        ctx.luckysheet_select_save;
+                                      selections?.forEach((selection: any) => {
+                                        for (
+                                          let row = selection.row[0];
+                                          row <= selection.row[1];
+                                          row += 1
+                                        ) {
+                                          for (
+                                            let col = selection.column[0];
+                                            col <= selection.column[1];
+                                            col += 1
+                                          ) {
+                                            const cell = d[row]?.[col];
+                                            if (cell) {
+                                              cell.baseCurrency = opt.geckoId;
+                                            }
+                                          }
+                                        }
+                                      });
+                                    }
                                   });
                                 }
                                 setOpen(false);

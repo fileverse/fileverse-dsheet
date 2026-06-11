@@ -90,6 +90,8 @@ export {
   valueShowEs,
   isTypedCurrencyDisplayFormat,
   isCurrencyLikeNumberFormat,
+  buildFiatCurrencyFormat,
+  quoteSsfLiteral,
   // formula
   FormulaCache,
   groupValuesRefresh,
