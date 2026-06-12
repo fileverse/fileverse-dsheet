@@ -61,6 +61,7 @@ import {
 } from '../modules/protection';
 import {
   normalizeSelection,
+  seletedHighlistByindex,
   syncPrimaryCellActiveFromSelection,
   pasteHandlerOfPaintModel,
 } from '../modules/selection';
@@ -4930,49 +4931,34 @@ export function handleRowHeaderMouseDown(
       const last = _.cloneDeep(
         ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
       ); // 选区最后一个
-      if (
-        !last ||
-        _.isNil(last.top) ||
-        _.isNil(last.height) ||
-        _.isNil(last.row_focus)
-      ) {
-        return;
-      }
+      if (last) {
+        const anchor = last.row_focus ?? last.row?.[0] ?? row_index;
+        const rStart = Math.min(anchor, row_index);
+        const rEnd = Math.max(anchor, row_index);
+        const bounds = seletedHighlistByindex(ctx, rStart, rEnd, 0, col_index);
 
-      let _top = 0;
-      let _height = 0;
-      let _rowseleted = [];
-      if (last.top > row_pre) {
-        _top = row_pre;
-        _height = last.top + last.height - row_pre;
-
-        if (last.row[1] > last.row_focus) {
-          last.row[1] = last.row_focus;
+        last.row = [rStart, rEnd];
+        last.column = [0, col_index];
+        if (bounds) {
+          last.left = bounds.left;
+          last.width = bounds.width;
+          last.top = bounds.top;
+          last.height = bounds.height;
+          last.left_move = bounds.left;
+          last.width_move = bounds.width;
+          last.top_move = bounds.top;
+          last.height_move = bounds.height;
+        }
+        last.row_select = true;
+        last.column_select = false;
+        last.column_focus = 0;
+        if (_.isNil(last.row_focus)) {
+          last.row_focus = anchor;
         }
 
-        _rowseleted = [row_index, last.row[1]];
-      } else if (last.top === row_pre) {
-        _top = row_pre;
-        _height = last.top + last.height - row_pre;
-        _rowseleted = [row_index, last.row[0]];
-      } else {
-        _top = last.top;
-        _height = row - last.top - 1;
-
-        if (last.row[0] < last.row_focus) {
-          last.row[0] = last.row_focus;
-        }
-
-        _rowseleted = [last.row[0], row_index];
+        ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1] =
+          last;
       }
-
-      last.row = _rowseleted;
-
-      last.top_move = _top;
-      last.height_move = _height;
-
-      ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1] =
-        last;
     } else if (e.ctrlKey || e.metaKey) {
       ctx.luckysheet_select_save?.push({
         left: colLocationByIndex(0, ctx.visibledatacolumn)[0],
@@ -5347,51 +5333,40 @@ export function handleColumnHeaderMouseDown(
       const last = _.cloneDeep(
         ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1],
       ); // 选区最后一个
+      if (last) {
+        const anchor = last.column_focus ?? last.column?.[0] ?? col_index;
+        const cStart = Math.min(anchor, col_index);
+        const cEnd = Math.max(anchor, col_index);
+        const bounds = seletedHighlistByindex(
+          ctx,
+          0,
+          row_index,
+          cStart,
+          cEnd,
+        );
 
-      let _left = 0;
-      let _width = 0;
-      let _columnseleted = [];
-
-      if (
-        !last ||
-        _.isNil(last.left) ||
-        _.isNil(last.width) ||
-        _.isNil(last.column_focus)
-      ) {
-        return;
-      }
-
-      if (last.left > col_pre) {
-        _left = col_pre;
-        _width = last.left + last.width - col_pre;
-
-        if (last.column[1] > last.column_focus) {
-          last.column[1] = last.column_focus;
+        last.column = [cStart, cEnd];
+        last.row = [0, row_index];
+        if (bounds) {
+          last.left = bounds.left;
+          last.width = bounds.width;
+          last.top = bounds.top;
+          last.height = bounds.height;
+          last.left_move = bounds.left;
+          last.width_move = bounds.width;
+          last.top_move = bounds.top;
+          last.height_move = bounds.height;
+        }
+        last.column_select = true;
+        last.row_select = false;
+        last.row_focus = 0;
+        if (_.isNil(last.column_focus)) {
+          last.column_focus = anchor;
         }
 
-        _columnseleted = [col_index, last.column[1]];
-      } else if (last.left === col_pre) {
-        _left = col_pre;
-        _width = last.left + last.width - col_pre;
-        _columnseleted = [col_index, last.column[0]];
-      } else {
-        _left = last.left;
-        _width = col - last.left - 1;
-
-        if (last.column[0] < last.column_focus) {
-          last.column[0] = last.column_focus;
-        }
-
-        _columnseleted = [last.column[0], col_index];
+        ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1] =
+          last;
       }
-
-      last.column = _columnseleted;
-
-      last.left_move = _left;
-      last.width_move = _width;
-
-      ctx.luckysheet_select_save![ctx.luckysheet_select_save!.length - 1] =
-        last;
     } else if (e.ctrlKey || e.metaKey) {
       // 选区添加
       ctx.luckysheet_select_save?.push({
