@@ -692,6 +692,54 @@ export const useEditorData = (
     syncDataBlockCalcFromPlain,
   ]);
 
+  // Rebuild the full plain snapshot from the current Yjs doc and force a Workbook
+  // remount. Used after a collab (RTC) sync completes, where surgical applies are
+  // unsafe because the local workbook may be stale relative to the merged server
+  // state. Returns true when a rebuild was performed.
+  const rehydrateWorkbookFromYdoc = useCallback(
+    (reason = 'host'): boolean => {
+      if (!ydocRef.current || !dsheetId) return false;
+
+      try {
+        const sheetArray = ydocRef.current.getArray(dsheetId);
+        migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
+
+        // @ts-ignore
+        const plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map>);
+
+        // Prevent the freshly-rebuilt local state from being written back into ydoc.
+        holdRemoteApplyLock(800);
+
+        currentDataRef.current = plain;
+        syncDataBlockCalcFromPlain(plain);
+        initialiseLiveQueryData(plain);
+
+        dataInitialized.current = true;
+        setIsDataLoaded(true);
+
+        if (setForceSheetRender) {
+          setForceSheetRender((prev) => prev + 1);
+        }
+
+        return true;
+      } catch (error) {
+        console.error(
+          `[DSheet] rehydrateWorkbookFromYdoc failed (reason: ${reason})`,
+          error,
+        );
+        return false;
+      }
+    },
+    [
+      ydocRef,
+      dsheetId,
+      holdRemoteApplyLock,
+      syncDataBlockCalcFromPlain,
+      initialiseLiveQueryData,
+      setForceSheetRender,
+    ],
+  );
+
   // Handle changes to the sheet
   const handleChange = useCallback(
     (_data: Sheet[]) => {
@@ -720,5 +768,6 @@ export const useEditorData = (
     handleChange,
     handleLiveQuery,
     initialiseLiveQueryData,
+    rehydrateWorkbookFromYdoc,
   };
 };
