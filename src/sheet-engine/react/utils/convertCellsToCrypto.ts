@@ -22,79 +22,106 @@ export const getFiatSymbol = (code: string): string => {
 
 export const getFiatGeckoId = (
   symbol: string,
-  baseCurrency: string,
+  baseCurrency?: string,
 ): string => {
   switch (symbol) {
     case '$':
-      return 'usd'; // Defaulting to USD for $ — adjust if needed
+      return baseCurrency || 'usd';
     case '€':
       return 'eur';
     case '￡':
       return 'gbp';
+    case '¥':
     case 'CN¥':
       return 'cny';
+    case 'HK$':
     case 'K$':
       return 'hkd';
+    case '￥':
     case 'jp¥':
       return 'jpy';
     case 'AU$':
       return 'aud';
     case '৳':
       return 'bdt';
+    case 'din':
     case 'NAR':
-      return 'bhd';
+      return baseCurrency || 'bhd';
     case 'R$':
       return 'brl';
     case 'CA$':
       return 'cad';
+    case 'CHF':
     case 'CF':
       return 'chf';
     case 'CLP$':
       return 'clp';
+    case 'Kč':
+    case 'CZK':
+      return 'czk';
     case 'kr':
-      return 'dkk';
+      return baseCurrency || 'dkk';
+    case 'GEL':
     case 'gl':
       return 'gel';
+    case 'Ft':
     case 'ft':
       return 'huf';
     case 'Rp':
       return 'idr';
+    case '₪':
+    case 'N￡':
+      return 'ils';
+    case '₹':
+      return 'inr';
     case 'Rs':
-      return 'inr'; // Also used for LKR/PKR — adjust if needed
+    case 'L₹':
+    case 'P₹':
+      return baseCurrency || 'inr';
     case '₩':
       return 'krw';
     case 'KW':
       return 'kwd';
     case 'K':
       return 'mmk';
+    case 'MXN':
+    case 'MX$':
     case 'PO$':
       return 'mxn';
-    case 'R':
+    case 'RM':
       return 'myr';
     case '₦':
       return 'ngn';
     case '₦kr':
-      return 'nok'; // Also used for SEK, adjust if needed
+      return 'nok';
+    case 'NZ$':
+    case 'Z$':
+      return 'nzd';
     case '₱':
       return 'php';
     case 'zł':
       return 'pln';
+    case '₽':
     case 'RU':
       return 'rub';
     case 'Rial':
       return 'sar';
+    case 'S$':
     case 'P$':
       return 'sgd';
     case '฿':
       return 'thb';
     case '₺':
+    case 'TL':
       return 'try';
     case 'грн.':
       return 'uah';
+    case 'R':
+      return baseCurrency || 'zar';
     case 'ZAR':
       return 'zar';
     default:
-      return baseCurrency || 'usd'; // Fallback: assume symbol is already a code
+      return baseCurrency || 'usd';
   }
 };
 
@@ -212,7 +239,7 @@ export async function convertCellsToCrypto({
       baseValue,
       cryptoValue,
       // @ts-expect-error later
-      baseCurrency: getFiatGeckoId(fiatSymbol) || 'usd',
+      baseCurrency: getFiatGeckoId(fiatSymbol, cell?.baseCurrency) || 'usd',
       baseCurrencyPrice: fiatVsCryptoPrice,
     });
   });

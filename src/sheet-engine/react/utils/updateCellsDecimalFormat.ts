@@ -1,4 +1,4 @@
-import { getFlowdata } from '@sheet-engine/core';
+import { buildFiatCurrencyFormat, getFlowdata } from '@sheet-engine/core';
 import { FIAT_ICON_MAP } from '../constants';
 
 // Helper to get the actual symbol for a fiat code
@@ -78,7 +78,7 @@ export function updateCellsDecimalFormat({
         // Use the correct symbol from FIAT_ICON_MAP, fallback to code
         const symbol = fiat in FIAT_ICON_MAP ? getFiatSymbol(fiat) : fiat;
         cell.ct = {
-          fa: `${symbol} #,##0.${'0'.repeat(decimals)}`,
+          fa: buildFiatCurrencyFormat(symbol, decimals),
           t: 'n',
         };
         if (typeof cell.v === 'number') {

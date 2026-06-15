@@ -489,7 +489,9 @@ export function isTypedCurrencyDisplayFormat(
     if (fa.includes(`"${c}"`)) return true;
   }
   return getSortedFiatPrefixSymbols(currencyDetail).some(
-    (sym) => fa.startsWith(sym) && /#,##0/.test(fa),
+    (sym) =>
+      (fa.startsWith(sym) || fa.startsWith(quoteSsfLiteral(sym))) &&
+      /#,##0/.test(fa),
   );
 }
 
@@ -570,7 +572,7 @@ export function parseCurrencyPrefixedInput(
       const m = SSF.format(fa, finalV);
       return [m, ctOut, finalV];
     }
-    const fa = `${sym}#,##0`;
+    const fa = buildFiatCurrencyFormat(sym, 0, { spaced: false });
     const ctOut = { fa, t: 'n' };
     const m = SSF.format(fa, finalV);
     return [m, ctOut, finalV];
@@ -587,6 +589,23 @@ export function genarateOrCurrencyPrefixed(
   const cur = parseCurrencyPrefixedInput(vupdateStr, currencyDetail);
   if (cur) return cur;
   return genarate(vupdate);
+}
+
+/** Wrap text for SSF/Excel `fa` so letters like M/H/S/d are not date/time tokens (e.g. MXN → 5XN). */
+export function quoteSsfLiteral(text: string): string {
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+/** Build a fiat currency display mask safe for SSF.format (always quotes the symbol). */
+export function buildFiatCurrencyFormat(
+  symbol: string,
+  decimals = 2,
+  options?: { spaced?: boolean },
+): string {
+  const dp = '0'.repeat(Math.max(0, decimals));
+  const mask = decimals > 0 ? `#,##0.${dp}` : '#,##0';
+  const sep = options?.spaced === false ? '' : ' ';
+  return `${quoteSsfLiteral(symbol)}${sep}${mask}`;
 }
 
 export function update(fmt: string, v: any) {

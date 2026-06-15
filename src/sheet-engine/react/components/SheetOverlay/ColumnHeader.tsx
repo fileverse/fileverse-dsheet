@@ -148,8 +148,8 @@ const ColumnHeader: React.FC = () => {
       const clickedColIndex = getColIndexClicked(e.pageX, headerEl);
       if (clickedColIndex < 0) return;
 
-      const sel = api.getSelection(context);
-      const lastSelectedRow = sel?.[0].row?.[1];
+      const sel = context.luckysheet_select_save;
+      const lastSelectedRow = sel?.[0]?.row?.[1];
       let data = getFlowdata(context);
       if (!data) data = [];
 
@@ -160,6 +160,7 @@ const ColumnHeader: React.FC = () => {
         });
       }
       if (
+        e.shiftKey ||
         !allColSel ||
         (allColSel && sel && clickedColIndex < sel?.[0].column?.[0]) ||
         // @ts-ignore
@@ -203,6 +204,8 @@ const ColumnHeader: React.FC = () => {
       refs.globalCache,
       refs.cellInput,
       refs.fxInput,
+      context.luckysheet_select_save,
+      context.isFlvReadOnly,
       setContext,
       getColIndexClicked,
       isColDoubleClicked,

@@ -29,13 +29,14 @@ export const FIAT_ICON_MAP = {
 
 // Helper to merge and group options from locale currencyDetail
 export function getGroupedCurrencyOptions(
-  currencyDetail: Array<{ name: string; value: string }>,
+  currencyDetail: Array<{ name: string; value: string; geckoId?: string }>,
 ) {
   const fiatOptions = currencyDetail.map(
-    (c: { name: string; value: string }) => {
+    (c: { name: string; value: string; geckoId?: string }) => {
       return {
         label: c.name,
         value: c.value,
+        geckoId: c.geckoId,
         icon: FIAT_ICON_MAP[c.value as keyof typeof FIAT_ICON_MAP] || undefined,
         type: 'fiat',
       };
