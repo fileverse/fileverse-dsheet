@@ -1876,6 +1876,10 @@ export function updateCell(
           cancelNormalSelected(ctx);
           if (ctx.hooks.afterUpdateCell) {
             const newValue = _.cloneDeep(d[r][c]);
+            // Genuine user-driven edit (typed/committed via updateCell) — flag it
+            // so RTC joiners persist + broadcast it. Remote applies use
+            // setCellValueInternal and never reach here.
+            ctx.hooks.onLocalCellEdit?.();
             setTimeout(() =>
               ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue),
             );
@@ -1983,6 +1987,10 @@ export function updateCell(
     if (ctx.hooks.afterUpdateCell) {
       const newValue = _.cloneDeep(flowdata[r][c]);
       const { afterUpdateCell } = ctx.hooks;
+      // Genuine user-driven edit (typed/committed via updateCell) — flag it so
+      // RTC joiners persist + broadcast it. Remote applies use
+      // setCellValueInternal and never reach here.
+      ctx.hooks.onLocalCellEdit?.();
       setTimeout(() => {
         afterUpdateCell?.(r, c, oldValue, newValue);
       });

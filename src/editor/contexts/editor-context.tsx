@@ -101,6 +101,7 @@ interface EditorProviderProps {
     refreshIndexedDB: () => Promise<void>;
     terminateSession?: () => void;
     updateCollaboratorName?: (name: string) => void;
+    rehydrateAfterCollabSync?: (reason?: string) => boolean;
   } | null>;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
@@ -205,8 +206,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     onCollabUpdateRef.current = onChange;
   }, [onChange]);
 
+  const rehydrateAfterCollabSyncRef = useRef<(reason: string) => boolean>(
+    () => false,
+  );
+
   // onCollabUpdate: called by SyncManager when a remote update arrives.
-  // Stable function — uses refs so it never needs to be recreated.
   const onCollabUpdate = useCallback((fullState: string, _chunk: string) => {
     if (!onCollabUpdateRef.current) return;
     onCollabUpdateRef.current(
@@ -251,15 +255,6 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     },
     [awareness],
   );
-
-  // Keep refreshIndexedDB on the host-owned editorStateRef (existing behavior).
-  useEffect(() => {
-    if (!editorStateRef) return;
-    editorStateRef.current = {
-      ...editorStateRef.current,
-      refreshIndexedDB,
-    };
-  }, [editorStateRef, refreshIndexedDB]);
 
   // Always-fresh refs for our collab methods so the .current setter below
   // captures the latest closures without re-running.
@@ -353,6 +348,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     handleLiveQuery,
     initialiseLiveQueryData,
     setIsDataLoaded,
+    rehydrateWorkbookFromYdoc,
   } = useEditorData(
     ydocRef,
     dsheetId,
@@ -375,6 +371,19 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   // Keep the stable collab ref in sync with the live currentDataRef
   currentDataForCollabRef.current = currentDataRef.current;
+
+  rehydrateAfterCollabSyncRef.current = rehydrateWorkbookFromYdoc;
+
+  // Expose rehydrate on host-owned editorStateRef for RTC ready callbacks.
+  useEffect(() => {
+    if (!editorStateRef) return;
+    editorStateRef.current = {
+      ...editorStateRef.current,
+      refreshIndexedDB,
+      rehydrateAfterCollabSync: (reason = 'host') =>
+        rehydrateAfterCollabSyncRef.current(reason),
+    };
+  }, [editorStateRef, refreshIndexedDB]);
 
   // Force re-render when data changes
   useEffect(() => {
