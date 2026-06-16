@@ -485,6 +485,30 @@ export function generateAPIs(
         }
       }),
 
+    // Replace a sheet's dataVerification map imperatively. Used by the RTC
+    // remote-apply path so dropdown/checkbox validation rules appear on peers
+    // without a full Workbook remount (which could be skipped mid-cell-edit).
+    setSheetDataVerification: (
+      dataVerification: Record<string, any>,
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          draftCtx.luckysheetfile[idx].dataVerification = dataVerification;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
     scroll: (options: {
       scrollLeft?: number;
       scrollTop?: number;

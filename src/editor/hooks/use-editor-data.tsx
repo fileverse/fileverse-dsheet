@@ -371,6 +371,13 @@ export const useEditorData = (
     const SURGICAL_OVERLAY_KEYS = new Set(['images', 'iframes']);
 
     /**
+     * Map-backed sheet fields applied imperatively via WorkbookInstance helpers.
+     * dataVerification uses setSheetDataVerification so peers see dropdown /
+     * checkbox rules without a full remount (which can be skipped mid-edit).
+     */
+    const SURGICAL_MAP_FIELD_KEYS = new Set(['dataVerification']);
+
+    /**
      * Object sheet fields that drive layout and require a remount when they
      * genuinely change, but are rebuilt as fresh references on every remount.
      * A remote change to one of these is only "real" if its value differs from
@@ -414,7 +421,12 @@ export const useEditorData = (
         celldataMap: Y.Map<any>;
         changedKeys: Map<string, { action: string }>;
       };
+      type DataVerificationBatch = {
+        sheetId: string;
+        dvMap: Y.Map<any>;
+      };
       const cellBatches: CellBatch[] = [];
+      const dataVerificationUpdates = new Map<string, DataVerificationBatch>();
       const sheetMetaUpdates = new Map<
         string,
         { sheetId: string; sheetMap: Y.Map<any>; changedKeys: string[] }
@@ -453,6 +465,23 @@ export const useEditorData = (
           });
         } else if (
           path.length === 2 &&
+          path[1] === 'dataVerification' &&
+          typeof path[0] === 'number'
+        ) {
+          const sheetMap = sheetsArr[path[0] as number];
+          if (!(sheetMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          const sheetId = sheetMap.get('id') as string;
+          const dvMap = sheetMap.get('dataVerification');
+          if (!sheetId || !(dvMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          dataVerificationUpdates.set(sheetId, { sheetId, dvMap });
+        } else if (
+          path.length === 2 &&
           typeof path[0] === 'number' &&
           typeof path[1] === 'string' &&
           SURGICAL_SHEET_META_KEYS.has(path[1])
@@ -485,7 +514,8 @@ export const useEditorData = (
               changedKeys.every(
                 (k) =>
                   SURGICAL_SHEET_META_KEYS.has(k) ||
-                  SURGICAL_OVERLAY_KEYS.has(k),
+                  SURGICAL_OVERLAY_KEYS.has(k) ||
+                  SURGICAL_MAP_FIELD_KEYS.has(k),
               )
             ) {
               // color/hide have no imperative WorkbookInstance API — must remount.
@@ -500,6 +530,9 @@ export const useEditorData = (
                 );
                 const overlayKeys = changedKeys.filter((k) =>
                   SURGICAL_OVERLAY_KEYS.has(k),
+                );
+                const mapFieldKeys = changedKeys.filter((k) =>
+                  SURGICAL_MAP_FIELD_KEYS.has(k),
                 );
                 if (metaKeys.length > 0) {
                   const existing = sheetMetaUpdates.get(sheetId);
@@ -520,6 +553,12 @@ export const useEditorData = (
                     sheetMap,
                     changedKeys: keys,
                   });
+                }
+                if (mapFieldKeys.includes('dataVerification')) {
+                  const dvMap = sheetMap.get('dataVerification');
+                  if (dvMap instanceof Y.Map) {
+                    dataVerificationUpdates.set(sheetId, { sheetId, dvMap });
+                  }
                 }
                 continue;
               }
@@ -565,7 +604,8 @@ export const useEditorData = (
         if (
           cellBatches.length > 0 ||
           sheetMetaUpdates.size > 0 ||
-          overlayUpdates.size > 0
+          overlayUpdates.size > 0 ||
+          dataVerificationUpdates.size > 0
         )
           continue;
         const changedKeys = Array.from((event as Y.YMapEvent<any>).keys.keys());
@@ -588,6 +628,7 @@ export const useEditorData = (
         ...cellBatches.map((b) => b.sheetId),
         ...sheetMetaUpdates.keys(),
         ...overlayUpdates.keys(),
+        ...dataVerificationUpdates.keys(),
       ];
       const hasUnknownSheet = remoteSheetIds.some(
         (id) => id && !workbookSheetIds.has(id),
@@ -705,6 +746,22 @@ export const useEditorData = (
         }
       };
 
+      const applyRemoteDataVerification = () => {
+        for (const { sheetId, dvMap } of dataVerificationUpdates.values()) {
+          try {
+            sheetEditorRef.current?.setSheetDataVerification?.(
+              dvMap.toJSON(),
+              { id: sheetId },
+            );
+          } catch (error) {
+            console.warn(
+              '[DSheet] Skipped remote dataVerification apply — workbook not ready',
+              { sheetId, error },
+            );
+          }
+        }
+      };
+
       // --- Fall back to remount for structural changes or large cell batches ---
       if (needsStructuralRemount) {
         scheduleStructuralRemount();
@@ -720,9 +777,16 @@ export const useEditorData = (
         applyRemoteOverlays();
       }
 
+      if (dataVerificationUpdates.size > 0) {
+        holdRemoteApplyLock(800);
+        applyRemoteDataVerification();
+      }
+
       if (
         totalCells === 0 &&
-        (sheetMetaUpdates.size > 0 || overlayUpdates.size > 0)
+        (sheetMetaUpdates.size > 0 ||
+          overlayUpdates.size > 0 ||
+          dataVerificationUpdates.size > 0)
       ) {
         holdRemoteApplyLock(500);
         try {
@@ -730,7 +794,7 @@ export const useEditorData = (
           currentDataRef.current = plain;
         } catch (e) {
           console.error(
-            '[DSheet] ySheetArrayToPlain after remote sheet meta/overlay failed',
+            '[DSheet] ySheetArrayToPlain after remote sheet meta/overlay/dataVerification failed',
             e,
           );
         }
@@ -778,7 +842,8 @@ export const useEditorData = (
       if (
         totalCells > 0 ||
         sheetMetaUpdates.size > 0 ||
-        overlayUpdates.size > 0
+        overlayUpdates.size > 0 ||
+        dataVerificationUpdates.size > 0
       ) {
         try {
           const plain = ySheetArrayToPlain(sheetArray as any);

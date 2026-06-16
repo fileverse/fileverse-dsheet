@@ -140,6 +140,17 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
   const localUserEditRef = useRef(false);
 
+  // Skip ydoc writes while a remote update is being applied. Remounts and
+  // imperative remote applies re-fire metadata hooks; without this guard the
+  // peer can echo stale sheet fields back into ydoc (filter flicker, DV loss).
+  const guardRemoteEcho = useCallback(
+    (fn: () => void) => () => {
+      if (remoteUpdateRef.current) return;
+      fn();
+    },
+    [remoteUpdateRef],
+  );
+
   const awarenessRef = useRef(awareness);
   useEffect(() => {
     awarenessRef.current = awareness;
@@ -359,64 +370,64 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           sheetLengthChange: handleSheetLengthChange,
-          dataVerificationChange: () => {
+          dataVerificationChange: guardRemoteEcho(() => {
             dataVerificationYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          liveQueryChange: () => {
+          }),
+          liveQueryChange: guardRemoteEcho(() => {
             liveQueryListYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          calcChainChange: () => {
+          }),
+          calcChainChange: guardRemoteEcho(() => {
             calcChainYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          conditionFormatChange: () => {
+          }),
+          conditionFormatChange: guardRemoteEcho(() => {
             conditionFormatYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
+          }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          filterSelectChange: () => {
+          filterSelectChange: guardRemoteEcho(() => {
             filterSelectYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
+          }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          filterChange: () => {
+          filterChange: guardRemoteEcho(() => {
             filterYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          hyperlinkChange: () => {
+          }),
+          hyperlinkChange: guardRemoteEcho(() => {
             hyperlinkYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
+          }),
           updateCellYdoc: (changes: SheetChangePath[]) => {
             updateYdocSheetData(
               ydocRef.current,
@@ -425,22 +436,22 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleOnChangePortalUpdate,
             );
           },
-          afterImagesChange: () => {
+          afterImagesChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'images');
-          },
-          afterIframesChange: () => {
+          }),
+          afterIframesChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'iframes');
-          },
-          afterFrozenChange: () => {
+          }),
+          afterFrozenChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'frozen');
-          },
-          afterNameChanges: () => {
+          }),
+          afterNameChanges: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'name');
-          },
+          }),
           afterOrderChanges: handleAfterOrderChanges,
-          afterConfigChanges: () => {
+          afterConfigChanges: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'config');
-          },
+          }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           updateAllCell: (subSheetId: string) => {
             setTimeout(() => {
@@ -460,9 +471,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           afterHideChanges: handleAfterHideChanges,
           afterColRowChanges: handleAfterColRowChanges,
-          afterShowGridLinesChange: () => {
+          afterShowGridLinesChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'showGridLines');
-          },
+          }),
           afterSelectionChange: (
             sheetId: string,
             selection: import('../../sheet-engine/core/types').Selection,
