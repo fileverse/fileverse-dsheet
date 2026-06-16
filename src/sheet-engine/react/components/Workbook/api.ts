@@ -255,6 +255,24 @@ export function generateAPIs(
         ),
       ),
 
+    /**
+     * Apply a cell value coming from a remote RTC peer, verbatim.
+     *
+     * Use this (instead of `setCellValue`) for every Yjs-driven remote apply:
+     * it writes the synced value/formula as-is without running the formula
+     * engine and without firing local-edit hooks, while keeping formula cells
+     * registered in `calcChain` so they remain reactive to future local edits.
+     */
+    applyRemoteCellValue: (
+      row: number,
+      column: number,
+      value: any,
+      options: api.CommonOptions & { type?: keyof Cell } = {},
+    ) =>
+      setContext((draftCtx) =>
+        api.applyRemoteCellValue(draftCtx, row, column, value, options),
+      ),
+
     setCellError: (
       row: number,
       column: number,

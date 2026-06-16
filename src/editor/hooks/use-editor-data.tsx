@@ -738,8 +738,12 @@ export const useEditorData = (
       }
 
       // --- Surgical path: imperative per-cell updates, zero Workbook remount ---
-      // callAfterUpdate=false prevents afterUpdateCell hook from writing the
-      // remote value back into ydoc, which would create an update loop.
+      // `applyRemoteCellValue` writes the synced value/formula verbatim without
+      // running the formula engine and without firing the afterUpdateCell hook
+      // (which would write the remote value back into ydoc and create an update
+      // loop). Crucially it keeps formula cells registered in `calcChain` so
+      // their reactivity is preserved — unlike `setCellValue`, which drops them
+      // via `delFunctionGroup` and permanently breaks recalculation.
       holdRemoteApplyLock(totalCells > 20 ? 1500 : 800);
       for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
         changedKeys.forEach(({ action }, key) => {
@@ -749,22 +753,17 @@ export const useEditorData = (
 
           try {
             if (action === 'delete') {
-              sheetEditorRef.current?.setCellValue(
-                r,
-                c,
-                null,
-                { id: sheetId },
-                false,
-              );
+              sheetEditorRef.current?.applyRemoteCellValue(r, c, null, {
+                id: sheetId,
+              });
             } else {
               const cellObj = celldataMap.get(key);
-              sheetEditorRef.current?.setCellValue(
-                r,
-                c,
-                cellObj?.v ?? null,
-                { id: sheetId },
-                false,
-              );
+              // Celldata is stored in Fortune format `{ r, c, v: <cell> }`, so
+              // the actual cell object (with v/m/f) lives at `cellObj.v`.
+              const remoteCell = cellObj?.v ?? null;
+              sheetEditorRef.current?.applyRemoteCellValue(r, c, remoteCell, {
+                id: sheetId,
+              });
             }
           } catch (error) {
             console.warn(
