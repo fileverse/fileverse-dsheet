@@ -1,5 +1,6 @@
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
+import isEqual from 'lodash/isEqual';
 import {
   applyYdocSheetChanges,
   getSheetYdocSyncContext,
@@ -31,14 +32,18 @@ export const filterYdocUpdate = ({
   const newData = (sheetEditorRef.current?.getSheet() as any)?.filter || {};
   const oldData = syncContext.oldSheet.filter || {};
 
-  const changed = (() => {
-    try {
-      return JSON.stringify(oldData || {}) !== JSON.stringify(newData || {});
-    } catch {
-      return true;
-    }
-  })();
-  if (!changed) return;
+  // Order-insensitive deep compare (matches every other metadata updater).
+  // JSON.stringify is key-order-sensitive: a remount rebuilds `filter` with the
+  // same values but possibly different key order, which a string compare reports
+  // as a change — triggering a cross-peer write/remount ping-pong (the filter
+  // flicker). isEqual compares by value so an unchanged filter never re-writes.
+  if (isEqual(oldData || {}, newData || {})) return;
+
+  // TEMP [echo-debug]
+  console.log('[echo-debug] filter WRITE', {
+    old: JSON.stringify(oldData),
+    new: JSON.stringify(newData),
+  });
 
   const changes: SheetChangePath[] = [
     {

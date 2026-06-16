@@ -94,5 +94,11 @@ export const applyYdocSheetChanges = ({
   handleContentPortal?: any;
 }) => {
   if (!changes.length) return;
+  // TEMP [echo-debug]
+  console.log('[echo-debug] applyYdocSheetChanges', {
+    paths: changes.map(
+      (c) => `${c.path.join('.')}${c.key ? `[${c.key}]` : ''}:${c.type}`,
+    ),
+  });
   updateYdocSheetData(ydoc, dsheetId, changes, handleContentPortal);
 };
