@@ -1,5 +1,6 @@
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
+import isEqual from 'lodash/isEqual';
 import { SheetChangePath, updateYdocSheetData } from '../utils/update-ydoc';
 
 type SyncContext = {
@@ -175,8 +176,24 @@ export const syncCurrentSheetField = (
   if (!currentSheet || !currentYdocSheet) return;
 
   const ydocValue = getSheetField(currentYdocSheet, field);
-  if (ydocValue !== currentSheet[field]) {
-    setSheetField(currentYdocSheet, field, currentSheet[field]);
+  const nextValue = currentSheet[field];
+
+  // Object fields (config, frozen, images, iframes) are rebuilt as fresh
+  // references on every Workbook remount, so a reference check (`!==`) reports
+  // a change even when the value is identical. In RTC that re-write broadcasts
+  // to peers, who remount (config/frozen are classified structural), rebuild a
+  // fresh reference, and write it straight back — a continuous cross-peer
+  // remount ping-pong (the "filter flicker"). Deep-compare object values so an
+  // unchanged field never re-writes.
+  const isObjectValue =
+    (typeof nextValue === 'object' && nextValue !== null) ||
+    (typeof ydocValue === 'object' && ydocValue !== null);
+  const changed = isObjectValue
+    ? !isEqual(ydocValue, nextValue)
+    : ydocValue !== nextValue;
+
+  if (changed) {
+    setSheetField(currentYdocSheet, field, nextValue);
     handleOnChangePortalUpdate();
   }
 };

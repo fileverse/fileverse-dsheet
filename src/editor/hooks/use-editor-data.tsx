@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Sheet } from '@sheet-engine/react';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { toUint8Array } from 'js-base64';
+import isEqual from 'lodash/isEqual';
 import * as Y from 'yjs';
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { useLiveQuery } from './live-query/use-live-query';
@@ -369,6 +370,15 @@ export const useEditorData = (
      */
     const SURGICAL_OVERLAY_KEYS = new Set(['images', 'iframes']);
 
+    /**
+     * Object sheet fields that drive layout and require a remount when they
+     * genuinely change, but are rebuilt as fresh references on every remount.
+     * A remote change to one of these is only "real" if its value differs from
+     * the live workbook value — otherwise it is a redundant echo (see the
+     * cross-peer config remount ping-pong) and must NOT trigger another remount.
+     */
+    const LAYOUT_OBJECT_KEYS = new Set(['config', 'frozen']);
+
     /** True only when a sheet tab is inserted/removed on the top-level Y.Array. */
     const isSheetTabArrayChange = (event: Y.YEvent<any>): boolean => {
       const path = event.path;
@@ -513,6 +523,34 @@ export const useEditorData = (
                 }
                 continue;
               }
+            }
+
+            // Fix B: a config/frozen-only remote change should remount ONLY if
+            // the value actually differs from the live workbook value. A
+            // redundant echo (identical value, fresh reference) is skipped so
+            // it cannot drive a remount loop.
+            if (
+              changedKeys.length > 0 &&
+              changedKeys.every((k) => LAYOUT_OBJECT_KEYS.has(k))
+            ) {
+              const sheetId = sheetMap.get('id') as string;
+              const wbSheet = sheetEditorRef.current
+                ?.getWorkbookContext?.()
+                ?.luckysheetfile?.find((s) => s.id === sheetId) as
+                | Record<string, any>
+                | undefined;
+              if (wbSheet) {
+                const allEqual = changedKeys.every((k) =>
+                  isEqual(sheetMap.get(k), wbSheet[k]),
+                );
+                if (allEqual) {
+                  // Redundant echo — ignore entirely (no remount).
+                  continue;
+                }
+              }
+              // Genuine layout change — fall through to a remount.
+              hasStructural = true;
+              continue;
             }
           }
           // Bubbling [sheetIndex] alongside nested celldata — resolved after the loop.
