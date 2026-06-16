@@ -38,6 +38,13 @@ export const useCollabAwareness = (
   // (remote cursors would vanish until the next cell change re-broadcast).
   const lastRosterSigRef = useRef<string>('');
 
+  // Tracks the last presence set actually written to Fortune. The awareness
+  // heartbeat (and every remote cursor move) fires a 'change' on a fixed
+  // cadence; without this guard we'd removePresences + addPresences on each
+  // one — even when nothing changed — forcing a full Workbook re-render that
+  // visibly repaints filter overlays. Skip the churn when the set is identical.
+  const lastPresenceSigRef = useRef<string>('');
+
   // Emit collaborator list (incl. local user) only when the roster changes.
   useEffect(() => {
     if (!awareness) return;
@@ -121,6 +128,22 @@ export const useCollabAwareness = (
           selection: { r: state.cell.r, c: state.cell.c },
         });
       });
+
+      // Diff guard: if no peer departed and the computed presence set is
+      // identical to what we last wrote, skip the remove/add churn. This stops
+      // idle heartbeats (and no-op awareness updates) from triggering a full
+      // Workbook re-render — the root cause of the 5s filter flicker.
+      const presenceSig = presences
+        .map(
+          (p) =>
+            `${p.userId}:${p.sheetId}:${p.selection.r}:${p.selection.c}:${p.color}:${p.username}`,
+        )
+        .sort()
+        .join('|');
+      if (removed.length === 0 && presenceSig === lastPresenceSigRef.current) {
+        return;
+      }
+      lastPresenceSigRef.current = presenceSig;
 
       // Replace all remote presences atomically:
       // removePresences clears stale entries, addPresences writes current ones
