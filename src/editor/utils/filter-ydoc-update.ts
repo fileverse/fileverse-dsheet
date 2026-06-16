@@ -39,12 +39,6 @@ export const filterYdocUpdate = ({
   // flicker). isEqual compares by value so an unchanged filter never re-writes.
   if (isEqual(oldData || {}, newData || {})) return;
 
-  // TEMP [echo-debug]
-  console.log('[echo-debug] filter WRITE', {
-    old: JSON.stringify(oldData),
-    new: JSON.stringify(newData),
-  });
-
   const changes: SheetChangePath[] = [
     {
       sheetId: syncContext.currentSheetId,

@@ -193,12 +193,6 @@ export const syncCurrentSheetField = (
     : ydocValue !== nextValue;
 
   if (changed) {
-    // TEMP [echo-debug]
-    console.log('[echo-debug] syncCurrentSheetField WRITE', {
-      field,
-      old: JSON.stringify(ydocValue),
-      new: JSON.stringify(nextValue),
-    });
     setSheetField(currentYdocSheet, field, nextValue);
     handleOnChangePortalUpdate();
   }

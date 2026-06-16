@@ -1,4 +1,5 @@
 //@ts-nocheck
+import isEqual from 'lodash/isEqual';
 import { Sheet } from '@sheet-engine/react';
 
 /**
@@ -117,33 +118,21 @@ export function diffObjectMap<T extends Record<string, any>>(
   // Added + Updated
   for (const key of newKeys) {
     const newVal = newObj[key];
-    const oldVal = oldObj[key];
 
-    if (!oldVal) {
+    // Presence check by key, NOT truthiness. `!oldVal` wrongly treats falsy
+    // values (0, '', false) as missing, so e.g. filter_select's `left:0` /
+    // `row_focus:0` were flagged "changed" on every diff — producing a write on
+    // every remount and a cross-peer echo loop (the filter flicker).
+    if (!oldKeys.has(key)) {
       added[key] = newVal;
       continue;
     }
 
-    const changes: UpdatedEntry<T>['changes'] = {};
-
-    (Object.keys(newVal) as Array<keyof T>).forEach((prop) => {
-      if (newVal[prop] !== oldVal[prop]) {
-        added[key] = newVal;
-        // changes[prop] = {
-        //   from: oldVal[prop],
-        //   to: newVal[prop],
-        // };
-      }
-    });
-
-    // if (Object.keys(changes).length > 0) {
-    //   updated.push({
-    //     key,
-    //     before: oldVal,
-    //     after: newVal,
-    //     changes,
-    //   });
-    // }
+    // Deep value compare (order-insensitive) instead of per-prop `!==`, which
+    // ref-compared nested arrays/objects and reported spurious changes.
+    if (!isEqual(newVal, oldObj[key])) {
+      added[key] = newVal;
+    }
   }
 
   // Removed

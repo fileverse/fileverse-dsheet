@@ -39,15 +39,6 @@ export const filterSelectYdocUpdate = ({
     newData: newData || {},
   });
 
-  // TEMP [echo-debug]
-  if (changes.length > 0) {
-    console.log('[echo-debug] filter_select WRITE', {
-      old: JSON.stringify(oldData),
-      new: JSON.stringify(newData),
-      changes: changes.length,
-    });
-  }
-
   applyYdocSheetChanges({
     ydoc: syncContext.ydoc,
     dsheetId,
