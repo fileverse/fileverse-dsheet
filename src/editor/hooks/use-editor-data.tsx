@@ -182,9 +182,7 @@ export const useEditorData = (
 
               const getComment = (rowIndex: number, colIndex: number) =>
                 // Primary: UUID-based key (new, immutable)
-                (commentData as any)?.[
-                `${sheetKey}_${rowIndex}_${colIndex}`
-                ] ??
+                (commentData as any)?.[`${sheetKey}_${rowIndex}_${colIndex}`] ??
                 // Legacy: order-based key (old, breaks on reorder)
                 (commentData as any)?.[
                 `${sheetOrder}_${rowIndex}_${colIndex}`
@@ -364,6 +362,13 @@ export const useEditorData = (
       'showGridLines',
     ]);
 
+    /**
+     * Overlay sheet fields (DOM overlays, not canvas) that can be applied
+     * imperatively without a remount via setSheetImages / setSheetIframes.
+     * A remote move/resize of an image or iframe only touches these.
+     */
+    const SURGICAL_OVERLAY_KEYS = new Set(['images', 'iframes']);
+
     /** True only when a sheet tab is inserted/removed on the top-level Y.Array. */
     const isSheetTabArrayChange = (event: Y.YEvent<any>): boolean => {
       const path = event.path;
@@ -403,6 +408,10 @@ export const useEditorData = (
       const sheetMetaUpdates = new Map<
         string,
         { sheetId: string; sheetMap: Y.Map<any>; changedKeys: string[] }
+      >();
+      const overlayUpdates = new Map<
+        string,
+        { sheetId: string; sheetMap: Y.Map<any>; changedKeys: Set<string> }
       >();
       const indexOnlyEvents: Y.YEvent<any>[] = [];
       let hasStructural = false;
@@ -463,7 +472,11 @@ export const useEditorData = (
             );
             if (
               changedKeys.length > 0 &&
-              changedKeys.every((k) => SURGICAL_SHEET_META_KEYS.has(k))
+              changedKeys.every(
+                (k) =>
+                  SURGICAL_SHEET_META_KEYS.has(k) ||
+                  SURGICAL_OVERLAY_KEYS.has(k),
+              )
             ) {
               // color/hide have no imperative WorkbookInstance API — must remount.
               if (changedKeys.some((k) => k === 'color' || k === 'hide')) {
@@ -472,14 +485,32 @@ export const useEditorData = (
               }
               const sheetId = sheetMap.get('id') as string;
               if (sheetId) {
-                const existing = sheetMetaUpdates.get(sheetId);
-                sheetMetaUpdates.set(sheetId, {
-                  sheetId,
-                  sheetMap,
-                  changedKeys: existing
-                    ? [...existing.changedKeys, ...changedKeys]
-                    : changedKeys,
-                });
+                const metaKeys = changedKeys.filter((k) =>
+                  SURGICAL_SHEET_META_KEYS.has(k),
+                );
+                const overlayKeys = changedKeys.filter((k) =>
+                  SURGICAL_OVERLAY_KEYS.has(k),
+                );
+                if (metaKeys.length > 0) {
+                  const existing = sheetMetaUpdates.get(sheetId);
+                  sheetMetaUpdates.set(sheetId, {
+                    sheetId,
+                    sheetMap,
+                    changedKeys: existing
+                      ? [...existing.changedKeys, ...metaKeys]
+                      : metaKeys,
+                  });
+                }
+                if (overlayKeys.length > 0) {
+                  const existing = overlayUpdates.get(sheetId);
+                  const keys = existing?.changedKeys ?? new Set<string>();
+                  overlayKeys.forEach((k) => keys.add(k));
+                  overlayUpdates.set(sheetId, {
+                    sheetId,
+                    sheetMap,
+                    changedKeys: keys,
+                  });
+                }
                 continue;
               }
             }
@@ -493,7 +524,12 @@ export const useEditorData = (
       }
 
       for (const event of indexOnlyEvents) {
-        if (cellBatches.length > 0 || sheetMetaUpdates.size > 0) continue;
+        if (
+          cellBatches.length > 0 ||
+          sheetMetaUpdates.size > 0 ||
+          overlayUpdates.size > 0
+        )
+          continue;
         const changedKeys = Array.from((event as Y.YMapEvent<any>).keys.keys());
         if (changedKeys.length === 0) continue;
         hasStructural = true;
@@ -513,6 +549,7 @@ export const useEditorData = (
       const remoteSheetIds = [
         ...cellBatches.map((b) => b.sheetId),
         ...sheetMetaUpdates.keys(),
+        ...overlayUpdates.keys(),
       ];
       const hasUnknownSheet = remoteSheetIds.some(
         (id) => id && !workbookSheetIds.has(id),
@@ -596,6 +633,40 @@ export const useEditorData = (
         }
       };
 
+      // Apply remote image/iframe overlay changes imperatively (no remount).
+      // The overlay div repositions; afterImagesChange/afterIframesChange may
+      // fire from the setContext — holdRemoteApplyLock prevents that echoing
+      // the value back into ydoc.
+      const applyRemoteOverlays = () => {
+        for (const {
+          sheetId,
+          sheetMap,
+          changedKeys,
+        } of overlayUpdates.values()) {
+          try {
+            if (changedKeys.has('images')) {
+              const images = sheetMap.get('images');
+              sheetEditorRef.current?.setSheetImages?.(
+                Array.isArray(images) ? images : [],
+                { id: sheetId },
+              );
+            }
+            if (changedKeys.has('iframes')) {
+              const iframes = sheetMap.get('iframes');
+              sheetEditorRef.current?.setSheetIframes?.(
+                Array.isArray(iframes) ? iframes : [],
+                { id: sheetId },
+              );
+            }
+          } catch (error) {
+            console.warn(
+              '[DSheet] Skipped remote overlay apply — workbook not ready',
+              { sheetId, error },
+            );
+          }
+        }
+      };
+
       // --- Fall back to remount for structural changes or large cell batches ---
       if (needsStructuralRemount) {
         scheduleStructuralRemount();
@@ -606,14 +677,22 @@ export const useEditorData = (
         applyRemoteSheetMeta();
       }
 
-      if (totalCells === 0 && sheetMetaUpdates.size > 0) {
+      if (overlayUpdates.size > 0) {
+        holdRemoteApplyLock(800);
+        applyRemoteOverlays();
+      }
+
+      if (
+        totalCells === 0 &&
+        (sheetMetaUpdates.size > 0 || overlayUpdates.size > 0)
+      ) {
         holdRemoteApplyLock(500);
         try {
           const plain = ySheetArrayToPlain(sheetArray as any);
           currentDataRef.current = plain;
         } catch (e) {
           console.error(
-            '[DSheet] ySheetArrayToPlain after remote sheet meta failed',
+            '[DSheet] ySheetArrayToPlain after remote sheet meta/overlay failed',
             e,
           );
         }
@@ -659,7 +738,11 @@ export const useEditorData = (
       }
 
       // Keep currentDataRef aligned (no re-render triggered here)
-      if (totalCells > 0 || sheetMetaUpdates.size > 0) {
+      if (
+        totalCells > 0 ||
+        sheetMetaUpdates.size > 0 ||
+        overlayUpdates.size > 0
+      ) {
         try {
           const plain = ySheetArrayToPlain(sheetArray as any);
           currentDataRef.current = plain;

@@ -433,6 +433,40 @@ export function generateAPIs(
     setSheetOrder: (orderList: Record<string, number>) =>
       setContext((draftCtx) => api.setSheetOrder(draftCtx, orderList)),
 
+    // Replace a sheet's image overlay array imperatively. Used by the RTC
+    // remote-apply path to reposition images without a full Workbook remount:
+    // images render from `insertedImgs` (active sheet) backed by
+    // `luckysheetfile[idx].images`. Updates both so the overlay repositions and
+    // the data survives the next remount/sheet-switch.
+    setSheetImages: (images: any[], options: api.CommonOptions = {}) =>
+      setContext((draftCtx) => {
+        const idx = getSheetIndex(
+          draftCtx,
+          options.id ?? draftCtx.currentSheetId,
+        );
+        if (idx == null) return;
+        draftCtx.luckysheetfile[idx].images = images;
+        if (draftCtx.luckysheetfile[idx].id === draftCtx.currentSheetId) {
+          draftCtx.insertedImgs = images;
+        }
+      }),
+
+    // Replace a sheet's iframe overlay array imperatively. Iframes render from
+    // `luckysheetfile[idx].iframes` (memoized); `insertedIframes` is kept in
+    // sync for parity with the remount init path.
+    setSheetIframes: (iframes: any[], options: api.CommonOptions = {}) =>
+      setContext((draftCtx) => {
+        const idx = getSheetIndex(
+          draftCtx,
+          options.id ?? draftCtx.currentSheetId,
+        );
+        if (idx == null) return;
+        draftCtx.luckysheetfile[idx].iframes = iframes;
+        if (draftCtx.luckysheetfile[idx].id === draftCtx.currentSheetId) {
+          draftCtx.insertedIframes = iframes;
+        }
+      }),
+
     scroll: (options: {
       scrollLeft?: number;
       scrollTop?: number;
