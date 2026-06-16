@@ -644,7 +644,7 @@ export const useEditorData = (
               sheetEditorRef.current?.setCellValue(
                 r,
                 c,
-                cellObj ?? null,
+                cellObj?.v ?? null,
                 { id: sheetId },
                 false,
               );

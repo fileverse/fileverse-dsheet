@@ -1998,7 +1998,7 @@ export class Canvas {
       dataVerification?.[`${r}_${c}`] &&
       dataVerification?.[`${r}_${c}`].type === 'dropdown';
     if (isDataVlidationAvailable) {
-      const option = cell?.v;
+      const option = cell?.m ?? cell?.v;
       const color = dataVerification?.[`${r}_${c}`]?.color;
       const allOptions = dataVerification?.[`${r}_${c}`]?.value1.split(',');
 
