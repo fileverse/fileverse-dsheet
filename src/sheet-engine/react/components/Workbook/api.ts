@@ -14,6 +14,7 @@ import {
   Settings,
   SingleRange,
   createFilterOptions,
+  applySheetFilterState,
   getSheetIndex,
   Sheet,
   locale,
@@ -500,6 +501,72 @@ export function generateAPIs(
           );
           if (idx == null) return;
           draftCtx.luckysheetfile[idx].dataVerification = dataVerification;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    // Apply filter + filter_select from Yjs without remount (RTC remote apply).
+    setSheetFilterState: (
+      state: {
+        filter?: Record<string, any> | null;
+        filter_select?: { row: number[]; column: number[] } | null;
+      },
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const sheetId = options.id ?? draftCtx.currentSheetId;
+          applySheetFilterState(draftCtx, sheetId, state);
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    // Generic map-backed sheet metadata (hyperlink, conditionRules, …).
+    setSheetMapField: (
+      field: string,
+      value: Record<string, any> | null | undefined,
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          (draftCtx.luckysheetfile[idx] as Record<string, any>)[field] =
+            value ?? undefined;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    setSheetConditionFormatRules: (
+      rules: any[],
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          draftCtx.luckysheetfile[idx].luckysheet_conditionformat_save = rules;
           try {
             jfrefreshgrid(draftCtx, null, undefined, false);
           } catch {

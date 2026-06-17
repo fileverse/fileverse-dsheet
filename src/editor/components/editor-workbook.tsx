@@ -140,9 +140,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
 
   const localUserEditRef = useRef(false);
 
-  // Skip ydoc writes while a remote update is being applied. Remounts and
-  // imperative remote applies re-fire metadata hooks; without this guard the
-  // peer can echo stale sheet fields back into ydoc (filter flicker, DV loss).
+  // Block metadata → ydoc echoes only while a remote apply is in flight
+  // (remoteApplyDepth > 0). User-initiated edits run when depth is zero.
   const guardRemoteEcho = useCallback(
     (fn: () => void) => () => {
       if (remoteUpdateRef.current) return;
