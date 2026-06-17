@@ -107,7 +107,12 @@ export const useSyncManager = (config: SyncManagerConfig) => {
   }, [manager]);
 
   const terminateSession = useCallback(() => {
-    manager.terminateSession();
+    void manager.terminateSession().catch((err) => {
+      console.warn(
+        'useSyncManager: terminateSession failed (session reset locally)',
+        err,
+      );
+    });
   }, [manager]);
 
   const isSyncing = collabState.status === 'syncing';

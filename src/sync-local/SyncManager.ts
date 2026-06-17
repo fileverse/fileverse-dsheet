@@ -43,6 +43,8 @@ export class SyncManager {
   private uncommittedUpdatesIdList: string[] = [];
   private contentTobeAppliedQueue: Array<{ data: string; id?: string }> = [];
   private isProcessing = false;
+  /** Prevents parallel terminateSession calls (UI + effect cleanup). */
+  private _terminating = false;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly FLUSH_INTERVAL_MS = 50;
   private readonly MAX_QUEUE_SIZE = 5;
@@ -232,29 +234,38 @@ export class SyncManager {
   }
 
   async terminateSession(): Promise<void> {
-    if (this._status === 'idle') return;
-    await this.awaitFlush();
+    if (this._status === 'idle' || this._terminating) return;
+    this._terminating = true;
 
     try {
-      if (this._awareness) {
-        removeAwarenessStates(
-          this._awareness,
-          [this.ydoc.clientID],
-          'session terminated',
+      await this.awaitFlush();
+
+      try {
+        if (this._awareness) {
+          removeAwarenessStates(
+            this._awareness,
+            [this.ydoc.clientID],
+            'session terminated',
+          );
+        }
+        if (this.isOwner) {
+          await this.socketClient?.terminateSession();
+        } else {
+          this.socketClient?.disconnect();
+        }
+      } catch (err) {
+        console.warn(
+          '[SyncManager] terminateSession socket step failed (local cleanup continues)',
+          err,
         );
       }
-      if (this.isOwner) {
-        await this.socketClient?.terminateSession();
-      } else {
-        this.socketClient?.disconnect();
-      }
     } finally {
+      this._terminating = false;
       this.resetInternalState();
       this.send({
         type: 'SESSION_TERMINATED',
         reason: 'User terminated session',
       });
-      // After terminated, reset to idle for potential reuse
       this.send({ type: 'RESET' });
     }
   }

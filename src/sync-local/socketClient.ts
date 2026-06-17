@@ -229,6 +229,14 @@ export class SocketClient {
         sessionDid: this.collaborationKeyPair?.did(),
       };
       await this._emitWithAck('/documents/terminate', args);
+    } catch (err) {
+      // Relay may be slow or unreachable; local disconnect still runs below.
+      // Throwing here caused an unhandled rejection and left users unable to
+      // restart collab even though client state was already torn down.
+      console.warn(
+        '[SocketClient] /documents/terminate failed — disconnected locally',
+        err,
+      );
     } finally {
       this.disconnect();
     }
