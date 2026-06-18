@@ -11,9 +11,12 @@ import {
   fillSelectionWithActiveValue,
   jumpHighlightCell,
 } from '../modules/selection';
+import { createFilter } from '../modules/filter';
 import {
   handleBorder,
   handleCurrencyFormat,
+  handleNumberDecrease,
+  handleNumberIncrease,
   handlePercentageFormat,
   handleStrikeThrough,
   updateFormat,
@@ -101,6 +104,16 @@ function handleNumberFormatShortcuts(
 }
 
 function handleBorderShortcuts(ctx: Context, e: KeyboardEvent): boolean {
+  if (
+    (e.ctrlKey || e.metaKey) &&
+    e.shiftKey &&
+    !e.altKey &&
+    isDigitCode(e.code, '7')
+  ) {
+    handleBorder(ctx, 'border-outside');
+    return true;
+  }
+
   if (!e.altKey || !e.shiftKey || e.ctrlKey || e.metaKey) return false;
 
   if (isDigitCode(e.code, '6')) {
@@ -113,6 +126,9 @@ function handleBorderShortcuts(ctx: Context, e: KeyboardEvent): boolean {
     '2': 'border-right',
     '3': 'border-bottom',
     '4': 'border-left',
+    '7': 'border-outside',
+    '8': 'border-all',
+    '9': 'border-inside',
   };
 
   for (const [digit, type] of Object.entries(borderByDigit)) {
@@ -122,6 +138,58 @@ function handleBorderShortcuts(ctx: Context, e: KeyboardEvent): boolean {
     }
   }
   return false;
+}
+
+function handlePlainTextFormatShortcut(
+  ctx: Context,
+  cellInput: HTMLDivElement,
+  e: KeyboardEvent,
+): boolean {
+  if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return false;
+  if (e.code !== 'Backquote') return false;
+
+  const flowdata = getFlowdata(ctx);
+  if (!flowdata) return false;
+  updateFormat(ctx, cellInput, flowdata, 'ct', '@');
+  return true;
+}
+
+function handleDecimalPlaceShortcuts(
+  ctx: Context,
+  cellInput: HTMLDivElement,
+  e: KeyboardEvent,
+): boolean {
+  if (ctx.luckysheetCellUpdate.length > 0) return false;
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return false;
+
+  const isMacDecimal =
+    e.ctrlKey &&
+    e.shiftKey &&
+    !e.metaKey &&
+    !e.altKey;
+  const isWinDecimal =
+    e.altKey &&
+    e.shiftKey &&
+    !e.ctrlKey &&
+    !e.metaKey;
+
+  if (!isMacDecimal && !isWinDecimal) return false;
+
+  if (e.key === 'ArrowUp') {
+    handleNumberIncrease(ctx, cellInput);
+  } else {
+    handleNumberDecrease(ctx, cellInput);
+  }
+  return true;
+}
+
+function handleFilterToggleShortcut(ctx: Context, e: KeyboardEvent): boolean {
+  if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return false;
+  if (e.code !== 'KeyL') return false;
+  if (ctx.luckysheetCellUpdate.length > 0) return false;
+
+  createFilter(ctx);
+  return true;
 }
 
 function handleStrikethroughShortcut(
@@ -279,6 +347,12 @@ export function handleShortcutsV2(
   } else if (handleStrikethroughShortcut(ctx, cellInput, e)) {
     handled = true;
   } else if (handleBorderShortcuts(ctx, e)) {
+    handled = true;
+  } else if (handlePlainTextFormatShortcut(ctx, cellInput, e)) {
+    handled = true;
+  } else if (handleDecimalPlaceShortcuts(ctx, cellInput, e)) {
+    handled = true;
+  } else if (handleFilterToggleShortcut(ctx, e)) {
     handled = true;
   } else if (handleHideUnhideShortcuts(ctx, e)) {
     handled = true;

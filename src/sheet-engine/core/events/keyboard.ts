@@ -691,15 +691,13 @@ export function handleWithCtrlOrMetaKey(
     } else {
       ctx.showQuickSearch = true;
     }
-  } else if (e.code === 'KeyH') {
-    // Ctrl + H  替换
+  } else if (
+    (e.ctrlKey && !e.metaKey && e.code === 'KeyH' && !e.shiftKey) ||
+    (e.metaKey && e.shiftKey && e.code === 'KeyH' && !e.ctrlKey)
+  ) {
+    // Win: Ctrl+H — Mac: Cmd+Shift+H (Google Sheets)
+    ctx.showSearch = true;
     ctx.showReplace = true;
-    //   searchReplace.init();
-
-    //   $("#luckysheet-search-replace #searchInput input").focus();
-    // } else if (e.code === "KeyI") {
-    //   // Ctrl + I  斜体
-    //   $("#luckysheet-icon-italic").click();
   } else if (e.code === 'KeyV') {
     // Ctrl + V  粘贴
     // if (isEditMode()) {
@@ -1028,13 +1026,19 @@ export async function handleGlobalKeyDown(
     return;
   }
   let handledFlvShortcut = false;
-  if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === 'KeyE') {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.code === 'KeyE') {
     textFormat(ctx, 'center');
     handledFlvShortcut = true;
-  } else if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === 'KeyL') {
+  } else if (
+    (e.ctrlKey || e.metaKey) &&
+    e.shiftKey &&
+    !e.altKey &&
+    e.code === 'KeyL' &&
+    ctx.luckysheetCellUpdate.length > 0
+  ) {
     textFormat(ctx, 'left');
     handledFlvShortcut = true;
-  } else if ((e.ctrlKey || (e.metaKey && e.shiftKey)) && e.code === 'KeyR') {
+  } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.code === 'KeyR') {
     textFormat(ctx, 'right');
     handledFlvShortcut = true;
   }
@@ -1152,7 +1156,11 @@ export async function handleGlobalKeyDown(
   const isF4Key = kstr === 'F4' || e.code === 'F4' || kcode === 115;
 
   const passFindReplaceThroughEdit =
-    (e.ctrlKey || e.metaKey) && (e.code === 'KeyF' || e.code === 'KeyH');
+    (e.ctrlKey || e.metaKey) &&
+    (e.code === 'KeyF' ||
+      (e.code === 'KeyH' &&
+        ((e.ctrlKey && !e.metaKey && !e.shiftKey) ||
+          (e.metaKey && e.shiftKey && !e.ctrlKey))));
 
   if (
     // $("#luckysheet-modal-dialog-mask").is(":visible") ||
