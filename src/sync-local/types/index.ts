@@ -5,6 +5,7 @@ export interface CollabUser {
   clientId: number;
   name: string;
   color: string;
+  isEns: boolean;
   cell?: { r: number; c: number; sheetId: string };
 }
 

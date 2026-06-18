@@ -58,6 +58,7 @@ export const useCollabAwareness = (
           clientId,
           name: user.name,
           color: user.color || '#3DA5F4',
+          isEns: user.isEns ?? false,
         });
       });
 
