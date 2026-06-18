@@ -113,21 +113,8 @@ export function updateFormatCell(
 
       for (let c = col_st; c <= col_ed; c += 1) {
         const cell = d[r][c];
-        let value;
 
-        if (_.isPlainObject(cell)) {
-          // When switching a date cell to plain text, preserve user-visible date text
-          // instead of converting Excel serial (`v`) into the new format.
-          if (cell?.ct?.t === 'd') {
-            value = cell?.m ?? cell?.v ?? cell?.ct?.s?.[0]?.v;
-          } else {
-            value = cell?.v ?? cell?.ct?.s?.[0]?.v;
-          }
-        } else {
-          value = cell;
-        }
-
-        // Compute type early (depends only on foucsStatus, not cell value) so it's available for empty cells too
+        // Compute target type before resolving value (depends only on foucsStatus).
         let type = 'n';
 
         if (
@@ -148,6 +135,31 @@ export function updateFormatCell(
           type = 'd';
         } else if (foucsStatus === '@' || foucsStatus === 49) {
           type = 's';
+        }
+
+        let value;
+
+        if (_.isPlainObject(cell)) {
+          const rawV = cell?.v;
+          const rawM = cell?.m ?? cell?.ct?.s?.[0]?.v;
+
+          if (foucsStatus === '@' && cell?.ct?.t === 'd') {
+            // Plain text: preserve user-visible date/time text.
+            value = rawM ?? rawV ?? cell?.ct?.s?.[0]?.v;
+          } else if (
+            cell?.ct?.t === 'd' &&
+            isRealNum(rawV) &&
+            type !== 's'
+          ) {
+            // Date/time cells keep Excel serial in `v` — reuse it when reformatting.
+            value = rawV;
+          } else if (cell?.ct?.t === 'd') {
+            value = rawM ?? rawV ?? cell?.ct?.s?.[0]?.v;
+          } else {
+            value = rawV ?? cell?.ct?.s?.[0]?.v;
+          }
+        } else {
+          value = cell;
         }
 
         if (_.isNil(value)) {
