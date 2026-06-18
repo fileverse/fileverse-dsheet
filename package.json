@@ -34,7 +34,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "dev:link": "npm run build && cp -r dist/* ../dsheets.new/node_modules/@fileverse-dev/dsheet/dist/ && echo '✓ Copied to dsheets.new'",
+    "build:dist": "vite build",
+    "dev:link": "npm run build:dist && cp -r dist/* ../dsheets.new/node_modules/@fileverse-dev/dsheet/dist/ && echo '✓ Copied to dsheets.new'",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview"
   },

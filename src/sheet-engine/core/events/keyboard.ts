@@ -50,6 +50,7 @@ import {
   isAllowEditReadOnly,
 } from '../utils';
 import { handleCopy } from './copy';
+import { handleShortcutsV2 } from './shortcuts-v2';
 import { jfrefreshgrid } from '../modules/refresh';
 import { moveToEnd } from '../modules/cursor';
 
@@ -1061,6 +1062,12 @@ export async function handleGlobalKeyDown(
   }
   if (handledFlvShortcut) {
     jfrefreshgrid(ctx, null, undefined);
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+
+  if (handleShortcutsV2(ctx, cellInput, e, cache, canvas)) {
     e.stopPropagation();
     e.preventDefault();
     return;

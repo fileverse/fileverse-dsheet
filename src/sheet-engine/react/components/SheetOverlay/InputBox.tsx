@@ -1704,9 +1704,9 @@ const InputBox: React.FC = () => {
         });
         e.preventDefault();
       } else if (e.key === 'Enter' && context.luckysheetCellUpdate.length > 0) {
-        if (e.altKey || e.metaKey) {
-          // Fully own Cmd/Alt+Enter behavior to avoid native contenteditable
-          // insertion running in parallel with our custom newline path.
+        if (e.altKey) {
+          // In-cell line break: Alt+Enter (Win) / Ctrl+Option+Return (Mac).
+          // Cmd/Ctrl+Enter (fill range) must bubble to the workbook handler.
           e.preventDefault();
           // Match Space behavior in multiline mode too: link the token before caret first.
           autoLinkUrlsInEditorRef.current('commit', {
@@ -1725,6 +1725,9 @@ const InputBox: React.FC = () => {
             document.execCommand('delete', false);
           }
           e.stopPropagation();
+        } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+          // Fill range (Ctrl/Cmd+Enter): let handleShortcutsV2 handle it.
+          return;
         } else {
           // Single-line Enter commit should also auto-link like Space.
           autoLinkUrlsInEditorRef.current('commit');

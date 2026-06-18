@@ -16,6 +16,7 @@ import {
   mergeBorder,
   mergeMoveMain,
   recalcAutoRowHeightForRow,
+  updateCell,
 } from './cell';
 import { isInlineStringCell } from './inline-string';
 import { delFunctionGroup } from './formula';
@@ -3559,4 +3560,79 @@ export function calcSelectionInfo(
   //   lang && !["zh", "zh_tw"].includes(lang) ? "0.00000" : "0.00000";
   const average = String(sum / numberC);
   return { numberC, count, sum, max, min, average };
+}
+
+/** Move the active selection focus to an absolute row/column (Home/End navigation). */
+export function jumpHighlightCell(ctx: Context, targetRow: number, targetCol: number) {
+  const flowdata = getFlowdata(ctx);
+  if (!flowdata?.length || !flowdata[0]?.length) return;
+
+  const last =
+    ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1];
+  if (!last) return;
+
+  const r = Math.max(0, Math.min(targetRow, flowdata.length - 1));
+  const c = Math.max(0, Math.min(targetCol, flowdata[0].length - 1));
+
+  last.row = [r, r];
+  last.column = [c, c];
+  last.row_focus = r;
+  last.column_focus = c;
+  last.moveXY = { x: r, y: c };
+  normalizeSelection(ctx, ctx.luckysheet_select_save);
+  scrollToHighlightCell(ctx, r, c);
+}
+
+/**
+ * Fill every cell in the current selection with the active/focus cell value
+ * (Ctrl/Cmd+Enter — same value across the whole selection).
+ */
+export function fillSelectionWithActiveValue(
+  ctx: Context,
+  cellInput: HTMLDivElement,
+  canvas?: CanvasRenderingContext2D,
+): boolean {
+  if (!isAllowEdit(ctx)) return false;
+  const selection = ctx.luckysheet_select_save;
+  if (!selection?.length) return false;
+
+  if (ctx.luckysheetCellUpdate.length > 0) {
+    updateCell(
+      ctx,
+      ctx.luckysheetCellUpdate[0],
+      ctx.luckysheetCellUpdate[1],
+      cellInput,
+      undefined,
+      canvas,
+    );
+  }
+
+  const d = getFlowdata(ctx);
+  if (!d) return false;
+
+  const last = selection[selection.length - 1];
+  const srcR = last.row_focus ?? last.row[0];
+  const srcC = last.column_focus ?? last.column[0];
+  const sourceCell = d[srcR]?.[srcC];
+
+  for (let s = 0; s < selection.length; s += 1) {
+    const r1 = selection[s].row[0];
+    const r2 = selection[s].row[1];
+    const c1 = selection[s].column[0];
+    const c2 = selection[s].column[1];
+    for (let r = r1; r <= r2; r += 1) {
+      if (!d[r]) d[r] = [];
+      for (let c = c1; c <= c2; c += 1) {
+        if (r === srcR && c === srcC) continue;
+        d[r][c] =
+          sourceCell != null && _.isPlainObject(sourceCell)
+            ? _.cloneDeep(sourceCell)
+            : sourceCell != null
+              ? sourceCell
+              : null;
+      }
+    }
+  }
+
+  return true;
 }
