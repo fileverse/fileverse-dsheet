@@ -15,6 +15,8 @@ Demo (App.tsx)
             │         └─ SyncManager (SyncManager.ts)    ← core class: state machine + queue
             │              ├─ collabStateMachine.ts       ← pure state transitions
             │              └─ SocketClient (socketClient.ts) ← Socket.IO + UCAN auth
+            ├─ useEditorData (use-editor-data.tsx)        ← ydoc observeDeep → surgical/remount apply
+            │    └─ remote-apply-guard.ts                 ← scoped remote-apply lock (echo break)
             └─ useCollabAwareness (use-collab-awareness.tsx) ← remote cursors → Fortune sheet
 ```
 
@@ -31,6 +33,8 @@ Demo (App.tsx)
 | `src/editor/contexts/editor-context.tsx` | React context: wires all hooks together, exposes collab state downward |
 | `src/editor/hooks/use-editor-sync.tsx` | Sets up ydoc, IndexedDB persistence, and calls `useSyncManager` |
 | `src/editor/hooks/use-collab-awareness.tsx` | Reads remote awareness states → calls Fortune `addPresences`/`removePresences` |
+| `src/editor/hooks/use-editor-data.tsx` | Registers `observeDeep` on the ydoc sheet array; classifies remote events and applies them surgically or via remount |
+| `src/editor/utils/remote-apply-guard.ts` | Depth-counted guard (`beginRemoteApply`/`endRemoteApply`/`runUnderRemoteApply`) that marks the remote-apply window so local write handlers skip echoing remote changes back into the ydoc |
 | `src/editor/components/editor-workbook-sync.ts` | Ydoc ↔ Fortune sheet data sync (cell updates) |
 | `src/sync-local/useSyncManager.ts` | React hook: creates `SyncManager`, registers ydoc update listener |
 | `src/sync-local/SyncManager.ts` | Core class: owns state machine, update queue, commit logic |
@@ -190,18 +194,24 @@ client → /auth {
   collaborationToken: UCAN (issued by roomKey keypair, audience: server DID),
   sessionDid: collaborationKeyPair.did(),
   documentId: roomId,
+  appType: 'dsheet',                                               ← always sent (APP_TYPE const)
   ownerToken: UCAN (issued by ownerKeyPair, audience: server DID),  ← owner only
   ownerAddress, contractAddress,                                    ← owner only
   roomInfo: encrypted JSON { documentTitle, portalAddress, commentKey } ← optional
 }
 
-server → ACK { status, statusCode, data }
-  statusCode 200 → handshake success
+server → ACK { status, statusCode, data, errorCode }
+  statusCode 200 → handshake success → onHandshakeSuccess()
   statusCode 404 → session not found → SESSION_TERMINATED event
   statusCode 401 → auth failed → reject / ERROR event
+  any non-200  → onHandShakeError(error, statusCode)
 ```
 
-UCAN tokens are built with `@ucans/ucans`, 1-hour lifetime, cached and reused until 60s before expiry.
+`onHandshakeData` is always called with the raw ACK + roomKey (even on non-200) so the host can render room info / copy-link UI.
+
+If `errorCode === APP_MISMATCH` (the room belongs to a different Fileverse app, e.g. a ddoc link opened in dsheet), the thrown error message is `"This link belongs to a different Fileverse app"`. `appType` is what the server uses to detect this.
+
+UCAN tokens are built with `@ucans/ucans`, 1-hour lifetime, cached and reused until 60s before expiry. `_emitWithAck` rejects any socket call that gets no ACK within 15s (`SocketTimeoutError`).
 
 **Key derivation:** `collaborationKeyPair` is an Ed25519 keypair derived from the secp256k1 roomKey via `generateKeyPairFromSeed(toUint8Array(roomKey))`. The private key bytes of the secp256k1 key are reused as the Ed25519 seed.
 
@@ -255,76 +265,87 @@ Server broadcasts '/document/content_update' to room
 
 When your peer edits a cell, that change arrives as an encrypted blob, gets decrypted, and is applied to the shared Yjs document. At that point the app has two ways to show it in the spreadsheet:
 
-1. **Surgical (fast, no flicker):** If the update only touches ≤ 50 individual cells and doesn't add/remove sheets, the app calls `setCellValue` directly on the live spreadsheet instance — like typing into the cell yourself. The spreadsheet component never re-renders; only the affected cells update. This is the happy path for normal typing and editing.
+1. **Surgical (fast, no flicker):** If the update only touches ≤ 50 individual cells (plus a fixed set of imperatively-applicable sheet fields — meta, filters, data-validation, overlays, etc.) and doesn't add/remove sheets, the app calls imperative `WorkbookInstance` methods directly on the live spreadsheet — `applyRemoteCellValue` per cell, `setSheetName`/`setSheetOrder` for meta, and so on. The spreadsheet component never re-renders; only the affected cells/fields update. This is the happy path for normal typing and editing.
 
-2. **Remount (slow, may flicker):** If the update touches more than 50 cells (e.g. a paste, import, or formula recalc) or restructures sheets (add/delete/rename tab), the app increments a counter that tells React to tear down and rebuild the entire Workbook component. The full ydoc state is read fresh before the rebuild so nothing is stale. This is debounced by 50ms and is skipped while the local user is actively typing in a cell.
+2. **Remount (slow, may flicker):** If the update touches more than 50 cells (e.g. a paste, import, or formula recalc), restructures sheets (add/delete/rename tab), references a sheet id the live workbook doesn't have yet, or changes an un-applicable field (`color`, `hide`, or a genuine `config`/`frozen` layout change), the app increments a counter that tells React to tear down and rebuild the entire Workbook component. The full ydoc state is read fresh before the rebuild so nothing is stale. This is debounced by 50ms and is skipped while the local user is actively typing in a cell.
 
-The threshold of 50 cells (`SURGICAL_CELL_LIMIT`) is the break-even point: 50 individual `setCellValue` calls is cheaper than one full remount; 51+ is not.
+The threshold of 50 cells (`SURGICAL_CELL_LIMIT`) is the break-even point: 50 individual imperative cell applies is cheaper than one full remount; 51+ is not.
+
+**Echo break:** Surgical applies run inside `runUnderRemoteApply()` and remounts inside `beginRemoteApply()…endRemoteApplyAfterPaint()` (from `remote-apply-guard.ts`). These bump a depth counter that sets `remoteUpdateRef`, so the local Fortune change handlers (which fire as a side-effect of the imperative apply) see "we're mid remote-apply" and skip writing the value back into the ydoc — breaking the infinite loop. This replaced the older `setCellValue(..., callAfterUpdate=false)` flag approach.
 
 #### Technical explanation
 
-On every remote ydoc update, `observeDeep` fires and classifies each changed Y.Map/Y.Array event by its path:
+The classifier lives in `use-editor-data.tsx` (`useEditorData`), which registers `sheetArray.observeDeep(observerCallback)`. The callback bails immediately on `transaction.local || isUpdatingRef.current` — so only genuinely remote (or otherwise non-local) transactions are classified. (`Y.applyUpdate(ydoc, update, 'remote')` produces a non-local transaction → observer runs.)
 
-| Event path | Classification |
-|---|---|
-| `[sheetIdx, 'celldata']` | `CellBatch` — keyed by `r_c`, carries new cell value |
-| `[sheetIdx, metaKey]` (name/order/…) | `SheetMetaUpdate` |
-| isSheetTabArrayChange() | `hasStructural = true` |
-| anything else | `hasStructural = true` |
+On every remote ydoc update, `observeDeep` fires and classifies each changed Y.Map/Y.Array event by its path. Each `[sheetIdx, field]` path is bucketed into a typed batch; `[sheetIdx]`-only (whole-sheet-map) events are expanded to their changed keys and bucketed the same way:
 
-**Surgical gate:** `totalCells ≤ SURGICAL_CELL_LIMIT (50) && !hasStructural && sheetEditorRef.current != null`
+| Event path | Classification | Surgical apply |
+|---|---|---|
+| `[sheetIdx, 'celldata']` | `CellBatch` — keyed by `r_c`, action + value | `applyRemoteCellValue(r, c, value, {id})` |
+| `[sheetIdx, 'name'/'order']` | `SheetMetaUpdate` | `setSheetName(...)` / `setSheetOrder({...})` |
+| `[sheetIdx, 'dataVerification']` | `DataVerificationBatch` | `setSheetDataVerification(json, {id})` |
+| `[sheetIdx, 'filter'/'filter_select']` | `FilterBatch` | `setSheetFilterState({filter, filter_select}, {id})` |
+| `[sheetIdx, 'hyperlink'/'conditionRules']` | `MapFieldBatch` | `setSheetMapField(field, json, {id})` |
+| `[sheetIdx, 'luckysheet_conditionformat_save']` | `ConditionFormatBatch` | `setSheetConditionFormatRules(rules, {id})` |
+| `[sheetIdx, 'images'/'iframes']` | overlay update | `setSheetImages(...)` / `setSheetIframes(...)` |
+| `[sheetIdx, 'config'/'frozen']` | layout change — remount **only if value actually differs** from live workbook (echo guard via `isEqual`) | n/a |
+| `[sheetIdx, 'color'/'hide']` | classified but **forces remount** — no imperative API | n/a |
+| `isSheetTabArrayChange()` (tab insert/delete) | `hasStructural = true` | n/a |
+| anything else | `hasStructural = true` | n/a |
 
-If the gate passes:
-- Each `CellBatch` → `sheetEditorRef.current.setCellValue(r, c, value, {id}, false)`. The `callAfterUpdate=false` flag prevents the Fortune sheet from writing the value back into the ydoc, breaking any infinite loop.
-- Supported meta updates (name, order, status, showGridLines) → `sheetEditorRef.current.setSheetName(...)`.
-- `currentDataRef.current` is synced from ydoc without triggering a re-render.
-- `setForceSheetRender` is **never called** → no Workbook remount → no flicker.
+**Key sets (defined inside the effect):**
+- `SURGICAL_SHEET_META_KEYS` = `{name, order, status, color, hide, showGridLines}` — recognised as sheet-meta. Only `name` and `order` are actually applied imperatively (`applyRemoteSheetMeta`); `status`/`showGridLines` are recognised but have no imperative apply branch; `color`/`hide` explicitly force a remount.
+- `SURGICAL_OVERLAY_KEYS` = `{images, iframes}` — DOM overlays, applied via `setSheetImages`/`setSheetIframes`.
+- `SURGICAL_MAP_FIELD_KEYS` = `{dataVerification, filter_select, hyperlink, conditionRules}`.
+- `SURGICAL_OBJECT_FIELD_KEYS` = `{filter}`.
+- `LAYOUT_OBJECT_KEYS` = `{config, frozen}` — layout objects rebuilt fresh on every remount, so a remote change only remounts when its value genuinely differs from the live workbook value (prevents the cross-peer config remount ping-pong).
 
-If the gate fails (structural change or `totalCells > 50`):
-- 50ms debounce fires `setForceSheetRender(prev + 1)`.
-- Guard: skipped if `luckysheetCellUpdate.length > 0` (user mid-edit in a cell).
-- `currentDataRef.current` is synced from ydoc before the remount to prevent stale snapshot.
+**Remount gate** — a remount is forced (`needsStructuralRemount`) if ANY of:
+- `hasStructural` (tab change, `color`/`hide`, genuine `config`/`frozen` change, or unknown path)
+- `hasUnknownSheet` — a remote event targets a sheet id not present in the live workbook
+- `structuralRemountPendingRef.current` — a remount is already queued (later surgicals would race a stale workbook)
+- `totalCells > SURGICAL_CELL_LIMIT (50)`
+- `!sheetEditorRef.current` (workbook not mounted)
 
-`SURGICAL_SHEET_META_KEYS` defines which sheet-level fields qualify for surgical apply: `name`, `order`, `status`, `showGridLines`. `color` and `hide` are classified but fall back to remount — no imperative `WorkbookInstance` API exists for them.
+#### Surgical path (no remount)
 
----
-
-#### Surgical path (small cell edits, no remount)
-
-For remote updates where all events are cell-data changes and the total changed-cell count is ≤ `SURGICAL_CELL_LIMIT` (50):
-
-```
-observerCallback fires (origin = 'remote')
-  → classify events:
-       path=[sheetIdx, 'celldata'] → CellBatch (r/c key → action + value)
-       path=[sheetIdx, metaKey]   → SheetMetaUpdate (name/order/color/…)
-       isSheetTabArrayChange()     → hasStructural = true
-       anything else               → hasStructural = true
-  → totalCells ≤ 50 && !hasStructural && sheetEditorRef.current exists
-       → for each CellBatch:
-            changedKeys.forEach((key) → sheetEditorRef.current.setCellValue(r, c, value, {id: sheetId}, false))
-            ← callAfterUpdate=false prevents writing value back into ydoc (no loop)
-       → if sheetMetaUpdates present:
-            sheetEditorRef.current.setSheetName(name, {id: sheetId})
-       → currentDataRef.current = ySheetArrayToPlain(sheetArray)  ← sync snapshot, no re-render
-```
-
-No `setForceSheetRender` call → no Workbook remount → **no flicker**.
-
-#### Remount path (structural changes or large batches)
-
-Falls back to debounced full remount when:
-- Any event is structural (tab insert/delete or unknown path)
-- `totalCells > SURGICAL_CELL_LIMIT`
-- `sheetEditorRef.current` is null
+When the remount gate is **not** tripped, all batches are applied imperatively inside `runUnderRemoteApply(remoteApplyGuardRefs, () => { … })`:
 
 ```
-  → debounce 50ms → setForceSheetRender(prev + 1)
-       ← guarded: skipped if user is mid-cell-edit (luckysheetCellUpdate.length > 0)
-       ← currentDataRef.current synced from ydoc before remount to avoid stale snapshot
+runUnderRemoteApply(guard, () => {
+  applyRemoteSheetMeta()          // name → setSheetName, order → setSheetOrder (batched)
+  applyRemoteOverlays()           // images/iframes → setSheetImages/setSheetIframes
+  applyRemoteDataVerification()   // → setSheetDataVerification
+  applyRemoteFilters()            // → setSheetFilterState
+  applyRemoteMapFields()          // hyperlink/conditionRules → setSheetMapField
+  applyRemoteConditionFormat()    // → setSheetConditionFormatRules
+  for each CellBatch:
+    changedKeys.forEach(({action}, key) =>
+      action === 'delete'
+        ? applyRemoteCellValue(r, c, null, {id})
+        : applyRemoteCellValue(r, c, cell.v ?? null, {id}))
+  syncPlainSnapshot()             // currentDataRef.current = ySheetArrayToPlain(sheetArray)
+})
 ```
 
-**`SURGICAL_SHEET_META_KEYS`** — sheet-level fields that can be applied without a remount: `name`, `order`, `status`, `showGridLines`. `color` and `hide` are in the set for classification purposes but trigger a remount because no imperative `WorkbookInstance` API exists for them.
+`runUnderRemoteApply` holds the remote-apply lock for the synchronous duration, so the resulting Fortune onChange handlers skip re-writing the values into the ydoc. No `setForceSheetRender` → no Workbook remount → **no flicker**.
+
+#### Remount path (structural / large batches / unknown sheet)
+
+```
+scheduleStructuralRemount():
+  structuralRemountPendingRef = true
+  beginRemoteApply(guard)                       ← lock held across the debounce + paint
+  debounce 50ms → :
+    isEditingCell = luckysheetCellUpdate.length > 0
+    currentDataRef.current = ySheetArrayToPlain(sheetArray)   ← fresh snapshot, no stale
+    syncDataBlockCalcFromPlain(plain)
+    if (!isEditingCell) setForceSheetRender(prev + 1)         ← skip remount while user mid-edit
+    structuralRemountPendingRef = false
+    endRemoteApplyAfterPaint(guard)             ← releases lock after 2 rAF (≈ one paint)
+```
+
+`rehydrateWorkbookFromYdoc()` (exposed by `useEditorData`) does the same full rebuild on demand — used right after an RTC sync completes, where surgical applies are unsafe because the local workbook may be stale vs the merged server state.
 
 ### 8. Commit Flow (owner only)
 
@@ -372,13 +393,24 @@ Server broadcasts '/document/awareness_update'
   → applyAwarenessUpdate(awareness, decrypted, 'remote')
   → awareness 'change' event fires
   → useCollabAwareness handleChange()
-       → reads all remote states from awareness
-       → calls workbook.removePresences([...allRemoteIds])
-       → calls workbook.addPresences([{ sheetId, username, userId, color, selection }])
+       → on removed clients: workbook.removePresences(removed)
+       → reads all remote states from awareness, builds presences[]
+       → DIFF GUARD: if no client departed AND presenceSig === lastPresenceSig → return
+         (stops idle heartbeats from churning removePresences/addPresences → filter flicker)
+       → workbook.removePresences([...allRemoteIds])
+       → workbook.addPresences([{ sheetId, username, userId, color, isEns, selection }])
        → Fortune renders colored cell highlights + username labels
 ```
 
-Awareness is only initialized once `status === 'ready'` (entry action in state machine). On full disconnect (→ `idle`), awareness is destroyed. During reconnect, awareness is preserved — ghost cursors are cleaned up by the `disconnect` handler in SocketClient.
+`presenceColor(isEns, color, clientId)` resolves the cursor color — ENS users get a deterministic color, others use their session color or a per-clientId fallback.
+
+**Heartbeat + stale pruning** (in `useCollabAwareness`, separate from content):
+- Every `HEARTBEAT_MS = 5000`, the local client re-broadcasts its own awareness (`setLocalState({ ...local })` bumps the clock → triggers an `update` → socket broadcast). Without this, an idle peer stops broadcasting and would be wrongly pruned.
+- A `5000ms` interval prunes any remote client whose `meta.lastUpdated` is older than `STALE_TIMEOUT_MS = 30000` (≈ 6 missed heartbeats) via `removeAwarenessStates`. This is what removes genuinely-gone peers (vs merely idle ones).
+
+**Collaborator roster** — `useCollabAwareness` also emits the full roster (incl. the local user) to the host via `onCollaboratorsChange` for navbar chips. It fires on every awareness `update` but only notifies the host when the *roster signature* (`clientId:name:color`, cursor position excluded) actually changes — so cursor moves don't re-render the host tree (which would wipe Fortune's imperatively-added presences). On teardown it emits `[]`.
+
+Awareness is only initialized once `status === 'ready'` (entry action in state machine). On full disconnect (→ `idle`), awareness is destroyed. During reconnect, awareness is preserved — ghost cursors are cleaned up by the `disconnect` handler in SocketClient, and local state is re-broadcast on the `reconnect` event.
 
 Cell position is written to awareness via:
 ```typescript
@@ -386,7 +418,7 @@ awareness.setLocalStateField('cell', { r, c, sheetId })
 ```
 Username/color via:
 ```typescript
-awareness.setLocalStateField('user', { name, color })
+awareness.setLocalStateField('user', { name, color, isEns })
 ```
 
 ### 10. Reconnection Flow
@@ -503,8 +535,10 @@ type CollabState =
 | `/document/awareness_update` | server → client | Peer awareness changed |
 | `/documents/terminate` | client → server | Owner terminates session |
 | `/session/terminated` | server → client | Session was terminated |
-| `/room/membership_change` | server → client | Peer joined or left |
+| `/room/membership_change` | server → client | Peer joined or left (triggers `_fetchRoomMembers`) |
 | `/documents/peers/list` | client → server | Fetch current room members |
+| `/server/error` | server → client | Server-side error → `onError` |
+| `ping` / `pong` | server ↔ client | Keep-alive heartbeat (client replies `pong`) |
 
 ---
 
@@ -534,8 +568,11 @@ type CollabState =
 | Socket reconnection delay | 1500ms | `reconnectionDelay` |
 | Socket timeout | 6000ms | `timeout` (transport layer) |
 | Connection timeout | 30s | Safety net in `connectSocket()` |
+| Emit ACK timeout | 15000ms | `_emitWithAck` default — rejects with `SocketTimeoutError` |
 | UCAN lifetime | 3600s | 1 hour, cached until 60s before expiry |
 | Awareness throttle | 50ms | Same window as update flush |
+| `HEARTBEAT_MS` | 5000ms | Awareness self re-broadcast cadence (`useCollabAwareness`) |
+| `STALE_TIMEOUT_MS` | 30000ms | Prune a peer after this long without an awareness update (~6 missed heartbeats) |
 
 ---
 
@@ -563,9 +600,11 @@ type CollabState =
 ### "Remote cell updates cause visible flicker"
 Flicker = full Workbook remount firing on every peer keystroke. Remounts happen when the surgical path is bypassed:
 1. `sheetEditorRef.current` is null (workbook not yet mounted) → remount is the only option; resolve by ensuring `EditorWorkbook` is mounted before RTC connects.
-2. `totalCells > SURGICAL_CELL_LIMIT` (paste / import / formula recalc) → intentional fallback; large batches are cheaper as one remount than N `setCellValue` calls.
-3. An event path was unrecognised → `hasStructural = true`. Add a `console.log(event.path)` in the observer to identify the unclassified event and extend the classifier if needed.
-4. `setCellValue` is missing on `sheetEditorRef.current` → the workbook API surface changed; check the `ISheetEditor` interface.
+2. `totalCells > SURGICAL_CELL_LIMIT` (paste / import / formula recalc) → intentional fallback; large batches are cheaper as one remount than N `applyRemoteCellValue` calls.
+3. An event path was unrecognised → `hasStructural = true`. Add a `console.log(event.path)` in the observer (`use-editor-data.tsx`) to identify the unclassified event and extend the classifier if needed.
+4. A remote event targets a sheet id not yet in the live workbook → `hasUnknownSheet` → remount (the workbook hasn't caught up to a newly-added tab).
+5. A `config`/`frozen` change is echoing back and forth between peers → check the `isEqual` echo guard in the `LAYOUT_OBJECT_KEYS` branch; a genuine diff remounts, an identical echo must be ignored.
+6. An imperative apply method (`applyRemoteCellValue`, `setSheetName`, `setSheetFilterState`, …) is missing on `sheetEditorRef.current` → the `WorkbookInstance` API surface changed; the surgical branch throws and logs `Skipped remote … apply — workbook not ready`.
 
 ### "Commit never happens (demo)"
 `services.commitToStorage` is `undefined` in the demo. `commitLocalContents` and `processCommit` both return early with a `console.debug`. This is by design — the demo accumulates all updates as uncommitted on the server.
