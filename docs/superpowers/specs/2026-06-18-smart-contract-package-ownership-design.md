@@ -8,7 +8,7 @@
 
 ## Goal
 
-Right now a consumer must implement `handleSmartContractQuery` (complex blockchain call logic), manage contract registry state, handle the import modal, and wire up the sidebar panel themselves. After this change: consumer passes `smartContracts` config prop with RPC URLs + optional storage adapter, and gets the full smart contract feature out of the box.
+Consumer currently must implement `handleSmartContractQuery` (blockchain call logic), manage contract registry state, render the import modal, handle the sidebar panel, and wire all of it together. After this change: consumer loads contracts from their own storage, passes them to the package alongside RPC config and save/delete callbacks, and gets UI + execution out of the box.
 
 ---
 
@@ -16,107 +16,66 @@ Right now a consumer must implement `handleSmartContractQuery` (complex blockcha
 
 | Decision | Choice |
 |---|---|
-| Contract persistence | `contractStorage` adapter (localStorage default, consumer overrides) |
+| Contract persistence | **Consumer-owned** — package never touches storage. Consumer passes loaded contracts + callbacks. |
 | `viem` in bundle | Externalized — consumer installs `viem`, package doesn't bundle it |
-| Chain config | Consumer passes `rpcConfig: Record<string, string>` (chain name → RPC URL) |
-| ABI storage | Stored directly in `contractStorage` (no IPFS dep in package) |
+| Chain config | Consumer passes `rpcConfig: Partial<Record<SupportedChain, string>>` |
+| ABI in `ContractConfig` | Inline `abi: Abi` field — consumer resolves ABI before passing (no IPFS in package) |
 
 ---
 
-## What Moves from dsheets.new → Package
+## New `smartContracts` Prop (Controlled Component)
 
-| Source (dsheets.new) | Destination (package) | Strip |
-|---|---|---|
-| `smart-contract-reading/types.ts` | `src/editor/types/smart-contract.ts` | Remove viem re-exports not needed |
-| `smart-contract-reading/error-helper.ts` | `src/editor/utils/smart-contract/error-helper.ts` | — |
-| `smart-contract-reading/helpers.ts` | `src/editor/utils/smart-contract/helpers.ts` | — |
-| `smart-contract-reading/smart-contract-reading-utils.ts` | `src/editor/utils/smart-contract/reading-utils.ts` | Strip IPFS, keystore, Sentry, DB cache, ucans, AgentInstance |
-| `smart-contract-reading/use-smart-contract-reading.tsx` | `src/editor/hooks/use-smart-contract-reading.ts` (internal) | Strip analytics, Sentry, IPFS keystore — replace with contractStorage adapter |
-| `smart-contract-reading/use-smart-contract-modal.ts` | `src/editor/hooks/use-smart-contract-modal.ts` (internal) | Strip app-specific validation deps |
-| `smart-contract-reading/smart-contract-modal.tsx` | `src/editor/components/smart-contract/smart-contract-modal.tsx` | Strip next/image |
-| `smart-contract-reading/smart-contract-modal-ui.tsx` | `src/editor/components/smart-contract/smart-contract-modal-ui.tsx` | Strip next/image, 'use client' |
-| `smart-contract-reading/modal/*.tsx` | `src/editor/components/smart-contract/modal/*.tsx` | Strip 'use client' |
-| `smart-contract-reading/smart-contract-view-list.tsx` | `src/editor/components/smart-contract/smart-contract-view-list.tsx` | — |
-| `smart-contract-reading/smart-contract-list-item.tsx` | `src/editor/components/smart-contract/smart-contract-list-item.tsx` | — |
-| `smart-contract-reading/smart-contract-reading-intro.tsx` | `src/editor/components/smart-contract/smart-contract-intro.tsx` | Strip next/image |
-| `smart-contract-reading/error-toast.tsx` | `src/editor/components/smart-contract/error-toast.tsx` | — |
-| `smart-contract-reading/constants.ts` | `src/editor/utils/smart-contract/constants.ts` | Strip `RPC_URL_MAP`/`DEV_RPC_URL_MAP` (consumer provides RPC now) |
-| `smart-contract-reading/index.css` | `src/editor/styles/smart-contract.css` | — |
+```ts
+export interface SmartContractConfig {
+  // RPC URL per chain. Package creates viem publicClient from these.
+  rpcConfig: Partial<Record<SupportedChain, string>>;
 
-**Files NOT moved (fileverse-specific, no generic equivalent):**
-- `use-address-validation.ts` — uses `useAccountContext` (portal address lookup)
-- `use-modal-outside-click.ts` — check if used, may not be needed
-- `utils.ts` — check for fileverse-specific utils
+  // Consumer provides already-loaded contracts (with ABI resolved, not hash)
+  contracts: ContractConfig[];
+
+  // Package calls these when user adds/removes a contract via UI.
+  // Consumer is responsible for persisting the change and updating `contracts` prop.
+  onAddContract: (contract: ContractConfig) => Promise<void>;
+  onDeleteContract: (contractName: string) => Promise<void>;
+
+  // Optional: lifecycle callbacks for analytics/error logging
+  onSmartContractEvent?: (event: SmartContractEvent) => void;
+}
+```
+
+No storage adapter. No localStorage default. Package is stateless with respect to contracts — it reads from `contracts` prop, calls `onAddContract`/`onDeleteContract`, and lets consumer update their state. Consumer re-renders with updated `contracts`, package reflects the change.
 
 ---
 
-## Critical Type Change: `ContractConfig`
+## Type Changes
 
-Current `ContractConfig` stores `abiHash: string` (IPFS hash). Package can't fetch from IPFS. Replace with inline ABI:
+### `ContractConfig`
+
+Current shape stores `abiHash: string` (IPFS hash). Package can't resolve IPFS. Consumer must pass ABI inline:
 
 ```ts
 // BEFORE (consumer):
 export interface ContractConfig {
   address: Hex;
-  abiHash: string;       // IPFS hash — package can't resolve this
+  abiHash: string;       // IPFS hash — consumer fetches ABI separately
   network: SupportedChain;
   name: string;
 }
 
-// AFTER (package):
+// AFTER (package exports this):
 export interface ContractConfig {
   address: Hex;
-  abi: Abi;              // ABI stored directly
+  abi: Abi;              // ABI already resolved — consumer's responsibility
   network: SupportedChain;
   name: string;
 }
 ```
 
-`contractStorage.load()` returns `ContractConfig[]` with full ABI. No IPFS fetch needed during formula execution.
+Consumer migration: on load, fetch ABI from IPFS using `abiHash`, replace field, pass to package.
 
----
-
-## New Types
-
-### `ContractStorage`
+### Other Types
 
 ```ts
-export interface ContractStorage {
-  load: () => Promise<ContractConfig[]>;
-  save: (contracts: ContractConfig[]) => Promise<void>;
-}
-
-// Default localStorage implementation (internal to package):
-const defaultContractStorage: ContractStorage = {
-  load: async () => {
-    try {
-      return JSON.parse(localStorage.getItem('dsheet-contracts') ?? '[]');
-    } catch {
-      return [];
-    }
-  },
-  save: async (contracts) => {
-    localStorage.setItem('dsheet-contracts', JSON.stringify(contracts));
-  },
-};
-```
-
-### `SmartContractConfig` (new DsheetProps entry)
-
-```ts
-export interface SmartContractConfig {
-  // Required: RPC URL per chain. Keys match SupportedChain enum values.
-  // Package creates viem publicClient from these. Consumer provides own keys.
-  rpcConfig: Partial<Record<SupportedChain, string>>;
-
-  // Optional: where to persist saved contracts
-  // Default: localStorage under 'dsheet-contracts'
-  contractStorage?: ContractStorage;
-
-  // Optional: lifecycle events for analytics/logging
-  onSmartContractEvent?: (event: SmartContractEvent) => void;
-}
-
 export interface SmartContractEvent {
   type: 'query-success' | 'query-error' | 'contract-added' | 'contract-deleted';
   contractName?: string;
@@ -135,7 +94,7 @@ export enum SupportedChain {
 
 ---
 
-## New DsheetProps Changes
+## DsheetProps Changes
 
 ### Removed Props
 
@@ -144,32 +103,97 @@ export enum SupportedChain {
 | `handleSmartContractQuery` | Package implements blockchain call internally |
 | `setShowSmartContractModal` | Package manages modal state via EditorContext |
 
-### Added Props
+### Added Prop
 
 ```ts
-// on DsheetProps:
 smartContracts?: SmartContractConfig;
 ```
 
-If `smartContracts` is not passed → smart contract formula cells show `#SC_DISABLED` error. SmartContractButton hidden from toolbar.
+If not passed → SC formula cells return `#SC_DISABLED`. SmartContractButton hidden from toolbar.
+
+---
+
+## What Moves from dsheets.new → Package
+
+| Source (dsheets.new) | Destination (package) | Strip |
+|---|---|---|
+| `smart-contract-reading/types.ts` | `src/editor/types/smart-contract.ts` | Remove fileverse-specific types |
+| `smart-contract-reading/error-helper.ts` | `src/editor/utils/smart-contract/error-helper.ts` | — |
+| `smart-contract-reading/helpers.ts` | `src/editor/utils/smart-contract/helpers.ts` | — |
+| `smart-contract-reading/smart-contract-reading-utils.ts` | `src/editor/utils/smart-contract/reading-utils.ts` | Strip IPFS, keystore, Sentry, DB cache, ucans, AgentInstance |
+| `smart-contract-reading/use-smart-contract-reading.tsx` | `src/editor/hooks/use-smart-contract-reading.ts` (internal) | Strip all storage/IPFS — use `contracts` prop + callbacks |
+| `smart-contract-reading/use-smart-contract-modal.ts` | `src/editor/hooks/use-smart-contract-modal.ts` (internal) | Strip app-specific validation deps |
+| `smart-contract-reading/smart-contract-modal.tsx` | `src/editor/components/smart-contract/smart-contract-modal.tsx` | Strip `next/image` |
+| `smart-contract-reading/smart-contract-modal-ui.tsx` | `src/editor/components/smart-contract/smart-contract-modal-ui.tsx` | Strip `next/image`, `'use client'` |
+| `smart-contract-reading/modal/*.tsx` | `src/editor/components/smart-contract/modal/*.tsx` | Strip `'use client'` |
+| `smart-contract-reading/smart-contract-view-list.tsx` | `src/editor/components/smart-contract/smart-contract-view-list.tsx` | — |
+| `smart-contract-reading/smart-contract-list-item.tsx` | `src/editor/components/smart-contract/smart-contract-list-item.tsx` | — |
+| `smart-contract-reading/smart-contract-reading-intro.tsx` | `src/editor/components/smart-contract/smart-contract-intro.tsx` | Strip `next/image` |
+| `smart-contract-reading/error-toast.tsx` | `src/editor/components/smart-contract/error-toast.tsx` | — |
+| `smart-contract-reading/constants.ts` | `src/editor/utils/smart-contract/constants.ts` | Strip `RPC_URL_MAP`/`DEV_RPC_URL_MAP` |
+| `smart-contract-reading/index.css` | `src/editor/styles/smart-contract.css` | — |
+
+**Files NOT moved (fileverse-specific):**
+- `use-address-validation.ts` — uses `useAccountContext` (portal address lookup)
+- `use-modal-outside-click.ts` — verify if still needed, likely removable
+- `utils.ts` — check for fileverse-specific helpers before moving
 
 ---
 
 ## Internal Architecture
 
+### `src/editor/hooks/use-smart-contract-reading.ts`
+
+Adapted from `use-smart-contract-reading.tsx`. No storage logic. Builds registry from `contracts` prop:
+
+```ts
+// BEFORE: loads from IPFS keystore
+const init = async () => {
+  const keyStoreData = await getKeyStoreData(portalAddress, hash);
+  registryMapRef.current = { ...keyStoreData.smartContracts, ...POPULAR_CONTRACTS_MAP };
+};
+
+// AFTER: builds from `contracts` prop
+useEffect(() => {
+  const savedMap = Object.fromEntries(contracts.map(c => [c.name, c]));
+  registryMapRef.current = { ...savedMap, ...POPULAR_CONTRACTS_MAP };
+}, [contracts]);
+```
+
+When user imports a contract via modal:
+```ts
+// BEFORE: uploads ABI to IPFS, saves hash to keystore
+await pushSmartContractToKeyStore(contractConfig);
+
+// AFTER: calls consumer callback, consumer handles persistence + state update
+await onAddContract(contractConfig);
+onSmartContractEvent?.({ type: 'contract-added', contractName: contractConfig.name });
+```
+
+When user deletes:
+```ts
+await onDeleteContract(contractName);
+onSmartContractEvent?.({ type: 'contract-deleted', contractName });
+```
+
+`registryMapRef` stays in sync with `contracts` prop via `useEffect`. Consumer drives the data.
+
+**Remove from hook:**
+- `useAccountContext` — identity not needed
+- `KSRInstance` / `getKeyStoreData` — keystore gone
+- `publicIPFSUpload` — IPFS gone
+- `usePlausibleEvents` — replaced by `onSmartContractEvent`
+- `captureException` — Sentry removed; consumer handles via `onSmartContractEvent`
+
 ### `src/editor/utils/smart-contract/reading-utils.ts`
 
-Adapted from `smart-contract-reading-utils.ts`. Key changes:
+**`parseCallSignature`** — remove `getIPFSAsset` call. ABI comes from `ContractConfig.abi` directly.
 
-**`executeSmartContractCall`** — keep as-is, uses `viem` (externalized).
+**`getContractConfig`** — remove `getPortalContractConfig` (fileverse "My Fileverse portal" default). Look up by name from registry only.
 
-**`parseCallSignature`** — keep core logic. Remove `getIPFSAsset` call (ABI now in `ContractConfig.abi` directly).
+**`pushSmartContractToKeyStore` / `deleteContractFromKeyStore`** — not moved. Replaced by callbacks.
 
-**`getContractConfig`** — remove `getPortalContractConfig` (fileverse-specific default contract). Remove `KSRInstance` usage. Looks up contract in registry by name only.
-
-**`pushSmartContractToKeyStore` / `deleteContractFromKeyStore`** — remove entirely. Replaced by `contractStorage.save(updatedContracts)` calls in `useSmartContractReading`.
-
-**`createPublicClient` call** — built from `rpcConfig` instead of hardcoded `RPC_URL_MAP`:
+**`createSmartContractClient`** — built from `rpcConfig` prop instead of hardcoded `RPC_URL_MAP`:
 
 ```ts
 export const createSmartContractClient = (
@@ -178,88 +202,29 @@ export const createSmartContractClient = (
 ) => {
   const rpcUrl = rpcConfig[chain];
   if (!rpcUrl) throw new UnsupportedChainError(chain);
-
-  return createPublicClient({
-    chain: SUPPORTED_VIEM_CHAIN_MAP[chain],
-    transport: http(rpcUrl),
-  });
+  return createPublicClient({ chain: SUPPORTED_VIEM_CHAIN_MAP[chain], transport: http(rpcUrl) });
 };
 ```
 
-**`POPULAR_CONTRACTS_MAP`** — moved from consumer `constants.ts` into package. These are pre-configured well-known contracts (Uniswap, etc.) available to all consumers without needing to import them.
-
-### `src/editor/hooks/use-smart-contract-reading.ts` (internal)
-
-Adapted from `use-smart-contract-reading.tsx`. Key changes:
-
-**Remove:**
-- `useAccountContext` — identity not needed
-- `KSRInstance` / `getKeyStoreData` — keystore not needed  
-- `publicIPFSUpload` — IPFS not needed
-- `usePlausibleEvents` — analytics callbacks via `onSmartContractEvent` instead
-- `captureException` — Sentry removed
-
-**Replace:**
-```ts
-// BEFORE: load from IPFS keystore
-const init = async () => {
-  const keyStoreData = await getKeyStoreData(portalAddress, hash);
-  registryMapRef.current = { ...keyStoreData.smartContracts, ...POPULAR_CONTRACTS_MAP };
-};
-
-// AFTER: load from contractStorage
-const init = async () => {
-  const saved = await contractStorage.load();
-  const savedMap = Object.fromEntries(saved.map(c => [c.name, c]));
-  registryMapRef.current = { ...savedMap, ...POPULAR_CONTRACTS_MAP };
-  setUserSmartContracts(saved);
-};
-```
-
-```ts
-// BEFORE: save to IPFS keystore
-await pushSmartContractToKeyStore(contractConfig);
-
-// AFTER: save to contractStorage
-const updated = [...userSmartContracts, contractConfig];
-await contractStorage.save(updated);
-setUserSmartContracts(updated);
-registryMapRef.current[contractConfig.name] = contractConfig;
-onSmartContractEvent?.({ type: 'contract-added', contractName: contractConfig.name });
-```
-
-**`handleSmartContractQuery`** — moves from a prop passed in from consumer to an internal function built by this hook. Wired into `afterUpdateCell` via `EditorContext` (same pattern as `openApiKeyModal`).
+**`POPULAR_CONTRACTS_MAP`** — moved into package constants. Pre-configured well-known contracts (Uniswap, etc.) with full ABI objects bundled. Available to all consumers automatically.
 
 ### `EditorContext` Changes
 
-Add smart contract state:
-
 ```ts
-// added to EditorContext:
+// added:
 const [showSmartContractModal, setShowSmartContractModal] = useState(false);
 
-// SmartContractButton calls this (already wired in src/editor/components/smart-contract.tsx)
-const openSmartContractModal = () => setShowSmartContractModal(true);
+// handleSmartContractQuery built from useSmartContractReading, passed through context
+// afterUpdateCell accesses it via context (same pattern as openApiKeyModal)
 ```
-
-`handleSmartContractQuery` built from `useSmartContractReading` and passed down through context (same way `openApiKeyModal` is passed). `afterUpdateCell` calls it via context instead of via prop.
 
 ### `afterUpdateCell.tsx` Changes
 
-```ts
-// BEFORE:
-handleSmartContractQuery?: SmartContractQueryHandler;
-
-// AFTER:
-// handleSmartContractQuery comes from EditorContext (built internally)
-// no longer a param — accessed via context inside the component that calls afterUpdateCell
-```
-
-When `smartContracts` prop not passed → `handleSmartContractQuery` is undefined → `smartContractQueryHandlerFunction` returns `#SC_DISABLED`.
+`handleSmartContractQuery` removed as a param. Consumed from EditorContext instead. When `smartContracts` not passed → `handleSmartContractQuery` is `undefined` → `smartContractQueryHandlerFunction` returns `#SC_DISABLED`.
 
 ### Built-in Sidebar Panel
 
-`smart-contract-list-view` auto-registered as a built-in panel alongside `comments`, `templates`, etc.:
+Auto-registered when `smartContracts` prop present:
 
 ```ts
 {
@@ -267,72 +232,60 @@ When `smartContracts` prop not passed → `handleSmartContractQuery` is undefine
   header: { title: 'My Smart Contracts' },
   width: '380px',
   content: <SmartContractListView
-    userSmartContracts={userSmartContracts}
-    onDelete={onDelete}
+    userSmartContracts={contracts}  // from prop, not internal state
+    onDelete={onDeleteContract}
     handleSearch={handleSearch}
     setShowSmartContractModal={setShowSmartContractModal}
   />,
 }
 ```
 
-Only registered when `smartContracts` prop is passed. Hidden otherwise.
-
 ### `SmartContractModal` Changes
 
-Currently consumer passes `registryMapRef` to modal. After: modal is rendered inside `EditorContent` driven by `showSmartContractModal` context state. `registryMapRef` is internal to `useSmartContractReading`.
+Rendered inside `EditorContent` driven by `showSmartContractModal` context state.
 
-`onSaveContract` signature changes: no longer uploads to IPFS. Accepts full ABI directly:
-
+`onSaveContract` accepts full ABI (not IPFS hash):
 ```ts
 // BEFORE:
 onSaveContract: (address, chain, abiJsonString, name) => Promise<void>
-// internally: upload ABI to IPFS, store hash in ContractConfig
+// internally: upload to IPFS, store hash
 
 // AFTER:
 onSaveContract: (address, chain, abi: Abi, name) => Promise<void>
-// internally: store ABI directly in ContractConfig, save via contractStorage
+// internally: build ContractConfig with inline abi, call onAddContract(config)
 ```
 
 ---
 
 ## viem as External Dependency
 
-Add `viem` to `rollupOptions.external` in `vite.config.ts`:
-
+Add to `vite.config.ts` externals:
 ```ts
-external: [
-  // ... existing externals ...
-  'viem',
-  'viem/chains',
-  'viem/ens',
-]
+'viem',
+'viem/chains',
 ```
 
-Consumer install requirement (document in README):
+Consumer install:
 ```bash
 npm install @fileverse-dev/dsheet viem
 ```
 
-Consumers who don't use smart contracts don't need viem. The `smartContracts` prop being optional means the feature tree-shakes if consumers don't import it — but since it's inside `DSheetEditor`, viem is always required as a peer dep when `DSheetEditor` is used.
-
-**Note:** This means all `DSheetEditor` consumers must install viem even without SC usage. If this is unacceptable, the alternative is dynamic import of SC utils — defer that decision until consumer feedback.
+All `DSheetEditor` consumers must install viem (even without SC usage, since it's bundled in the same entry). If this becomes a pain point, defer SC utils to a dynamic import — not needed now.
 
 ---
 
 ## New Package Exports
 
 ```ts
-// src/index.ts additions:
 export type {
   SmartContractConfig,
   SmartContractEvent,
-  ContractStorage,
   ContractConfig,
   SupportedChain,
 } from './editor/types/smart-contract';
 ```
 
-`SmartContractListView`, `SmartContractModal`, `SmartContractIntro` are **not exported** — internal only. Consumer cannot override them.
+`SmartContractListView`, `SmartContractModal`, `SmartContractIntro` — internal only, not exported.
 
 ---
 
@@ -344,52 +297,68 @@ export type {
 components/smart-contract-reading/  (entire directory)
 ```
 
-Except keep temporarily: any IPFS-based migration utility needed to convert existing users' `abiHash`-based contracts to inline ABI format.
+Keep temporarily: IPFS fetch utility needed for one-time migration of existing users.
 
-### Migration Concern: Existing User Data
+### Existing User Data Migration
 
-Current dsheets.new users have `ContractConfig` with `abiHash` (IPFS hash) in their keystore. The new package uses `abi: Abi` directly. dsheets.new needs a **one-time migration**:
-
-1. On app load, check if user has old keystore contracts with `abiHash`
-2. For each: fetch ABI from IPFS via `getIPFSAsset(abiHash)`
-3. Replace `abiHash` with fetched `abi`
-4. Save updated contracts via `contractStorage.save`
-
-This migration lives in `dsheets.new`, not the package.
-
-### `contractStorage` Adapter for dsheets.new
-
-dsheets.new passes a `contractStorage` adapter that uses its existing IPFS keystore (post-migration, contracts already have inline ABI):
+Users have `ContractConfig` with `abiHash` in keystore. Before passing to package, consumer must resolve:
 
 ```ts
-smartContracts={{
-  rpcConfig: {
-    Ethereum: process.env.NEXT_PUBLIC_ETH_RPC_URL,
-    Base: process.env.NEXT_PUBLIC_BASE_RPC_URL,
-    Gnosis: process.env.NEXT_PUBLIC_GNOSIS_RPC_URL,
-    Sepolia: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
-  },
-  contractStorage: {
-    load: async () => {
-      const keyStoreData = await getKeyStoreData(portalAddress, hash);
-      return Object.values(keyStoreData.smartContracts || {});
-    },
-    save: async (contracts) => {
-      await updateKeyStoreData({ smartContracts: Object.fromEntries(contracts.map(c => [c.name, c])) });
-    },
-  },
-  onSmartContractEvent: (event) => {
-    if (event.type === 'query-success') onUseSmartContractReading();
-    if (event.type === 'contract-added') onSmartContractAdd();
-    if (event.type === 'query-error') captureException(new Error(event.errorMessage));
-  },
-}}
+// One-time migration in dsheets.new:
+const migrateContracts = async (rawContracts: OldContractConfig[]) => {
+  return Promise.all(rawContracts.map(async (c) => {
+    if ('abiHash' in c) {
+      const abi = await getIPFSAsset(c.abiHash);
+      return { ...c, abi, abiHash: undefined };
+    }
+    return c;
+  }));
+};
 ```
 
-### Changes to `dsheet-editor.tsx`
+Run on app load, save migrated list back to keystore. After migration, all contracts have inline `abi`.
 
-**Remove:**
+### New dsheets.new Usage
+
+```tsx
+// dsheets.new loads contracts from its keystore, resolves ABI, passes to package
+const [contracts, setContracts] = useState<ContractConfig[]>([]);
+
+useEffect(() => {
+  loadAndMigrateContracts(portalAddress, hash).then(setContracts);
+}, [portalAddress]);
+
+<DSheetEditor
+  smartContracts={{
+    rpcConfig: {
+      Ethereum: process.env.NEXT_PUBLIC_ETH_RPC_URL,
+      Base: process.env.NEXT_PUBLIC_BASE_RPC_URL,
+      Gnosis: process.env.NEXT_PUBLIC_GNOSIS_RPC_URL,
+      Sepolia: process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL,
+    },
+    contracts,
+    onAddContract: async (contract) => {
+      await updateKeyStoreData({ smartContracts: { ...keystoreContracts, [contract.name]: contract } });
+      setContracts(prev => [...prev, contract]);
+      onSmartContractAdd(); // analytics
+    },
+    onDeleteContract: async (name) => {
+      const updated = contracts.filter(c => c.name !== name);
+      await updateKeyStoreData({ smartContracts: Object.fromEntries(updated.map(c => [c.name, c])) });
+      setContracts(updated);
+    },
+    onSmartContractEvent: (event) => {
+      if (event.type === 'query-success') onUseSmartContractReading();
+      if (event.type === 'query-error') captureException(new Error(event.errorMessage));
+    },
+  }}
+/>
+```
+
+### Remove from `dsheet-editor.tsx`
+
 ```ts
+// Remove:
 import { useSmartContractReading } from '../smart-contract-reading/use-smart-contract-reading';
 import { SmartContractModal } from '../smart-contract-reading/smart-contract-modal';
 import { SmartContractReadingIntro } from '../smart-contract-reading/smart-contract-reading-intro';
@@ -397,28 +366,15 @@ import { SmartContractReadingErrorToast } from '../smart-contract-reading/error-
 
 const { handleSmartContractQuery, onImportContract, userSmartContracts, ... } = useSmartContractReading();
 const [showSmartContractModal, setShowSmartContractModal] = useState(false);
-```
 
-**Remove from `<DSheetEditor>` JSX:**
-```tsx
+// Remove from JSX:
 handleSmartContractQuery={handleSmartContractQuery}
 setShowSmartContractModal={setShowSmartContractModal}
-```
 
-**Remove from render:**
-```tsx
+// Remove from render:
 <SmartContractModal ... />
 <SmartContractReadingIntro />
 <SmartContractReadingErrorToast ... />
-```
-
-**Add to `<DSheetEditor>` JSX:**
-```tsx
-smartContracts={{
-  rpcConfig: { ... },
-  contractStorage: { load, save },
-  onSmartContractEvent: handleSmartContractEvent,
-}}
 ```
 
 ---
@@ -432,7 +388,7 @@ const {
   userSmartContracts, onDelete, handleSearch,
   registryMapRef, smartContractReadingError,
   setSmartContractReadingError,
-} = useSmartContractReading();
+} = useSmartContractReading({ portalAddress, hash, ... });
 const [showSmartContractModal, setShowSmartContractModal] = useState(false);
 
 <DSheetEditor
@@ -455,15 +411,19 @@ const [showSmartContractModal, setShowSmartContractModal] = useState(false);
 
 ### After
 ```tsx
+const [contracts, setContracts] = useState<ContractConfig[]>([]);
+// consumer loads + migrates contracts from their own storage on mount
+
 <DSheetEditor
   smartContracts={{
-    rpcConfig: {
-      Ethereum: process.env.ETH_RPC_URL,
-      Base: process.env.BASE_RPC_URL,
-    },
-    contractStorage: myKeystoreAdapter,
-    onSmartContractEvent: handleSmartContractEvent,
+    rpcConfig: { Ethereum: '...', Base: '...' },
+    contracts,
+    onAddContract: async (c) => { /* save to keystore, setContracts */ },
+    onDeleteContract: async (name) => { /* remove from keystore, setContracts */ },
+    onSmartContractEvent: (e) => { /* analytics, error logging */ },
   }}
 />
-// Modal, list view, intro, error toast all render automatically inside DSheetEditor
+// Modal, list view, intro, error toast all render inside DSheetEditor automatically
 ```
+
+Consumer still owns storage. Package owns UI and execution.
