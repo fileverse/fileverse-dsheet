@@ -5,6 +5,7 @@ import {
   dropCellCache,
   functionHTMLGenerate,
   getTypeItemHide,
+  insertUpdateFunctionGroup,
   setCellValue as setCellValueInternal,
   updateCell,
   updateDropCell,
@@ -168,8 +169,92 @@ export function setCellValue(
     }
   }
 
-  if (callAfterUpdate && ctx.hooks.afterUpdateCell) {
-    ctx.hooks.afterUpdateCell?.(row, column, null, value);
+  if (callAfterUpdate) {
+    ctx.hooks.onLocalCellEdit?.();
+    if (ctx.hooks.afterUpdateCell) {
+      ctx.hooks.afterUpdateCell?.(row, column, null, value);
+    }
+  }
+}
+
+/**
+ * Apply a cell value coming from a remote RTC peer, verbatim.
+ *
+ * This differs from `setCellValue` in two important ways and must be used for
+ * every Yjs-driven remote apply:
+ *
+ * 1. It NEVER runs the formula engine and NEVER fires the local-edit hooks
+ *    (`onLocalCellEdit` / `afterUpdateCell`). The peer already computed the
+ *    value, so we use the synced `v`/`m`/`f` as-is. This avoids both
+ *    recomputation divergence and an update loop back into Yjs.
+ *
+ * 2. It PRESERVES the formula calc list. The regular `setCellValue` object
+ *    branch calls `delFunctionGroup`, which removes the cell from `calcChain`
+ *    and strips its dependency edges. Because `execFunctionGroup` walks
+ *    `calcChain` to decide what to recompute, dropping a formula cell there
+ *    permanently breaks its reactivity on that client (even after RTC stops).
+ *    Here we instead keep formula cells registered via
+ *    `insertUpdateFunctionGroup`, so they stay reactive to future local edits
+ *    on both owner and peer.
+ */
+export function applyRemoteCellValue(
+  ctx: Context,
+  row: number,
+  column: number,
+  value: any,
+  options: CommonOptions = {},
+) {
+  if (!_.isNumber(row) || !_.isNumber(column)) {
+    throw new Error('row or column cannot be null or undefined');
+  }
+
+  const sheet = getSheet(ctx, options);
+  const { data } = sheet;
+  if (!data) return;
+
+  const sheetId = (options.id ?? sheet.id ?? ctx.currentSheetId) as string;
+
+  // Remote clear / delete: drop the value and any formula registration.
+  if (value == null || value.toString().length === 0) {
+    delFunctionGroup(ctx, row, column, sheetId);
+    setCellValueInternal(ctx, row, column, data, value);
+    return;
+  }
+
+  if (value instanceof Object) {
+    // Remote peers always send the COMPLETE post-edit cell snapshot (adds,
+    // edits, format changes and deletes all emit `{ r, c, v: <full cell> }`).
+    // So we replace the cell verbatim rather than merging — merging left stale
+    // `v`/`m` behind, which meant remote deletes (a cell stripped of `v`/`m`
+    // but still carrying format keys like `ct`/`tb`) were never applied. This
+    // mirrors how the structural-remount path rebuilds cells from ydoc.
+    const newCell = _.cloneDeep(value) as Cell;
+    data![row][column] = newCell;
+
+    const hasFormula = newCell.f != null;
+    if (hasFormula) {
+      // Keep the formula registered so it stays reactive to future local edits.
+      // We intentionally do NOT execute it here — the peer's computed v/m is
+      // applied as-is.
+      insertUpdateFunctionGroup(ctx, row, column, sheetId);
+    } else {
+      // No formula (value cleared or replaced) — drop any stale calc-chain /
+      // dependency registration for this cell.
+      delFunctionGroup(ctx, row, column, sheetId);
+    }
+    return;
+  }
+
+  // Primitive value.
+  const str = value.toString();
+  if (str.substr(0, 1) === '=' || str.substr(0, 5) === '<span') {
+    // Bare formula string with no precomputed value (rare for remote celldata,
+    // which normally sync as objects). Register it without executing.
+    setCellValueInternal(ctx, row, column, data, { f: str } as Cell);
+    insertUpdateFunctionGroup(ctx, row, column, sheetId);
+  } else {
+    delFunctionGroup(ctx, row, column, sheetId);
+    setCellValueInternal(ctx, row, column, data, value);
   }
 }
 

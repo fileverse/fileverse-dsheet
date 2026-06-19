@@ -77,7 +77,42 @@ interface AfterUpdateCellParams {
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >;
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } };
+  collabEnabled?: boolean;
+  collabIsOwner?: boolean;
+  remoteUpdateRef?: React.MutableRefObject<boolean>;
+  localUserEditRef?: React.MutableRefObject<boolean>;
 }
+
+/** True when data-block formulas (API / smart contract) should run for this edit. */
+export const shouldExecuteDataBlocks = (params: {
+  collabEnabled?: boolean;
+  collabIsOwner?: boolean;
+  remoteUpdateRef?: React.MutableRefObject<boolean>;
+  localUserEditRef?: React.MutableRefObject<boolean>;
+  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+}): boolean => {
+  if (params.collabEnabled) {
+    // Joiners display owner-synced values; only run API work on explicit local edits.
+    if (params.collabIsOwner === false) {
+      return params.localUserEditRef?.current === true;
+    }
+    if (params.remoteUpdateRef?.current) {
+      return false;
+    }
+  }
+
+  const ctx = params.sheetEditorRef.current?.getWorkbookContext?.();
+  if (!ctx?.luckysheetfile?.length) {
+    return false;
+  }
+
+  const sheetId = ctx.currentSheetId;
+  if (!sheetId) {
+    return false;
+  }
+
+  return ctx.luckysheetfile.some((sheet) => sheet.id === sheetId);
+};
 
 /**
  * Parameters for the adjustRowHeight function
@@ -448,15 +483,22 @@ const handlePromiseValue = async (
       ...newValue,
       m: LOADING_MESSAGE,
     };
-    (sheetEditorRef.current as any)?.setCellValuesByRange(
-      [[newCellValue]],
-      {
-        row: [row, row],
-        column: [column, column],
-      },
-      {},
-      false,
-    );
+    try {
+      (sheetEditorRef.current as any)?.setCellValuesByRange(
+        [[newCellValue]],
+        {
+          row: [row, row],
+          column: [column, column],
+        },
+        {},
+        false,
+      );
+    } catch (error) {
+      console.warn(
+        '[DSheet] Skipped loading UI update — workbook not ready',
+        error,
+      );
+    }
   }
 };
 
@@ -469,6 +511,14 @@ const handlePromiseValue = async (
 export const afterUpdateCell = async (
   params: AfterUpdateCellParams,
 ): Promise<void> => {
+  const runDataBlocks = shouldExecuteDataBlocks(params);
+
+  // During RTC remote apply (e.g. owner XLSX import), skip local data-block work.
+  // Owner local edits and joiner local formula entry clear the lock via onLocalCellEdit.
+  if (!runDataBlocks) {
+    return;
+  }
+
   const currentSheetId = params.sheetEditorRef.current?.getWorkbookContext()
     ?.currentSheetId as string;
   updateYdocSheetData(

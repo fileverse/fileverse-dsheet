@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { ComponentProps, useCallback, useEffect, useMemo } from 'react';
+import React, {
+  ComponentProps,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { Workbook } from '@sheet-engine/react';
 import { Cell } from '@sheet-engine/react';
 import {
@@ -13,6 +19,7 @@ import {
   getReadOnlyCustomToolbarItems,
 } from '../utils/custom-toolbar-item';
 import { useEditor } from '../contexts/editor-context';
+import { useCollabAwareness } from '../hooks/use-collab-awareness';
 import {
   afterUpdateCell,
   SmartContractQueryHandler,
@@ -100,7 +107,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
   exportDropdownOpen = false,
   commentData,
   getCommentCellUI,
-  setExportDropdownOpen = () => {},
+  setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
   onDataBlockApiResponse,
@@ -124,7 +131,31 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     updateDocumentTitle,
     handleLiveQuery,
     setIsDataLoaded,
+    awareness,
+    onCollaboratorsChange,
+    collabEnabled,
+    collabIsOwner,
+    remoteUpdateRef,
   } = useEditor();
+
+  const localUserEditRef = useRef(false);
+
+  // Block metadata → ydoc echoes only while a remote apply is in flight
+  // (remoteApplyDepth > 0). User-initiated edits run when depth is zero.
+  const guardRemoteEcho = useCallback(
+    (fn: () => void) => () => {
+      if (remoteUpdateRef.current) return;
+      fn();
+    },
+    [remoteUpdateRef],
+  );
+
+  const awarenessRef = useRef(awareness);
+  useEffect(() => {
+    awarenessRef.current = awareness;
+  }, [awareness]);
+
+  useCollabAwareness(awareness, sheetEditorRef, onCollaboratorsChange);
 
   const onboardingLsKey =
     onboardingCompleteLocalStorageKey ?? 'onboardingComplete';
@@ -241,6 +272,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       // @ts-ignore
       <Workbook
         isFlvReadOnly={isReadOnly}
+        isRTCActive={collabEnabled}
         isAuthorized={isAuthorized}
         key={workbookKey}
         ref={sheetEditorRef}
@@ -265,38 +297,41 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           isReadOnly
             ? allowSheetDownload
               ? getReadOnlyCustomToolbarItems({
-                  setExportDropdownOpen,
-                  handleExportToXLSX,
-                  handleExportToCSV,
-                  handleExportToJSON,
-                  sheetEditorRef,
-                  ydocRef,
-                  dsheetId,
-                  getDocumentTitle,
-                })
-              : []
-            : getCustomToolbarItems({
-                handleContentPortal: handleOnChangePortalUpdate,
-                setShowSmartContractModal,
-                getDocumentTitle,
-                updateDocumentTitle,
                 setExportDropdownOpen,
-                handleCSVUpload,
-                // @ts-ignore
-                handleXLSXUpload,
                 handleExportToXLSX,
                 handleExportToCSV,
                 handleExportToJSON,
                 sheetEditorRef,
                 ydocRef,
                 dsheetId,
-                currentDataRef,
-                setForceSheetRender,
-                toggleTemplateSidebar,
-                setShowFetchURLModal,
+                getDocumentTitle,
               })
+              : []
+            : getCustomToolbarItems({
+              handleContentPortal: handleOnChangePortalUpdate,
+              setShowSmartContractModal,
+              getDocumentTitle,
+              updateDocumentTitle,
+              setExportDropdownOpen,
+              handleCSVUpload,
+              // @ts-ignore
+              handleXLSXUpload,
+              handleExportToXLSX,
+              handleExportToCSV,
+              handleExportToJSON,
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              currentDataRef,
+              setForceSheetRender,
+              toggleTemplateSidebar,
+              setShowFetchURLModal,
+            })
         }
         hooks={{
+          onLocalCellEdit: () => {
+            localUserEditRef.current = true;
+          },
           afterUpdateCell: (
             row: number,
             column: number,
@@ -325,68 +360,73 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               dataBlockCalcFunction,
               handleSmartContractQuery,
               handleLiveQueryData: handleLiveQuery,
+              collabEnabled,
+              collabIsOwner,
+              remoteUpdateRef,
+              localUserEditRef,
             });
+            localUserEditRef.current = false;
           },
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           sheetLengthChange: handleSheetLengthChange,
-          dataVerificationChange: () => {
+          dataVerificationChange: guardRemoteEcho(() => {
             dataVerificationYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          liveQueryChange: () => {
+          }),
+          liveQueryChange: guardRemoteEcho(() => {
             liveQueryListYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          calcChainChange: () => {
+          }),
+          calcChainChange: guardRemoteEcho(() => {
             calcChainYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          conditionFormatChange: () => {
+          }),
+          conditionFormatChange: guardRemoteEcho(() => {
             conditionFormatYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
+          }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          filterSelectChange: () => {
+          filterSelectChange: guardRemoteEcho(() => {
             filterSelectYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
+          }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          filterChange: () => {
+          filterChange: guardRemoteEcho(() => {
             filterYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
-          hyperlinkChange: () => {
+          }),
+          hyperlinkChange: guardRemoteEcho(() => {
             hyperlinkYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,
               handleContentPortal: handleOnChangePortalUpdate,
             });
-          },
+          }),
           updateCellYdoc: (changes: SheetChangePath[]) => {
             updateYdocSheetData(
               ydocRef.current,
@@ -395,22 +435,22 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               handleOnChangePortalUpdate,
             );
           },
-          afterImagesChange: () => {
+          afterImagesChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'images');
-          },
-          afterIframesChange: () => {
+          }),
+          afterIframesChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'iframes');
-          },
-          afterFrozenChange: () => {
+          }),
+          afterFrozenChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'frozen');
-          },
-          afterNameChanges: () => {
+          }),
+          afterNameChanges: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'name');
-          },
+          }),
           afterOrderChanges: handleAfterOrderChanges,
-          afterConfigChanges: () => {
+          afterConfigChanges: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'config');
-          },
+          }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           updateAllCell: (subSheetId: string) => {
             setTimeout(() => {
@@ -430,8 +470,19 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           afterHideChanges: handleAfterHideChanges,
           afterColRowChanges: handleAfterColRowChanges,
-          afterShowGridLinesChange: () => {
+          afterShowGridLinesChange: guardRemoteEcho(() => {
             syncCurrentSheetField(syncContext, 'showGridLines');
+          }),
+          afterSelectionChange: (
+            sheetId: string,
+            selection: import('../../sheet-engine/core/types').Selection,
+          ) => {
+            const aw = awarenessRef.current;
+            if (!aw) return;
+            const r = selection.row_focus ?? selection.row?.[0];
+            const c = selection.column_focus ?? selection.column?.[0];
+            if (r == null || c == null) return;
+            aw.setLocalStateField('cell', { r, c, sheetId });
           },
         }}
         onDuneChartEmbed={onDuneChartEmbed}

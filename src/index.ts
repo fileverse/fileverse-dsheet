@@ -1,5 +1,6 @@
 // Main component
 export { default as DSheetEditor } from './editor/dsheet-editor';
+export { default as DSheetSkeleton } from './editor/components/skeleton-loader';
 
 // Utilities
 export { formulaResponseUiSync } from './editor/utils/formula-ui-sync';
@@ -10,6 +11,18 @@ export { loadLocale } from '@sheet-engine/core';
 // Types
 export type { ErrorMessageHandlerReturnType } from './editor/types';
 export type { WorkbookInstance } from '@sheet-engine/react';
+export type {
+  CollaborationProps,
+  CollabConnectionConfig,
+  CollabSessionMeta,
+  CollabServices,
+  CollabCallbacks,
+  CollabState,
+  CollabStatus,
+  CollabError,
+  CollabErrorCode,
+  CollabUser,
+} from './sync-local/types';
 
 // Constants
 export {

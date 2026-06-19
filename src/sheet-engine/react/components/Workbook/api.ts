@@ -14,6 +14,7 @@ import {
   Settings,
   SingleRange,
   createFilterOptions,
+  applySheetFilterState,
   getSheetIndex,
   Sheet,
   locale,
@@ -255,6 +256,24 @@ export function generateAPIs(
         ),
       ),
 
+    /**
+     * Apply a cell value coming from a remote RTC peer, verbatim.
+     *
+     * Use this (instead of `setCellValue`) for every Yjs-driven remote apply:
+     * it writes the synced value/formula as-is without running the formula
+     * engine and without firing local-edit hooks, while keeping formula cells
+     * registered in `calcChain` so they remain reactive to future local edits.
+     */
+    applyRemoteCellValue: (
+      row: number,
+      column: number,
+      value: any,
+      options: api.CommonOptions & { type?: keyof Cell } = {},
+    ) =>
+      setContext((draftCtx) =>
+        api.applyRemoteCellValue(draftCtx, row, column, value, options),
+      ),
+
     setCellError: (
       row: number,
       column: number,
@@ -432,6 +451,130 @@ export function generateAPIs(
 
     setSheetOrder: (orderList: Record<string, number>) =>
       setContext((draftCtx) => api.setSheetOrder(draftCtx, orderList)),
+
+    // Replace a sheet's image overlay array imperatively. Used by the RTC
+    // remote-apply path to reposition images without a full Workbook remount:
+    // images render from `insertedImgs` (active sheet) backed by
+    // `luckysheetfile[idx].images`. Updates both so the overlay repositions and
+    // the data survives the next remount/sheet-switch.
+    setSheetImages: (images: any[], options: api.CommonOptions = {}) =>
+      setContext((draftCtx) => {
+        const idx = getSheetIndex(
+          draftCtx,
+          options.id ?? draftCtx.currentSheetId,
+        );
+        if (idx == null) return;
+        draftCtx.luckysheetfile[idx].images = images;
+        if (draftCtx.luckysheetfile[idx].id === draftCtx.currentSheetId) {
+          draftCtx.insertedImgs = images;
+        }
+      }),
+
+    // Replace a sheet's iframe overlay array imperatively. Iframes render from
+    // `luckysheetfile[idx].iframes` (memoized); `insertedIframes` is kept in
+    // sync for parity with the remount init path.
+    setSheetIframes: (iframes: any[], options: api.CommonOptions = {}) =>
+      setContext((draftCtx) => {
+        const idx = getSheetIndex(
+          draftCtx,
+          options.id ?? draftCtx.currentSheetId,
+        );
+        if (idx == null) return;
+        draftCtx.luckysheetfile[idx].iframes = iframes;
+        if (draftCtx.luckysheetfile[idx].id === draftCtx.currentSheetId) {
+          draftCtx.insertedIframes = iframes;
+        }
+      }),
+
+    // Replace a sheet's dataVerification map imperatively. Used by the RTC
+    // remote-apply path so dropdown/checkbox validation rules appear on peers
+    // without a full Workbook remount (which could be skipped mid-cell-edit).
+    setSheetDataVerification: (
+      dataVerification: Record<string, any>,
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          draftCtx.luckysheetfile[idx].dataVerification = dataVerification;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    // Apply filter + filter_select from Yjs without remount (RTC remote apply).
+    setSheetFilterState: (
+      state: {
+        filter?: Record<string, any> | null;
+        filter_select?: { row: number[]; column: number[] } | null;
+      },
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const sheetId = options.id ?? draftCtx.currentSheetId;
+          applySheetFilterState(draftCtx, sheetId, state);
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    // Generic map-backed sheet metadata (hyperlink, conditionRules, …).
+    setSheetMapField: (
+      field: string,
+      value: Record<string, any> | null | undefined,
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          (draftCtx.luckysheetfile[idx] as Record<string, any>)[field] =
+            value ?? undefined;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    setSheetConditionFormatRules: (
+      rules: any[],
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          draftCtx.luckysheetfile[idx].luckysheet_conditionformat_save = rules;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
 
     scroll: (options: {
       scrollLeft?: number;

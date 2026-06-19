@@ -245,6 +245,7 @@ export {
   clearFilterForColumn,
   toggleViewerFilter,
   createFilter,
+  applySheetFilterState,
   getFilterColumnValues,
   getFilterColumnColors,
   orderbydatafiler,

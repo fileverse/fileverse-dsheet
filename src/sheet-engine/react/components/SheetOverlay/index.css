@@ -803,20 +803,47 @@
   padding-right: 6px;
   padding-top: 2px;
   padding-bottom: 2px;
-  left: -2px;
   font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   box-sizing: content-box;
   color: #fff;
+  border-radius: 4px;
+  border-bottom-left-radius: 0px;
+  transition: opacity 0.25s ease;
+}
+
+.fortune-presence-username--ens {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 4px;
+  padding-right: 6px;
+}
+
+.fortune-presence-ens-logo {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.fortune-presence-ens-name {
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.fortune-presence-ens-tick {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 
 .fortune-presence-selection {
   position: absolute;
   border-style: solid;
-  border-width: 1;
-  opacity: 0.7;
+  border-width: 2;
 }
 
 .luckysheet-filter-options {

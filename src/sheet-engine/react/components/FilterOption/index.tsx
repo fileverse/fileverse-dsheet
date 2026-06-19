@@ -6,7 +6,7 @@ import {
   isAllowEdit,
 } from '@sheet-engine/core';
 import _ from 'lodash';
-import React, { useCallback, useContext, useEffect } from 'react';
+import React, { useCallback, useContext, useEffect, useRef } from 'react';
 import WorkbookContext from '../../context';
 import SVGIcon from '../SVGIcon';
 
@@ -25,7 +25,23 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
   const { filter_select, frozen } = context.luckysheetfile[sheetIndex!];
   const isViewerReadOnly = context.isFlvReadOnly || !isAllowEdit(context);
 
+  const filterSyncSigRef = useRef<string>('');
   useEffect(() => {
+    let nextSig = `${currentSheetId ?? ''}|`;
+    if (filter_select?.row && filter_select?.column) {
+      const [r1, r2] = filter_select.row;
+      const [c1, c2] = filter_select.column;
+      nextSig +=
+        `${r1},${r2},${c1},${c2}|` +
+        `${visibledatarow?.[r2]},${visibledatarow?.[r1 - 1]},` +
+        `${visibledatacolumn?.[c2]},${visibledatacolumn?.[c1 - 1]}|` +
+        (visibledatacolumn?.slice(c1, c2 + 1).join(',') ?? '');
+    } else {
+      nextSig += 'none';
+    }
+    if (nextSig === filterSyncSigRef.current) return;
+    filterSyncSigRef.current = nextSig;
+
     setContext((draftCtx) => {
       const sheetIdx = getSheetIndex(draftCtx, draftCtx.currentSheetId);
       if (sheetIdx == null) return;
@@ -175,9 +191,8 @@ const FilterOptions: React.FC<{ getContainer: () => HTMLDivElement }> = ({
               cursor: isViewerReadOnly ? ('default' as const) : undefined,
               pointerEvents: isViewerReadOnly ? ('none' as const) : undefined,
             })}
-            className={`luckysheet-filter-options ${
-              filterParam == null ? '' : 'luckysheet-filter-options-active'
-            }`}
+            className={`luckysheet-filter-options ${filterParam == null ? '' : 'luckysheet-filter-options-active'
+              }`}
           >
             <SVGIcon name="filter" width={15} height={15} />
           </div>

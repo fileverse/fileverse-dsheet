@@ -27,7 +27,12 @@ export const dataBlockCalcFunctionHandler = ({
   if (currentSheetDataBlockList && currentSheetDataBlockList?.length > 0) {
     currentSheetDataBlockList.forEach(
       (dataBlock: { row: number; column: number }) => {
-        const sheet = sheetEditorRef.current?.getSheet();
+        let sheet;
+        try {
+          sheet = sheetEditorRef.current?.getSheet();
+        } catch {
+          return;
+        }
         const dataBlockValue = sheet?.data?.[dataBlock.row]?.[dataBlock.column];
         const currentFormulaName = dataBlockValue?.f
           ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]

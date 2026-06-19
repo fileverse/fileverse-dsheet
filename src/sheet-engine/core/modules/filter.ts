@@ -677,3 +677,63 @@ export function saveFilter(
   //   k: "rowhidden",
   // });
 }
+
+type SheetFilterState = {
+  filter?: Record<string, any> | null;
+  filter_select?: { row: number[]; column: number[] } | null;
+};
+
+/**
+ * Apply filter state from Yjs on a remote RTC peer without a Workbook remount.
+ * Bypasses isAllowEdit — caller must only invoke for remote-origin updates.
+ */
+export function applySheetFilterState(
+  ctx: Context,
+  sheetId: string,
+  state: SheetFilterState,
+) {
+  const sheetIndex = getSheetIndex(ctx, sheetId);
+  if (sheetIndex == null) return;
+
+  const file = ctx.luckysheetfile[sheetIndex];
+  const isActive = file.id === ctx.currentSheetId;
+
+  const filterSelect = state.filter_select;
+  const hasFilterSelect =
+    filterSelect != null &&
+    Array.isArray(filterSelect.row) &&
+    filterSelect.row.length === 2 &&
+    Array.isArray(filterSelect.column) &&
+    filterSelect.column.length === 2;
+
+  if (!hasFilterSelect) {
+    file.filter = undefined;
+    file.filter_select = undefined;
+    if (isActive) {
+      ctx.luckysheet_filter_save = undefined;
+      ctx.filterOptions = undefined;
+      ctx.filterContextMenu = undefined;
+      ctx.filter = {};
+      ensureManualHiddenInitialized(ctx);
+      rebuildRowHiddenUnion(ctx);
+    }
+    return;
+  }
+
+  const filterPayload =
+    state.filter && Object.keys(state.filter).length > 0
+      ? state.filter
+      : undefined;
+
+  file.filter_select = filterSelect;
+  file.filter = filterPayload;
+
+  if (isActive) {
+    ctx.luckysheet_filter_save = filterSelect;
+    ctx.filter = filterPayload ? { ...filterPayload } : {};
+    createFilterOptions(ctx, filterSelect, sheetId, filterPayload, false);
+    ensureManualHiddenInitialized(ctx);
+    rebuildRowHiddenUnion(ctx);
+  }
+}
+

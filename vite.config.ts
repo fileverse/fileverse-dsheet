@@ -35,8 +35,6 @@ export default defineConfig({
         'yjs',
         'y-indexeddb',
         'y-protocols',
-        'y-webrtc',
-        'y-websocket',
         'exceljs',
         'xlsx',
         'xlsx-js-style',
