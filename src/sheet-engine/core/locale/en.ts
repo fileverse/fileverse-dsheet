@@ -12077,6 +12077,21 @@ export default {
 
     selectCategory: 'Or select a category',
   },
+  removeDuplicates: {
+    title: 'Remove duplicates',
+    dataHasHeaderRow: 'Data has header row',
+    columnsToAnalyze: 'Columns to analyze',
+    selectAll: 'Select all',
+    removeDuplicates: 'Remove duplicates',
+    result:
+      '{removed} duplicate rows found and removed. {remaining} unique rows remain.',
+    noMulti:
+      'Cannot perform this operation on multiple selection areas, please select a single area',
+    noMerge: 'This operation cannot be performed on merged cells',
+    noColumns: 'Select at least one column to analyze',
+    noSelection: 'Please select the scope of the operation',
+    readOnly: 'Cannot remove duplicates in read-only mode',
+  },
   drag: {
     noMerge: 'Cannot perform this operation on merged cells',
     affectPivot:

@@ -57,6 +57,7 @@ import {
   CommandItem,
 } from '@fileverse/ui';
 import DataVerificationPortal from './dataVerificationPortal';
+import { useRemoveDuplicatesDialog } from '../RemoveDuplicates';
 import ConditionalFormatPortal from './conditionalFormatPortal';
 // import DataVerification from "../DataVerification";
 import WorkbookContext from '../../context';
@@ -736,12 +737,16 @@ const Toolbar: React.FC<{
     [context, setContext],
   );
 
+  const { openRemoveDuplicatesDialog } = useRemoveDuplicatesDialog();
+
   useEffect(() => {
     // @ts-ignore
     window.dataVerificationClick = dataVerificationClick;
     // @ts-ignore
     window.conditionalFormatClick = conditionalFormatClick;
-  }, [dataVerificationClick, conditionalFormatClick]);
+    // @ts-ignore
+    window.removeDuplicatesClick = openRemoveDuplicatesDialog;
+  }, [dataVerificationClick, conditionalFormatClick, openRemoveDuplicatesDialog]);
 
   // Sync toolbar recent colors from selected cell so picker and display stay correct (only when cell exists)
   useEffect(() => {
