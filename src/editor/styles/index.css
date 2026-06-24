@@ -158,3 +158,17 @@ body {
   bottom: 0;
   z-index: 1000;
 }
+
+/* Hide scrollbars while keeping scroll — used by sidebar panels (data-verification,
+   conditional-format, functions). Migrated from the consumer's globals.css so the
+   package is self-contained. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
+}
