@@ -15,7 +15,24 @@ export interface EditorValues {
   sheetEditorRef: RefObject<WorkbookInstance>;
   currentDataRef: React.MutableRefObject<Sheet[] | null>;
   ydocRef: React.RefObject<Y.Doc | null>;
+  openPanel: (panelId: string) => void; // NEW
+  closePanel: () => void; // NEW
 }
+
+export interface PanelConfig {
+  id: string;
+  header: {
+    title: string;
+    subtitle?: string;
+  };
+  width?: string; // default: '380px'
+  content: React.ReactNode;
+}
+
+export type {
+  PanelId,
+  BuiltInPanelType,
+} from './components/sidebar/use-right-panels';
 
 // Define the onboarding handler type
 export type OnboardingHandlerType = (params: {
@@ -98,6 +115,7 @@ export interface DsheetProps {
   handleSmartContractQuery?: SmartContractQueryHandler;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
+  customPanels?: PanelConfig[];
 }
 export type BaseError = {
   message: string;

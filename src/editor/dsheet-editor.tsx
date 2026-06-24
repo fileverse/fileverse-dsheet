@@ -19,6 +19,9 @@ import '@sheet-engine/react/index.css';
 import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
 import { Workbook } from '@sheet-engine/react';
+import { useSidebar } from './components/sidebar/sidebar-context';
+import { EditorRightSidebar } from './components/sidebar/editor-right-sidebar';
+import { PanelConfig } from './types';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -54,6 +57,7 @@ const EditorContent = ({
   onSheetCountChange,
   handleSmartContractQuery,
   isNewSheet,
+  customPanels,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -83,6 +87,7 @@ const EditorContent = ({
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
   handleSmartContractQuery?: SmartContractQueryHandler;
+  customPanels?: PanelConfig[];
 }) => {
   const {
     loading,
@@ -96,6 +101,21 @@ const EditorContent = ({
     initialiseLiveQueryData,
     setSelectedTemplate: contextSetSelectedTemplate,
   } = useEditor();
+
+  const { activePanel, isOpen, openPanel, closePanel } = useSidebar();
+
+  const allPanels: PanelConfig[] = [...(customPanels ?? [])];
+
+  const activePanelConfig = (() => {
+    const panel = allPanels.find((p) => p.id === activePanel);
+    if (!panel) return null;
+    return {
+      id: panel.id,
+      width: panel.width ?? '380px',
+      header: panel.header,
+      content: panel.content,
+    };
+  })();
 
   // Initialize template button functionality
   useApplyTemplatesBtn({
@@ -123,6 +143,8 @@ const EditorContent = ({
     sheetEditorRef,
     currentDataRef,
     ydocRef,
+    openPanel,
+    closePanel,
   };
   const shouldRenderSheet = currentDataRef.current.length > 0 || isNewSheet;
 
@@ -267,6 +289,12 @@ const EditorContent = ({
           />
         </TransitionWrapper>
       </div>
+
+      <EditorRightSidebar
+        isOpen={isOpen && activePanelConfig !== null}
+        activePanelConfig={activePanelConfig}
+        onClose={closePanel}
+      />
     </div>
   );
 };
@@ -316,6 +344,7 @@ const SpreadsheetEditor = ({
   liveQueryRefreshRate,
   enableLiveQuery,
   collaboration,
+  customPanels,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -369,6 +398,7 @@ const SpreadsheetEditor = ({
         onSheetCountChange={onSheetCountChange}
         onDataBlockApiResponse={onDataBlockApiResponse}
         handleSmartContractQuery={handleSmartContractQuery}
+        customPanels={customPanels}
       />
     </EditorProvider>
   );

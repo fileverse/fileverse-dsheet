@@ -21,6 +21,7 @@ import {
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
+import { SidebarProvider } from '../components/sidebar/sidebar-context';
 import type {
   CollaborationProps,
   CollabState,
@@ -485,7 +486,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   return (
     <EditorContext.Provider value={contextValue}>
-      {children}
+      <SidebarProvider isReadMode={isReadOnly}>{children}</SidebarProvider>
     </EditorContext.Provider>
   );
 };

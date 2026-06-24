@@ -10,6 +10,7 @@ export { loadLocale } from '@sheet-engine/core';
 
 // Types
 export type { ErrorMessageHandlerReturnType } from './editor/types';
+export type { PanelConfig, PanelId, BuiltInPanelType } from './editor/types';
 export type { WorkbookInstance } from '@sheet-engine/react';
 export type {
   CollaborationProps,
