@@ -40,11 +40,8 @@ export {
   handleRowSizeHandleMouseDown,
   handleColFreezeHandleMouseDown,
   handleRowFreezeHandleMouseDown,
-<<<<<<< HEAD
-=======
   describeMatchedShortcut,
   isBrowserZoomShortcut,
->>>>>>> 2cfe7e8 (fix: pass browser zoom through on AZERTY and remove sheet keyboard zoom (2.0.36-shortcut-3))
   isOpenShortcutsModalShortcut,
   isFormulaListShortcut,
 } from './events';

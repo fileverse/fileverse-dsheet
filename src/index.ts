@@ -76,16 +76,9 @@ export {
   handleLink,
   // common
   api,
-<<<<<<< HEAD
-  isOpenShortcutsModalShortcut,
-  isFormulaListShortcut,
-  isZoomInShortcut,
-  isZoomOutShortcut,
-=======
   describeMatchedShortcut,
   isBrowserZoomShortcut,
   isFormulaListShortcut,
   isOpenShortcutsModalShortcut,
->>>>>>> 2cfe7e8 (fix: pass browser zoom through on AZERTY and remove sheet keyboard zoom (2.0.36-shortcut-3))
 } from '@sheet-engine/core';
 export type { PatchOptions } from '@sheet-engine/core';

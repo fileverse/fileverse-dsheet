@@ -360,8 +360,6 @@ export function isOpenShortcutsModalShortcut(e: KeyboardEvent): boolean {
     SLASH_SHIFT_TYPING_CODES.has(e.code)
   );
 }
-<<<<<<< HEAD
-=======
 
 /** Label which engine shortcut would match (best-effort; for host debug tooling). */
 export function describeMatchedShortcut(e: KeyboardEvent): string | null {
@@ -382,4 +380,3 @@ export function describeMatchedShortcut(e: KeyboardEvent): string | null {
   if (isOpenShortcutsModalShortcut(e)) return 'shortcuts-modal';
   return null;
 }
->>>>>>> 2cfe7e8 (fix: pass browser zoom through on AZERTY and remove sheet keyboard zoom (2.0.36-shortcut-3))
