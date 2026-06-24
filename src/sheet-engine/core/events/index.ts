@@ -3,6 +3,13 @@ export { handleCopy } from './copy';
 export { handleGlobalKeyDown } from './keyboard';
 
 export {
+  describeMatchedShortcut,
+  isBrowserZoomShortcut,
+  isOpenShortcutsModalShortcut,
+  isFormulaListShortcut,
+} from './keyboard-shortcut-utils';
+
+export {
   fixPositionOnFrozenCells,
   handleCellAreaMouseDown,
   handleCellAreaDoubleClick,

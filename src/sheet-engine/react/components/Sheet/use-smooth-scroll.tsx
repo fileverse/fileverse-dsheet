@@ -78,6 +78,8 @@ export const useSmoothScroll = (
       ) {
         return;
       }
+      // Pinch / Cmd+scroll: browser page zoom — do not hijack for sheet scroll.
+      if (event.ctrlKey || event.metaKey) return;
       event.preventDefault();
       const scaleFactor = getPixelScale();
       scrollHandler(event.deltaX * scaleFactor, event.deltaY * scaleFactor);

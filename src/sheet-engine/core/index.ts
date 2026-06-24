@@ -40,6 +40,10 @@ export {
   handleRowSizeHandleMouseDown,
   handleColFreezeHandleMouseDown,
   handleRowFreezeHandleMouseDown,
+  describeMatchedShortcut,
+  isBrowserZoomShortcut,
+  isOpenShortcutsModalShortcut,
+  isFormulaListShortcut,
 } from './events';
 
 // locale
@@ -278,7 +282,6 @@ export {
   // zoom
   MAX_ZOOM_RATIO,
   MIN_ZOOM_RATIO,
-  handleKeydownForZoom,
   // refresh
   jfrefreshgrid,
   // iframe
