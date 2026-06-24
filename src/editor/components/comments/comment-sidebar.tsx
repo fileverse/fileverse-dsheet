@@ -427,7 +427,7 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
                   </div>
                 ) : comment.replies.length <= 0 ? (
                   <div className="pl-[32px]">
-                    {isCommentClick.has(key) && (
+                    {isCommentClick.has(key) && !comment.isResolved && (
                       <CommentInput
                         id="sidebar-comment-edit"
                         onSend={handleSendReply(key)}

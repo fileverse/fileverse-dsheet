@@ -1,4 +1,4 @@
-import React, { ComponentProps, useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import cn from 'classnames';
 import * as Y from 'yjs';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
@@ -55,9 +55,7 @@ const EditorContent = ({
   exportDropdownOpen,
   setExportDropdownOpen,
   dsheetId,
-  commentData,
   commentsConfig,
-  getCommentCellUI,
   selectedTemplate,
   setFetchingURLData,
   setInputFetchURLDataBlock,
@@ -83,9 +81,7 @@ const EditorContent = ({
   | 'storeApiKey'
   | 'isNewSheet'
 > & {
-  commentData?: object;
   commentsConfig?: CommentsConfig;
-  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;
   setExportDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -235,13 +231,23 @@ const EditorContent = ({
   }, [commentsConfig?.ensResolutionUrl]);
 
   // Create editor values to pass to the navbar
-  const editorValues: EditorValues = {
-    sheetEditorRef,
-    currentDataRef,
-    ydocRef,
-    openPanel,
-    closePanel,
-  };
+
+  const editorValues: EditorValues = useMemo(
+    () => ({
+      sheetEditorRef,
+      currentDataRef,
+      ydocRef,
+      openPanel,
+      closePanel,
+    }),
+    [sheetEditorRef, currentDataRef, ydocRef, openPanel, closePanel],
+  );
+
+  const navbarContent = useMemo(
+    () => (renderNavbar ? renderNavbar(editorValues) : null),
+    [renderNavbar, editorValues],
+  );
+
   const shouldRenderSheet = currentDataRef.current.length > 0 || isNewSheet;
 
   const cellArrayToYMap = (celldata: any[] = []) => {
@@ -360,7 +366,7 @@ const EditorContent = ({
           )}
           data-testid="dsheet-navbar"
         >
-          {renderNavbar(editorValues)}
+          {navbarContent}
         </nav>
       )}
 
@@ -387,8 +393,7 @@ const EditorContent = ({
             setShowFetchURLModal={setShowFetchURLModal}
             setFetchingURLData={setFetchingURLData}
             setInputFetchURLDataBlock={setInputFetchURLDataBlock}
-            commentData={commentData}
-            getCommentCellUI={getCommentCellUI}
+            commentsConfig={commentsConfig}
             isReadOnly={isReadOnly}
             allowSheetDownload={allowSheetDownload}
             toggleTemplateSidebar={openTemplatesPanel}
@@ -498,9 +503,7 @@ const SpreadsheetEditor = ({
       dataBlockApiKeyHandler={dataBlockApiKeyHandler}
     >
       <EditorContent
-        commentData={commentData}
         commentsConfig={commentsConfig}
-        getCommentCellUI={getCommentCellUI}
         renderNavbar={renderNavbar}
         setFetchingURLData={setFetchingURLData}
         isNewSheet={isNewSheet}
