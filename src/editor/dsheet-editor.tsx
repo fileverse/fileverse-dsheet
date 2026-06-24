@@ -22,6 +22,8 @@ import { Workbook } from '@sheet-engine/react';
 import { useSidebar } from './components/sidebar/sidebar-context';
 import { EditorRightSidebar } from './components/sidebar/editor-right-sidebar';
 import { PanelConfig } from './types';
+import { DataVerification } from './components/sidebars/data-verification';
+import { ConditionalFormat } from './components/sidebars/conditional-format';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -102,9 +104,25 @@ const EditorContent = ({
     setSelectedTemplate: contextSetSelectedTemplate,
   } = useEditor();
 
-  const { activePanel, isOpen, openPanel, closePanel } = useSidebar();
+  const { activePanel, isOpen, openPanel, closePanel, togglePanel } =
+    useSidebar();
 
-  const allPanels: PanelConfig[] = [...(customPanels ?? [])];
+  const builtInPanels: PanelConfig[] = [
+    {
+      id: 'data-verification',
+      header: { title: 'Data Validation' },
+      width: '380px',
+      content: <DataVerification />,
+    },
+    {
+      id: 'conditional-format',
+      header: { title: 'Conditional Formatting' },
+      width: '380px',
+      content: <ConditionalFormat />,
+    },
+  ];
+
+  const allPanels: PanelConfig[] = [...builtInPanels, ...(customPanels ?? [])];
 
   const activePanelConfig = (() => {
     const panel = allPanels.find((p) => p.id === activePanel);
@@ -227,6 +245,23 @@ const EditorContent = ({
       className={cn('dsheet-editor', isReadOnly && 'fortune-read-only')}
       data-testid="dsheet-editor"
     >
+      {/* Hidden DOM triggers — FortuneCore fires these by id via element.click() */}
+      <button
+        id="data-verification-button"
+        className="hidden"
+        onClick={() => togglePanel('data-verification')}
+      />
+      <button
+        id="conditional-format-button"
+        className="hidden"
+        onClick={() => openPanel('conditional-format')}
+      />
+      <button
+        id="smartcontract-button"
+        className="hidden"
+        onClick={() => openPanel('smart-contract-list-view')}
+      />
+
       {renderNavbar && (
         <nav
           id="Navbar"

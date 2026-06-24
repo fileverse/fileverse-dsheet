@@ -1,5 +1,4 @@
 #fortune-data-verification {
-  min-width: 510px;
   user-select: none;
 }
 
@@ -219,20 +218,20 @@
 }
 
 .color-picker-reset-btn {
-    height: 30px;
-    border-radius: 6px;
+  height: 30px;
+  border-radius: 6px;
 }
 
 .color-picker-reset-btn:hover {
-    background: hsl(var(--color-bg-default-hover, #F2F4F5))!important;
+  background: hsl(var(--color-bg-default-hover, #f2f4f5)) !important;
 }
 
 .color-picker:hover {
-  background: hsl(var(--color-bg-default-hover, #F2F4F5))!important;
+  background: hsl(var(--color-bg-default-hover, #f2f4f5)) !important;
 }
 
 .color-picker-container {
-  border: 1px solid hsl(var(--color-border-default, #E8EBEC)) !important;
+  border: 1px solid hsl(var(--color-border-default, #e8ebec)) !important;
   box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.15);
   width: 230px !important;
 }
@@ -247,11 +246,11 @@
 }
 
 .edit-dropdown {
-  height: 28px!important;
+  height: 28px !important;
   border-radius: 5px;
 }
 
 .edit-dropdown:hover {
-  height: 28px!important;
-  background: hsl(var(--color-bg-default-hover, #F2F4F5))!important;
+  height: 28px !important;
+  background: hsl(var(--color-bg-default-hover, #f2f4f5)) !important;
 }
