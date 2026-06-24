@@ -18,6 +18,10 @@ export type {
   CommentsConfig,
 } from './editor/types/comments';
 export { CommentAction } from './editor/types/comments';
+export { CommentsContent } from './editor/components/comments/comment-sidebar';
+export { CommentCellUI } from './editor/components/comments/comment-cell-popup';
+export { useEnsStatus } from './editor/components/comments/ens/use-ens-status';
+export type { EnsStatus } from './editor/components/comments/ens/ens-cache';
 export type { WorkbookInstance } from '@sheet-engine/react';
 export type {
   CollaborationProps,

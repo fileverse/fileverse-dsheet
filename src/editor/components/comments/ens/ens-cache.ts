@@ -31,7 +31,7 @@ const persist = () => {
   try {
     window.localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify(Object.fromEntries(cache))
+      JSON.stringify(Object.fromEntries(cache)),
     );
   } catch {
     // ignore quota / serialization errors
@@ -61,7 +61,7 @@ export const resolveEns = async (username: string): Promise<void> => {
   try {
     const { name, isEns, resolved } = await getAddressName(
       username,
-      resolutionUrl
+      resolutionUrl,
     );
     if (resolved) {
       cache.set(username, { name, isEns });

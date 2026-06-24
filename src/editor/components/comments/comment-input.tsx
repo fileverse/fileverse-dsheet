@@ -60,7 +60,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
     if (!buttonsVisible) return;
 
     const focusables: HTMLElement[] = [textareaRef.current].filter(
-      Boolean
+      Boolean,
     ) as HTMLElement[];
     if (!removeCancelButton && cancelButtonRef.current) {
       focusables.push(cancelButtonRef.current);

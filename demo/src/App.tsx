@@ -117,6 +117,15 @@ function App() {
         delete next[a.commentKey];
         return next;
       }
+      if (a.action === CommentAction.DELETE && a.isReply) {
+        return {
+          ...prev,
+          [a.commentKey]: {
+            ...c,
+            replies: c.replies.filter((r) => r.id !== a.commentId),
+          },
+        };
+      }
       if (a.action === CommentAction.RESOLVE)
         return { ...prev, [a.commentKey]: { ...c, isResolved: true } };
       if (a.action === CommentAction.UNRESOLVE)

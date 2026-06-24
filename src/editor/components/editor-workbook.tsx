@@ -68,7 +68,6 @@ interface EditorWorkbookProps {
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
   isReadOnly?: boolean;
   allowSheetDownload?: boolean;
-  allowComments?: boolean;
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
   onboardingCompleteLocalStorageKey?: string;
@@ -94,7 +93,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   setFetchingURLData,
   isReadOnly = false,
   allowSheetDownload = false,
-  allowComments = false,
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
@@ -143,6 +141,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   const commentsConfigRef = useRef(commentsConfig);
   commentsConfigRef.current = commentsConfig;
   const hasComments = !!commentsConfig;
+  const allowComments = hasComments;
 
   const removeCommentFromCell = useCallback(
     (row: number, col: number) => {

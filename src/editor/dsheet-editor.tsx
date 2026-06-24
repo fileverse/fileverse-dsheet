@@ -45,7 +45,6 @@ const EditorContent = ({
   renderNavbar,
   isReadOnly,
   allowSheetDownload,
-  allowComments,
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
@@ -71,7 +70,6 @@ const EditorContent = ({
   | 'renderNavbar'
   | 'isReadOnly'
   | 'allowSheetDownload'
-  | 'allowComments'
   | 'toggleTemplateSidebar'
   | 'selectedTemplate'
   | 'dsheetId'
@@ -385,7 +383,7 @@ const EditorContent = ({
               className="dsheet-permission-chip-wrap absolute top-2 right-4 z-20"
               data-testid="dsheet-permission-chip-wrap"
             >
-              <PermissionChip allowComments={allowComments || false} />
+              <PermissionChip allowComments={!!commentsConfig} />
             </div>
           )}
 
@@ -407,7 +405,6 @@ const EditorContent = ({
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
             storeApiKey={storeApiKey}
-            allowComments={allowComments}
             onDataBlockApiResponse={onDataBlockApiResponse}
             onDuneChartEmbed={onDuneChartEmbed}
             onSheetCountChange={onSheetCountChange}
@@ -439,7 +436,6 @@ const EditorContent = ({
 const SpreadsheetEditor = ({
   isReadOnly = false,
   allowSheetDownload,
-  allowComments = false,
   renderNavbar,
   enableIndexeddbSync,
   dsheetId = '',
@@ -452,9 +448,7 @@ const SpreadsheetEditor = ({
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
-  commentData,
   commentsConfig,
-  getCommentCellUI,
   dataBlockApiKeyHandler,
   setFetchingURLData,
   setShowFetchURLModal,
@@ -490,11 +484,9 @@ const SpreadsheetEditor = ({
       portalContent={portalContent}
       enableIndexeddbSync={enableIndexeddbSync}
       isReadOnly={isReadOnly}
-      allowComments={allowComments}
       onChange={onChange}
       externalEditorRef={externalSheetEditorRef}
       collaboration={collaboration}
-      commentData={commentData}
       commentsConfig={commentsConfig}
       isAuthorized={isAuthorized}
       editorStateRef={editorStateRef}
@@ -524,7 +516,6 @@ const SpreadsheetEditor = ({
         dsheetId={dsheetId}
         selectedTemplate={selectedTemplate}
         storeApiKey={storeApiKey}
-        allowComments={allowComments}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
         onDataBlockApiResponse={onDataBlockApiResponse}
