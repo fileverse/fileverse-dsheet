@@ -52,6 +52,7 @@
     "@fileverse-dev/dsheets-templates": "^0.0.29",
     "@fileverse-dev/formulajs": "^4.4.53",
     "@fileverse/crypto": "^0.0.22",
+    "@fileverse/ens": "^0.0.4",
     "@fileverse/ui": "^5.0.0",
     "@noble/ciphers": "^2.2.0",
     "@noble/curves": "^2.2.0",
