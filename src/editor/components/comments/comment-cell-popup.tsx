@@ -81,7 +81,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
       onDoubleClick={handleDoubleClick}
       onMouseEnter={() => {
         const con = document.getElementsByClassName(
-          'comment-cell'
+          'comment-cell',
         )[0] as HTMLDivElement;
         con?.addEventListener('wheel', handler, { capture: true });
       }}

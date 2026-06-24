@@ -46,7 +46,7 @@ export const CommentActionsDropdown: React.FC<CommentActionsDropdownProps> = ({
     ownerAddress,
     currentUserName,
     currentUserAddress,
-    isOwner
+    isOwner,
   );
 
   const [dropdownKey, setDropdownKey] = useState(0);
@@ -90,7 +90,7 @@ export const CommentActionsDropdown: React.FC<CommentActionsDropdownProps> = ({
             handleAction(
               comment.isResolved
                 ? CommentAction.UNRESOLVE
-                : CommentAction.RESOLVE
+                : CommentAction.RESOLVE,
             )
           }
           className="justify-start w-full gap-2 px-3 py-2 text-sm"

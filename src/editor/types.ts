@@ -1,5 +1,5 @@
-import { Sheet, Workbook } from '@sheet-engine/react';
-import { ComponentProps, RefObject } from 'react';
+import { Sheet } from '@sheet-engine/react';
+import { RefObject } from 'react';
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import { Cell } from '@sheet-engine/react';
@@ -106,16 +106,12 @@ export interface DsheetProps {
   onboardingHandler?: OnboardingHandlerType;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
-  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  commentData?: Object;
   commentsConfig?: CommentsConfig;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<
     WorkbookInstance & { refreshIndexedDB: () => Promise<void> }
   >;
   storeApiKey?: (apiKeyName: string) => void;
-  allowComments?: boolean;
   onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;

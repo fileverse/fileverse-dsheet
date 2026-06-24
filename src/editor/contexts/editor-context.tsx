@@ -83,7 +83,6 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
-  allowComments?: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
   setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: (dsheetId: string) => Promise<string>;
@@ -98,7 +97,6 @@ interface EditorProviderProps {
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
-  commentData?: object;
   commentsConfig?: CommentsConfig;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
@@ -123,11 +121,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   portalContent = '',
   enableIndexeddbSync = true,
   isReadOnly = false,
-  allowComments = false,
   onChange,
   externalEditorRef,
   collaboration,
-  commentData,
   commentsConfig,
   isAuthorized,
   editorStateRef,
@@ -135,12 +131,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   liveQueryRefreshRate,
   dataBlockApiKeyHandler,
 }) => {
-  // Prefer values derived from commentsConfig when present (new API); fall back
-  // to the legacy commentData/allowComments props otherwise.
-  const resolvedCommentData = commentsConfig
-    ? commentsConfig.commentsData
-    : commentData;
-  const resolvedAllowComments = commentsConfig ? true : allowComments;
+  // Comments are driven entirely by commentsConfig (the legacy
+  // commentData/allowComments props were removed).
+  const resolvedCommentData = commentsConfig?.commentsData;
+  const resolvedAllowComments = !!commentsConfig;
 
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
