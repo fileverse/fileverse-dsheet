@@ -1,11 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, {
-  ComponentProps,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Workbook } from '@sheet-engine/react';
 import { Cell } from '@sheet-engine/react';
 import {
@@ -49,6 +43,10 @@ import {
   syncCurrentSheetField,
   updateAllCell,
 } from './editor-workbook-sync';
+import { CommentsConfig } from '../types/comments';
+import { CommentCellUI } from './comments/comment-cell-popup';
+import { hideCellCommentMarker } from '../utils/cell-comment-marker';
+import { getCurrentSheetIdSafe } from '../utils/sheet-editor-safe';
 // import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -77,9 +75,7 @@ interface EditorWorkbookProps {
   onboardingHandler?: OnboardingHandler;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  commentData?: Object;
-  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
+  commentsConfig?: CommentsConfig;
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
   storeApiKey?: (apiKeyName: string) => void;
@@ -105,8 +101,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   onboardingHandler,
   dataBlockApiKeyHandler,
   exportDropdownOpen = false,
-  commentData,
-  getCommentCellUI,
+  commentsConfig,
   setExportDropdownOpen = () => { },
   dsheetId,
   storeApiKey,
@@ -139,6 +134,58 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   } = useEditor();
 
   const localUserEditRef = useRef(false);
+
+  // Read the latest commentsConfig at call time via a ref so `getCommentCellUI`
+  // keeps a STABLE identity. Otherwise a new commentsConfig object on every
+  // comment action would churn the prop and re-render the memoized Workbook
+  // (visible canvas glitch). FortuneCore calls getCommentCellUI lazily, so
+  // ref.current is always fresh when a popup actually renders.
+  const commentsConfigRef = useRef(commentsConfig);
+  commentsConfigRef.current = commentsConfig;
+  const hasComments = !!commentsConfig;
+
+  const removeCommentFromCell = useCallback(
+    (row: number, col: number) => {
+      hideCellCommentMarker(sheetEditorRef, row, col);
+    },
+    [sheetEditorRef],
+  );
+
+  const getCommentCellUI = useMemo(() => {
+    if (!hasComments) return undefined;
+    return (
+      row: number,
+      col: number,
+      dragHandler: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void,
+      isHover?: boolean,
+    ) => {
+      const cfg = commentsConfigRef.current;
+      if (!cfg) return null;
+      const isAuthed = cfg.isAuthenticated ?? true;
+      const sheetId = getCurrentSheetIdSafe(sheetEditorRef);
+      const key = `${sheetId}_${row}_${col}`;
+      const comment = cfg.commentsData[key];
+      if (!isAuthed) return cfg.unauthenticatedFallback ?? null;
+      return (
+        <CommentCellUI
+          row={row}
+          col={col}
+          sheetId={sheetId}
+          comment={comment}
+          onSendComment={(_k, textareaId) => cfg.onSendComment(key, textareaId)}
+          onAction={cfg.onCommentAction}
+          ownerAddress={cfg.ownerAddress}
+          currentUserAddress={cfg.currentUserAddress}
+          isOwner={cfg.isOwner}
+          sheetEditorRef={sheetEditorRef as never}
+          currentUserName={cfg.userName}
+          removeCommentFromCell={removeCommentFromCell}
+          dragHandler={dragHandler}
+          isHover={isHover}
+        />
+      );
+    };
+  }, [hasComments, sheetEditorRef, removeCommentFromCell]);
 
   // Block metadata → ydoc echoes only while a remote apply is in flight
   // (remoteApplyDepth > 0). User-initiated edits run when depth is zero.
@@ -504,7 +551,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     dataBlockApiKeyHandler,
     dsheetId,
     exportDropdownOpen,
-    commentData,
+    getCommentCellUI,
     syncStatus,
     isAuthorized,
     dataBlockCalcFunction,
