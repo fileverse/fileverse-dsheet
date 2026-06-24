@@ -3,14 +3,12 @@ import React, {
   useContext,
   useRef,
   useState,
-  useEffect,
 } from 'react';
 import {
   Context,
   MAX_ZOOM_RATIO,
   MIN_ZOOM_RATIO,
   getSheetIndex,
-  handleKeydownForZoom,
 } from '@sheet-engine/core';
 import { useMediaQuery } from 'usehooks-ts';
 import { IconButton } from '@fileverse/ui';
@@ -88,20 +86,6 @@ const ZoomControl: React.FC = () => {
     },
     [setContext],
   );
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const newZoom = handleKeydownForZoom(e, context.zoomRatio);
-      if (newZoom === context.zoomRatio) return;
-      zoomTo(newZoom);
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    window.addEventListener('keydown', handleKeyDown, true);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown, true);
-    };
-  }, [context.zoomRatio, zoomTo]);
 
   return (
     <div className="fortune-zoom-container">

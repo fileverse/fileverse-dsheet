@@ -53,6 +53,7 @@ import {
 import { handleCopy } from './copy';
 import { handleShortcutsV2 } from './shortcuts-v2';
 import {
+  isBrowserZoomShortcut,
   isFindReplaceShortcut,
   isFindShortcut,
   isInsertDateShortcut,
@@ -987,6 +988,8 @@ export async function handleGlobalKeyDown(
   handleRedo: () => void,
   canvas?: CanvasRenderingContext2D,
 ) {
+  if (isBrowserZoomShortcut(e)) return;
+
   /* FLV */
   if (e.shiftKey && e.code === 'Space') {
     e.stopImmediatePropagation();

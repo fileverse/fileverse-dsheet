@@ -210,21 +210,18 @@ const CLOSE_PAREN_TYPING_CODES = new Set([
 ]);
 
 /**
- * Formula list — Ctrl/Cmd+) (Google Sheets).
- * US: Shift+0 → ")"; AZERTY: Shift+5 → ")" (code Digit5, often Equal-adjacent noise).
+ * Formula list — Ctrl/Cmd+Shift+) (Google Sheets).
+ * US: Shift+0 → ")"; AZERTY: Shift+5 → ")".
  */
 export function isFormulaListShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey) || e.altKey) return false;
   if (isImeOrDeadKey(e)) return false;
+  if (isBrowserZoomShortcut(e)) return false;
 
-  if (e.key === ')') return true;
+  if (e.key === ')') return e.shiftKey;
 
   if (!e.shiftKey) {
-    return (
-      e.code === 'BracketRight' ||
-      e.code === 'Digit0' ||
-      e.code === 'Numpad0'
-    );
+    return e.code === 'BracketRight';
   }
 
   return CLOSE_PAREN_TYPING_CODES.has(e.code);
@@ -247,25 +244,31 @@ export function isFindReplaceShortcut(e: KeyboardEvent): boolean {
   );
 }
 
-export function isZoomInShortcut(e: KeyboardEvent): boolean {
-  if (!hasMod(e) || e.altKey) return false;
-  if (isImeOrDeadKey(e)) return false;
-  if (isFormulaListShortcut(e)) return false;
-
-  if (e.key === '+' || e.code === 'NumpadAdd') return true;
-  if (e.code === 'Equal' && (e.key === '+' || e.key === '=')) return true;
-  return false;
-}
-
-export function isZoomOutShortcut(e: KeyboardEvent): boolean {
-  if (!hasMod(e) || e.altKey) return false;
+/**
+ * Browser page zoom (Cmd/Ctrl + +/−). Never intercept — sheet has no keyboard zoom.
+ * Match by physical `code` and by AZERTY-remapped `key` values.
+ */
+export function isBrowserZoomShortcut(e: KeyboardEvent): boolean {
+  if (!(e.metaKey || e.ctrlKey) || e.altKey) return false;
   if (isImeOrDeadKey(e)) return false;
 
-  if (e.key === '-' || e.key === '_') return true;
-  if (e.code === 'NumpadSubtract') return true;
-  if (e.code === 'Minus' && e.key === '-') return true;
-  // AZERTY French: `-` on Digit6 (US zoom `-` uses Minus key).
-  if (e.code === 'Digit6' && e.key === '-') return true;
+  if (
+    e.code === 'Equal' ||
+    e.code === 'NumpadAdd' ||
+    e.code === 'Minus' ||
+    e.code === 'NumpadSubtract' ||
+    e.code === 'Digit6'
+  ) {
+    return true;
+  }
+
+  // AZERTY Mac: browser zoom remaps `key` (e.g. zoom-in → `-`, zoom-out → `)`).
+  if (!e.shiftKey) {
+    if (e.key === '-' || e.key === '_') return true;
+    if (e.key === ')') return true;
+  }
+  if (e.key === '+' || e.key === '=') return true;
+
   return false;
 }
 
@@ -277,20 +280,106 @@ const SLASH_SHIFT_TYPING_CODES = new Set([
   'Numpad7',
 ]);
 
-/**
- * Open shortcuts modal — Ctrl/Cmd+/ (Google Sheets).
- * AZERTY Mac: `/` is Shift+7; must not overlap zoom (+/=) or formula list `)`.
- */
-export function isOpenShortcutsModalShortcut(e: KeyboardEvent): boolean {
-  if (!hasMod(e) || e.altKey) return false;
+/** Punctuation codes used for `/` or `:` on AZERTY variants (incl. WY). */
+const SLASH_COLON_TYPING_CODES = new Set([
+  'Slash',
+  'NumpadDivide',
+  'Digit7',
+  'Numpad7',
+  'Period',
+  'Comma',
+  'Semicolon',
+]);
+
+/** Windows: Ctrl + / (AZERTY: Ctrl + Shift + 7). */
+function isWinCtrlSlashShortcut(e: KeyboardEvent): boolean {
+  if (!e.ctrlKey || e.metaKey || e.altKey) return false;
   if (isImeOrDeadKey(e)) return false;
-  if (isZoomInShortcut(e) || isZoomOutShortcut(e)) return false;
 
   if (e.key === '/') return true;
+  if (e.code === 'Slash' || e.code === 'NumpadDivide') return true;
+  if (e.code === 'Digit7' || e.code === 'Numpad7') {
+    return e.shiftKey || e.key === '7' || e.key === '/' || e.key === '&';
+  }
+  return false;
+}
+
+/**
+ * Mac / AZERTY: Option + / or Option + : (incl. AZERTY WY).
+ * Does not use Cmd — Option alone is the Google AZERTY pattern for this chord.
+ */
+function isOptionSlashOrColonShortcut(e: KeyboardEvent): boolean {
+  if (e.getModifierState?.('AltGraph')) return false;
+  if (!e.altKey || e.ctrlKey) return false;
+  if (isImeOrDeadKey(e)) return false;
+
+  if (e.key === '/' || e.key === ':') return true;
+  if (e.code === 'Slash' || e.code === 'NumpadDivide') return true;
+  // Option remaps `key` on Mac — match physical AZERTY slash/colon keys by `code`.
+  if (SLASH_COLON_TYPING_CODES.has(e.code)) return true;
+  return false;
+}
+
+/**
+ * Open shortcuts modal.
+ * Win: Ctrl+/. Mac/AZERTY: Option+/ or Option+: (WY). US fallback: Cmd+/.
+ */
+export function isOpenShortcutsModalShortcut(e: KeyboardEvent): boolean {
+  if (isImeOrDeadKey(e)) return false;
+  if (isBrowserZoomShortcut(e)) return false;
+  if (isFormulaListShortcut(e)) return false;
+
+  if (isWinCtrlSlashShortcut(e)) return true;
+  if (isOptionSlashOrColonShortcut(e)) return true;
+
+  if (!hasMod(e) || e.altKey) return false;
+
+  // US Cmd+/ only — AZERTY Cmd+Shift+7 types `/` and must not steal browser zoom.
+  if (e.key === '/' && !e.shiftKey) return true;
+
+  // AZERTY Mac: `:` is Cmd+Period (runtime: code Period, key `:`, meta — not Option).
+  if (
+    e.key === ':' &&
+    !e.shiftKey &&
+    (e.code === 'Period' || e.code === 'Comma' || e.code === 'Semicolon')
+  ) {
+    return true;
+  }
+
+  if (e.code === 'Digit7' || e.code === 'Numpad7') {
+    return e.shiftKey || e.key === '7' || e.key === '&';
+  }
 
   if (!e.shiftKey) {
     return e.code === 'Slash' || e.code === 'NumpadDivide';
   }
 
-  return SLASH_SHIFT_TYPING_CODES.has(e.code);
+  return (
+    e.code === 'Slash' ||
+    e.code === 'NumpadDivide' ||
+    SLASH_SHIFT_TYPING_CODES.has(e.code)
+  );
 }
+<<<<<<< HEAD
+=======
+
+/** Label which engine shortcut would match (best-effort; for host debug tooling). */
+export function describeMatchedShortcut(e: KeyboardEvent): string | null {
+  if (
+    isInsertDateTimeShortcut(e) ||
+    isUsInsertDateTimeQuoteShortcut(e)
+  ) {
+    return 'insert-date-time';
+  }
+  if (isInsertTimeShortcut(e)) return 'insert-time';
+  if (isInsertDateShortcut(e)) return 'insert-date';
+  if (isPlainTextFormatShortcut(e)) return 'plain-text';
+  if (isStrikethroughShortcut(e)) return 'strikethrough';
+  if (isInsertCommentShortcut(e)) return 'insert-comment';
+  if (isSelectAllShortcut(e)) return 'select-all';
+  if (isFormulaListShortcut(e)) return 'formula-list';
+  if (isNumberFormatModifier(e)) return 'number-format';
+  if (isOpenShortcutsModalShortcut(e)) return 'shortcuts-modal';
+  return null;
+}
+>>>>>>> 2cfe7e8 (fix: pass browser zoom through on AZERTY and remove sheet keyboard zoom (2.0.36-shortcut-3))

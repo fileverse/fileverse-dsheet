@@ -35,6 +35,7 @@ import {
   setDateBaseLocale,
 } from '@sheet-engine/core/modules/date-base-locale';
 import {
+  isBrowserZoomShortcut,
   isFindReplaceShortcut,
   isFindShortcut,
   isInsertDateShortcut,
@@ -1055,6 +1056,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
     const onKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const { nativeEvent } = e;
+        if (isBrowserZoomShortcut(nativeEvent)) return;
+
         // @ts-expect-error later
         const { getSelection, getSheet, setSelection } = ref.current;
         const currentSelection = getSelection()?.[0];
@@ -1240,7 +1244,6 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           });
         }
 
-        const { nativeEvent } = e;
         // handling undo and redo ahead because handleUndo and handleRedo
         // themselves are calling setContext, and should not be nested
         // in setContextWithProduce.
