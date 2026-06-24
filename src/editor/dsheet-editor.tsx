@@ -25,6 +25,7 @@ import { PanelConfig } from './types';
 import { DataVerification } from './components/sidebars/data-verification';
 import { ConditionalFormat } from './components/sidebars/conditional-format';
 import { Templates } from './components/sidebars/templates';
+import FunctionContent from './components/sidebars/function-content';
 import { TemplatePreview, Template } from './components/sidebars/template-ui';
 import { useMediaQuery } from 'usehooks-ts';
 
@@ -121,6 +122,8 @@ const EditorContent = ({
     string | null
   >(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<Template | null>(null);
+  const [shouldHandleSuggestionFromCell, setShouldHandleSuggestionFromCell] =
+    useState(0);
   const isMobile = useMediaQuery('(max-width: 840px)', { defaultValue: false });
 
   const builtInPanels: PanelConfig[] = [
@@ -150,6 +153,17 @@ const EditorContent = ({
       header: { title: 'Conditional Formatting' },
       width: '380px',
       content: <ConditionalFormat />,
+    },
+    {
+      id: 'functions',
+      header: { title: 'Function' },
+      width: '380px',
+      content: (
+        <FunctionContent
+          sheetEditorRef={sheetEditorRef}
+          shouldHandleSuggestionFromCell={shouldHandleSuggestionFromCell}
+        />
+      ),
     },
   ];
 
@@ -294,6 +308,14 @@ const EditorContent = ({
         id="smartcontract-button"
         className="hidden"
         onClick={() => openPanel('smart-contract-list-view')}
+      />
+      <button
+        id="function-button"
+        className="hidden"
+        onClick={() => {
+          openPanel('functions');
+          setShouldHandleSuggestionFromCell((p) => p + 1);
+        }}
       />
 
       {renderNavbar && (
