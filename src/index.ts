@@ -11,6 +11,13 @@ export { loadLocale } from '@sheet-engine/core';
 // Types
 export type { ErrorMessageHandlerReturnType } from './editor/types';
 export type { PanelConfig, PanelId, BuiltInPanelType } from './editor/types';
+export type {
+  CommentThread,
+  CommentReply,
+  CommentActionParams,
+  CommentsConfig,
+} from './editor/types/comments';
+export { CommentAction } from './editor/types/comments';
 export type { WorkbookInstance } from '@sheet-engine/react';
 export type {
   CollaborationProps,

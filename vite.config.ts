@@ -45,6 +45,7 @@ export default defineConfig({
         'immer',
         'dayjs',
         '@fileverse/ui',
+        '@fileverse/ens',
         '@fileverse-dev/formulajs',
         '@fileverse-dev/dsheets-templates',
         '@tippyjs/react',

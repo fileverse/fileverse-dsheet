@@ -22,6 +22,7 @@ import {
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
+import type { CommentsConfig } from '../types/comments';
 import { SidebarProvider } from '../components/sidebar/sidebar-context';
 import type {
   CollaborationProps,
@@ -99,6 +100,7 @@ interface EditorProviderProps {
   collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   commentData?: object;
+  commentsConfig?: CommentsConfig;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
     terminateSession?: () => void;
@@ -127,12 +129,20 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   externalEditorRef,
   collaboration,
   commentData,
+  commentsConfig,
   isAuthorized,
   editorStateRef,
   enableLiveQuery,
   liveQueryRefreshRate,
   dataBlockApiKeyHandler,
 }) => {
+  // Prefer values derived from commentsConfig when present (new API); fall back
+  // to the legacy commentData/allowComments props otherwise.
+  const resolvedCommentData = commentsConfig
+    ? commentsConfig.commentsData
+    : commentData;
+  const resolvedAllowComments = commentsConfig ? true : allowComments;
+
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
   const sheetEditorRef = externalEditorRef || internalEditorRef;
@@ -371,13 +381,13 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isReadOnly,
     handleOnChangePortalUpdate,
     syncStatus,
-    commentData,
+    resolvedCommentData,
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
     enableLiveQuery,
     liveQueryRefreshRate,
     dataBlockApiKeyHandler,
-    allowComments,
+    resolvedAllowComments,
     hasCollabContentInitialised,
     collaboration?.enabled === true,
   );

@@ -6,6 +6,15 @@ import { Cell } from '@sheet-engine/react';
 import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
 import { CollaborationProps } from '../sync-local/types';
+import { CommentsConfig } from './types/comments';
+
+export type {
+  CommentThread,
+  CommentReply,
+  CommentActionParams,
+  CommentsConfig,
+} from './types/comments';
+export { CommentAction } from './types/comments';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -100,6 +109,7 @@ export interface DsheetProps {
   getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   // eslint-disable-next-line @typescript-eslint/ban-types
   commentData?: Object;
+  commentsConfig?: CommentsConfig;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<
     WorkbookInstance & { refreshIndexedDB: () => Promise<void> }

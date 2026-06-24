@@ -28,6 +28,9 @@ import { Templates } from './components/sidebars/templates';
 import FunctionContent from './components/sidebars/function-content';
 import { TemplatePreview, Template } from './components/sidebars/template-ui';
 import { useMediaQuery } from 'usehooks-ts';
+import { CommentsContent } from './components/comments/comment-sidebar';
+import { setEnsResolutionUrl } from './components/comments/ens/ens-cache';
+import { CommentsConfig } from './types/comments';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -53,6 +56,7 @@ const EditorContent = ({
   setExportDropdownOpen,
   dsheetId,
   commentData,
+  commentsConfig,
   getCommentCellUI,
   selectedTemplate,
   setFetchingURLData,
@@ -80,6 +84,7 @@ const EditorContent = ({
   | 'isNewSheet'
 > & {
   commentData?: object;
+  commentsConfig?: CommentsConfig;
   getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
   isTemplateOpen?: boolean;
   exportDropdownOpen: boolean;
@@ -127,6 +132,27 @@ const EditorContent = ({
   const isMobile = useMediaQuery('(max-width: 840px)', { defaultValue: false });
 
   const builtInPanels: PanelConfig[] = [
+    ...(commentsConfig
+      ? [
+        {
+          id: 'comments',
+          header: { title: 'Comments' },
+          width: '380px',
+          content: (
+            <CommentsContent
+              sheetEditorRef={sheetEditorRef}
+              userName={commentsConfig.userName}
+              commentsData={commentsConfig.commentsData}
+              onSendComment={commentsConfig.onSendComment}
+              onCommentAction={commentsConfig.onCommentAction}
+              ownerAddress={commentsConfig.ownerAddress}
+              currentUserAddress={commentsConfig.currentUserAddress}
+              isOwner={commentsConfig.isOwner}
+            />
+          ),
+        },
+      ]
+      : []),
     {
       id: 'templates',
       header: {
@@ -203,6 +229,10 @@ const EditorContent = ({
     isReadOnly,
     loading,
   });
+
+  useEffect(() => {
+    setEnsResolutionUrl(commentsConfig?.ensResolutionUrl);
+  }, [commentsConfig?.ensResolutionUrl]);
 
   // Create editor values to pass to the navbar
   const editorValues: EditorValues = {
@@ -418,6 +448,7 @@ const SpreadsheetEditor = ({
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
   commentData,
+  commentsConfig,
   getCommentCellUI,
   dataBlockApiKeyHandler,
   setFetchingURLData,
@@ -459,6 +490,7 @@ const SpreadsheetEditor = ({
       externalEditorRef={externalSheetEditorRef}
       collaboration={collaboration}
       commentData={commentData}
+      commentsConfig={commentsConfig}
       isAuthorized={isAuthorized}
       editorStateRef={editorStateRef}
       liveQueryRefreshRate={liveQueryRefreshRate}
@@ -467,6 +499,7 @@ const SpreadsheetEditor = ({
     >
       <EditorContent
         commentData={commentData}
+        commentsConfig={commentsConfig}
         getCommentCellUI={getCommentCellUI}
         renderNavbar={renderNavbar}
         setFetchingURLData={setFetchingURLData}
