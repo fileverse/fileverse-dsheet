@@ -92,7 +92,7 @@ interface EditorWorkbookProps {
 /**
  * EditorWorkbook component handles rendering the Fortune Workbook with proper configuration
  */
-export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
+const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   setInputFetchURLDataBlock,
   setShowFetchURLModal,
   setFetchingURLData,
@@ -510,3 +510,5 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     dataBlockCalcFunction,
   ]);
 };
+
+export const EditorWorkbook = React.memo(EditorWorkbookComponent);

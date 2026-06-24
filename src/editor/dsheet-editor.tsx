@@ -1,4 +1,4 @@
-import React, { ComponentProps, useEffect, useState } from 'react';
+import React, { ComponentProps, useCallback, useEffect, useState } from 'react';
 import cn from 'classnames';
 import * as Y from 'yjs';
 import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
@@ -24,6 +24,9 @@ import { EditorRightSidebar } from './components/sidebar/editor-right-sidebar';
 import { PanelConfig } from './types';
 import { DataVerification } from './components/sidebars/data-verification';
 import { ConditionalFormat } from './components/sidebars/conditional-format';
+import { Templates } from './components/sidebars/templates';
+import { TemplatePreview, Template } from './components/sidebars/template-ui';
+import { useMediaQuery } from 'usehooks-ts';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -107,7 +110,35 @@ const EditorContent = ({
   const { activePanel, isOpen, openPanel, closePanel, togglePanel } =
     useSidebar();
 
+  // Stable reference so the memoized EditorWorkbook (and its toolbar) is not
+  // rebuilt on every panel toggle.
+  const openTemplatesPanel = useCallback(
+    () => togglePanel('templates'),
+    [togglePanel],
+  );
+
+  const [internalSelectedTemplate, setInternalSelectedTemplate] = useState<
+    string | null
+  >(null);
+  const [hoveredTemplate, setHoveredTemplate] = useState<Template | null>(null);
+  const isMobile = useMediaQuery('(max-width: 840px)', { defaultValue: false });
+
   const builtInPanels: PanelConfig[] = [
+    {
+      id: 'templates',
+      header: {
+        title: 'Templates',
+        subtitle:
+          'Start with pre-built templates. Includes smart contract analysis, real time coins price and much more for blockchain analytics',
+      },
+      width: '380px',
+      content: (
+        <Templates
+          setSelectedTemplate={(slug) => setInternalSelectedTemplate(slug)}
+          setHoveredTemplate={setHoveredTemplate}
+        />
+      ),
+    },
     {
       id: 'data-verification',
       header: { title: 'Data Validation' },
@@ -137,8 +168,11 @@ const EditorContent = ({
 
   // Initialize template button functionality
   useApplyTemplatesBtn({
-    selectedTemplate,
-    setSelectedTemplate: contextSetSelectedTemplate,
+    selectedTemplate: internalSelectedTemplate ?? selectedTemplate,
+    setSelectedTemplate: (slug: string | null) => {
+      setInternalSelectedTemplate(null);
+      contextSetSelectedTemplate?.(slug as any);
+    },
     ydocRef,
     dsheetId,
     currentDataRef,
@@ -305,7 +339,7 @@ const EditorContent = ({
             getCommentCellUI={getCommentCellUI}
             isReadOnly={isReadOnly}
             allowSheetDownload={allowSheetDownload}
-            toggleTemplateSidebar={toggleTemplateSidebar}
+            toggleTemplateSidebar={openTemplatesPanel}
             onboardingComplete={onboardingComplete}
             onboardingCompleteLocalStorageKey={
               onboardingCompleteLocalStorageKey
@@ -331,6 +365,9 @@ const EditorContent = ({
         onClose={closePanel}
         isReadOnly={isReadOnly}
       />
+      {hoveredTemplate && !isMobile && (
+        <TemplatePreview template={hoveredTemplate} />
+      )}
     </div>
   );
 };
