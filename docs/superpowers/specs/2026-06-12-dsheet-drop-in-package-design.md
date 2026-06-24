@@ -8,9 +8,9 @@
 
 ## Goal
 
-Make `@fileverse-dev/dsheet` a complete drop-in package. A new consumer should be able to install it, render `<DSheetEditor>`, and get a fully functional spreadsheet editor — including navbar menus, sidebar panels (comments, templates, data validation, conditional formatting, function reference), and a shortcuts modal — with minimal wiring.
+Make `@fileverse-dev/dsheet` a complete drop-in package. A new consumer should be able to install it, render `<DSheetEditor>`, and get a fully functional spreadsheet editor — including sidebar panels (comments, templates, data validation, conditional formatting, function reference) — with minimal wiring. The consumer supplies their own navbar and shortcuts modal, and wires navbar items to the package's `openPanel`.
 
-Currently, critical UI (navbar menus, all sidebar panels, comment UI, shortcuts) lives in the `dsheets.new` consumer app. Any third-party consumer must re-implement all of it.
+Currently, critical UI (all sidebar panels, comment UI) lives in the `dsheets.new` consumer app. Any third-party consumer must re-implement all of it. (The navbar and shortcuts modal stay consumer-owned by design — see "Out of scope" below.)
 
 ---
 
@@ -18,7 +18,6 @@ Currently, critical UI (navbar menus, all sidebar panels, comment UI, shortcuts)
 
 | Feature | Consumer location today | Destination |
 |---|---|---|
-| Navbar menus (File/Edit/View/Insert/Format/Data/Help) | `components/navbar/` | `src/editor/components/navbar/` |
 | Right sidebar system | `components/right-sidebar-wrapper/` | `src/editor/components/sidebar/` (internal) |
 | Data Validation UI | `right-sidebar-wrapper/data-verification.tsx` | `src/editor/components/sidebars/data-verification.tsx` |
 | Conditional Formatting UI | `right-sidebar-wrapper/conditional-format.tsx` | `src/editor/components/sidebars/conditional-format.tsx` |
@@ -26,20 +25,20 @@ Currently, critical UI (navbar menus, all sidebar panels, comment UI, shortcuts)
 | Function Learn More Sidebar | `components/function/function-content.tsx` | `src/editor/components/sidebars/function-content.tsx` |
 | Comments Sidebar UI | `components/comment-section/components/comment-sidebar.tsx` | `src/editor/components/comments/comment-sidebar.tsx` |
 | Comment Cell Popup UI | `components/comment-section/components/comment-cell-popup/` | `src/editor/components/comments/comment-cell-popup.tsx` |
-| Shortcuts Modal | `components/shortcuts-popup/shortcuts-popup.tsx` | `src/editor/components/shortcuts-modal.tsx` |
 
 **Comment storage/state stays consumer-side.** Package provides UI only.  
-**App-specific navbar items** (share, publish, delete, auth) stay consumer-side.
+**The entire navbar stays consumer-side.** All menus (File/Edit/View/Insert/Format/Data/Help) and app-specific items (share, publish, delete, auth) remain in `dsheets.new` and are NOT migrated. The consumer's existing navbar keeps calling `openPanel` — now sourced from `editorValues` (Phase 1) instead of consumer-local sidebar state.
 
 ---
 
-## Migration Strategy: 3 Phases
+## Migration Strategy: 2 Phases
 
 ### Phase 1 — Sidebar Infrastructure
 ### Phase 2 — Panel Content + Comments UI
-### Phase 3 — Navbar Menu Components
 
 Each phase ships independently. `dsheets.new` keeps working throughout. Regressions are isolated to each phase's diff.
+
+**Out of scope:** Navbar menu components are NOT migrated. The edit/view/insert/format/data/help menus (and file menu) stay in `dsheets.new` as-is. The shortcuts modal also stays consumer-side (it is triggered by the consumer-owned help menu).
 
 ---
 
@@ -166,12 +165,9 @@ commentsConfig?: CommentsConfig;
 // sidebar panel contents (for consumers who want to use them standalone)
 export { CommentsContent } from './editor/components/comments/comment-sidebar';
 export { CommentCellUI } from './editor/components/comments/comment-cell-popup';
-
-// standalone modal (not a sidebar panel)
-export { ShortcutsModal } from './editor/components/shortcuts-modal';
 ```
 
-**`ShortcutsModal`** is exported as a standalone component. Consumer controls open/close state and renders it wherever they want. It does not appear in the sidebar.
+The shortcuts modal is NOT migrated — it stays consumer-side (triggered by the consumer-owned help menu).
 
 ### Exported Types
 
@@ -185,103 +181,14 @@ A consumer with no sidebar code in their app gets comments, templates, data vali
 
 ---
 
-## Phase 3: Navbar Menu Components
-
-### File Structure
-
-```
-src/editor/components/navbar/
-  file-menu.tsx
-  edit-menu.tsx
-  view-menu.tsx
-  insert-menu.tsx
-  format-menu.tsx
-  data-menu.tsx
-  help-menu.tsx
-  nav-menu-bar.tsx       // convenience wrapper — composes all 7
-  use-nav-menu-state.ts  // shared open/close coordination hook
-```
-
-### Scope of Package Menus
-
-Each menu contains only **sheet operation items** backed by FortuneCore functions. App-specific items are stripped:
-
-| Menu | Included | Excluded (stays consumer-side) |
-|---|---|---|
-| File | Import CSV/XLSX, Export CSV/XLSX/JSON, New sheet | Delete sheet, Share, Publish |
-| Edit | Undo, Redo, Copy, Cut, Paste, Delete row/col | — |
-| View | Freeze rows/cols | — |
-| Insert | Insert row/col, Image, Link | — |
-| Format | Cell format, Merge, Align, Text size, Clear format | — |
-| Data | Sort, Filter | — |
-| Help | Shortcuts (fires `onShortcutsOpen`) | Community, Feedback |
-
-### Menu Component Props
-
-Each menu is self-contained. Shared open/close coordination (one menu open at a time) uses `useNavMenuState`:
-
-```ts
-// hook exported from package
-export const useNavMenuState = () => {
-  const [currentMenu, setCurrentMenu] = useState<string | undefined>();
-  return { currentMenu, setCurrentMenu };
-};
-
-// individual menu usage
-const { currentMenu, setCurrentMenu } = useNavMenuState();
-
-<EditMenu
-  sheetEditorRef={sheetEditorRef}
-  openPanel={openPanel}
-  currentMenu={currentMenu}
-  setCurrentMenu={setCurrentMenu}
-/>
-```
-
-### `NavMenuBar` Convenience Wrapper
-
-Composes all 7 menus with internal `useNavMenuState`. Consumer passes only `sheetEditorRef` + `openPanel`:
-
-```tsx
-<NavMenuBar
-  sheetEditorRef={sheetEditorRef}
-  openPanel={openPanel}
-  onShortcutsOpen={() => setShortcutsOpen(true)}
-/>
-```
-
-### `HelpMenu` + `ShortcutsModal` Wiring
-
-```tsx
-const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-// inside renderNavbar:
-<HelpMenu
-  currentMenu={currentMenu}
-  setCurrentMenu={setCurrentMenu}
-  onShortcutsOpen={() => setShortcutsOpen(true)}
-/>
-<ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
-```
-
-### Phase 3 Deliverable
-
-Package exports `NavMenuBar` (drop-in) and all 7 individual menu components. Consumer can use `NavMenuBar` for zero-config menus, or compose individual menus for custom ordering/filtering.
-
----
-
 ## Final Drop-In Usage (New Consumer)
 
+The navbar is consumer-owned. A consumer builds their own navbar and calls `openPanel` (from `editorValues`) to drive the built-in sidebar panels.
+
 ```tsx
-import {
-  DSheetEditor,
-  NavMenuBar,
-  ShortcutsModal,
-} from '@fileverse-dev/dsheet';
+import { DSheetEditor } from '@fileverse-dev/dsheet';
 
 function App() {
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
   return (
     <DSheetEditor
       dsheetId={id}
@@ -299,17 +206,11 @@ function App() {
       customPanels={[]}
       renderNavbar={({ sheetEditorRef, openPanel }) => (
         <>
-          <NavMenuBar
-            sheetEditorRef={sheetEditorRef}
-            openPanel={openPanel}
-            onShortcutsOpen={() => setShortcutsOpen(true)}
-          />
+          {/* Consumer owns the navbar + shortcuts modal. Wire items to openPanel: */}
+          <button onClick={() => openPanel('comments')}>Comments</button>
+          <button onClick={() => openPanel('templates')}>Templates</button>
           <input placeholder="Untitled" />
           <button>Share</button>
-          <ShortcutsModal
-            open={shortcutsOpen}
-            onClose={() => setShortcutsOpen(false)}
-          />
         </>
       )}
     />
@@ -317,7 +218,7 @@ function App() {
 }
 ```
 
-Comments sidebar, templates, data validation, conditional formatting, function reference — all work with zero additional wiring beyond `commentsConfig`.
+Comments sidebar, templates, data validation, conditional formatting, function reference — all work with zero additional wiring beyond `commentsConfig`. The consumer only needs to wire their own navbar buttons to `openPanel`.
 
 ---
 
@@ -337,13 +238,10 @@ Comments sidebar, templates, data validation, conditional formatting, function r
 - Remove `components/right-sidebar-wrapper/conditional-format.tsx`
 - Remove `components/template/templates.tsx`
 - Remove `components/function/function-content.tsx`
-- Remove `components/shortcuts-popup/shortcuts-popup.tsx`
 - Replace `commentData` + `getCommentCellUI` props with `commentsConfig`
 - Remove `toggleTemplateSidebar`, `isTemplateOpen` props
 
-**After Phase 3:**
-- Replace `components/navbar/edit/edit-menu.tsx` etc. with package-exported versions
-- Keep only dsheets.new-specific navbar items (share, publish, auth, collaborators)
+**Navbar:** unchanged. `components/navbar/` (all menus + app-specific items) stays in `dsheets.new`. It keeps calling `openPanel`, now passed in from `editorValues`.
 
 ---
 

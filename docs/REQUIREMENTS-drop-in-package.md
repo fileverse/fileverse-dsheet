@@ -26,24 +26,25 @@ These components live in `dsheets.new` and must move into the package:
 | Function Learn More Sidebar | `components/function/function-content.tsx` (+ all files in `components/function/`) | `src/editor/components/sidebars/function-content.tsx` |
 | Comments Sidebar UI | `components/comment-section/components/comment-sidebar.tsx` (+ supporting files) | `src/editor/components/comments/comment-sidebar.tsx` |
 | Comment Cell Popup UI | `components/comment-section/components/comment-cell-popup/` | `src/editor/components/comments/comment-cell-popup.tsx` |
-| Shortcuts Modal | `components/shortcuts-popup/shortcuts-popup.tsx` | `src/editor/components/shortcuts-modal.tsx` |
-| Navbar menu components | `components/navbar/` (individual menus only — see scope below) | `src/editor/components/navbar/` |
+
+> **Navbar is NOT migrated.** All navbar menus (file/edit/view/insert/format/data/help) and app-specific navbar items stay in `dsheets.new`. The existing navbar keeps calling `openPanel`, now sourced from `editorValues` (Phase 1).
 
 ---
 
 ## What Stays in dsheets.new (Do NOT Move)
 
+- **The entire navbar** (`components/navbar/` — all menus and app-specific items). The consumer keeps its own navbar and wires items to `openPanel` from `editorValues`.
 - Comment storage, syncing, crypto, IPFS utilities (`components/comment-section/hooks/`, `components/comment-section/utils/`)
 - Comment types that reference `@/db/comments/types` (app-specific DB layer)
-- App-specific navbar items: share, publish, auth UI, collaborator chips, community dropdown
-- `FileMenu` delete/share items, any dsheets.new-specific actions
 - Auth providers, wallet providers, RTC provider
 
 ---
 
-## Migration Strategy: 3 Phases
+## Migration Strategy: 2 Phases
 
 Work through phases in order. Each phase must leave `dsheets.new` working.
+
+**Out of scope:** Navbar menu components are NOT migrated (see above).
 
 ---
 
@@ -229,16 +230,7 @@ Also copy supporting comment UI components (they have no app-specific deps):
 - `comment-actions-dropdown.tsx` → same
 - `comment-sidebar-empty.tsx` → same
 
-**`src/editor/components/shortcuts-modal.tsx`**
-
-Direct copy of `dsheets.new/components/shortcuts-popup/shortcuts-popup.tsx`. Uses only `@fileverse/ui` (`DynamicModal`, `IconButton`). Zero app-specific deps. Rename export to `ShortcutsModal`, change `open`/`onClose` props to be explicit:
-
-```ts
-interface ShortcutsModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-```
+> **Shortcuts modal is NOT migrated.** `components/shortcuts-popup/shortcuts-popup.tsx` stays in `dsheets.new` — it is triggered by the consumer-owned help menu (`window` CustomEvent `'openShortcuts'`).
 
 ### New Types in Package
 
@@ -415,7 +407,6 @@ const getCommentCellUI = commentsConfig
 // Exported components (consumers can use these standalone)
 export { CommentsContent } from './editor/components/comments/comment-sidebar';
 export { CommentCellUI } from './editor/components/comments/comment-cell-popup';
-export { ShortcutsModal } from './editor/components/shortcuts-modal';
 
 // Exported types
 export type {
@@ -450,174 +441,9 @@ export type {
 
 ---
 
-## PHASE 3: Navbar Menu Components
+## dsheets.new Migration (after both phases)
 
-### Goal
-Export individual spreadsheet operation menu components so consumers can compose them inside `renderNavbar`. Also export `NavMenuBar` as a convenience wrapper.
-
-### New Files to Create in Package
-
-**`src/editor/components/navbar/constant.ts`**
-
-```ts
-export const BUTTON_CLASS =
-  'hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-start space-x-2 transition';
-export const TRIGGER_BUTTON_CLASS =
-  'hover:color-bg-default-hover h-8 rounded p-2 w-full text-left flex items-center justify-between space-x-2 transition pl-0';
-
-export type MenuType =
-  | 'file'
-  | 'edit'
-  | 'data'
-  | 'insert'
-  | 'view'
-  | 'format'
-  | 'help'
-  | undefined;
-```
-
-**`src/editor/components/navbar/use-nav-menu-state.ts`**
-
-```ts
-import { useState } from 'react';
-import { MenuType } from './constant';
-
-export const useNavMenuState = () => {
-  const [currentMenu, setCurrentMenu] = useState<MenuType>(undefined);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  return { currentMenu, setCurrentMenu, isMenuOpen, setIsMenuOpen };
-};
-```
-
-**Individual menu files:**
-
-Each adapted from `dsheets.new/components/navbar/{name}/{name}-menu.tsx`. All use FortuneCore functions already exported from the package.
-
-**Strip from each menu:**
-- `usePlausibleEvents` — remove all analytics calls
-- Any `useAuthStatus`, wallet, or auth references
-- Next.js `'use client'` directives
-
-**Add `openPanel` prop to menus that trigger sidebar:**
-
-```ts
-// InsertMenu, DataMenu, HelpMenu, FormatMenu need this
-openPanel: (panelId: string) => void;
-```
-
-**Menu scope (what stays, what's cut):**
-
-| Menu | Keep | Cut |
-|---|---|---|
-| `file-menu.tsx` | Import CSV, Import XLSX, Export CSV/XLSX/JSON | Delete sheet, rename, share, new sheet (app-specific) |
-| `edit-menu.tsx` | Undo, Redo, Copy, Cut, Paste, Delete row/col/value, Find & Replace | — |
-| `view-menu.tsx` | Freeze rows/cols | — |
-| `insert-menu.tsx` | Insert row/col, Image, Link, Function (`openPanel('functions')`) | — |
-| `format-menu.tsx` | Cell format, Merge, Align, Text size, Border, Clear format | — |
-| `data-menu.tsx` | Sort, Filter, Data Validation (`openPanel('data-verification')`), Conditional Format (`openPanel('conditional-format')`) | — |
-| `help-menu.tsx` | Shortcuts (`onShortcutsOpen()`), Keyboard reference | Community, Feedback (app-specific) |
-
-**`src/editor/components/navbar/nav-menu-bar.tsx`**
-
-Convenience wrapper that composes all 7 menus with internal `useNavMenuState`:
-
-```tsx
-interface NavMenuBarProps {
-  sheetEditorRef: React.RefObject<WorkbookInstance>;
-  openPanel: (panelId: string) => void;
-  onShortcutsOpen?: () => void;
-  // Optional: render extra items between menus and end
-  children?: React.ReactNode;
-}
-
-export const NavMenuBar = ({ sheetEditorRef, openPanel, onShortcutsOpen }: NavMenuBarProps) => {
-  const { currentMenu, setCurrentMenu, isMenuOpen, setIsMenuOpen } = useNavMenuState();
-  return (
-    <span className="flex items-center gap-1">
-      <FileMenu ... />
-      <EditMenu ... />
-      <ViewMenu ... />
-      <InsertMenu ... />
-      <FormatMenu ... />
-      <DataMenu ... />
-      <HelpMenu onShortcutsOpen={onShortcutsOpen} ... />
-    </span>
-  );
-};
-```
-
-### Exports to Add to `src/index.ts`
-
-```ts
-// Individual menus
-export { FileMenu } from './editor/components/navbar/file-menu';
-export { EditMenu } from './editor/components/navbar/edit-menu';
-export { ViewMenu } from './editor/components/navbar/view-menu';
-export { InsertMenu } from './editor/components/navbar/insert-menu';
-export { FormatMenu } from './editor/components/navbar/format-menu';
-export { DataMenu } from './editor/components/navbar/data-menu';
-export { HelpMenu } from './editor/components/navbar/help-menu';
-
-// Convenience wrapper + hook
-export { NavMenuBar } from './editor/components/navbar/nav-menu-bar';
-export { useNavMenuState } from './editor/components/navbar/use-nav-menu-state';
-```
-
-### Phase 3 Verification
-
-Minimal drop-in usage for a new consumer:
-
-```tsx
-import {
-  DSheetEditor,
-  NavMenuBar,
-  ShortcutsModal,
-} from '@fileverse-dev/dsheet';
-import '@fileverse-dev/dsheet/styles';
-import { useState } from 'react';
-
-function MyApp() {
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-
-  return (
-    <DSheetEditor
-      dsheetId="my-sheet-id"
-      isAuthorized={true}
-      isNewSheet={false}
-      enableIndexeddbSync={true}
-      onChange={handleChange}
-      commentsConfig={{
-        commentsData,
-        onSendComment,
-        onCommentAction,
-        userName: 'Alice',
-        unauthenticatedFallback: <LoginButton />,
-      }}
-      renderNavbar={({ sheetEditorRef, openPanel }) => (
-        <>
-          <NavMenuBar
-            sheetEditorRef={sheetEditorRef}
-            openPanel={openPanel}
-            onShortcutsOpen={() => setShortcutsOpen(true)}
-          />
-          <input placeholder="Untitled" className="title-input" />
-          <button>Share</button>
-          <ShortcutsModal
-            open={shortcutsOpen}
-            onClose={() => setShortcutsOpen(false)}
-          />
-        </>
-      )}
-    />
-  );
-}
-```
-
----
-
-## dsheets.new Migration (after all 3 phases)
-
-After all phases are complete, update `dsheets.new` to remove the duplicated code and use the package-exported versions.
+After both phases are complete, update `dsheets.new` to remove the duplicated code and use the package-exported versions. The navbar is left untouched.
 
 ### Files to Delete from dsheets.new
 
@@ -644,22 +470,15 @@ components/comment-section/components/comment-input.tsx
 components/comment-section/components/comment-item.tsx
 components/comment-section/components/comment-actions-dropdown.tsx
 components/comment-section/components/comment-sidebar-empty.tsx
-components/shortcuts-popup/shortcuts-popup.tsx
-components/navbar/edit/edit-menu.tsx
-components/navbar/view/view-menu.tsx
-components/navbar/insert/insert-menu.tsx
-components/navbar/format/format-menu.tsx
-components/navbar/data/data-menu.tsx
-components/navbar/help/help-menu.tsx
 ```
+
+> Navbar files (`components/navbar/**`) and `components/shortcuts-popup/` are NOT deleted — the navbar and shortcuts modal stay in `dsheets.new` as-is.
 
 **Keep in dsheets.new:**
 ```
-components/navbar/navbar.tsx           (still has app-specific items)
-components/navbar/file/file-menu.tsx   (has app-specific delete/share — keep until reworked)
-components/navbar/constant.ts          (can be deleted once navbar imports from package)
-components/comment-section/hooks/      (all comment storage/sync logic — stays forever)
-components/comment-section/utils/      (same)
+components/navbar/                      (entire navbar — all menus + app-specific items, unchanged)
+components/comment-section/hooks/       (all comment storage/sync logic — stays forever)
+components/comment-section/utils/       (same)
 components/comment-section/types/comment-types.ts  (app's extended Comment type — stays)
 ```
 
