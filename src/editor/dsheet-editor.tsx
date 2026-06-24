@@ -329,6 +329,7 @@ const EditorContent = ({
         isOpen={isOpen && activePanelConfig !== null}
         activePanelConfig={activePanelConfig}
         onClose={closePanel}
+        isReadOnly={isReadOnly}
       />
     </div>
   );
