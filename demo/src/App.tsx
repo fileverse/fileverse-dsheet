@@ -194,7 +194,8 @@ function App() {
 
 
   // --- Navbar (memoized — stable reference, no re-renders from collab/save state) ---
-  const renderNavbar = useCallback((): JSX.Element => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderNavbar = useCallback((editorValues?: any): JSX.Element => {
     return (
       <>
         <div className="flex items-center gap-[12px]">
@@ -227,6 +228,15 @@ function App() {
         </div>
 
         <div className="flex gap-2">
+          {/* CHECKPOINT-ONLY: temporary sidebar test button */}
+          <button
+            type="button"
+            onClick={() => editorValues?.openPanel('demo-panel')}
+            style={{ border: '1px solid #ccc', borderRadius: 6, padding: '2px 8px' }}
+          >
+            Open Demo Panel
+          </button>
+
           {isMediaMax1280px ? (
             <DynamicDropdown
               key="navbar-more-actions"
@@ -345,6 +355,18 @@ function App() {
                 isAuthorized={false}
                 isNewSheet={isNewSheet}
                 collaboration={collaboration}
+                customPanels={[
+                  {
+                    id: 'demo-panel',
+                    header: { title: 'Demo Panel', subtitle: 'checkpoint 1' },
+                    width: '380px',
+                    content: (
+                      <div style={{ padding: 16 }}>
+                        Hello from a custom panel
+                      </div>
+                    ),
+                  },
+                ]}
               />
             </div>
           }
