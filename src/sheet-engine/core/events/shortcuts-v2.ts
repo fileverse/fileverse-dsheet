@@ -24,6 +24,12 @@ import {
 import { CellMatrix, GlobalCache } from '../types';
 import { isAllowEdit, getSheetIndex } from '../utils';
 import { isInlineStringCell } from '../modules/inline-string';
+import {
+  isDigitFormatKey,
+  isNumberFormatModifier,
+  isPlainTextFormatShortcut,
+  isStrikethroughShortcut,
+} from './keyboard-shortcut-utils';
 
 function cellHasContent(cell: unknown): boolean {
   if (cell == null) return false;
@@ -76,7 +82,7 @@ function handleNumberFormatShortcuts(
   cellInput: HTMLDivElement,
   e: KeyboardEvent,
 ): boolean {
-  if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return false;
+  if (!isNumberFormatModifier(e)) return false;
 
   const formatByDigit: Record<string, string | (() => void)> = {
     '1': '#,##0.00',
@@ -92,7 +98,7 @@ function handleNumberFormatShortcuts(
   };
 
   for (const [digit, fmt] of Object.entries(formatByDigit)) {
-    if (!isDigitCode(e.code, digit)) continue;
+    if (!isDigitFormatKey(e, digit)) continue;
     if (typeof fmt === 'function') {
       fmt();
     } else {
@@ -145,8 +151,7 @@ function handlePlainTextFormatShortcut(
   cellInput: HTMLDivElement,
   e: KeyboardEvent,
 ): boolean {
-  if (!(e.ctrlKey || e.metaKey) || !e.shiftKey || e.altKey) return false;
-  if (e.code !== 'Backquote') return false;
+  if (!isPlainTextFormatShortcut(e)) return false;
 
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return false;
@@ -197,15 +202,9 @@ function handleStrikethroughShortcut(
   cellInput: HTMLDivElement,
   e: KeyboardEvent,
 ): boolean {
-  if (e.metaKey && e.shiftKey && !e.altKey && e.code === 'KeyX') {
-    handleStrikeThrough(ctx, cellInput);
-    return true;
-  }
-  if (e.altKey && e.shiftKey && !e.ctrlKey && !e.metaKey && isDigitCode(e.code, '5')) {
-    handleStrikeThrough(ctx, cellInput);
-    return true;
-  }
-  return false;
+  if (!isStrikethroughShortcut(e)) return false;
+  handleStrikeThrough(ctx, cellInput);
+  return true;
 }
 
 function unhideAllManualRows(ctx: Context) {

@@ -2,6 +2,8 @@ export { handleCopy } from './copy';
 
 export { handleGlobalKeyDown } from './keyboard';
 
+export { isOpenShortcutsModalShortcut, isFormulaListShortcut, isZoomInShortcut, isZoomOutShortcut } from './keyboard-shortcut-utils';
+
 export {
   fixPositionOnFrozenCells,
   handleCellAreaMouseDown,

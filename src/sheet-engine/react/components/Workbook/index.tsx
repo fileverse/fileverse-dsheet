@@ -34,6 +34,15 @@ import {
   normalizeDateBaseLocale,
   setDateBaseLocale,
 } from '@sheet-engine/core/modules/date-base-locale';
+import {
+  isFindReplaceShortcut,
+  isFindShortcut,
+  isInsertDateShortcut,
+  isInsertDateTimeShortcut,
+  isInsertTimeShortcut,
+  isSelectAllShortcut,
+  isUsInsertDateTimeQuoteShortcut,
+} from '@sheet-engine/core/events/keyboard-shortcut-utils';
 import React, {
   useMemo,
   useState,
@@ -239,9 +248,8 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const changeMap = new Map<string, any>();
 
         const upsert = (change: any) => {
-          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${
-            change.key ?? ''
-          }`;
+          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${change.key ?? ''
+            }`;
           changeMap.set(k, change);
         };
 
@@ -545,10 +553,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterUndo != null &&
-            newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
+              newContext.luckysheetfile[sheetIdxAfterUndo]?.config != null
               ? {
-                  config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
-                }
+                config: newContext.luckysheetfile[sheetIdxAfterUndo].config,
+              }
               : {}),
           };
           if (isBorderUndo) {
@@ -586,10 +594,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           let nw = {
             ...newContext,
             ...(sheetIdxAfterRedo != null &&
-            newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
+              newContext.luckysheetfile[sheetIdxAfterRedo]?.config != null
               ? {
-                  config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
-                }
+                config: newContext.luckysheetfile[sheetIdxAfterRedo].config,
+              }
               : {}),
           };
           if (isBorderUndo) {
@@ -993,6 +1001,58 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     let waitingForDelRow = false;
     let resetDeleteRowTimer: any;
 
+    useEffect(() => {
+      const isExternalTextFocus = (root: HTMLDivElement | null) => {
+        const active = document.activeElement;
+        if (!active || active === document.body || active === document.documentElement) {
+          return false;
+        }
+        if (root?.contains(active)) return false;
+        const tag = active.tagName;
+        return (
+          tag === 'INPUT' ||
+          tag === 'TEXTAREA' ||
+          (active as HTMLElement).isContentEditable
+        );
+      };
+
+      const onWindowInsertShortcut = (e: KeyboardEvent) => {
+        const root = workbookContainer.current;
+        if (!root || isExternalTextFocus(root)) return;
+
+        const isSheetShortcut =
+          isInsertDateShortcut(e) ||
+          isInsertTimeShortcut(e) ||
+          isInsertDateTimeShortcut(e) ||
+          isUsInsertDateTimeQuoteShortcut(e) ||
+          isFindShortcut(e) ||
+          isFindReplaceShortcut(e) ||
+          isSelectAllShortcut(e);
+        if (!isSheetShortcut) return;
+
+        setContextWithProduce((draftCtx) => {
+          handleGlobalKeyDown(
+            draftCtx,
+            cellInput.current!,
+            fxInput.current!,
+            e,
+            globalCache.current!,
+            handleUndo,
+            handleRedo,
+            canvas.current!.getContext('2d')!,
+          );
+        });
+
+        if (e.defaultPrevented) {
+          e.stopImmediatePropagation();
+          e.stopPropagation();
+        }
+      };
+
+      window.addEventListener('keydown', onWindowInsertShortcut, true);
+      return () => window.removeEventListener('keydown', onWindowInsertShortcut, true);
+    }, [handleRedo, handleUndo, setContextWithProduce]);
+
     const onKeyDown = useCallback(
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         // @ts-expect-error later
@@ -1260,18 +1320,18 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           const insertRowColOp: SetContextOptions['insertRowColOp'] | null =
             rowToBeAdded > 0
               ? {
-                  type: 'row',
-                  index:
-                    context.luckysheetfile[
-                      getSheetIndex(
-                        context,
-                        context!.currentSheetId! as string,
-                      ) as number
-                    ].data!.length - 1,
-                  count: rowToBeAdded,
-                  direction: 'rightbottom',
-                  id: context.currentSheetId,
-                }
+                type: 'row',
+                index:
+                  context.luckysheetfile[
+                    getSheetIndex(
+                      context,
+                      context!.currentSheetId! as string,
+                    ) as number
+                  ].data!.length - 1,
+                count: rowToBeAdded,
+                direction: 'rightbottom',
+                id: context.currentSheetId,
+              }
               : null;
           setContextWithProduce(
             (draftCtx) => {

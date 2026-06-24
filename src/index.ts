@@ -76,5 +76,9 @@ export {
   handleLink,
   // common
   api,
+  isOpenShortcutsModalShortcut,
+  isFormulaListShortcut,
+  isZoomInShortcut,
+  isZoomOutShortcut,
 } from '@sheet-engine/core';
 export type { PatchOptions } from '@sheet-engine/core';

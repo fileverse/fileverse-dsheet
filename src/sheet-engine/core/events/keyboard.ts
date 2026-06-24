@@ -25,6 +25,7 @@ import {
   textFormat,
   fillDate,
   fillTime,
+  fillDateTime,
   fillRightData,
   fillDownData,
   moveHighlightCell,
@@ -51,6 +52,15 @@ import {
 } from '../utils';
 import { handleCopy } from './copy';
 import { handleShortcutsV2 } from './shortcuts-v2';
+import {
+  isFindReplaceShortcut,
+  isFindShortcut,
+  isInsertDateShortcut,
+  isInsertDateTimeShortcut,
+  isInsertTimeShortcut,
+  isSelectAllShortcut,
+  isUsInsertDateTimeQuoteShortcut,
+} from './keyboard-shortcut-utils';
 import { jfrefreshgrid } from '../modules/refresh';
 import { moveToEnd } from '../modules/cursor';
 
@@ -73,46 +83,6 @@ function getActiveFormulaEditorForKeyboardGuard(): HTMLElement | null {
     (document.getElementById(
       'luckysheet-functionbox-cell',
     ) as HTMLElement | null)
-  );
-}
-
-/** US QWERTY Cmd/Ctrl+; — physical semicolon key (no Option). */
-function isUsInsertDateShortcut(e: KeyboardEvent): boolean {
-  return (
-    (e.metaKey || e.ctrlKey) &&
-    !e.shiftKey &&
-    !e.altKey &&
-    e.code === 'Semicolon'
-  );
-}
-
-/** AZERTY typed ";" is Shift+, — works for Cmd+; and Cmd+Option+;. */
-function isAzertyInsertDateShortcut(e: KeyboardEvent): boolean {
-  return (e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Comma';
-}
-
-/**
- * On AZERTY the "M" key shares the US semicolon physical key; Cmd+Option there
- * is reserved for host-app shortcuts, not insert-date.
- */
-function isAzertyCmdOptionPhysicalSemicolonKey(e: KeyboardEvent): boolean {
-  return e.altKey && !e.shiftKey && e.code === 'Semicolon';
-}
-
-function isInsertDateShortcut(e: KeyboardEvent): boolean {
-  if (!(e.metaKey || e.ctrlKey)) return false;
-  if (isAzertyInsertDateShortcut(e)) return true;
-  if (isAzertyCmdOptionPhysicalSemicolonKey(e)) return false;
-  return isUsInsertDateShortcut(e);
-}
-
-/** US QWERTY Cmd/Ctrl+Shift+; — insert time. */
-function isUsInsertTimeShortcut(e: KeyboardEvent): boolean {
-  return (
-    (e.metaKey || e.ctrlKey) &&
-    e.shiftKey &&
-    !e.altKey &&
-    e.code === 'Semicolon'
   );
 }
 
@@ -592,6 +562,23 @@ export function handleWithCtrlOrMetaKey(
   const flowdata = getFlowdata(ctx);
   if (!flowdata) return;
 
+  if (isFindShortcut(e)) {
+    ctx.showSearch = false;
+    ctx.showReplace = false;
+    if (ctx.showQuickSearch) {
+      ctx.quickSearchFocusNonce = (ctx.quickSearchFocusNonce ?? 0) + 1;
+    } else {
+      ctx.showQuickSearch = true;
+    }
+    return;
+  }
+
+  if (isFindReplaceShortcut(e)) {
+    ctx.showSearch = true;
+    ctx.showReplace = true;
+    return;
+  }
+
   if (
     (e.ctrlKey || e.metaKey) &&
     ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) &&
@@ -682,22 +669,6 @@ export function handleWithCtrlOrMetaKey(
     }
     e.stopPropagation();
     return;
-  } else if (e.code === 'KeyF') {
-    // Ctrl/Cmd + F — in-sheet Quick Search (browser find suppressed below)
-    ctx.showSearch = false;
-    ctx.showReplace = false;
-    if (ctx.showQuickSearch) {
-      ctx.quickSearchFocusNonce = (ctx.quickSearchFocusNonce ?? 0) + 1;
-    } else {
-      ctx.showQuickSearch = true;
-    }
-  } else if (
-    (e.ctrlKey && !e.metaKey && e.code === 'KeyH' && !e.shiftKey) ||
-    (e.metaKey && e.shiftKey && e.code === 'KeyH' && !e.ctrlKey)
-  ) {
-    // Win: Ctrl+H — Mac: Cmd+Shift+H (Google Sheets)
-    ctx.showSearch = true;
-    ctx.showReplace = true;
   } else if (e.code === 'KeyV') {
     // Ctrl + V  粘贴
     // if (isEditMode()) {
@@ -859,10 +830,8 @@ export function handleWithCtrlOrMetaKey(
       $("#luckysheet-rich-text-editor"),
       e.keyCode
     );
-  } */ else if (e.code === 'KeyA') {
-    // Ctrl + A  全选
-    // $("#luckysheet-left-top").trigger("mousedown");
-    // $(document).trigger("mouseup");
+  } */ else if (isSelectAllShortcut(e)) {
+    // Ctrl/Cmd + A  全选
     selectAll(ctx);
   }
 
@@ -1048,12 +1017,17 @@ export async function handleGlobalKeyDown(
     e.stopPropagation();
     return;
   }
-  if (isInsertDateShortcut(e)) {
-    fillDate(ctx);
+  if (
+    isInsertDateTimeShortcut(e) ||
+    isUsInsertDateTimeQuoteShortcut(e)
+  ) {
+    fillDateTime(ctx);
     handledFlvShortcut = true;
-  }
-  if (isUsInsertTimeShortcut(e)) {
+  } else if (isInsertTimeShortcut(e)) {
     fillTime(ctx);
+    handledFlvShortcut = true;
+  } else if (isInsertDateShortcut(e)) {
+    fillDate(ctx);
     handledFlvShortcut = true;
   }
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyR') {
@@ -1072,6 +1046,18 @@ export async function handleGlobalKeyDown(
   }
 
   if (handleShortcutsV2(ctx, cellInput, e, cache, canvas)) {
+    e.stopPropagation();
+    e.preventDefault();
+    return;
+  }
+
+  if (
+    isSelectAllShortcut(e) &&
+    ctx.luckysheetCellUpdate.length === 0 &&
+    _.isEmpty(ctx.contextMenu) &&
+    !ctx.filterContextMenu
+  ) {
+    selectAll(ctx);
     e.stopPropagation();
     e.preventDefault();
     return;

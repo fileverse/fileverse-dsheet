@@ -40,6 +40,10 @@ export {
   handleRowSizeHandleMouseDown,
   handleColFreezeHandleMouseDown,
   handleRowFreezeHandleMouseDown,
+  isOpenShortcutsModalShortcut,
+  isFormulaListShortcut,
+  isZoomInShortcut,
+  isZoomOutShortcut,
 } from './events';
 
 // locale

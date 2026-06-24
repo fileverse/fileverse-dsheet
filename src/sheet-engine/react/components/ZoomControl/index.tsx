@@ -10,6 +10,7 @@ import {
   MAX_ZOOM_RATIO,
   MIN_ZOOM_RATIO,
   getSheetIndex,
+  handleKeydownForZoom,
 } from '@sheet-engine/core';
 import { useMediaQuery } from 'usehooks-ts';
 import { IconButton } from '@fileverse/ui';
@@ -90,24 +91,15 @@ const ZoomControl: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Keep zoom shortcuts on Cmd/Ctrl only.
-      if (e.altKey) {
-        return;
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.code === 'Equal') {
-        zoomTo(context.zoomRatio + 0.1);
-        e.preventDefault();
-        e.stopPropagation();
-      } else if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === 'Minus') {
-        zoomTo(context.zoomRatio - 0.1);
-        e.preventDefault();
-        e.stopPropagation();
-      }
+      const newZoom = handleKeydownForZoom(e, context.zoomRatio);
+      if (newZoom === context.zoomRatio) return;
+      zoomTo(newZoom);
+      e.preventDefault();
+      e.stopPropagation();
     };
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, true);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [context.zoomRatio, zoomTo]);
 
