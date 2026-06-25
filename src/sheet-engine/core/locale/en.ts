@@ -12084,7 +12084,7 @@ export default {
     selectAll: 'Select all',
     removeDuplicates: 'Remove duplicates',
     result:
-      '{removed} duplicate rows found and removed. {remaining} unique rows remain.',
+      '{removed} duplicate values removed from the analyzed columns. {remaining} unique values remain.',
     noMulti:
       'Cannot perform this operation on multiple selection areas, please select a single area',
     noMerge: 'This operation cannot be performed on merged cells',
