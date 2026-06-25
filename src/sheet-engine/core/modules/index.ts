@@ -229,6 +229,20 @@ export {
 // merge
 export { mergeCells, mergeSelectionHasValues } from './merge';
 
+// removeDuplicates
+export {
+  getRemoveDuplicatesPreview,
+  removeDuplicates,
+  getRemoveDuplicatesErrorMessage,
+} from './removeDuplicates';
+export type {
+  RemoveDuplicatesColumnOption,
+  RemoveDuplicatesError,
+  RemoveDuplicatesOptions,
+  RemoveDuplicatesPreview,
+  RemoveDuplicatesResult,
+} from './removeDuplicates';
+
 // sort
 export {
   sortSelection,

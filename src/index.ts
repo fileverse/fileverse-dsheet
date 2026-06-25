@@ -49,6 +49,9 @@ export {
   createFilter,
   clearFilter,
   handleSort,
+  getRemoveDuplicatesPreview,
+  removeDuplicates,
+  getRemoveDuplicatesErrorMessage,
   // edit-menu.tsx
   handleCopy,
   handlePasteByClick,

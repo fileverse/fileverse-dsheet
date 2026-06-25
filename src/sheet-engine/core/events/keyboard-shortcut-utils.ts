@@ -125,9 +125,13 @@ export function isInsertDateTimeShortcut(e: KeyboardEvent): boolean {
 export function isUsInsertDateTimeQuoteShortcut(e: KeyboardEvent): boolean {
   if (!hasMod(e) || !e.shiftKey || e.altKey) return false;
   if (isImeOrDeadKey(e)) return false;
+  // Number formats (§8) share Ctrl/Cmd+Shift+digit chords — must win over insert date/time.
+  if (isNumberFormatShortcut(e)) return false;
 
   if (e.key === '"') return true;
   if (!isQuoteTypingCode(e.code)) return false;
+  // Physical quote-key slots also type digits 1–9 with Shift — not insert date/time.
+  if (/^[0-9]$/.test(e.key)) return false;
 
   // ⌘+Shift+3 is macOS full-screen screenshot — browser never receives Digit3.
   if (
@@ -201,6 +205,12 @@ export function isDigitFormatKey(e: KeyboardEvent, digit: string): boolean {
   return e.code === `Digit${digit}` || e.code === `Numpad${digit}`;
 }
 
+/** Ctrl/Cmd+Shift+1–6 — number format (TEC-2311 §8). */
+export function isNumberFormatShortcut(e: KeyboardEvent): boolean {
+  if (!isNumberFormatModifier(e)) return false;
+  return ['1', '2', '3', '4', '5', '6'].some((d) => isDigitFormatKey(e, d));
+}
+
 /** Physical codes commonly used to type `)` (formula list). */
 const CLOSE_PAREN_TYPING_CODES = new Set([
   'BracketRight',
@@ -224,7 +234,12 @@ export function isFormulaListShortcut(e: KeyboardEvent): boolean {
     return e.code === 'BracketRight';
   }
 
-  return CLOSE_PAREN_TYPING_CODES.has(e.code);
+  if (!CLOSE_PAREN_TYPING_CODES.has(e.code)) return false;
+  // US Shift+5 is `%` (number format). AZERTY Shift+5 is `)`.
+  if (e.code === 'Digit5' || e.code === 'Numpad5') {
+    return e.key === ')';
+  }
+  return true;
 }
 
 export function isFindShortcut(e: KeyboardEvent): boolean {
@@ -251,13 +266,14 @@ export function isFindReplaceShortcut(e: KeyboardEvent): boolean {
 export function isBrowserZoomShortcut(e: KeyboardEvent): boolean {
   if (!(e.metaKey || e.ctrlKey) || e.altKey) return false;
   if (isImeOrDeadKey(e)) return false;
+  if (isNumberFormatShortcut(e)) return false;
 
   if (
     e.code === 'Equal' ||
     e.code === 'NumpadAdd' ||
     e.code === 'Minus' ||
     e.code === 'NumpadSubtract' ||
-    e.code === 'Digit6'
+    (e.code === 'Digit6' && !e.shiftKey)
   ) {
     return true;
   }
@@ -310,7 +326,7 @@ function isWinCtrlSlashShortcut(e: KeyboardEvent): boolean {
  */
 function isOptionSlashOrColonShortcut(e: KeyboardEvent): boolean {
   if (e.getModifierState?.('AltGraph')) return false;
-  if (!e.altKey || e.ctrlKey) return false;
+  if (!e.altKey || e.ctrlKey || e.metaKey) return false;
   if (isImeOrDeadKey(e)) return false;
 
   if (e.key === '/' || e.key === ':') return true;
@@ -328,6 +344,7 @@ export function isOpenShortcutsModalShortcut(e: KeyboardEvent): boolean {
   if (isImeOrDeadKey(e)) return false;
   if (isBrowserZoomShortcut(e)) return false;
   if (isFormulaListShortcut(e)) return false;
+  if (isInsertDateTimeShortcut(e)) return false;
 
   if (isWinCtrlSlashShortcut(e)) return true;
   if (isOptionSlashOrColonShortcut(e)) return true;

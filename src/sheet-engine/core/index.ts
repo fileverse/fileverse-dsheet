@@ -178,6 +178,9 @@ export {
   handleMerge,
   mergeSelectionHasValues,
   handleSort,
+  getRemoveDuplicatesPreview,
+  removeDuplicates,
+  getRemoveDuplicatesErrorMessage,
   handleFreeze,
   handleTextSize,
   handleSum,
@@ -365,6 +368,14 @@ export type {
   LiveQueryData,
   Freezen,
 } from './types';
+
+export type {
+  RemoveDuplicatesColumnOption,
+  RemoveDuplicatesError,
+  RemoveDuplicatesOptions,
+  RemoveDuplicatesPreview,
+  RemoveDuplicatesResult,
+} from './modules';
 
 export type {
   CheckModes,
