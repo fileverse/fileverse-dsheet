@@ -66,7 +66,7 @@ const RemoveDuplicatesDialog: React.FC<RemoveDuplicatesDialogProps> = ({
       }
 
       const resultMessage = (copy?.result ||
-        '{removed} duplicate rows found and removed. {remaining} unique rows remain.')
+        '{removed} duplicate values removed from the analyzed columns. {remaining} unique values remain.')
         .replace('{removed}', String(result.removedCount))
         .replace('{remaining}', String(result.remainingCount));
 
