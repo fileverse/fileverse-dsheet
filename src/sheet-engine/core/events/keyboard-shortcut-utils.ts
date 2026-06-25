@@ -234,7 +234,12 @@ export function isFormulaListShortcut(e: KeyboardEvent): boolean {
     return e.code === 'BracketRight';
   }
 
-  return CLOSE_PAREN_TYPING_CODES.has(e.code);
+  if (!CLOSE_PAREN_TYPING_CODES.has(e.code)) return false;
+  // US Shift+5 is `%` (number format). AZERTY Shift+5 is `)`.
+  if (e.code === 'Digit5' || e.code === 'Numpad5') {
+    return e.key === ')';
+  }
+  return true;
 }
 
 export function isFindShortcut(e: KeyboardEvent): boolean {
@@ -321,7 +326,7 @@ function isWinCtrlSlashShortcut(e: KeyboardEvent): boolean {
  */
 function isOptionSlashOrColonShortcut(e: KeyboardEvent): boolean {
   if (e.getModifierState?.('AltGraph')) return false;
-  if (!e.altKey || e.ctrlKey) return false;
+  if (!e.altKey || e.ctrlKey || e.metaKey) return false;
   if (isImeOrDeadKey(e)) return false;
 
   if (e.key === '/' || e.key === ':') return true;
@@ -339,6 +344,7 @@ export function isOpenShortcutsModalShortcut(e: KeyboardEvent): boolean {
   if (isImeOrDeadKey(e)) return false;
   if (isBrowserZoomShortcut(e)) return false;
   if (isFormulaListShortcut(e)) return false;
+  if (isInsertDateTimeShortcut(e)) return false;
 
   if (isWinCtrlSlashShortcut(e)) return true;
   if (isOptionSlashOrColonShortcut(e)) return true;
