@@ -145,6 +145,8 @@ const EditorContent = ({
               currentUserAddress={commentsConfig.currentUserAddress}
               isOwner={commentsConfig.isOwner}
               disabled={commentsConfig.disabled}
+              isAuthenticated={commentsConfig.isAuthenticated}
+              unauthenticatedFallback={commentsConfig.unauthenticatedFallback}
             />
           ),
         },

@@ -97,6 +97,8 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
   currentUserAddress,
   isOwner,
   disabled = false,
+  isAuthenticated = true,
+  unauthenticatedFallback,
 }) => {
   const [selectedComment, setSelectedComment] = React.useState<string | null>(
     null,
@@ -285,6 +287,14 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
       return newSet;
     });
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        {unauthenticatedFallback ?? null}
+      </div>
+    );
+  }
 
   if (!showComment) {
     return <CommentSidebarEmpty setShowComment={setShowComment} />;

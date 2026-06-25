@@ -135,4 +135,6 @@ export interface CommentsContentProps {
   currentUserAddress?: string;
   isOwner?: boolean;
   disabled?: boolean;
+  isAuthenticated?: boolean;
+  unauthenticatedFallback?: React.ReactNode;
 }
