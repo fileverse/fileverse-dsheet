@@ -56,9 +56,7 @@ import {
   CommandGroup,
   CommandItem,
 } from '@fileverse/ui';
-import DataVerificationPortal from './dataVerificationPortal';
 import { useRemoveDuplicatesDialog } from '../RemoveDuplicates';
-import ConditionalFormatPortal from './conditionalFormatPortal';
 // import DataVerification from "../DataVerification";
 import WorkbookContext from '../../context';
 import './index.css';
@@ -691,9 +689,6 @@ const Toolbar: React.FC<{
     });
   }, []);
 
-  const [showDataValidation, setShowDataValidation] = useState(false);
-  const [showConditionalFormat, setShowConditionalFormat] = useState(false);
-
   const dataVerificationClick = useCallback(
     (selectedCells: any) => {
       const selection = api.getSelection(context);
@@ -705,15 +700,6 @@ const Toolbar: React.FC<{
         });
       }
       document.getElementById('data-verification-button')?.click();
-      // if (context.allowEdit === false) return;
-      // showDialog(
-      //   <DataVerification />,
-      //   undefined,
-      //   toolbar.dataVerification
-      // );
-      setTimeout(() => {
-        setShowDataValidation(true);
-      }, 100);
     },
     [context, setContext],
   );
@@ -729,10 +715,6 @@ const Toolbar: React.FC<{
         });
       }
       document.getElementById('conditional-format-button')?.click();
-
-      setTimeout(() => {
-        setShowConditionalFormat(true);
-      }, 100);
     },
     [context, setContext],
   );
@@ -2180,11 +2162,6 @@ const Toolbar: React.FC<{
       aria-label={toolbar.toolbar}
       onMouseUpCapture={restoreEditorFocusAfterToolbarAction}
     >
-      <DataVerificationPortal visible={showDataValidation} />
-      <ConditionalFormatPortal
-        visible={showConditionalFormat}
-        context={context}
-      />
       <input
         id="fortune-img-upload"
         className="test-fortune-img-upload"

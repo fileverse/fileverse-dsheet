@@ -24,6 +24,7 @@ import {
 import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
 import type { CommentsConfig } from '../types/comments';
 import { SidebarProvider } from '../components/sidebar/sidebar-context';
+import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
   CollaborationProps,
   CollabState,
@@ -502,7 +503,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   return (
     <EditorContext.Provider value={contextValue}>
-      <SidebarProvider isReadMode={isReadOnly}>{children}</SidebarProvider>
+      <SidebarPortalRegistryProvider>
+        <SidebarProvider isReadMode={isReadOnly}>{children}</SidebarProvider>
+      </SidebarPortalRegistryProvider>
     </EditorContext.Provider>
   );
 };

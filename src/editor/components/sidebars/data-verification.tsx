@@ -1,9 +1,11 @@
+import { SidebarPortalSlot } from '../sidebar/sidebar-portal-registry';
+
 const DataVerification = () => {
   return (
-    <div
-      id="placeholder-data-verification"
+    <SidebarPortalSlot
+      panelId="data-verification"
       className="h-[calc(100vh-200px)] overflow-y-auto no-scrollbar"
-    ></div>
+    />
   );
 };
 

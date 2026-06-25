@@ -268,15 +268,14 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
 
     if (buttonClickCreateRef.current) return;
 
-    if (matchedCondition.length >= 0) {
+    if (matchedCondition.length > 0) {
       setCreate(false);
-    }
-
-    if (firstRenderRef.current && matchedCondition.length <= 0) {
+    } else if (firstRenderRef.current) {
       setCreate(true);
+      setEditConditionRange(selectionRangeTxt || '');
       firstRenderRef.current = false;
     }
-  }, [context]);
+  }, [context, create, selectionRangeTxt]);
 
   useEffect(() => {
     if (editConditionRange !== null) return;

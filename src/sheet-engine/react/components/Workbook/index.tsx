@@ -75,6 +75,11 @@ import { ModalProvider } from '../../context/modal';
 import FilterMenu from '../ContextMenu/FilterMenu';
 import SheetList from '../SheetList';
 import DunePreview from '../DunePreview/DunePreview';
+import {
+  SidebarPanelPortals,
+  type SidebarPortalRegistryHandle,
+  type SidebarPortalRenderer,
+} from '../SidebarPanelPortals';
 // import ConditionRules from "../ConditionFormat/ConditionRules";
 
 enablePatches();
@@ -83,6 +88,9 @@ export type WorkbookInstance = ReturnType<typeof generateAPIs>;
 
 type AdditionalProps = {
   onOp?: (op: Op[]) => void;
+  sidebarActivePanel?: string | null;
+  sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
+  sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
 };
 
 const triggerGroupValuesRefresh = (ctx: Context) => {
@@ -100,7 +108,18 @@ const concatProducer = (...producers: ((ctx: Context) => void)[]) => {
 };
 
 const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
-  ({ onOp, data: originalData, isFlvReadOnly, ...props }, ref) => {
+  (
+    {
+      onOp,
+      data: originalData,
+      isFlvReadOnly,
+      sidebarActivePanel = null,
+      sidebarPortalRegistry = null,
+      sidebarPortalRenderers = {},
+      ...props
+    },
+    ref,
+  ) => {
     const globalCache = useRef<GlobalCache>({ undoList: [], redoList: [] });
     const cellInput = useRef<HTMLDivElement>(null);
     const fxInput = useRef<HTMLDivElement>(null);
@@ -1467,6 +1486,11 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             <ContextMenu />
             <FilterMenu />
             <SheetTabContextMenu />
+            <SidebarPanelPortals
+              activePanel={sidebarActivePanel}
+              portalRegistry={sidebarPortalRegistry}
+              extraPortals={sidebarPortalRenderers}
+            />
             {context.showSheetList && <SheetList />}
             {!_.isEmpty(context.contextMenu) && (
               <div

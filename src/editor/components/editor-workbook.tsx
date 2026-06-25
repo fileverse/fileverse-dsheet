@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Workbook } from '@sheet-engine/react';
+import type { SidebarPortalRegistryHandle, SidebarPortalRenderer } from '@sheet-engine/react';
 import { Cell } from '@sheet-engine/react';
 import {
   TOOL_BAR_ITEMS,
@@ -82,6 +83,9 @@ interface EditorWorkbookProps {
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
   handleSmartContractQuery?: SmartContractQueryHandler;
+  sidebarActivePanel?: string | null;
+  sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
+  sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
 }
 
 /**
@@ -107,6 +111,9 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   onDuneChartEmbed,
   onSheetCountChange,
   handleSmartContractQuery,
+  sidebarActivePanel = null,
+  sidebarPortalRegistry = null,
+  sidebarPortalRenderers = {},
 }) => {
   const {
     setSelectedTemplate,
@@ -306,8 +313,9 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     [dsheetId, handleOnChangePortalUpdate],
   );
 
-  // Memoized workbook component to avoid unnecessary re-renders
-  return useMemo(() => {
+  // Memoize stable Workbook props; sidebar portal props are merged after to avoid
+  // rebuilding customToolbarItems (which glitches the toolbar) on panel switches.
+  const workbookElement = useMemo(() => {
     // Create a unique key to force re-render when needed
     const workbookKey = `workbook-${dsheetId}-${forceSheetRender}`;
 
@@ -556,6 +564,12 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     isAuthorized,
     dataBlockCalcFunction,
   ]);
+
+  return React.cloneElement(workbookElement, {
+    sidebarActivePanel,
+    sidebarPortalRegistry,
+    sidebarPortalRenderers,
+  });
 };
 
 export const EditorWorkbook = React.memo(EditorWorkbookComponent);
