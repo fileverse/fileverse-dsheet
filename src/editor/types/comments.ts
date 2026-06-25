@@ -52,6 +52,7 @@ export interface CommentsConfig {
   isAuthenticated?: boolean; // default true; false → unauthenticatedFallback in the cell popup
   unauthenticatedFallback?: React.ReactNode;
   ensResolutionUrl?: string; // mainnet RPC URL; enables ENS name + verified badge. Omit → raw names.
+  disabled?: boolean;
 }
 
 export interface CellPosition {
@@ -121,6 +122,7 @@ export interface CommentCellUIProps {
   removeCommentFromCell: (row: number, col: number) => void;
   dragHandler: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
   isHover?: boolean;
+  disabled?: boolean;
 }
 
 export interface CommentsContentProps {
@@ -132,4 +134,5 @@ export interface CommentsContentProps {
   ownerAddress?: string;
   currentUserAddress?: string;
   isOwner?: boolean;
+  disabled?: boolean;
 }

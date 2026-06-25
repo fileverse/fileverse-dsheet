@@ -96,6 +96,7 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
   ownerAddress,
   currentUserAddress,
   isOwner,
+  disabled = false,
 }) => {
   const [selectedComment, setSelectedComment] = React.useState<string | null>(
     null,
@@ -114,7 +115,9 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
     new Map(),
   );
 
-  const enableCollaboration = false;
+  // When disabled (e.g. during real-time collaboration), comments are visible
+  // but read-only: input + actions are blocked.
+  const enableCollaboration = disabled;
 
   React.useEffect(() => {
     try {
@@ -388,7 +391,7 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
                   comment={comment as CommentThread}
                   sheetName={sheetInfo?.displayName}
                   cellReference={cellReference}
-                  onAction={onCommentAction}
+                  onAction={disabled ? undefined : onCommentAction}
                   ownerAddress={ownerAddress}
                   currentUserAddress={currentUserAddress}
                   isOwner={isOwner}

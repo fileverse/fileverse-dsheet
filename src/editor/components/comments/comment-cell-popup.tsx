@@ -21,6 +21,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
   removeCommentFromCell,
   dragHandler,
   isHover = false,
+  disabled = false,
 }) => {
   const [isCommentHovered, setIsCommentHovered] = useState(false);
   const cellKey = `${sheetId}_${row}_${col}`;
@@ -37,6 +38,11 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
 
     removeCommentFromCell(row, col);
   };
+
+  // No comment yet — nothing to show in read-only mode (can't add one).
+  if (!comment && disabled) {
+    return null;
+  }
 
   // No comment yet — always show the input regardless of hover/click,
   // since there's nothing else to display.
@@ -95,7 +101,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
       >
         <p className="text-sm font-medium text-[#363B3F]">Comments</p>
         <div className="min-h-[26px]">
-          {onAction && isCommentHovered && (
+          {onAction && isCommentHovered && !disabled && (
             <CommentActionsDropdown
               comment={comment}
               onAction={(action) => {
@@ -123,7 +129,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
         <CommentItem
           comment={comment}
           isHovered={true}
-          onAction={onAction}
+          onAction={disabled ? undefined : onAction}
           ownerAddress={ownerAddress}
           currentUserAddress={currentUserAddress}
           isOwner={isOwner}
@@ -138,7 +144,16 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
 
       {/* Input Section — hidden on hover, shown only when the popup is pinned (clicked) */}
       {!isHover &&
-        (comment.isResolved ? (
+        (disabled ? (
+          <div className="space-sm color-bg-secondary">
+            <div className="flex items-center gap-1 text-sm text-gray-600">
+              <LucideIcon name="Info" size="sm" />
+              <span>
+                Comments are not available during Real-Time Collaboration
+              </span>
+            </div>
+          </div>
+        ) : comment.isResolved ? (
           <div className="space-sm color-bg-secondary">
             <div className="flex items-center text-sm text-gray-600">
               <LucideIcon name="CheckCircle" size="sm" />

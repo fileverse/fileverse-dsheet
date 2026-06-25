@@ -142,6 +142,7 @@ const EditorContent = ({
               ownerAddress={commentsConfig.ownerAddress}
               currentUserAddress={commentsConfig.currentUserAddress}
               isOwner={commentsConfig.isOwner}
+              disabled={commentsConfig.disabled}
             />
           ),
         },

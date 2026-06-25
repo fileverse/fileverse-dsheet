@@ -181,6 +181,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           removeCommentFromCell={removeCommentFromCell}
           dragHandler={dragHandler}
           isHover={isHover}
+          disabled={cfg.disabled}
         />
       );
     };
