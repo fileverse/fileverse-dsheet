@@ -34,7 +34,6 @@ import {
   getFlowdata,
   fixRowStyleOverflowInFreeze,
   fixColumnStyleOverflowInFreeze,
-  handleKeydownForZoom,
   isLegacyFormulaRangeMode,
   isFormulaReferenceInputMode,
   expandCellRectForMerge,
@@ -642,19 +641,8 @@ const SheetOverlay: React.FC = () => {
         ev.preventDefault();
         return;
       }
-
-      const newZoom = handleKeydownForZoom(ev, context.zoomRatio);
-      if (newZoom !== context.zoomRatio) {
-        setContext((ctx) => {
-          ctx.zoomRatio = newZoom;
-          ctx.luckysheetfile[
-            getSheetIndex(ctx, ctx.currentSheetId)!
-          ].zoomRatio = newZoom;
-        });
-      }
     },
     [
-      context.zoomRatio,
       context.currentSheetId,
       context.luckysheet_select_save,
       setContext,

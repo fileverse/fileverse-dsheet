@@ -321,6 +321,12 @@ function App() {
   // @ts-expect-error demo proxy
   window.NEXT_PUBLIC_PROXY_BASE_URL = 'https://staging-api-proxy-ca4268d7d581.herokuapp.com';
 
+  useEffect(() => {
+    // Demo-only: allows automated shortcut verification via window.__dsheetRef
+    (window as unknown as { __dsheetRef?: typeof sheetEditorRef }).__dsheetRef =
+      sheetEditorRef;
+  });
+
   return (
     <Router>
       <Routes>

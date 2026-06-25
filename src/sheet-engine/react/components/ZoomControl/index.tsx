@@ -3,7 +3,6 @@ import React, {
   useContext,
   useRef,
   useState,
-  useEffect,
 } from 'react';
 import {
   Context,
@@ -87,29 +86,6 @@ const ZoomControl: React.FC = () => {
     },
     [setContext],
   );
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Keep zoom shortcuts on Cmd/Ctrl only.
-      if (e.altKey) {
-        return;
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.code === 'Equal') {
-        zoomTo(context.zoomRatio + 0.1);
-        e.preventDefault();
-        e.stopPropagation();
-      } else if ((e.metaKey || e.ctrlKey) && !e.altKey && e.code === 'Minus') {
-        zoomTo(context.zoomRatio - 0.1);
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [context.zoomRatio, zoomTo]);
 
   return (
     <div className="fortune-zoom-container">

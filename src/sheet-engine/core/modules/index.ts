@@ -355,7 +355,7 @@ export {
 export { handleOverlayTouchStart, handleOverlayTouchEnd } from './mobile';
 
 // zoom
-export { MAX_ZOOM_RATIO, MIN_ZOOM_RATIO, handleKeydownForZoom } from './zoom';
+export { MAX_ZOOM_RATIO, MIN_ZOOM_RATIO } from './zoom';
 
 // refresh
 export { jfrefreshgrid } from './refresh';
