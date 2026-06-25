@@ -20,6 +20,7 @@ import './styles/index.css';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
 import { Workbook } from '@sheet-engine/react';
 import { useSidebar } from './components/sidebar/sidebar-context';
+import { useSidebarPortalRegistryHandle } from './components/sidebar/sidebar-portal-registry';
 import { EditorRightSidebar } from './components/sidebar/editor-right-sidebar';
 import { PanelConfig } from './types';
 import { DataVerification } from './components/sidebars/data-verification';
@@ -109,6 +110,7 @@ const EditorContent = ({
 
   const { activePanel, isOpen, openPanel, closePanel, togglePanel } =
     useSidebar();
+  const sidebarPortalRegistry = useSidebarPortalRegistryHandle();
 
   // Stable reference so the memoized EditorWorkbook (and its toolbar) is not
   // rebuilt on every panel toggle.
@@ -410,6 +412,8 @@ const EditorContent = ({
             onDuneChartEmbed={onDuneChartEmbed}
             onSheetCountChange={onSheetCountChange}
             handleSmartContractQuery={handleSmartContractQuery}
+            sidebarActivePanel={activePanel}
+            sidebarPortalRegistry={sidebarPortalRegistry}
           />
         </TransitionWrapper>
       </div>

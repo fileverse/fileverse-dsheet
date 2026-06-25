@@ -7,5 +7,10 @@ export {
 } from '@fileverse-dev/formulajs/crypto-constants';
 export { Workbook };
 export type { WorkbookInstance } from './Workbook';
+export type {
+  SidebarPortalRenderer,
+  SidebarPortalRegistryHandle,
+  SidebarPortalTargets,
+} from './SidebarPanelPortals';
 export type { Cell, Sheet, LiveQueryData } from '@sheet-engine/core';
 export { markCellChanged as animateChangedCell } from '@sheet-engine/core';
