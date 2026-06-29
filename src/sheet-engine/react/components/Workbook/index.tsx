@@ -22,6 +22,7 @@ import {
   // calcSelectionInfo,
   groupValuesRefresh,
   runFormulaEvalChunk,
+  applyWorkerFormulaChunkResults,
   insertDuneChart,
   getFlowdata,
   api,
@@ -45,6 +46,15 @@ import {
   isSelectAllShortcut,
   isUsInsertDateTimeQuoteShortcut,
 } from '@sheet-engine/core/events/keyboard-shortcut-utils';
+import {
+  FORMULA_WORKER_CHUNK_SIZE,
+  FORMULA_WORKER_THRESHOLD,
+} from '@sheet-engine/core/modules/formula-async-eval';
+import {
+  buildSnapshotEvalInput,
+  evalFormulasInBackground,
+} from '@sheet-engine/core/modules/formula-worker-bridge';
+import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
   useMemo,
   useState,
@@ -1394,27 +1404,84 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       };
     }, [onPaste]);
 
-    // Step 1: drain deferred formula eval queue in chunks so the UI stays responsive.
+    // Drain deferred formula eval: main-thread chunks (small jobs) or Web Worker (large jobs).
     useEffect(() => {
       if (!context.isFormulaCalculating || !context.formulaAsyncEval) {
         return;
       }
 
       let cancelled = false;
-      const frameId = requestAnimationFrame(() => {
+
+      const finishJobIfComplete = (draft: Context) => {
+        const job = draft.formulaAsyncEval;
+        if (!job || job.nextIndex < job.total) return;
+        draft.formulaCache.execFunctionExist = undefined;
+        clearRangeValuePassCache(draft.formulaCache);
+        draft.formulaCache.execFunctionGlobalData = null;
+        draft.formulaAsyncEval = null;
+        draft.isFormulaCalculating = false;
+      };
+
+      const drain = async () => {
         if (cancelled) return;
+        const job = context.formulaAsyncEval;
+        if (!job) return;
+
+        const useWorker = job.total >= FORMULA_WORKER_THRESHOLD;
+
+        if (useWorker) {
+          const chunkEnd = Math.min(
+            job.nextIndex + FORMULA_WORKER_CHUNK_SIZE,
+            job.formulaRunList.length,
+          );
+          const formulas = job.formulaRunList.slice(job.nextIndex, chunkEnd);
+          try {
+            const input = buildSnapshotEvalInput(context, formulas);
+            const output = await evalFormulasInBackground(input);
+            if (cancelled) return;
+            setContextWithProduce(
+              (draft) => {
+                const liveJob = draft.formulaAsyncEval;
+                if (!liveJob) return;
+                applyWorkerFormulaChunkResults(
+                  draft,
+                  output,
+                  new Set(liveJob.impactedByCircular),
+                  new Set(liveJob.cycleNodes),
+                );
+                liveJob.nextIndex = chunkEnd;
+                finishJobIfComplete(draft);
+              },
+              { noHistory: true },
+            );
+          } catch {
+            if (cancelled) return;
+            setContextWithProduce(
+              (draft) => {
+                const liveJob = draft.formulaAsyncEval;
+                if (!liveJob) return;
+                runFormulaEvalChunk(draft, liveJob);
+                finishJobIfComplete(draft);
+              },
+              { noHistory: true },
+            );
+          }
+          return;
+        }
+
         setContextWithProduce(
           (draft) => {
-            const job = draft.formulaAsyncEval;
-            if (!job) return;
-            runFormulaEvalChunk(draft, job);
-            if (job.nextIndex >= job.total) {
-              draft.formulaAsyncEval = null;
-              draft.isFormulaCalculating = false;
-            }
+            const liveJob = draft.formulaAsyncEval;
+            if (!liveJob) return;
+            runFormulaEvalChunk(draft, liveJob);
+            finishJobIfComplete(draft);
           },
           { noHistory: true },
         );
+      };
+
+      const frameId = requestAnimationFrame(() => {
+        void drain();
       });
 
       return () => {
@@ -1422,6 +1489,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         cancelAnimationFrame(frameId);
       };
     }, [
+      context,
       context.isFormulaCalculating,
       context.formulaAsyncEval?.nextIndex,
       setContextWithProduce,

@@ -43,6 +43,8 @@ import {
   sliceRangeFragmentForOrigin,
   type RangePassCacheEntry,
 } from './formula-range-cache';
+import { collectTransitiveFormulaDependents } from './formula-transitive-deps';
+import type { SnapshotEvalOutput } from './formula-snapshot-eval';
 
 let functionHTMLIndex = 0;
 let rangeIndexes: number[] = [];
@@ -2029,6 +2031,92 @@ function evalFormulaCellInGroup(
   });
 }
 
+function mergeFormulaDeps(
+  ctx: Context,
+  originKey: string,
+  deps: Iterable<string>,
+) {
+  const depSet = new Set(deps);
+  const prevDeps =
+    ctx.formulaCache.depsByCell.get(originKey) ?? new Set<string>();
+  ctx.formulaCache.depsByCell.set(originKey, depSet);
+  prevDeps.forEach((depKey) => {
+    if (depSet.has(depKey)) return;
+    const rev = ctx.formulaCache.revDepsByCell.get(depKey);
+    if (!rev) return;
+    rev.delete(originKey);
+    if (rev.size === 0) ctx.formulaCache.revDepsByCell.delete(depKey);
+  });
+  depSet.forEach((depKey) => {
+    if (prevDeps.has(depKey)) return;
+    const rev = ctx.formulaCache.revDepsByCell.get(depKey) ?? new Set<string>();
+    rev.add(originKey);
+    ctx.formulaCache.revDepsByCell.set(depKey, rev);
+  });
+}
+
+/** Apply worker chunk output onto the live context (main thread only). */
+export function applyWorkerFormulaChunkResults(
+  ctx: Context,
+  output: SnapshotEvalOutput,
+  impactedByCircular: Set<string>,
+  cycleNodes: Set<string>,
+) {
+  ensureExecFunctionGlobalData(ctx);
+  Object.assign(ctx.formulaCache.execFunctionGlobalData, output.execFunctionGlobalData);
+
+  for (const result of output.results) {
+    const formulaCellKey = `${result.id}:${result.r}:${result.c}`;
+    mergeFormulaDeps(ctx, formulaCellKey, result.deps);
+
+    if (impactedByCircular.has(formulaCellKey)) {
+      const isInCycle = cycleNodes.has(formulaCellKey);
+      const message = isInCycle
+        ? 'Circular dependency.'
+        : 'Circular dependency (upstream).';
+      setCellError(ctx, result.r, result.c, {
+        row_column: `${result.r}_${result.c}`,
+        title: CIRCULAR_REF_TITLE,
+        message,
+      });
+      ctx.groupValuesRefreshData.push({
+        r: result.r,
+        c: result.c,
+        v: CIRCULAR_REF_ERROR,
+        f: result.f,
+        id: result.id,
+      });
+      writeExecFunctionGlobalDataCell(ctx, result.r, result.c, result.id, {
+        v: CIRCULAR_REF_ERROR,
+        f: result.f,
+      });
+      continue;
+    }
+
+    if (result.isError) {
+      setCellError(ctx, result.r, result.c, {
+        row_column: `${result.r}_${result.c}`,
+        title: 'Error',
+        message: String(result.v ?? 'Unknown Error'),
+      });
+    } else {
+      clearCellError(ctx, result.r, result.c);
+    }
+
+    ctx.groupValuesRefreshData.push({
+      r: result.r,
+      c: result.c,
+      v: result.v,
+      f: result.f,
+      id: result.id,
+    });
+    writeExecFunctionGlobalDataCell(ctx, result.r, result.c, result.id, {
+      v: result.v,
+      f: result.f,
+    });
+  }
+}
+
 /** Run up to `chunkSize` formulas from an async job. Returns true when job is complete. */
 export function runFormulaEvalChunk(
   ctx: Context,
@@ -2122,6 +2210,24 @@ export function execFunctionGroup(
 
   // { "r": r, "c": c, "id": id, "func": func}
   const calcChains = getAllFunctionGroup(ctx);
+  let calcChainsToProcess = calcChains;
+  if (
+    !isForce &&
+    !_.isNil(origin_r) &&
+    !_.isNil(origin_c) &&
+    !_.isNil(id) &&
+    ctx.formulaCache.revDepsByCell.size > 0
+  ) {
+    const dependents = collectTransitiveFormulaDependents(
+      originKey,
+      ctx.formulaCache.revDepsByCell,
+    );
+    if (dependents.size > 0) {
+      calcChainsToProcess = calcChains.filter((cell) =>
+        dependents.has(`${cell.id}:${cell.r}:${cell.c}`),
+      );
+    }
+  }
   const formulaObjects: any = {};
 
   const sheets = ctx.luckysheetfile;
@@ -2193,8 +2299,8 @@ export function execFunctionGroup(
 
   // 创建公式缓存及其范围的缓存
   // console.time("1");
-  for (let i = 0; i < calcChains.length; i += 1) {
-    const formulaCell = calcChains[i];
+  for (let i = 0; i < calcChainsToProcess.length; i += 1) {
+    const formulaCell = calcChainsToProcess[i];
     const key = `r${formulaCell.r}c${formulaCell.c}i${formulaCell.id}`;
     const calc_funcStr = getcellFormula(
       ctx,
