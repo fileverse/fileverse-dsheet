@@ -35,6 +35,14 @@ import {
   FORMULA_ASYNC_EVAL_THRESHOLD,
   type FormulaAsyncEvalJob,
 } from './formula-async-eval';
+import {
+  beginRangeValuePassCache,
+  clearRangeValuePassCache,
+  collectGlobalDataKeysInRange,
+  makeRangePassCacheKey,
+  sliceRangeFragmentForOrigin,
+  type RangePassCacheEntry,
+} from './formula-range-cache';
 
 let functionHTMLIndex = 0;
 let rangeIndexes: number[] = [];
@@ -342,6 +350,11 @@ export class FormulaCache {
    */
   activeDepCollection: null | { originKey: string; deps: Set<string> };
 
+  /** Step 2: per execFunctionGroup pass cache for materialized range reads. */
+  rangeValuePassCache?: Map<string, RangePassCacheEntry>;
+
+  rangeValuePassCacheStats?: { hits: number; misses: number };
+
   constructor() {
     const that = this;
     const toCellKey = (sheetId: string, r: number, c: number) =>
@@ -407,10 +420,8 @@ export class FormulaCache {
           endCol = flowdata?.[0].length ?? 0;
         }
         if (emptyRow && emptyCol) throw Error(ERROR_REF);
-        let cryptoDenomination = '';
-        let cryptoDecimal = 0;
 
-        // Record dependencies for cycle detection. Unlike value aggregation below (which skips origin),
+        // Record dependencies for cycle detection.
         // dependency recording must include the origin cell when it lies within the referenced range.
         if (that.activeDepCollection) {
           const originRow = typeof options === 'object' ? options.row : null;
@@ -440,47 +451,98 @@ export class FormulaCache {
           }
         }
 
-        const fragment = [];
-        for (let row = startRow; row <= endRow; row += 1) {
-          const colFragment = [];
+        const originRow =
+          typeof options === 'object' ? options.row : null;
+        const originCol =
+          typeof options === 'object' ? options.column : null;
+        const skippedOrigin =
+          originRow != null &&
+          originCol != null &&
+          originRow >= startRow &&
+          originRow <= endRow &&
+          originCol >= startCol &&
+          originCol <= endCol;
 
-          for (let col = startCol; col <= endCol; col += 1) {
-            if (
-              typeof options === 'object' &&
-              row === options.row &&
-              col === options.column
-            ) {
-              continue;
-            }
-            const cell =
-              context?.formulaCache.execFunctionGlobalData?.[
-                `${row}_${col}_${id}`
-              ] || flowdata?.[row]?.[col];
-            const v = that.tryGetCellAsNumber(cell);
-            // FLV crypto denomination --START--
-            if (
-              (cell?.m?.includes('ETH') ||
-                cell?.m?.includes('SOL') ||
-                cell?.m?.includes('BTC')) &&
-              cryptoDenomination !== 'Error'
-            ) {
-              const visualString = cell?.m.split(' ');
-              if (
-                cryptoDenomination !== '' &&
-                cryptoDenomination !== visualString[1]
-              ) {
-                cryptoDenomination = 'Error';
-              } else {
-                cryptoDenomination = visualString[1];
-              }
-              cryptoDecimal = visualString[0].includes('.')
-                ? visualString[0].split('.')[1]?.length
-                : 0;
-            }
-            colFragment.push(v);
+        let fragment: any[][] | null = null;
+        let cryptoDenomination = '';
+        let cryptoDecimal = 0;
+
+        if (that.rangeValuePassCache) {
+          const cacheKey = makeRangePassCacheKey(
+            id,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+          );
+          const fingerprint = collectGlobalDataKeysInRange(
+            context.formulaCache.execFunctionGlobalData ?? {},
+            id,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+          );
+          const cached = that.rangeValuePassCache.get(cacheKey);
+          if (cached && cached.globalDataKeysFingerprint === fingerprint) {
+            that.rangeValuePassCacheStats!.hits += 1;
+            fragment = sliceRangeFragmentForOrigin(
+              cached.fragment,
+              startRow,
+              startCol,
+              skippedOrigin ? originRow : null,
+              skippedOrigin ? originCol : null,
+            );
+            cryptoDenomination = cached.cryptoDenomination;
+            cryptoDecimal = cached.cryptoDecimal;
+          } else {
+            that.rangeValuePassCacheStats!.misses += 1;
+            const built = that.materializeFullRangeFragment(
+              context,
+              id,
+              flowdata,
+              startRow,
+              endRow,
+              startCol,
+              endCol,
+            );
+            that.rangeValuePassCache.set(cacheKey, {
+              fragment: built.fragment,
+              cryptoDenomination: built.cryptoDenomination,
+              cryptoDecimal: built.cryptoDecimal,
+              globalDataKeysFingerprint: fingerprint,
+            });
+            fragment = sliceRangeFragmentForOrigin(
+              built.fragment,
+              startRow,
+              startCol,
+              skippedOrigin ? originRow : null,
+              skippedOrigin ? originCol : null,
+            );
+            cryptoDenomination = built.cryptoDenomination;
+            cryptoDecimal = built.cryptoDecimal;
           }
-          fragment.push(colFragment);
+        } else {
+          const built = that.materializeFullRangeFragment(
+            context,
+            id,
+            flowdata,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+          );
+          fragment = sliceRangeFragmentForOrigin(
+            built.fragment,
+            startRow,
+            startCol,
+            skippedOrigin ? originRow : null,
+            skippedOrigin ? originCol : null,
+          );
+          cryptoDenomination = built.cryptoDenomination;
+          cryptoDecimal = built.cryptoDecimal;
         }
+
         if (cryptoDenomination === 'Error') {
           cryptoDenomination = '';
           cryptoDecimal = 0;
@@ -491,6 +553,63 @@ export class FormulaCache {
         }
       },
     );
+  }
+
+  materializeFullRangeFragment(
+    context: Context,
+    sheetId: string,
+    flowdata: CellMatrix | null | undefined,
+    startRow: number,
+    endRow: number,
+    startCol: number,
+    endCol: number,
+  ): {
+    fragment: any[][];
+    cryptoDenomination: string;
+    cryptoDecimal: number;
+  } {
+    const fragment: any[][] = [];
+    let cryptoDenomination = '';
+    let cryptoDecimal = 0;
+
+    for (let row = startRow; row <= endRow; row += 1) {
+      const colFragment: any[] = [];
+      for (let col = startCol; col <= endCol; col += 1) {
+        const cell =
+          context?.formulaCache.execFunctionGlobalData?.[
+            `${row}_${col}_${sheetId}`
+          ] || flowdata?.[row]?.[col];
+        const v = this.tryGetCellAsNumber(cell);
+        if (
+          (cell?.m?.includes('ETH') ||
+            cell?.m?.includes('SOL') ||
+            cell?.m?.includes('BTC')) &&
+          cryptoDenomination !== 'Error'
+        ) {
+          const visualString = cell?.m.split(' ');
+          if (
+            cryptoDenomination !== '' &&
+            cryptoDenomination !== visualString[1]
+          ) {
+            cryptoDenomination = 'Error';
+          } else {
+            cryptoDenomination = visualString[1];
+          }
+          cryptoDecimal = visualString[0].includes('.')
+            ? visualString[0].split('.')[1]?.length
+            : 0;
+        }
+        colFragment.push(v);
+      }
+      fragment.push(colFragment);
+    }
+
+    if (cryptoDenomination === 'Error') {
+      cryptoDenomination = '';
+      cryptoDecimal = 0;
+    }
+
+    return { fragment, cryptoDenomination, cryptoDecimal };
   }
 
   tryGetCellAsNumber(cell: Cell) {
@@ -1939,6 +2058,7 @@ export function runFormulaEvalChunk(
   const complete = end >= job.formulaRunList.length;
   if (complete) {
     ctx.formulaCache.execFunctionExist = undefined;
+    clearRangeValuePassCache(ctx.formulaCache);
     ctx.formulaCache.execFunctionGlobalData = null;
   }
   return complete;
@@ -1977,6 +2097,7 @@ export function execFunctionGroup(
   // Start each group execution with a fresh pass-local cache so circular
   // propagation only reads values produced in the current recalculation pass.
   ctx.formulaCache.execFunctionGlobalData = {};
+  beginRangeValuePassCache(ctx.formulaCache);
   // let luckysheetfile = getluckysheetfile();
 
   const originKey = `${id}:${origin_r}:${origin_c}`;
@@ -2375,6 +2496,7 @@ export function execFunctionGroup(
   // console.timeEnd("4");
 
   ctx.formulaCache.execFunctionExist = undefined;
+  clearRangeValuePassCache(ctx.formulaCache);
 }
 
 function findrangeindex(ctx: Context, v: string, vp: string) {
