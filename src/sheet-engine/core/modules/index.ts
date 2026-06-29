@@ -81,6 +81,12 @@ export {
   getAllFunctionGroup,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
+export {
+  FORMULA_ASYNC_CHUNK_SIZE,
+  FORMULA_ASYNC_EVAL_THRESHOLD,
+  isFormulaEvalPending,
+} from './formula-async-eval';
+export type { FormulaAsyncEvalJob } from './formula-async-eval';
 
 // freeze
 export { initFreeze } from './freeze';
@@ -399,6 +405,7 @@ export {
   getcellrange,
   execfunction,
   execFunctionGroup,
+  runFormulaEvalChunk,
   insertUpdateFunctionGroup,
   functionCopy,
 } from './formula';

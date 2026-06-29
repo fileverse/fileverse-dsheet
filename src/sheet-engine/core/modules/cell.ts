@@ -39,6 +39,7 @@ import {
   iscelldata,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
+import { isFormulaEvalPending } from './formula-async-eval';
 import {
   convertSpanToShareString,
   getHyperlinksFromInlineSegments,
@@ -1884,7 +1885,9 @@ export function updateCell(
               ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue),
             );
           }
-          ctx.formulaCache.execFunctionGlobalData = null;
+          if (!isFormulaEvalPending(ctx)) {
+            ctx.formulaCache.execFunctionGlobalData = null;
+          }
           return;
         }
       }
@@ -1996,7 +1999,9 @@ export function updateCell(
       });
     }
 
-    ctx.formulaCache.execFunctionGlobalData = null;
+    if (!isFormulaEvalPending(ctx)) {
+      ctx.formulaCache.execFunctionGlobalData = null;
+    }
   } catch (e) {
     console.error(e);
     cancelNormalSelected(ctx);

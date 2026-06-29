@@ -21,6 +21,7 @@ import {
   // locale,
   // calcSelectionInfo,
   groupValuesRefresh,
+  runFormulaEvalChunk,
   insertDuneChart,
   getFlowdata,
   api,
@@ -1393,6 +1394,39 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       };
     }, [onPaste]);
 
+    // Step 1: drain deferred formula eval queue in chunks so the UI stays responsive.
+    useEffect(() => {
+      if (!context.isFormulaCalculating || !context.formulaAsyncEval) {
+        return;
+      }
+
+      let cancelled = false;
+      const frameId = requestAnimationFrame(() => {
+        if (cancelled) return;
+        setContextWithProduce(
+          (draft) => {
+            const job = draft.formulaAsyncEval;
+            if (!job) return;
+            runFormulaEvalChunk(draft, job);
+            if (job.nextIndex >= job.total) {
+              draft.formulaAsyncEval = null;
+              draft.isFormulaCalculating = false;
+            }
+          },
+          { noHistory: true },
+        );
+      });
+
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(frameId);
+      };
+    }, [
+      context.isFormulaCalculating,
+      context.formulaAsyncEval?.nextIndex,
+      setContextWithProduce,
+    ]);
+
     // expose APIs
     useImperativeHandle(
       ref,
@@ -1453,6 +1487,20 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             onKeyDown={onKeyDown}
             tabIndex={-1}
           >
+            {context.isFormulaCalculating && context.formulaAsyncEval && (
+              <div
+                className="fortune-formula-calculating-indicator"
+                role="status"
+                aria-live="polite"
+              >
+                Calculating formulas…{' '}
+                {Math.min(
+                  context.formulaAsyncEval.nextIndex,
+                  context.formulaAsyncEval.total,
+                )}
+                /{context.formulaAsyncEval.total}
+              </div>
+            )}
             <SVGDefines currency={mergedSettings.currency} />
             <div className="fortune-workarea">
               {mergedSettings.showToolbar && (

@@ -1,7 +1,7 @@
 // @ts-ignore
 import { Parser, ERROR_REF } from '@sheet-engine/formula-parser';
 import _ from 'lodash';
-import type { Cell, Rect, Selection } from '../types';
+import type { Cell, CellMatrix, Rect, Selection } from '../types';
 import { Context, getFlowdata } from '../context';
 import {
   columnCharToIndex,
@@ -30,6 +30,11 @@ import {
   setCellError,
   spillSortResult,
 } from '.';
+import {
+  FORMULA_ASYNC_CHUNK_SIZE,
+  FORMULA_ASYNC_EVAL_THRESHOLD,
+  type FormulaAsyncEvalJob,
+} from './formula-async-eval';
 
 let functionHTMLIndex = 0;
 let rangeIndexes: number[] = [];
@@ -235,6 +240,26 @@ function parseCellKey(
   return { sheetId, r, c };
 }
 
+/** In-pass formula value cache; must be a plain object while a recalc pass runs. */
+function ensureExecFunctionGlobalData(ctx: Context) {
+  if (ctx.formulaCache.execFunctionGlobalData == null) {
+    ctx.formulaCache.execFunctionGlobalData = {};
+  }
+}
+
+function writeExecFunctionGlobalDataCell(
+  ctx: Context,
+  r: number,
+  c: number,
+  sheetId: string,
+  value: { v: unknown; f: unknown },
+) {
+  if (ctx.formulaCache.execFunctionGlobalData == null) {
+    ensureExecFunctionGlobalData(ctx);
+  }
+  ctx.formulaCache.execFunctionGlobalData[`${r}_${c}_${sheetId}`] = value;
+}
+
 // FormulaCache is defined as class to avoid being frozen by immer
 export class FormulaCache {
   parser: any;
@@ -348,10 +373,10 @@ export class FormulaCache {
         if (id == null) throw Error(ERROR_REF);
         recordDep(toCellKey(id, cellCoord.row.index, cellCoord.column.index));
         const flowdata = getFlowdata(context, id);
+        const cacheKey = `${cellCoord.row.index}_${cellCoord.column.index}_${id}`;
         const cell =
-          context?.formulaCache.execFunctionGlobalData?.[
-            `${cellCoord.row.index}_${cellCoord.column.index}_${id}`
-          ] || flowdata?.[cellCoord.row.index]?.[cellCoord.column.index];
+          context?.formulaCache.execFunctionGlobalData?.[cacheKey] ||
+          flowdata?.[cellCoord.row.index]?.[cellCoord.column.index];
         const v = that.tryGetCellAsNumber(cell);
         done(v);
       },
@@ -367,7 +392,6 @@ export class FormulaCache {
             : getSheetIdByName(context, startCellCoord.sheetName);
         if (id == null) throw Error(ERROR_REF);
         const flowdata = getFlowdata(context, id);
-        const fragment = [];
         let startRow = startCellCoord.row.index;
         let endRow = endCellCoord.row.index;
         let startCol = startCellCoord.column.index;
@@ -416,6 +440,7 @@ export class FormulaCache {
           }
         }
 
+        const fragment = [];
         for (let row = startRow; row <= endRow; row += 1) {
           const colFragment = [];
 
@@ -1371,6 +1396,9 @@ export function execfunction(
   notInsertFunc?: boolean,
 ) {
   const originalTxt = txt;
+  if (_.isNil(id)) {
+    id = ctx.currentSheetId;
+  }
   if (
     txt?.toUpperCase().includes('NETWORKDAYS.INTL') ||
     txt?.toUpperCase().includes('WORKDAY.INTL')
@@ -1383,10 +1411,6 @@ export function execfunction(
 
   if (!checkBracketNum(txt)) {
     txt += ')';
-  }
-
-  if (_.isNil(id)) {
-    id = ctx.currentSheetId;
   }
 
   ctx.calculateSheetId = id;
@@ -1773,6 +1797,153 @@ export function groupValuesRefresh(ctx: Context) {
   }
 }
 
+type FormulaRunListCell = {
+  r: number;
+  c: number;
+  id: string;
+  calc_funcStr: string;
+  level?: number;
+};
+
+function evalFormulaCellInGroup(
+  ctx: Context,
+  formulaCell: FormulaRunListCell,
+  calcChainSet: Set<string>,
+  data: CellMatrix | null | undefined,
+  impactedByCircular: Set<string>,
+  cycleNodes: Set<string>,
+) {
+  ensureExecFunctionGlobalData(ctx);
+  if ((formulaCell as { level?: unknown }).level === (Math as any).max) {
+    return;
+  }
+
+  const { calc_funcStr } = formulaCell;
+
+  const formulaCellKey = `${formulaCell.id}:${formulaCell.r}:${formulaCell.c}`;
+  if (impactedByCircular.has(formulaCellKey)) {
+    const isInCycle = cycleNodes.has(formulaCellKey);
+    const message = isInCycle
+      ? 'Circular dependency.'
+      : 'Circular dependency (upstream).';
+    setCellError(ctx, formulaCell.r, formulaCell.c, {
+      row_column: `${formulaCell.r}_${formulaCell.c}`,
+      title: CIRCULAR_REF_TITLE,
+      message,
+    });
+
+    ctx.groupValuesRefreshData.push({
+      r: formulaCell.r,
+      c: formulaCell.c,
+      v: CIRCULAR_REF_ERROR,
+      f: calc_funcStr,
+      id: formulaCell.id,
+    });
+
+    writeExecFunctionGlobalDataCell(ctx, formulaCell.r, formulaCell.c, formulaCell.id, {
+      v: CIRCULAR_REF_ERROR,
+      f: calc_funcStr,
+    });
+
+    return;
+  }
+
+  const v = execfunction(
+    ctx,
+    calc_funcStr,
+    formulaCell.r,
+    formulaCell.c,
+    formulaCell.id,
+    calcChainSet,
+  );
+
+  const valueData = v?.[1];
+  const valueFunction = v?.[2];
+
+  if (Array.isArray(valueData)) {
+    const spilled = spillSortResult(
+      ctx,
+      formulaCell.r,
+      formulaCell.c,
+      { v: valueData, f: valueFunction },
+      data ?? undefined,
+    );
+
+    if (spilled) {
+      const matrixTopLeftValue = Array.isArray(valueData[0])
+        ? valueData[0][0]
+        : valueData[0];
+
+      ctx.groupValuesRefreshData.push({
+        r: formulaCell.r,
+        c: formulaCell.c,
+        v: matrixTopLeftValue,
+        f: valueFunction,
+        spe: v[3],
+        id: formulaCell.id,
+      });
+
+      writeExecFunctionGlobalDataCell(
+        ctx,
+        formulaCell.r,
+        formulaCell.c,
+        formulaCell.id,
+        { v: matrixTopLeftValue, f: valueFunction },
+      );
+
+      return;
+    }
+  }
+
+  ctx.groupValuesRefreshData.push({
+    r: formulaCell.r,
+    c: formulaCell.c,
+    v: v[1],
+    f: v[2],
+    spe: v[3],
+    id: formulaCell.id,
+  });
+
+  writeExecFunctionGlobalDataCell(ctx, formulaCell.r, formulaCell.c, formulaCell.id, {
+    v: v[1],
+    f: v[2],
+  });
+}
+
+/** Run up to `chunkSize` formulas from an async job. Returns true when job is complete. */
+export function runFormulaEvalChunk(
+  ctx: Context,
+  job: FormulaAsyncEvalJob,
+  chunkSize = FORMULA_ASYNC_CHUNK_SIZE,
+): boolean {
+  ensureExecFunctionGlobalData(ctx);
+  const calcChainSet = new Set(job.calcChainKeys);
+  const impactedByCircular = new Set(job.impactedByCircular);
+  const cycleNodes = new Set(job.cycleNodes);
+  const data = getFlowdata(ctx);
+  const end = Math.min(job.nextIndex + chunkSize, job.formulaRunList.length);
+
+  for (let i = job.nextIndex; i < end; i += 1) {
+    const formulaCell = job.formulaRunList[i];
+    evalFormulaCellInGroup(
+      ctx,
+      formulaCell,
+      calcChainSet,
+      data,
+      impactedByCircular,
+      cycleNodes,
+    );
+  }
+
+  job.nextIndex = end;
+  const complete = end >= job.formulaRunList.length;
+  if (complete) {
+    ctx.formulaCache.execFunctionExist = undefined;
+    ctx.formulaCache.execFunctionGlobalData = null;
+  }
+  return complete;
+}
+
 export function execFunctionGroup(
   ctx: Context,
   origin_r: number,
@@ -1784,6 +1955,10 @@ export function execFunctionGroup(
 ) {
   if (_.isNil(data)) {
     data = getFlowdata(ctx);
+  }
+
+  if (_.isNil(id)) {
+    id = ctx.currentSheetId;
   }
 
   // if (!window.luckysheet_compareWith) {
@@ -1803,11 +1978,6 @@ export function execFunctionGroup(
   // propagation only reads values produced in the current recalculation pass.
   ctx.formulaCache.execFunctionGlobalData = {};
   // let luckysheetfile = getluckysheetfile();
-  // let dynamicArray_compute = luckysheetfile[getSheetIndex(ctx.currentSheetId)_.isNil(]["dynamicArray_compute"]) ? {} : luckysheetfile[getSheetIndex(ctx.currentSheetId)]["dynamicArray_compute"];
-
-  if (_.isNil(id)) {
-    id = ctx.currentSheetId;
-  }
 
   const originKey = `${id}:${origin_r}:${origin_c}`;
   const cycleNodes = findCycleNodesFrom(originKey, ctx.formulaCache.depsByCell);
@@ -2171,104 +2341,35 @@ export function execFunctionGroup(
   // console.timeEnd("3");
 
   // console.time("4");
+  if (formulaRunList.length >= FORMULA_ASYNC_EVAL_THRESHOLD) {
+    ctx.formulaAsyncEval = {
+      formulaRunList: formulaRunList.map((f: any) => ({
+        r: f.r,
+        c: f.c,
+        id: f.id,
+        calc_funcStr: f.calc_funcStr,
+        level: f.level,
+      })),
+      calcChainKeys: Array.from(calcChainSet),
+      impactedByCircular: Array.from(impactedByCircular),
+      cycleNodes: Array.from(cycleNodes),
+      nextIndex: 0,
+      total: formulaRunList.length,
+    };
+    ctx.isFormulaCalculating = true;
+    return;
+  }
+
   for (let i = 0; i < formulaRunList.length; i += 1) {
     const formulaCell = formulaRunList[i];
-    if (formulaCell.level === Math.max) {
-      continue;
-    }
-
-    const { calc_funcStr } = formulaCell;
-
-    const formulaCellKey = `${formulaCell.id}:${formulaCell.r}:${formulaCell.c}`;
-    if (impactedByCircular.has(formulaCellKey)) {
-      const isInCycle = cycleNodes.has(formulaCellKey);
-      const message = isInCycle
-        ? 'Circular dependency.'
-        : 'Circular dependency (upstream).';
-      setCellError(ctx, formulaCell.r, formulaCell.c, {
-        row_column: `${formulaCell.r}_${formulaCell.c}`,
-        title: CIRCULAR_REF_TITLE,
-        message,
-      });
-
-      ctx.groupValuesRefreshData.push({
-        r: formulaCell.r,
-        c: formulaCell.c,
-        v: CIRCULAR_REF_ERROR,
-        f: calc_funcStr,
-        id: formulaCell.id,
-      });
-
-      ctx.formulaCache.execFunctionGlobalData[
-        `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
-      ] = {
-        v: CIRCULAR_REF_ERROR,
-        f: calc_funcStr,
-      };
-
-      continue;
-    }
-
-    const v = execfunction(
+    evalFormulaCellInGroup(
       ctx,
-      calc_funcStr,
-      formulaCell.r,
-      formulaCell.c,
-      formulaCell.id,
+      formulaCell,
       calcChainSet,
+      data,
+      impactedByCircular,
+      cycleNodes,
     );
-
-    const valueData = v?.[1];
-    const valueFunction = v?.[2];
-
-    if (Array.isArray(valueData)) {
-      // spill to grid
-      const spilled = spillSortResult(
-        ctx,
-        formulaCell.r,
-        formulaCell.c,
-        { v: valueData, f: valueFunction },
-        data, // flowdata for this sheet
-      );
-
-      if (spilled) {
-        const matrixTopLeftValue = Array.isArray(valueData[0])
-          ? valueData[0][0]
-          : valueData[0];
-
-        ctx.groupValuesRefreshData.push({
-          r: formulaCell.r,
-          c: formulaCell.c,
-          v: matrixTopLeftValue,
-          f: valueFunction,
-          spe: v[3],
-          id: formulaCell.id,
-        });
-
-        ctx.formulaCache.execFunctionGlobalData[
-          `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
-        ] = { v: matrixTopLeftValue, f: valueFunction };
-
-        continue;
-      }
-    }
-
-    ctx.groupValuesRefreshData.push({
-      r: formulaCell.r,
-      c: formulaCell.c,
-      v: v[1],
-      f: v[2],
-      spe: v[3],
-      id: formulaCell.id,
-    });
-
-    // _this.execFunctionGroupData[u.r][u.c] = value;
-    ctx.formulaCache.execFunctionGlobalData[
-      `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
-    ] = {
-      v: v[1],
-      f: v[2],
-    };
   }
   // console.log(formulaRunList);
   // console.timeEnd("4");
