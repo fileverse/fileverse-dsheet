@@ -157,7 +157,10 @@ line-height: 16px; /* 133.333% */
 }
 
 .luckysheet-arguments-help-parameter-active {
-  background-color: hsl(var(--color-bg-brand-light));
+  background-color: hsl(var(--color-border-focused) / 0.22);
+  box-shadow: inset 0 0 0 1px hsl(var(--color-border-focused));
+  border-radius: 3px;
+  padding: 1px 3px;
 }
 
 .luckysheet-formula-help-collapse {

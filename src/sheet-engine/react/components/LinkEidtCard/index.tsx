@@ -471,7 +471,9 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
         .replace(/-+/g, '-');
       return (
         <div
-          className={`fortune-link-card__icon fortune-link-card__action fortune-link-card__action--${iconIdClass} fortune-toolbar-button`}
+          className={`fortune-link-card__icon fortune-link-card__action fortune-link-card__action--${iconIdClass} fortune-toolbar-button ${
+            iconId === 'unlink' ? 'color-text-danger' : 'color-text-secondary'
+          }`}
           data-icon-id={iconId}
           onClick={(e) => {
             e.stopPropagation();
@@ -657,12 +659,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                         {isSheetLink ? (
                           <LucideIcon
                             name="Grid2x2"
-                            className="fortune-link-card__favicon-fallback fortune-link-card__favicon-fallback--sheet"
+                            className="fortune-link-card__favicon-fallback fortune-link-card__favicon-fallback--sheet color-text-secondary"
                           />
                         ) : emailLike ? (
                           <LucideIcon
                             name="Mail"
-                            className="fortune-link-card__favicon-fallback"
+                            className="fortune-link-card__favicon-fallback color-text-default"
                           />
                         ) : meta.faviconUrl ? (
                           <img
@@ -675,7 +677,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                         ) : (
                           <LucideIcon
                             name="Globe"
-                            className="fortune-link-card__favicon-fallback"
+                            className="fortune-link-card__favicon-fallback color-text-default"
                           />
                         )}
                         <div className="fortune-link-card__preview-text">
@@ -811,12 +813,12 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                       {isSheetLink ? (
                         <LucideIcon
                           name="Grid2x2"
-                          className="fortune-link-card__favicon-fallback fortune-link-card__favicon-fallback--sheet"
+                          className="fortune-link-card__favicon-fallback fortune-link-card__favicon-fallback--sheet color-text-secondary"
                         />
                       ) : emailLike ? (
                         <LucideIcon
                           name="Mail"
-                          className="fortune-link-card__favicon-fallback"
+                          className="fortune-link-card__favicon-fallback color-text-default"
                         />
                       ) : singleMeta?.faviconUrl ? (
                         <img
@@ -829,7 +831,7 @@ export const LinkEditCard: React.FC<LinkCardProps> = ({
                       ) : (
                         <LucideIcon
                           name="Globe"
-                          className="fortune-link-card__favicon-fallback"
+                          className="fortune-link-card__favicon-fallback color-text-default"
                         />
                       )}
                       <div className="fortune-link-card__preview-text">

@@ -57,6 +57,7 @@ const Button: React.FC<Props> = ({
             name={getLucideIcon(iconId)}
             width={16}
             height={16}
+            className={selected ? 'color-text-on-brand' : 'color-text-default'}
             style={disabled ? { opacity: 0.3 } : {}}
           />
         </span>
