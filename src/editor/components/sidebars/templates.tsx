@@ -127,7 +127,7 @@ export const Templates = ({
       {/* <h2 className="text-heading-xsm mb-2 pl-[3px] force-font">
         Start with pre-builded templates
       </h2>
-      <h3 className="text-body-sm mb-5 pl-[3px] text-[#363B3F] force-font">
+      <h3 className="text-body-sm mb-5 pl-[3px] color-text-default force-font">
         Includes smart contract analysis, real time coins price and much more
         for blockchain analytics
       </h3> */}
@@ -151,9 +151,9 @@ export const Templates = ({
             <Tag
               key={category.value}
               className={cn(
-                'bg-transparent px-2 py-2 rounded-lg text-helper-text-sm border-[#E8EBEC] color-border-default hover:cursor-pointer',
+                'bg-transparent px-2 py-2 rounded-lg text-helper-text-sm color-border-default hover:cursor-pointer',
                 selectedCategory === category.value &&
-                  '!bg-[#000] !text-[#fff] border-none'
+                  '!color-bg-default-inverse !color-text-inverse border-none'
               )}
               onClick={() => handleCategorySelect(category.value)}
             >

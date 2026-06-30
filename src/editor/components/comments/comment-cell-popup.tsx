@@ -99,7 +99,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
         className="color-bg-default space-y-xsm space-x-sm flex justify-between rounded-t- items-center border-b color-border-default"
         onMouseDown={dragHandler}
       >
-        <p className="text-sm font-medium text-[#363B3F]">Comments</p>
+        <p className="text-sm font-medium color-text-default">Comments</p>
         <div className="min-h-[26px]">
           {onAction && isCommentHovered && !disabled && (
             <CommentActionsDropdown
@@ -146,7 +146,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
       {!isHover &&
         (disabled ? (
           <div className="space-sm color-bg-secondary">
-            <div className="flex items-center gap-1 text-sm text-gray-600">
+            <div className="flex items-center gap-1 text-sm color-text-secondary">
               <LucideIcon name="Info" size="sm" />
               <span>
                 Comments are not available during Real-Time Collaboration
@@ -155,7 +155,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
           </div>
         ) : comment.isResolved ? (
           <div className="space-sm color-bg-secondary">
-            <div className="flex items-center text-sm text-gray-600">
+            <div className="flex items-center text-sm color-text-secondary">
               <LucideIcon name="CheckCircle" size="sm" />
               <span>
                 This thread has been resolved. No new replies can be added.

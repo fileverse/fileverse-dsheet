@@ -118,13 +118,13 @@ const ReplyWithENS: React.FC<{
           <div
             className={cn(
               'relative  bottom-[27px] h-auto w-[0px] border-l',
-              isHovered && !isCellPopup ? 'border-[#F8F9FA]' : 'border-white',
+              isHovered && !isCellPopup ? 'color-border-default' : 'border-transparent',
             )}
           ></div>
         )}
         <div className="ml-[53px]">
           <p
-            className={`text-body-sm text-[#363B3F] force-font whitespace-pre-wrap break-words ${contentClassName}`}
+            className={`text-body-sm color-text-default force-font whitespace-pre-wrap break-words ${contentClassName}`}
           >
             {reply.content}
           </p>
@@ -307,8 +307,8 @@ export const CommentItem: React.FC<CommentItemProps> = memo(
             className="absolute inset-0 z-20 flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute inset-0 bg-white/70 rounded-md" />
-            <div className="relative bg-white border color-border-default rounded-lg shadow-lg p-3 flex flex-col gap-2 min-w-[220px]">
+            <div className="absolute inset-0 color-bg-default/70 rounded-md" />
+            <div className="relative color-bg-default border color-border-default rounded-lg shadow-lg p-3 flex flex-col gap-2 min-w-[220px]">
               <p className="text-body-sm-bold text-center force-font">
                 Delete this comment thread?
               </p>
@@ -326,7 +326,7 @@ export const CommentItem: React.FC<CommentItemProps> = memo(
                     onAction?.(pendingDelete);
                     setPendingDelete(null);
                   }}
-                  className="px-3 py-1 !text-sm !text-[#FB3449]"
+                  className="px-3 py-1 !text-sm !color-text-danger"
                 >
                   Delete
                 </Button>

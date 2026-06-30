@@ -22,7 +22,7 @@ const FunctionList = ({
         <div
           key={data.n}
           onClick={() => onFunctionSelection(data, index)}
-          className={`h-[28px] w-full flex px-3 items-center py-2 justify-between hover:bg-[#F2F4F5] ${selectedFunction?.n === data.n ? 'bg-[#F2F4F5]' : ''}`}
+          className={`h-[28px] w-full flex px-3 items-center py-2 justify-between hover:color-bg-default-hover ${selectedFunction?.n === data.n ? 'color-bg-secondary' : ''}`}
         >
           <p className="text-body-sm">{data.n}</p>
           <div className="flex items-center gap-1">
@@ -39,11 +39,11 @@ const FunctionList = ({
                 }
               >
                 <div
-                  className={`flex h-[16px] rounded-[4px]  w-[16px] justify-center ${localStorage.getItem(data.API_KEY) ? 'bg-[#177E23]' : 'bg-[#e8ebec]'}`}
+                  className={`flex h-[16px] rounded-[4px]  w-[16px] justify-center ${localStorage.getItem(data.API_KEY) ? 'color-bg-success' : 'color-bg-secondary'}`}
                 >
                   <LucideIcon
                     name="Key"
-                    className={`${localStorage.getItem(data.API_KEY) ? 'text-white' : 'text-[#77818A]'} w-[12px] h-[12px]`}
+                    className={`${localStorage.getItem(data.API_KEY) ? 'color-text-inverse' : 'color-text-secondary'} w-[12px] h-[12px]`}
                   />
                 </div>
               </Tooltip>
