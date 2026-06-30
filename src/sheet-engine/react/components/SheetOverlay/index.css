@@ -245,7 +245,7 @@
 
 .luckysheet-cs-inner-border {
   pointer-events: none;
-  border: 1px solid hsl(var(--color-bg-default));
+  border: 1px solid #fff;
   position: absolute;
   top: 0;
   bottom: 0;
@@ -269,11 +269,11 @@
 .luckysheet-cs-draghandle {
   position: absolute;
   cursor: grab;
-  background-color: hsl(var(--color-bg-default));
+  background-color: #fff;
   opacity: 0.01;
   z-index: 15;
   pointer-events: auto;
-  border: 2px solid hsl(var(--color-bg-default));
+  border: 2px solid #fff;
 }
 
 .luckysheet-cs-draghandle-top {
@@ -390,6 +390,7 @@
   /* box-shadow: 0 2px 5px rgb(0 0 0 / 40%); */
   word-wrap: break-word;
   background-color: rgb(255, 255, 255);
+  color: #000000;
   font-size: 13px;
   right: auto;
   overflow-y: auto;

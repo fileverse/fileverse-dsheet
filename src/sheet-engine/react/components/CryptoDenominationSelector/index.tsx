@@ -107,13 +107,13 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
       <PopoverContent align="end" side="bottom" sideOffset={4} className="p-2">
         <div className="crypto-denomination-selector">
           <div className="cds-row px-2">
-            <span>Decimal places:</span>
+            <span className="color-text-default">Decimal places:</span>
             <span className="flex items-center">
               <IconButton
                 icon="Minus"
                 variant="ghost"
                 size="sm"
-                className="!bg-transparent"
+                className="!bg-transparent color-text-default"
                 disabled={decimals === 1}
                 onClick={() => handleDecimalsChange(Math.max(1, decimals - 1))}
               />
@@ -127,12 +127,13 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
                     Math.max(1, Math.min(18, Number(e.target.value))),
                   )
                 }
+                className="color-text-default color-border-default color-bg-default"
               />
               <IconButton
                 icon="Plus"
                 variant="ghost"
                 size="sm"
-                className="!bg-transparent"
+                className="!bg-transparent color-text-default"
                 disabled={decimals === 18}
                 onClick={() => handleDecimalsChange(Math.min(18, decimals + 1))}
               />
@@ -142,20 +143,25 @@ const CryptoDenominationSelector: React.FC<CryptoDenominationSelectorProps> = ({
             {CRYPTO_OPTIONS.map((opt) => (
               <div
                 key={opt.value}
-                className={`flex items-center justify-between cds-option${
-                  activeCryptoCurrency === opt.value ? ' selected' : ''
-                }`}
+                className={`flex items-center justify-between cds-option${activeCryptoCurrency === opt.value ? ' selected' : ''
+                  }`}
                 onClick={() => handleDenominationChange(opt.value)}
               >
                 <span className="flex items-center gap-2">
                   {activeCryptoCurrency === opt.value ? (
-                    <LucideIcon name="Check" className="w-4 h-4" />
+                    <LucideIcon
+                      name="Check"
+                      className="w-4 h-4 color-text-default"
+                    />
                   ) : (
                     <div className="w-4 h-4" />
                   )}
                   {opt.label}
                 </span>
-                <LucideIcon name={opt.icon} className="cds-icon" />
+                <LucideIcon
+                  name={opt.icon}
+                  className="cds-icon color-text-default"
+                />
                 {opt.value === 'SOL' && (
                   <SVGIcon name="solana" width={16} height={16} />
                 )}

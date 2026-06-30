@@ -76,8 +76,8 @@ export const getCustomToolbarItems = ({
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
   setShowFetchURLModal:
-    | React.Dispatch<React.SetStateAction<boolean>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<boolean>>
+  | undefined;
 }) => {
   return [
     {

@@ -148,13 +148,23 @@ const FormulaHint = (props: any) => {
     return `${r}, ${g}, ${b}`;
   };
 
-  const bgColor = (BRAND_SECONDARY_COLOR: string) => {
-    const bg = BRAND_SECONDARY_COLOR
-      ? `rgb(${hexToRgbString(BRAND_SECONDARY_COLOR)}, 0.4)`
-      : '#FFDF0A';
+  const bgColor = (BRAND_SECONDARY_COLOR: string) =>
+    `rgb(${hexToRgbString(BRAND_SECONDARY_COLOR)}, 0.55)`;
 
-    return bg;
-  };
+  const activeParameterClass = (index: number) =>
+    commaCount === index && !fn.BRAND_SECONDARY_COLOR
+      ? ' luckysheet-arguments-help-parameter-active'
+      : '';
+
+  const activeParameterStyle = (index: number) =>
+    commaCount === index && fn.BRAND_SECONDARY_COLOR
+      ? {
+          backgroundColor: bgColor(fn.BRAND_SECONDARY_COLOR),
+          boxShadow: `inset 0 0 0 1px ${fn.BRAND_SECONDARY_COLOR}`,
+          borderRadius: '3px',
+          padding: '1px 3px',
+        }
+      : undefined;
 
   useEffect(() => {
     setShowDelayedHint(false);
@@ -316,14 +326,11 @@ const FormulaHint = (props: any) => {
                     return (
                       <>
                         <code
-                          className="luckysheet-arguments-help-parameter font-family-mono mb-1 mt-2 color-text-default"
+                          className={`luckysheet-arguments-help-parameter font-family-mono mb-1 mt-2 color-text-default${activeParameterClass(i)}`}
                           dir="auto"
                           key={name}
                           style={{
-                            backgroundColor:
-                              commaCount === i
-                                ? bgColor(fn.BRAND_SECONDARY_COLOR)
-                                : 'transparent',
+                            ...activeParameterStyle(i),
                             fontWeight: 'bold',
                           }}
                         >
@@ -588,13 +595,10 @@ const FormulaHint = (props: any) => {
                       <div className="" key={param.name}>
                         <div>
                           <code
-                            className="font-family-mono mb-1 mt-2 color-text-default font-family-mono"
+                            className={`font-family-mono mb-1 mt-2 color-text-default font-family-mono${activeParameterClass(index)}`}
                             style={{
                               fontWeight: 600,
-                              backgroundColor:
-                                commaCount === index
-                                  ? bgColor(fn.BRAND_SECONDARY_COLOR)
-                                  : 'transparent',
+                              ...activeParameterStyle(index),
                             }}
                           >
                             {param.name}
