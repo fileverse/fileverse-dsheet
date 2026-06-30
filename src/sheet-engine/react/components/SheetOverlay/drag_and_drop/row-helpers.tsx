@@ -170,7 +170,7 @@ export const useRowDragAndDrop = (
     el.style.width = '0px';
     el.style.left = '0px';
     el.style.top = '0px';
-    el.style.background = '#5F6368';
+    el.style.background = 'hsl(var(--color-text-secondary))';
     el.style.zIndex = '9999';
     el.style.pointerEvents = 'none';
     document.body.appendChild(el);
@@ -217,7 +217,7 @@ export const useRowDragAndDrop = (
     el.style.position = 'fixed';
     el.style.boxSizing = 'border-box';
     el.style.padding = '6px 8px';
-    el.style.background = 'rgba(95,99,104,0.18)';
+    el.style.background = 'hsl(var(--color-text-secondary) / 0.18)';
     el.style.zIndex = '20000';
     el.style.pointerEvents = 'none';
     el.style.display = 'flex';

@@ -9,8 +9,8 @@
 }
 
 .fortune-iframe-boxes-delete-button {
-  background-color: #ffffff;
-  border: 1px solid #e8ebec;
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 8px;
   box-shadow: 0px 4px 16px -4px #00000026;
 }

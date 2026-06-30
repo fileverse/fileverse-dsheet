@@ -16,7 +16,7 @@
   width: 24px;
   height: 28px;
   border-radius: 3px;
-  color: var(--color-text-default);
+  color: hsl(var(--color-text-default));
   font-size: 14px;
 }
 
@@ -29,7 +29,7 @@
   display: flex;
   justify-content: center;
   width: 48px;
-  color: #1e1e1f;
+  color: hsl(var(--color-text-default));
   font-size: 12px;
   cursor: pointer;
 }
@@ -39,7 +39,7 @@
 }
 
 .fortune-zoom-ratio-item:hover {
-  background: #efefef;
+  background: hsl(var(--color-bg-default-hover));
 }
 
 .fortune-zoom-ratio-menu {
@@ -50,7 +50,7 @@
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
   padding: 10px 0px 10px 0px;
   border-radius: 6px;
-  background: white;
+  background: hsl(var(--color-bg-default));
   z-index: 1004;
 }
 

@@ -168,7 +168,7 @@ const DropDownList: React.FC = () => {
         style={{
           border: 'none',
           height: '1px',
-          background: 'hsl(var(--color-bg-default-hover, #F2F4F5))',
+          background: 'hsl(var(--color-bg-default-hover))',
           marginBottom: '4px',
         }}
       />

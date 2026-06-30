@@ -914,7 +914,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       allConditionFormats[key].conditionValue,
                     );
                   }}
-                  className={`group flex items-center border-b border-gray-200 condition-list-parent fortune-condition-rules__item fortune-condition-rules__item--${String(
+                  className={`group flex items-center border-b color-border-default condition-list-parent fortune-condition-rules__item fortune-condition-rules__item--${String(
                     key,
                   )
                     .replace(/[^a-zA-Z0-9-]/g, '-')
@@ -1365,7 +1365,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       </SelectItem>
                       <SelectItem
                         value="exact"
-                        className="border-t border-gray-200 mt-1"
+                        className="border-t color-border-default mt-1"
                       >
                         {conditionformat.cfDatePreset_exact}
                       </SelectItem>

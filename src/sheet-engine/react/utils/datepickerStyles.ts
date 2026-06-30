@@ -22,12 +22,12 @@ export const datepickerStyles = `
   .datepicker-input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid hsl(var(--color-border-default));
     border-radius: 6px;
     font-size: 14px;
     line-height: 1.5;
-    color: #1a202c;
-    background-color: #fff;
+    color: hsl(var(--color-text-default));
+    background-color: hsl(var(--color-bg-default));
     cursor: pointer;
   }
   
@@ -45,8 +45,8 @@ export const datepickerStyles = `
   
   .datepicker-input:focus {
     outline: none;
-    border-color: #4299e1;
-    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+    border-color: #0188fb;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
   }
 `;
 

@@ -1,6 +1,6 @@
 .fortune-sort-title {
-  background-color: #fff;
-  color: #000;
+  background-color: hsl(var(--color-bg-default));
+  color: hsl(var(--color-text-default));
   cursor: default;
   font-size: 16px;
   font-weight: 400;
