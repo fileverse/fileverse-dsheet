@@ -19,7 +19,7 @@ export function RightSidebar({
   return (
     <aside
       className={cn(
-        'fixed right-0 z-30 bg-[#F8F9FA] border-l transition-all duration-300 ease-in-out overflow-hidden dark:bg-[#1E1E1E] !select-text',
+        'fixed right-0 z-30 color-bg-secondary border-l color-border-default transition-all duration-300 ease-in-out overflow-hidden !select-text',
         className,
       )}
       data-state={isOpen ? 'open' : 'closed'}
@@ -35,10 +35,9 @@ export function RightSidebar({
     >
       <div style={{ padding: '16px', height: '100%', boxSizing: 'border-box' }}>
         <div
+          className="border color-border-default color-bg-default"
           style={{
-            border: '1px solid #E8EBEC',
             borderRadius: '12px',
-            backgroundColor: '#fff',
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
@@ -59,7 +58,7 @@ export function RightSidebarHeader({
   return (
     <header
       className={cn(
-        'relative z-50 px-4 py-2 border-b border-gray-200 shrink-0',
+        'relative z-50 px-4 py-2 border-b color-border-default shrink-0',
         className,
       )}
     >

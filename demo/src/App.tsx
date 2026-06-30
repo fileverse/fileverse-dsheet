@@ -15,6 +15,7 @@ import {
   DynamicDropdown,
   Toaster,
   toast,
+  ThemeToggle,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
 import { crypto as cryptoUtils } from './crypto';
@@ -315,6 +316,8 @@ function App() {
         </div>
 
         <div className="flex gap-2">
+          <ThemeToggle />
+
           <button
             type="button"
             onClick={() => editorValues?.openPanel('comments')}

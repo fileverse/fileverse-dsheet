@@ -63,6 +63,7 @@ chrome-only work and the grid work is preserved verbatim as deferred Phase 2.
 | 7 | Export/data color code | **Out of scope, stays literal** | `xlsx-*` ARGB, `csv-import` hyperlink `rgb(0,0,255)`, `formula-ui-sync` `STATIC_LINE_BG` are file/data values, not UI. |
 | 8 | `theme` prop / grid palette | **Deferred to Phase 2** | Canvas-only concern (§7). |
 | 9 | Provider/toggle ownership | **Consume only, no fork** | Avoids the multi-place duplication THEMES.md §9 flags. Demo uses ui's provider; ddocs.new uses its own. |
+| 10 | `@fileverse/ui` version | **Bumped 5.0.2 → 5.1.8** (matches ddoc's installed version) | **Required precondition, discovered during build.** 5.0.2 ships only `:root` + `.dark` token blocks — no `.theme-sepia`/`.theme-pink`/`.theme-green`. Under those classes the `.color-*` utilities fall back to light. 5.1.8 adds all four blocks AND upgrades `ThemeToggle` to the 5-theme selector (Keith/Naomiii). Without this bump Phase 1 themes light+dark only. Build verified green on 5.1.8. |
 
 ---
 
@@ -122,7 +123,7 @@ Convert hardcoded colors in dsheet's own `src/editor/styles/index.css` overrides
 | Selector | Today | Action |
 |---|---|---|
 | `.luckysheet-postil-show-main` (inline-comment popup) | `background-color: white`, `border: 1px solid #e8ebec` | → `hsl(var(--color-bg-default))`, `hsl(var(--color-border-default))` |
-| `.fortune-tooltip` | `background: black` | → tooltip token (`hsl(var(--color-bg-tooltip))`) |
+| `.fortune-tooltip` | `background: black` | **keep black** — `--color-bg-tooltip` is absent in the pinned `@fileverse/ui` v5.0.0; a fixed dark tooltip is theme-agnostic (like the selection accent). Revisit if ui is upgraded and the token appears. |
 | `.fetch-url-button` | `color: #1977e4` | brand accent — keep or token per design |
 | `.template-button:hover` | `#cf1c821f` | brand accent — keep |
 | `.luckysheet-cs-fillhandle`, `.fortune-cell-selected-*`, `.luckysheet-input-box-inner` (`#efc703`) | selection accent | **keep constant** |

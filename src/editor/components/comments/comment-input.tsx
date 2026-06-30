@@ -110,7 +110,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
         }}
         onBlur={hideButtons}
         onKeyDown={handleKeyDown}
-        className="bg-white max-h-[76px] !h-[76px]"
+        className="color-bg-default max-h-[76px] !h-[76px]"
       />
       {!disabled && (shouldShowButtons || isStaticButton) && (
         <div className="flex items-center gap-2 justify-end">

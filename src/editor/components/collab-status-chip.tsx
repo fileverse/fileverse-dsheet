@@ -11,7 +11,7 @@ export const CollabStatusChip: React.FC<Props> = ({ state }) => {
   const configs: Record<string, { dot: string; label: string }> = {
     connecting: { dot: 'bg-yellow-400', label: 'Connecting...' },
     syncing: { dot: 'bg-yellow-400', label: 'Syncing...' },
-    ready: { dot: 'bg-green-500', label: 'Live' },
+    ready: { dot: 'color-bg-success', label: 'Live' },
     reconnecting: {
       dot: 'bg-yellow-400',
       label:
@@ -29,7 +29,7 @@ export const CollabStatusChip: React.FC<Props> = ({ state }) => {
   if (!cfg) return null;
 
   return (
-    <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 select-none">
+    <div className="flex items-center gap-1.5 text-xs font-medium color-text-secondary select-none">
       <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
       <span>{cfg.label}</span>
     </div>

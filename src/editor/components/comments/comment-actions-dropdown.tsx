@@ -120,8 +120,8 @@ export const CommentActionsDropdown: React.FC<CommentActionsDropdownProps> = ({
         sideOffset={5}
         className="shadow-lg rounded-lg p-1 border"
         anchorTrigger={
-          <button className="p-1 hover:bg-gray-200 rounded transition-colors">
-            <LucideIcon name="Ellipsis" size="sm" className="text-gray-500" />
+          <button className="p-1 hover:color-bg-default-hover rounded transition-colors">
+            <LucideIcon name="Ellipsis" size="sm" className="color-text-secondary" />
           </button>
         }
         content={dropdownContent}

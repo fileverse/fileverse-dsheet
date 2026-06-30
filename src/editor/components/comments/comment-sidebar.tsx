@@ -420,8 +420,8 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
                 {selectedComment === key ? (
                   <div className="pl-[32px]">
                     {comment.isResolved ? (
-                      <div className="mt-3 p-3 bg-gray-50 border rounded-lg">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="mt-3 p-3 color-bg-secondary border color-border-default rounded-lg">
+                        <div className="flex items-center gap-2 text-sm color-text-secondary">
                           <LucideIcon name="CheckCircle" size="sm" />
                           <span>
                             This thread has been resolved. No new replies can be

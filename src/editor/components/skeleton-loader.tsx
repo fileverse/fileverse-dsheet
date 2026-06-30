@@ -56,11 +56,11 @@ const useGridDimensions = (containerRef: React.RefObject<HTMLDivElement>) => {
 // Skeleton formula bar component
 export const SkeletonFormulaBar = () => (
   <div
-    className={`dsheet-skeleton dsheet-skeleton-formula-bar w-full h-7 px-4 flex items-center bg-gray-50 border-b ${pulseAnimation}`}
+    className={`dsheet-skeleton dsheet-skeleton-formula-bar w-full h-7 px-4 flex items-center color-bg-secondary border-b ${pulseAnimation}`}
     data-testid="skeleton-formula-bar"
   >
     <div className="flex items-center gap-2">
-      <div className="h-4 w-32 bg-gray-200 rounded" aria-hidden></div>{' '}
+      <div className="h-4 w-32 color-bg-secondary rounded" aria-hidden></div>{' '}
       {/* Formula content */}
     </div>
   </div>
@@ -97,7 +97,7 @@ export const SkeletonToolbar = ({
   return (
     <div
       ref={containerRef}
-      className={`dsheet-skeleton dsheet-skeleton-toolbar w-full h-10 px-2 flex items-center border-b ml-5 bg-gray-50 ${pulseAnimation}`}
+      className={`dsheet-skeleton dsheet-skeleton-toolbar w-full h-10 px-2 flex items-center border-b ml-5 color-bg-secondary ${pulseAnimation}`}
       style={{ height: '39px' }}
       data-testid="skeleton-toolbar"
     >
@@ -107,7 +107,7 @@ export const SkeletonToolbar = ({
             {[...Array(section.items)].map((_, i) => (
               <div
                 key={i}
-                className="bg-gray-200"
+                className="color-bg-secondary"
                 style={{
                   height: '30px',
                   width: '30px',
@@ -117,7 +117,7 @@ export const SkeletonToolbar = ({
             ))}
           </div>
           {sectionIndex < sections.length - 1 && (
-            <div className="mx-3 h-5 w-px bg-gray-200" />
+            <div className="mx-3 h-5 w-px color-bg-secondary" />
           )}
         </div>
       ))}
@@ -137,11 +137,11 @@ export const SkeletonGrid = () => {
       data-testid="skeleton-grid"
     >
       {/* Column headers */}
-      <div className="dsheet-skeleton-grid-header flex sticky top-0 z-10 bg-gray-100">
+      <div className="dsheet-skeleton-grid-header flex sticky top-0 z-10 color-bg-secondary">
         {[...Array(cols)].map((_, i) => (
           <div
             key={i}
-            className={`h-7 w-24 bg-gray-100 flex-shrink-0 ${pulseAnimation} flex items-center justify-center text-gray-500 text-xs font-medium`}
+            className={`h-7 w-24 color-bg-secondary flex-shrink-0 ${pulseAnimation} flex items-center justify-center color-text-secondary text-xs font-medium`}
             style={{
               animationDelay: `${i * 50}ms`,
               opacity: 0.9 - i * 0.01,
@@ -155,20 +155,19 @@ export const SkeletonGrid = () => {
         {[...Array(rows)].map((_, rowIndex) => (
           <div key={rowIndex} className="flex whitespace-nowrap">
             <div
-              className={`h-6 w-16 bg-gray-100 flex-shrink-0 ${pulseAnimation} flex items-center justify-center text-gray-500 text-xs font-medium`}
+              className={`h-6 w-16 color-bg-secondary flex-shrink-0 ${pulseAnimation} flex items-center justify-center color-text-secondary text-xs font-medium`}
               style={{ animationDelay: `${rowIndex * 30}ms` }}
             ></div>
             {[...Array(cols)].map((_, colIndex) => (
               <div
                 key={colIndex}
-                className={`h-6 w-24 bg-white border border-1 flex-shrink-0 ${pulseAnimation} flex items-center justify-center`}
+                className={`h-6 w-24 color-bg-default border border-1 flex-shrink-0 ${pulseAnimation} flex items-center justify-center`}
                 style={{
                   animationDelay: `${(rowIndex * 5 + colIndex) * 10}ms`,
                   opacity: Math.max(0.3, 1 - rowIndex * 0.02 - colIndex * 0.01),
-                  background: '#ffffff',
                 }}
               >
-                <div className="w-4 h-1 bg-gray-200 rounded-md"></div>
+                <div className="w-4 h-1 color-bg-secondary rounded-md"></div>
               </div>
             ))}
           </div>

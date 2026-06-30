@@ -127,8 +127,8 @@ body {
 .luckysheet-postil-show-main {
   height: fit-content !important;
   width: 300px !important;
-  background-color: white !important;
-  border: 1px solid #e8ebec !important;
+  background-color: hsl(var(--color-bg-default)) !important;
+  border: 1px solid hsl(var(--color-border-default)) !important;
   border-radius: 4px !important;
   padding: 0 !important;
   box-shadow:
