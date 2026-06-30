@@ -670,8 +670,11 @@ const ContextMenu: React.FC = () => {
               addRowColRightAvobe('column', 'lefttop');
             }}
           >
-            <div className="context-item">
-              <LocalLucidIcon name="AddColLeft" />
+            <div className="context-item color-text-default">
+              <LocalLucidIcon
+                name="AddColLeft"
+                className="color-text-default"
+              />
               <div>{colLeftLabel}</div>
             </div>
           </Menu>
@@ -693,8 +696,11 @@ const ContextMenu: React.FC = () => {
               addRowColRightAvobe('column', 'rightbottom');
             }}
           >
-            <div className="context-item">
-              <LocalLucidIcon name="AddColRight" />
+            <div className="context-item color-text-default">
+              <LocalLucidIcon
+                name="AddColRight"
+                className="color-text-default"
+              />
               <div>{colRightLabel}</div>
             </div>
           </Menu>
@@ -715,8 +721,11 @@ const ContextMenu: React.FC = () => {
               addRowColRightAvobe('row', 'lefttop');
             }}
           >
-            <div className="context-item">
-              <LocalLucidIcon name="AddRowAboveLocal" />
+            <div className="context-item color-text-default">
+              <LocalLucidIcon
+                name="AddRowAboveLocal"
+                className="color-text-default"
+              />
               <div>{rowAboveLabel}</div>
             </div>
           </Menu>
@@ -738,8 +747,11 @@ const ContextMenu: React.FC = () => {
               addRowColRightAvobe('row', 'rightbottom');
             }}
           >
-            <div className="context-item">
-              <LocalLucidIcon name="AddRowBelowLocal" />
+            <div className="context-item color-text-default">
+              <LocalLucidIcon
+                name="AddRowBelowLocal"
+                className="color-text-default"
+              />
               <div>{rowBelowLabel}</div>
             </div>
           </Menu>

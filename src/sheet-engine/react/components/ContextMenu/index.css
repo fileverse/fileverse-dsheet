@@ -15,7 +15,7 @@
   z-index: 1004;
   box-sizing: border-box;
   user-select: none;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 14px;
   /* max-width: 250px; */
   color: hsl(var(--color-text-default));
@@ -36,6 +36,11 @@
   transition: all 0.2s ease-in-out;
 }
 
+/* Main menu rows: outer .luckysheet-cols-menuitem owns hover; flyouts keep .context-item:hover */
+.luckysheet-cols-menu .context-item:hover {
+  background: transparent;
+}
+
 .context-item svg {
   width: 18px !important;
   height: 18px !important;
@@ -49,7 +54,7 @@
 }
 
 .fortune-context-menu-divider {
-  width: "100%";
+  width: '100%';
   height: 1px;
   margin: 4px 0;
   background-color: hsl(var(--color-border-default));
@@ -309,7 +314,7 @@
   border: 1px solid hsl(var(--color-border-default));
 }
 
-.luckysheet-filter-bycolor-submenu .item input[type="checkbox"] {
+.luckysheet-filter-bycolor-submenu .item input[type='checkbox'] {
   position: absolute;
   right: 10px;
   top: 6px;

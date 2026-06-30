@@ -2019,7 +2019,7 @@ const Toolbar: React.FC<{
               }}
             >
               <span
-                className="fortune-toolbar-button__icon fortune-toolbar-button__icon--filter"
+                className="fortune-toolbar-button__icon fortune-toolbar-button__icon--filter color-text-default"
                 data-icon-id="filter"
                 data-testid="toolbar-icon-filter"
                 style={{
