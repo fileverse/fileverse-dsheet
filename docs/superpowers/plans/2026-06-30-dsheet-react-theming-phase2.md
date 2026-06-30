@@ -2,6 +2,8 @@
 
 > **For agentic workers:** executed via superpowers:subagent-driven-development — fresh subagent per task cluster, review after each. Steps use `- [ ]`.
 
+**Status:** 🟡 **Largely landed & committed** (commits `e31e56f`, `244c94e`, `560e8d9`). Hardcoded chrome grays (`#363b3f`/`#525c6f`/`#535a68` etc.) are gone across all of `src/sheet-engine/react/**`; Toolbar + ContextMenu fully done. Tooltip trap fixed (`.fortune-tooltip` kept literal dark, NOT `color-*-inverse`). **Remaining before calling Phase 2a closed:** (1) final holistic review + `npm run build` gate; (2) human visual QA across all 5 themes; (3) confirm the in-cell editor (`SheetOverlay/InputBox.tsx`, `ContentEditable.tsx`) + cell-editor CSS selectors were correctly left untouched. **Deferred:** in-cell editor (Phase 2b), grid canvas (`src/sheet-engine/core/**`, spec §7), `#0188fb` blue-accent token decision.
+
 **Goal:** Theme the sheet-engine **React/DOM components** (`src/sheet-engine/react/**`) — toolbar, context menu, dialogs, overlays, tabs, data tools — across all 5 themes by replacing hardcoded colors (in both `.tsx` classNames and component `.css` files) with `@fileverse/ui` `.color-*` utilities / `hsl(var(--color-*))`.
 
 **Out of scope (do NOT touch):**
