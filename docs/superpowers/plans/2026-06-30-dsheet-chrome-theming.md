@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status:** ✅ **Complete & committed.** All tasks (0–8) implemented via subagent-driven execution, reviewed, build green. Shipped in commits `01c698f` (chrome token updates) + the `@fileverse/ui` 5.0.2→5.1.9 bump that makes sepia/pink/green actually paint. Demo navbar has the 5-theme `ThemeToggle`.
+
 **Goal:** Make all dsheet-level chrome (toolbar wrapper, sidebars, comments, dialogs, chips in `src/editor/**` + dsheet-authored `index.css`) follow the active theme across all five themes by replacing hardcoded colors with `@fileverse/ui` `.color-*` semantic utilities.
 
 **Architecture:** Chrome themes by pure CSS cascade off the `<html>` class — no `theme` prop, no provider, no JS. `@fileverse/ui` already ships token blocks (`light`/`dark`/`theme-sepia`/`theme-pink`/`theme-green`) and `.color-*` utilities; `src/editor/styles/index.css` already imports them. The work is gap-filling: 56 spots already use `.color-*`; ~90 spots still hardcode colors or use ad-hoc `dark:` variants. We convert those. The canvas grid (`src/sheet-engine/**`) is explicitly **out of scope** (deferred Phase 2).

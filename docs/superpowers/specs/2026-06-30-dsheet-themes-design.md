@@ -5,7 +5,7 @@
 > `fileverse-ddoc/docs/THEMES.md` (the cross-repo reference) — read that first for the token
 > system, the five themes, and the `<html>`-class switch mechanism.
 
-**Status:** Design approved (re-scoped). Pending spec review.
+**Status:** Phase 1 (chrome `src/editor/**`) **implemented & committed**. `@fileverse/ui` upgraded to **5.1.9** (all 5 token blocks + 5-theme `ThemeToggle`). Phase 2a (sheet-engine React chrome, `src/sheet-engine/react/**`) token updates **largely landed & committed** (commits `01c698f`, `e31e56f`, `244c94e`, `560e8d9`). Deferred: in-cell editor (`SheetOverlay/InputBox`/`ContentEditable`) and the grid canvas (`src/sheet-engine/core/**`, §7).
 **Scope of this doc:** themes *inside dsheet only*. Wiring dsheet into the ddocs.new app is a
 later spec, but every decision here is made so that integration is a no-op (chrome) or a prop
 pass (Phase 2 grid), not a rewrite.
@@ -63,7 +63,7 @@ chrome-only work and the grid work is preserved verbatim as deferred Phase 2.
 | 7 | Export/data color code | **Out of scope, stays literal** | `xlsx-*` ARGB, `csv-import` hyperlink `rgb(0,0,255)`, `formula-ui-sync` `STATIC_LINE_BG` are file/data values, not UI. |
 | 8 | `theme` prop / grid palette | **Deferred to Phase 2** | Canvas-only concern (§7). |
 | 9 | Provider/toggle ownership | **Consume only, no fork** | Avoids the multi-place duplication THEMES.md §9 flags. Demo uses ui's provider; ddocs.new uses its own. |
-| 10 | `@fileverse/ui` version | **Bumped 5.0.2 → 5.1.8** (matches ddoc's installed version) | **Required precondition, discovered during build.** 5.0.2 ships only `:root` + `.dark` token blocks — no `.theme-sepia`/`.theme-pink`/`.theme-green`. Under those classes the `.color-*` utilities fall back to light. 5.1.8 adds all four blocks AND upgrades `ThemeToggle` to the 5-theme selector (Keith/Naomiii). Without this bump Phase 1 themes light+dark only. Build verified green on 5.1.8. |
+| 10 | `@fileverse/ui` version | **Bumped 5.0.2 → 5.1.9** (`^5.1.9`; matches ddoc) | **Required precondition, discovered during build.** 5.0.2 ships only `:root` + `.dark` token blocks — no `.theme-sepia`/`.theme-pink`/`.theme-green`. Under those classes the `.color-*` utilities fall back to light. 5.1.9 adds all four blocks AND upgrades `ThemeToggle` to the 5-theme selector (Keith/Naomiii). Without this bump Phase 1 themes light+dark only. Build verified green on 5.1.x. |
 
 ---
 
