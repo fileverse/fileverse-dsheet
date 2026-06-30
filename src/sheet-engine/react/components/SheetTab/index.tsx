@@ -163,9 +163,9 @@ const SheetTab: React.FC = () => {
             position: 'absolute',
             display: 'none',
             bottom: '31px',
-            backgroundColor: '#F8F9FA',
-            borderBottom: '1px solid #E8EBEC',
-            color: '#77818A',
+            backgroundColor: 'hsl(var(--color-bg-secondary))',
+            borderBottom: '1px solid hsl(var(--color-border-default))',
+            color: 'hsl(var(--color-text-secondary))',
             fontFamily: 'Helvetica Neue',
             fontSize: 'var(--font-size-2xsm, 12px)',
             fontStyle: 'normal',
@@ -389,7 +389,7 @@ const SheetTab: React.FC = () => {
                       className={`fortune-sheettab__stats-option fortune-sheettab__stats-option--${
                         option.value
                       } w-full h-8 rounded p-2 m-1 text-left flex items-center justify-between transition mr-2 min-w-[50px] ${
-                        selectedStat === option.value && 'bg-[#F8F9FA]'
+                        selectedStat === option.value && 'color-bg-secondary'
                       }`}
                       data-stat-value={option.value}
                       data-testid={`sheettab-stats-option-${option.value}`}

@@ -44,11 +44,11 @@ export const ColorSection = ({
         style={{ backgroundColor: 'red!important' }}
       >
         <div
-          className="flex items-center justify-between  color-picker rounded transition-all cursor-pointer border border-gray-300"
+          className="flex items-center justify-between color-picker rounded transition-all cursor-pointer color-border-default"
           style={{
             padding: '7px',
             border:
-              'var(--border-width-md, 1px) solid hsl(var(--color-border-default, #E8EBEC))',
+              'var(--border-width-md, 1px) solid hsl(var(--color-border-default))',
             borderRadius: 'var(--border-radius-sm, 4px)',
           }}
         >

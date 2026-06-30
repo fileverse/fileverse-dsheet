@@ -13,11 +13,11 @@
   margin: 0;
   flex-shrink: 0;
   box-sizing: border-box;
-  background-color: rgb(255, 255, 255);
+  background-color: hsl(var(--color-bg-default));
   border: 0;
   border-radius: 6px;
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.9) inset,
+    0 0 0 1px hsl(var(--color-bg-default) / 0.9) inset,
     0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
@@ -29,13 +29,13 @@
   gap: 10px;
   height: 36px;
   box-sizing: border-box;
-  background: #fff;
-  border: 1px solid #d0d0d0;
+  background: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 6px;
 }
 
 .fortune-quick-search-field--error {
-  border-color: #d0d0d0;
+  border-color: hsl(var(--color-border-danger));
 }
 
 /* Keep the text field within the bar (Fileverse TextField default height is often > 28px) */
@@ -75,7 +75,7 @@
 .fortune-quick-search-counter {
   font-size: 12px;
   line-height: 1.2;
-  color: #444;
+  color: hsl(var(--color-text-default));
   min-width: 72px;
   text-align: center;
   white-space: nowrap;
@@ -83,7 +83,7 @@
 }
 
 .fortune-quick-search-loading {
-  color: #555;
+  color: hsl(var(--color-text-secondary));
 }
 
 .fortune-quick-search-icon-btn {

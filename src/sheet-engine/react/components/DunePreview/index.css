@@ -1,7 +1,7 @@
 .fortune-dune-preview {
   position: absolute;
-  background-color: #fff;
-  border: 1px solid #e8ebec;
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   width: 270px;
@@ -21,7 +21,7 @@
 .fortune-dune-preview-title {
   font-size: 14px;
   font-weight: 500;
-  color: #363b3f;
+  color: hsl(var(--color-text-default));
 }
 
 .fortune-dune-preview-content {
@@ -29,7 +29,7 @@
   overflow: hidden;
   position: relative;
   border-radius: 4px;
-  border: 1px solid #f8f9fa;
+  border: 1px solid hsl(var(--color-border-default));
 }
 
 .fortune-dune-preview-footer {
@@ -48,10 +48,10 @@
 }
 
 .fortune-dune-preview-button:hover {
-  background-color: #f5f5f5;
+  background-color: hsl(var(--color-bg-default-hover));
 }
 
 .fortune-dune-preview-button.primary {
-  background-color: #000000;
-  color: #fff;
+  background-color: hsl(var(--color-bg-default-inverse));
+  color: hsl(var(--color-text-inverse));
 }

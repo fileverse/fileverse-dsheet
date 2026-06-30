@@ -193,7 +193,11 @@ const CustomBorder: React.FC<Props> = ({ onPick }) => {
         </div>
         <div className="fortune-border-style-preview">
           <svg width="90">
-            <g fill="none" stroke="black" strokeWidth={previewWith}>
+            <g
+              fill="none"
+              stroke="hsl(var(--color-text-default))"
+              strokeWidth={previewWith}
+            >
               <path strokeDasharray={previewdasharry} d="M0 0 l90 0" />
             </g>
           </svg>
@@ -226,7 +230,11 @@ const CustomBorder: React.FC<Props> = ({ onPick }) => {
                 tabIndex={0}
               >
                 <svg height="10" width="90">
-                  <g fill="none" stroke="black" strokeWidth={items.strokeWidth}>
+                  <g
+                    fill="none"
+                    stroke="hsl(var(--color-text-default))"
+                    strokeWidth={items.strokeWidth}
+                  >
                     <path
                       strokeDasharray={items.strokeDasharray}
                       d="M0 5 l85 0"

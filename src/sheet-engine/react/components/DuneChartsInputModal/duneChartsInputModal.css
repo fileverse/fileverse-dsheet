@@ -15,7 +15,7 @@
   left: 50%;
   transform: translateX(-50%);
   border-radius: 0.75rem;
-  background-color: #ffffff;
+  background-color: hsl(var(--color-bg-default));
   padding: 0;
   border: none;
   box-shadow: 0px 8px 32px 0px #00000026;
@@ -28,7 +28,7 @@
   gap: 0.5rem;
   align-items: center;
   padding: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid hsl(var(--color-border-default));
   height: 52px;
   width: 100%;
 }
@@ -85,8 +85,8 @@
 }
 
 .modal-error-message {
-  color: #ef4e2f;
-  background: #fff5f5;
+  color: hsl(var(--color-text-danger));
+  background: hsl(var(--color-bg-danger-light));
   margin: 8px 16px;
   padding: 4px 8px;
   border-radius: 4px;

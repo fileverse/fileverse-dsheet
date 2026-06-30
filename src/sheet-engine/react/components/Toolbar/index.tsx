@@ -2272,7 +2272,7 @@ const Toolbar: React.FC<{
                   tooltip="Crypto denominations"
                   key="crypto-denominations"
                   style={{
-                    backgroundColor: '#e8ebec',
+                    backgroundColor: 'hsl(var(--color-bg-secondary))',
                     borderRadius: '8px',
                   }}
                 />

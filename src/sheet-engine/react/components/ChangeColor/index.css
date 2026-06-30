@@ -44,7 +44,7 @@
   margin: auto;
   padding: 10px;
   border-radius: 6px;
-  background: white;
+  background: hsl(var(--color-bg-default));
   display: flex;
   align-items: center;
   margin: 1px 0px;
@@ -71,6 +71,6 @@
 .button-primary {
   background: #0188fb;
   border: 1px solid #0188fb;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   margin-right: -4px;
 }

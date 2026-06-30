@@ -304,7 +304,11 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         }}
         tabIndex={0}
       >
-        <SVGIcon name="downArrow" width={12} style={{ fill: '#363B3F' }} />
+        <SVGIcon
+          name="downArrow"
+          width={12}
+          style={{ fill: 'hsl(var(--color-text-default))' }}
+        />
       </span>
       {!!sheet.color && (
         <div

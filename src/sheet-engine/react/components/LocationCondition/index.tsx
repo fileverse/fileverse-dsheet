@@ -186,7 +186,9 @@ export const LocationCondition: React.FC<{}> = () => {
                 <label
                   htmlFor={v}
                   style={{
-                    color: isSelect('locationConstant') ? '#000' : '#666',
+                    color: isSelect('locationConstant')
+                      ? 'hsl(var(--color-text-default))'
+                      : 'hsl(var(--color-text-secondary))',
                   }}
                 >
                   {(findAndReplace as any)[v]}
@@ -233,7 +235,9 @@ export const LocationCondition: React.FC<{}> = () => {
                 <label
                   htmlFor={v}
                   style={{
-                    color: isSelect('locationFormula') ? '#000' : '#666',
+                    color: isSelect('locationFormula')
+                      ? 'hsl(var(--color-text-default))'
+                      : 'hsl(var(--color-text-secondary))',
                   }}
                 >
                   {(findAndReplace as any)[v]}
