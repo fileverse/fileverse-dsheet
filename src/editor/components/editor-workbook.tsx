@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Workbook } from '@sheet-engine/react';
 import type { SidebarPortalRegistryHandle, SidebarPortalRenderer } from '@sheet-engine/react';
+import type { ThemeKey } from '@sheet-engine/core/theme';
 import { Cell } from '@sheet-engine/react';
 import {
   TOOL_BAR_ITEMS,
@@ -86,6 +87,7 @@ interface EditorWorkbookProps {
   sidebarActivePanel?: string | null;
   sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
   sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
+  theme?: ThemeKey;
 }
 
 /**
@@ -114,6 +116,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   sidebarActivePanel = null,
   sidebarPortalRegistry = null,
   sidebarPortalRenderers = {},
+  theme,
 }) => {
   const {
     setSelectedTemplate,
@@ -329,6 +332,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
         isFlvReadOnly={isReadOnly}
         isRTCActive={collabEnabled}
         isAuthorized={isAuthorized}
+        theme={theme}
         key={workbookKey}
         ref={sheetEditorRef}
         suppressInitialCellSelection={
@@ -559,6 +563,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     syncStatus,
     isAuthorized,
     dataBlockCalcFunction,
+    theme,
   ]);
 
   return React.cloneElement(workbookElement, {

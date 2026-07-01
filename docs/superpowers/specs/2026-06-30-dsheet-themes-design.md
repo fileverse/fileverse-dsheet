@@ -5,7 +5,12 @@
 > `fileverse-ddoc/docs/THEMES.md` (the cross-repo reference) — read that first for the token
 > system, the five themes, and the `<html>`-class switch mechanism.
 
-**Status:** Phase 1 (chrome `src/editor/**`) **implemented & committed**. `@fileverse/ui` upgraded to **5.1.9** (all 5 token blocks + 5-theme `ThemeToggle`). Phase 2a (sheet-engine React chrome, `src/sheet-engine/react/**`) token updates **largely landed & committed** (commits `01c698f`, `e31e56f`, `244c94e`, `560e8d9`). Deferred: in-cell editor (`SheetOverlay/InputBox`/`ContentEditable`) and the grid canvas (`src/sheet-engine/core/**`, §7).
+**Status:** All theming phases implemented.
+- **Phase 1** — chrome (`src/editor/**`): **committed**.
+- **`@fileverse/ui`** upgraded to **5.1.9** (all 5 token blocks + 5-theme `ThemeToggle`): committed.
+- **Phase 2a** — sheet-engine React chrome (`src/sheet-engine/react/**`): **committed** (`01c698f`, `e31e56f`, `244c94e`, `560e8d9`).
+- **Phase 3** — canvas/grid + in-cell editor (`src/sheet-engine/core/**` + `SheetOverlay` input box): ✅ **implemented, uncommitted**. See the dedicated spec `2026-06-30-dsheet-canvas-theming-design.md` (with §11 as-built notes). This supersedes §7 below (the earlier deferred grid sketch).
+- **Deferred:** ddocs.new app integration; a shared `ThemeKey` constant across ddoc/dsheet.
 **Scope of this doc:** themes *inside dsheet only*. Wiring dsheet into the ddocs.new app is a
 later spec, but every decision here is made so that integration is a no-op (chrome) or a prop
 pass (Phase 2 grid), not a rewrite.

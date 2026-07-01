@@ -15,6 +15,7 @@ import { getBorderInfoComputeRange } from './modules/border';
 import { checkCF, getComputeMap, validateCellData } from './modules';
 import { cellFadeAnimator } from './animate';
 import { isNumericCellType } from './modules/validation';
+import { activePalette, SELECTION_ACCENT } from './theme';
 
 export const defaultStyle = {
   fillStyle: '#000000',
@@ -165,7 +166,7 @@ export class Canvas {
     renderCtx.font = defaultFont(this.sheetCtx.defaultFontSize);
     // @ts-ignore
     renderCtx.textBaseline = defaultStyle.textBaseline; // 基准线 垂直居中
-    renderCtx.fillStyle = defaultStyle.fillStyle;
+    renderCtx.fillStyle = activePalette.cellText;
 
     let dataset_row_st;
     let dataset_row_ed;
@@ -221,14 +222,14 @@ export class Canvas {
       }
 
       if (this.sheetCtx.config?.rowhidden?.[r] == null) {
-        renderCtx.fillStyle = '#F8F9FA';
+        renderCtx.fillStyle = activePalette.headerBg;
         renderCtx.fillRect(
           0,
           start_r + offsetTop + firstOffset,
           this.sheetCtx.rowHeaderWidth - 1,
           end_r - start_r + 1 + lastOffset - firstOffset,
         );
-        renderCtx.fillStyle = '#000000';
+        renderCtx.fillStyle = activePalette.headerText;
 
         // 行标题栏序列号
         renderCtx.save(); // save scale before draw text
@@ -259,7 +260,7 @@ export class Canvas {
       );
       renderCtx.lineWidth = 1;
 
-      renderCtx.strokeStyle = defaultStyle.strokeStyle;
+      renderCtx.strokeStyle = activePalette.gridLine;
       renderCtx.stroke();
       renderCtx.closePath();
 
@@ -354,7 +355,7 @@ export class Canvas {
     renderCtx.font = defaultFont(this.sheetCtx.defaultFontSize);
     // @ts-ignore
     renderCtx.textBaseline = defaultStyle.textBaseline; // 基准线 垂直居中
-    renderCtx.fillStyle = defaultStyle.fillStyle;
+    renderCtx.fillStyle = activePalette.cellText;
 
     let dataset_col_st;
     let dataset_col_ed;
@@ -412,14 +413,14 @@ export class Canvas {
       }
 
       if (this.sheetCtx.config?.colhidden?.[c] == null) {
-        renderCtx.fillStyle = '#F8F9FA';
+        renderCtx.fillStyle = activePalette.headerBg;
         renderCtx.fillRect(
           start_c + offsetLeft - 1,
           0,
           end_c - start_c,
           this.sheetCtx.columnHeaderHeight - 1,
         );
-        renderCtx.fillStyle = '#000000';
+        renderCtx.fillStyle = activePalette.headerText;
 
         // 列标题栏序列号
         renderCtx.save(); // save scale before draw text
@@ -455,7 +456,7 @@ export class Canvas {
           this.sheetCtx.columnHeaderHeight - 2,
         );
         renderCtx.lineWidth = 1;
-        renderCtx.strokeStyle = defaultStyle.strokeStyle;
+        renderCtx.strokeStyle = activePalette.gridLine;
         renderCtx.closePath();
         renderCtx.stroke();
       } else if (
@@ -470,7 +471,7 @@ export class Canvas {
         );
 
         renderCtx.lineWidth = 1;
-        renderCtx.strokeStyle = defaultStyle.strokeStyle;
+        renderCtx.strokeStyle = activePalette.gridLine;
         renderCtx.closePath();
         renderCtx.stroke();
       }
@@ -660,7 +661,7 @@ export class Canvas {
     const colEndX = this.sheetCtx.visibledatacolumn[colEnd];
 
     // 表格canvas 初始化处理
-    renderCtx.fillStyle = '#ffffff';
+    renderCtx.fillStyle = activePalette.cellBg;
     renderCtx.fillRect(
       offsetLeft - 1,
       offsetTop - 1,
@@ -668,7 +669,7 @@ export class Canvas {
       rowEndY - scrollHeight,
     );
     renderCtx.font = defaultFont(this.sheetCtx.defaultFontSize);
-    renderCtx.fillStyle = defaultStyle.fillStyle;
+    renderCtx.fillStyle = activePalette.cellText;
 
     // 表格渲染区域 非空单元格行列 起止坐标
     const cellupdate: {
@@ -1670,7 +1671,7 @@ export class Canvas {
     // }
 
     if (!fillStyle) {
-      renderCtx.fillStyle = '#FFFFFF';
+      renderCtx.fillStyle = activePalette.cellBg;
     } else {
       renderCtx.fillStyle = fillStyle;
     }
@@ -1705,7 +1706,7 @@ export class Canvas {
     if (`${r}_${c}` in dynamicArrayCompute) {
       const value = dynamicArrayCompute[`${r}_${c}`].v;
 
-      renderCtx.fillStyle = '#000000';
+      renderCtx.fillStyle = activePalette.cellText;
       // 文本宽度和高度
       const fontset = defaultFont(this.sheetCtx.defaultFontSize);
       renderCtx.font = fontset;
@@ -1745,7 +1746,7 @@ export class Canvas {
       renderCtx.moveTo(endX + offsetLeft - 1 - ps_w, startY + offsetTop);
       renderCtx.lineTo(endX + offsetLeft - 1, startY + offsetTop);
       renderCtx.lineTo(endX + offsetLeft - 1, startY + offsetTop + ps_h);
-      renderCtx.fillStyle = '#EFC703';
+      renderCtx.fillStyle = SELECTION_ACCENT;
       renderCtx.fill();
       renderCtx.closePath();
     }
@@ -1774,7 +1775,7 @@ export class Canvas {
 
       // Draw rounded rectangle
       renderCtx.beginPath();
-      renderCtx.fillStyle = 'rgba(232, 235, 236, 1)';
+      renderCtx.fillStyle = activePalette.secondaryFill;
       renderCtx.roundRect(x, y, ps_w, ps_h, radius);
       renderCtx.fill();
       renderCtx.closePath();
@@ -1839,7 +1840,7 @@ export class Canvas {
         renderCtx.moveTo(endX + offsetLeft - 2 + bodrder05, startY + offsetTop);
         renderCtx.lineTo(endX + offsetLeft - 2 + bodrder05, endY + offsetTop);
         renderCtx.lineWidth = 1;
-        renderCtx.strokeStyle = defaultStyle.strokeStyle;
+        renderCtx.strokeStyle = activePalette.gridLine;
         renderCtx.stroke();
         renderCtx.closePath();
       }
@@ -1859,7 +1860,7 @@ export class Canvas {
       renderCtx.lineTo(endX + offsetLeft - 1, endY + offsetTop - 2 + bodrder05);
       renderCtx.lineWidth = 1;
 
-      renderCtx.strokeStyle = defaultStyle.strokeStyle;
+      renderCtx.strokeStyle = activePalette.gridLine;
       renderCtx.stroke();
       renderCtx.closePath();
     }
@@ -1951,7 +1952,7 @@ export class Canvas {
       fillStyle = checksCF.cellColor;
     }
     if (!fillStyle) {
-      renderCtx.fillStyle = '#FFFFFF';
+      renderCtx.fillStyle = activePalette.cellBg;
     } else {
       renderCtx.fillStyle = fillStyle;
     }
@@ -2096,7 +2097,7 @@ export class Canvas {
       renderCtx.moveTo(startX + offsetLeft, startY + offsetTop);
       renderCtx.lineTo(startX + offsetLeft + dv_w, startY + offsetTop);
       renderCtx.lineTo(startX + offsetLeft, startY + offsetTop + dv_h);
-      renderCtx.fillStyle = '#EFC703';
+      renderCtx.fillStyle = SELECTION_ACCENT;
       renderCtx.fill();
       renderCtx.closePath();
     }
@@ -2110,7 +2111,7 @@ export class Canvas {
       renderCtx.moveTo(endX + offsetLeft - ps_w, startY + offsetTop);
       renderCtx.lineTo(endX + offsetLeft, startY + offsetTop);
       renderCtx.lineTo(endX + offsetLeft, startY + offsetTop + ps_h);
-      renderCtx.fillStyle = '#EFC703';
+      renderCtx.fillStyle = SELECTION_ACCENT;
       renderCtx.fill();
       renderCtx.closePath();
     }
@@ -2260,7 +2261,7 @@ export class Canvas {
       }
 
       // 文本
-      renderCtx.fillStyle = normalizedAttr(flowdata, r, c, 'fc');
+      renderCtx.fillStyle = flowdata?.[r]?.[c]?.fc ? normalizedAttr(flowdata, r, c, 'fc') : activePalette.cellText;
       renderCtx.fillText(
         _.isNil(value) ? '' : value,
         horizonAlignPos + 18,
@@ -2467,7 +2468,7 @@ export class Canvas {
       }
 
       // 单元格 文本颜色
-      renderCtx.fillStyle = normalizedAttr(flowdata, r, c, 'fc');
+      renderCtx.fillStyle = flowdata?.[r]?.[c]?.fc ? normalizedAttr(flowdata, r, c, 'fc') : activePalette.cellText;
 
       // 若单元格有交替颜色 文本颜色
       if (checksAF?.[0]) {
@@ -2513,7 +2514,7 @@ export class Canvas {
         renderCtx.moveTo(endX + offsetLeft - 2 + bodrder05, startY + offsetTop);
         renderCtx.lineTo(endX + offsetLeft - 2 + bodrder05, endY + offsetTop);
         renderCtx.lineWidth = 1;
-        renderCtx.strokeStyle = defaultStyle.strokeStyle;
+        renderCtx.strokeStyle = activePalette.gridLine;
         renderCtx.stroke();
         renderCtx.closePath();
       }
@@ -2531,7 +2532,7 @@ export class Canvas {
       );
       renderCtx.lineTo(endX + offsetLeft - 1, endY + offsetTop - 2 + bodrder05);
       renderCtx.lineWidth = 1;
-      renderCtx.strokeStyle = defaultStyle.strokeStyle;
+      renderCtx.strokeStyle = activePalette.gridLine;
       renderCtx.stroke();
       renderCtx.closePath();
     }
@@ -2725,7 +2726,7 @@ export class Canvas {
     const checksCF: any = checkCF(r, c, cfCompute);
 
     // 单元格 文本颜色
-    renderCtx.fillStyle = normalizedAttr(flowdata, r, c, 'fc');
+    renderCtx.fillStyle = flowdata?.[r]?.[c]?.fc ? normalizedAttr(flowdata, r, c, 'fc') : activePalette.cellText;
 
     // 若单元格有交替颜色 文本颜色
     if (checksAF?.[0]) {
@@ -3017,7 +3018,7 @@ export class Canvas {
       this.sheetCtx.devicePixelRatio,
       this.sheetCtx.devicePixelRatio,
     );
-    renderCtx.strokeStyle = '#ccc';
+    renderCtx.strokeStyle = activePalette.freezeLine;
     renderCtx.lineWidth = 2;
 
     if (horizontalTop) {

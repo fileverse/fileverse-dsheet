@@ -6,7 +6,7 @@
 > chrome (`src/sheet-engine/react/**`); this phase themes the **canvas core**
 > (`src/sheet-engine/core/**`) + the in-cell editor that Phase 2 deliberately deferred.
 
-**Status:** Design approved (verbally). Pending written-spec review.
+**Status:** ✅ **Implemented** (uncommitted — owner commits manually). Built step-by-step with browser checkpoints. Build green. See §11 "Implementation notes" for where the built solution deviated from the original design.
 **Companion docs:** `docs/superpowers/specs/2026-06-30-dsheet-themes-design.md` (overall theming;
 this supersedes/expands its §7 Phase-2-deferred grid sketch), `fileverse-ddoc/docs/THEMES.md`
 (cross-repo reference + ddoc's JS-path parity).
@@ -281,3 +281,23 @@ placeholder block.
 | Workbook usage | `src/editor/components/editor-workbook.tsx` |
 | In-cell editor | `src/sheet-engine/react/components/SheetOverlay/InputBox.tsx`, `ContentEditable.tsx` (+ CSS) |
 | ddoc parity references | `fileverse-ddoc/package/types.ts`, `package/context/editor-context.tsx`, `package/ddoc-editor.tsx` |
+
+---
+
+## 11. Implementation notes (as built)
+
+Where the built solution differs from or refines the design above:
+
+- **Palette = exact `@fileverse/ui` token values.** The four non-light `GRID_THEMES` palettes use the ui chrome tokens' HSL values verbatim (`cellBg`=`--color-bg-default`, `cellText`=`--color-text-default`, `gridLine`/`freezeLine`=`--color-border-default`, `headerBg`/`secondaryFill`=`--color-bg-secondary`, `headerText`=`--color-text-default`) as `hsla(...)` strings, so grid, chrome, and editor are pixel-consistent per theme. `light` keeps the exact original hex (regression guard). This realizes decision #9's "token-derived" better than arbitrary hex; if ui token values change, refresh these to match.
+
+- **In-cell editor uses published CSS vars, not `editor*` palette slots.** The GridPalette has no `editorBg`/`editorText`/`editorBorder`. Instead the Workbook theme effect publishes `--grid-cell-bg` / `--grid-cell-text` (from `activePalette`) on `document.documentElement`, and `.luckysheet-input-box-inner` reads `var(--grid-cell-bg, …)` / `var(--grid-cell-text, …)`. The editor therefore matches the canvas cell using the **same value source**. Editing a user-*colored* cell still shows the default themed surface (luckysheet's own inline style governs that case) — a known, minor follow-up.
+
+- **Default cell text needed two fixes beyond the canvas paint sites.** The `cellText` default lived in `modules/text.ts` (inline-string builder `!fc ? '#000'`) and at three `canvas.ts` sites via `normalizedAttr(...,'fc')` (which defaults unset `fc` to `#000000` in `modules/cell.ts`). Both were themed to `activePalette.cellText` **only when `fc` is unset** — user-set colors (including deliberate black) stay literal, and the `value !== '#000000'` styled-cell detection elsewhere is untouched.
+
+- **Theme signal path (as wired):** `theme?: ThemeKey` on `DsheetProps` → `SpreadsheetEditor` → `EditorContent` (added to its `Pick`) → `EditorWorkbook` (added to `EditorWorkbookProps` + memo deps) → `Workbook` (`AdditionalProps`) → effect `setActiveGridPalette(theme)` + `jfrefreshgrid(ctx, null, undefined)`. Redraw only when the palette changed; **no remount** (scroll/selection preserved). Demo passes `useTheme().theme`.
+
+- **Files touched:** `src/sheet-engine/core/theme.ts` (new), `src/sheet-engine/core/canvas.ts`, `src/sheet-engine/core/modules/text.ts`, `src/sheet-engine/react/components/Workbook/index.tsx`, `src/sheet-engine/react/components/SheetOverlay/index.css`, `src/editor/types.ts`, `src/editor/dsheet-editor.tsx`, `src/editor/components/editor-workbook.tsx`, `demo/src/App.tsx`.
+
+- **Left as-is (dead):** `canvas.ts` `defaultStyle.fillStyle/strokeStyle/rowFillStyle` are now unused (all reads replaced by `activePalette.*`). Harmless; optional cleanup.
+
+- **Feature/semantic canvas colors confirmed literal:** error red (`#ff0000`), error border (`#FB3449`), forced-string green (`#487f1e`), checkbox glyphs (`#000`/`#fff`), gradient stop, pivot-table placeholder; selection accent routed through `SELECTION_ACCENT` (`#EFC703`). Formula bar (`FxEditor`) was already themed in Phase 2.
