@@ -16,6 +16,7 @@ import {
   Toaster,
   toast,
   ThemeToggle,
+  useTheme,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
 import { crypto as cryptoUtils } from './crypto';
@@ -29,6 +30,7 @@ import {
 function App() {
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
   const sheetEditorRef = useRef<WorkbookInstance>(null);
+  const { theme } = useTheme();
 
   // --- Sheet identity ---
   const [dsheetId] = useState<string>(() => {
@@ -439,6 +441,7 @@ function App() {
               <Toaster position="bottom-right" duration={3000} />
               <DSheetEditor
                 isReadOnly={false}
+                theme={theme}
                 renderNavbar={renderNavbar}
                 dsheetId={dsheetId}
                 onChange={handleSheetChange}

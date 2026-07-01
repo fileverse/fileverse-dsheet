@@ -389,8 +389,11 @@
   -moz-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4); */
   /* box-shadow: 0 2px 5px rgb(0 0 0 / 40%); */
   word-wrap: break-word;
-  background-color: rgb(255, 255, 255);
-  color: #000000;
+  /* Match the canvas cell exactly: these vars are published from the active grid palette by
+     the Workbook theme effect (fallbacks = the original light values). The #efc703 border +
+     #f2f217 outline above stay literal — selection accent. */
+  background-color: var(--grid-cell-bg, rgb(255, 255, 255));
+  color: var(--grid-cell-text, #000000);
   font-size: 13px;
   right: auto;
   overflow-y: auto;

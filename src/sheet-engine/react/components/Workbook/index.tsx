@@ -29,7 +29,9 @@ import {
   loadLocale,
   defaultLuckysheetSelectRanges,
   updateContextWithSheetData,
+  jfrefreshgrid,
 } from '@sheet-engine/core';
+import { activePalette, setActiveGridPalette, type ThemeKey } from '@sheet-engine/core/theme';
 import {
   normalizeDateBaseLocale,
   setDateBaseLocale,
@@ -91,6 +93,7 @@ type AdditionalProps = {
   sidebarActivePanel?: string | null;
   sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
   sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
+  theme?: ThemeKey;
 };
 
 const triggerGroupValuesRefresh = (ctx: Context) => {
@@ -116,6 +119,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       sidebarActivePanel = null,
       sidebarPortalRegistry = null,
       sidebarPortalRenderers = {},
+      theme,
       ...props
     },
     ref,
@@ -719,6 +723,25 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         context.hooks.sheetLengthChange();
       }
     }, [context.luckysheetfile.length]);
+
+    // Repaint the canvas grid when the theme changes. Chrome themes via CSS cascade off the
+    // <html> class, but the grid is JS-painted and can't read CSS vars — so swap the active
+    // palette and force a full-grid redraw. No remount (that would lose scroll/selection).
+    useEffect(() => {
+      const changed = setActiveGridPalette(theme);
+      // Publish the resolved grid palette as CSS vars so DOM overlays that must match the
+      // canvas exactly — the in-cell editor box — read the same value the canvas paints with
+      // (not the ui chrome token, which may differ slightly). Set on every run (incl. mount)
+      // so the vars exist even when the theme never changes from the default.
+      const root = document.documentElement;
+      root.style.setProperty('--grid-cell-bg', activePalette.cellBg);
+      root.style.setProperty('--grid-cell-text', activePalette.cellText);
+      if (changed) {
+        setContextWithProduce((draftCtx) => {
+          jfrefreshgrid(draftCtx, null, undefined);
+        });
+      }
+    }, [theme, setContextWithProduce]);
 
     const currentSheet = useMemo(() => {
       return context?.luckysheetfile?.find(

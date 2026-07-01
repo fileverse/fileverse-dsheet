@@ -4,6 +4,7 @@ import type { Context } from '../context';
 import { locale } from '../locale';
 import { Cell } from '../types';
 import { normalizedCellAttr } from './cell';
+import { activePalette } from '../theme';
 import { isInlineStringCell } from './inline-string';
 import { isRealNum } from './validation';
 
@@ -539,7 +540,7 @@ export function getCellTextInfo(
         if (newValue === '' && x !== splitArr.length - 1) {
           inlineStringArr.push({
             fontset: scfontset,
-            fc: !fc ? '#000' : fc,
+            fc: !fc ? activePalette.cellText : fc,
             cl: !cl ? 0 : cl,
             un: !un ? 0 : un,
             wrap: true,
@@ -550,7 +551,7 @@ export function getCellTextInfo(
           if (hasLink) {
             inlineStringArr.push({
               fontset: scfontset,
-              fc: !fc ? '#000' : fc,
+              fc: !fc ? activePalette.cellText : fc,
               cl: !cl ? 0 : cl,
               un: !un ? 0 : un,
               v: newValue,
@@ -569,7 +570,7 @@ export function getCellTextInfo(
 
               inlineStringArr.push({
                 fontset: scfontset,
-                fc: !fc ? '#000' : fc,
+                fc: !fc ? activePalette.cellText : fc,
                 cl: !cl ? 0 : cl,
                 un: !un ? 0 : un,
                 v: nv,
@@ -582,7 +583,7 @@ export function getCellTextInfo(
           if (x !== splitArr.length - 1) {
             inlineStringArr.push({
               fontset: scfontset,
-              fc: !fc ? '#000' : fc,
+              fc: !fc ? activePalette.cellText : fc,
               cl: !cl ? 0 : cl,
               un: !un ? 0 : un,
               wrap: true,
