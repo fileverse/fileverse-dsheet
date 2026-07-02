@@ -347,10 +347,21 @@ export class FormulaCache {
   revDepsByCell: Map<string, Set<string>>;
 
   /**
+   * Formulas that referenced a range too large to fully expand into `revDepsByCell`.
+   * These must be included on incremental recalcs because a single-cell edit may
+   * affect them even when no precise reverse edge exists.
+   */
+  formulasWithWideRangeDeps: Set<string>;
+
+  /**
    * Dependency collection state for the currently-parsed formula, set by `execfunction`.
    * When null, dependency recording is disabled.
    */
-  activeDepCollection: null | { originKey: string; deps: Set<string> };
+  activeDepCollection: null | {
+    originKey: string;
+    deps: Set<string>;
+    hasWideRangeDep: boolean;
+  };
 
   /** Step 2: per execFunctionGroup pass cache for materialized range reads. */
   rangeValuePassCache?: Map<string, RangePassCacheEntry>;
@@ -375,6 +386,7 @@ export class FormulaCache {
     this.cellTextToIndexList = {};
     this.depsByCell = new Map();
     this.revDepsByCell = new Map();
+    this.formulasWithWideRangeDeps = new Set();
     this.activeDepCollection = null;
     this.parser = new Parser();
     this.parser.on(
@@ -447,16 +459,17 @@ export class FormulaCache {
                 recordDep(toCellKey(id, row, col));
               }
             }
-          } else if (originInRange) {
-            // Still record self-in-range to detect circular refs.
-            recordDep(toCellKey(id, originRow, originCol));
+          } else {
+            that.activeDepCollection.hasWideRangeDep = true;
+            if (originInRange) {
+              // Still record self-in-range to detect circular refs.
+              recordDep(toCellKey(id, originRow, originCol));
+            }
           }
         }
 
-        const originRow =
-          typeof options === 'object' ? options.row : null;
-        const originCol =
-          typeof options === 'object' ? options.column : null;
+        const originRow = typeof options === 'object' ? options.row : null;
+        const originCol = typeof options === 'object' ? options.column : null;
         const skippedOrigin =
           originRow != null &&
           originCol != null &&
@@ -1333,6 +1346,7 @@ export function delFunctionGroup(
 
   // Remove dependency edges for this cell (it is no longer a formula).
   const originKey = `${id}:${r}:${c}`;
+  ctx.formulaCache.formulasWithWideRangeDeps.delete(originKey);
   const prevDeps = ctx.formulaCache?.depsByCell?.get(originKey);
   if (prevDeps) {
     prevDeps.forEach((depKey) => {
@@ -1660,11 +1674,17 @@ export function execfunction(
   const sheetId = id || ctx.currentSheetId;
   const originKey = `${sheetId}:${r}:${c}`;
   const deps = new Set<string>();
-  ctx.formulaCache.activeDepCollection = { originKey, deps };
+  ctx.formulaCache.formulasWithWideRangeDeps.delete(originKey);
+  ctx.formulaCache.activeDepCollection = {
+    originKey,
+    deps,
+    hasWideRangeDep: false,
+  };
 
   ctx.formulaCache.parser.context = ctx;
   const parserExpression = normalizeDateArithmeticForParser(txt.substring(1));
   let parsedResponse: { error: any; result: any };
+  let hasWideRangeDep = false;
   try {
     parsedResponse = ctx.formulaCache.parser.parse(parserExpression, {
       sheetId,
@@ -1672,7 +1692,12 @@ export function execfunction(
       column: c,
     });
   } finally {
+    hasWideRangeDep =
+      ctx.formulaCache.activeDepCollection?.hasWideRangeDep ?? false;
     ctx.formulaCache.activeDepCollection = null;
+  }
+  if (hasWideRangeDep) {
+    ctx.formulaCache.formulasWithWideRangeDeps.add(originKey);
   }
 
   // Update dependency graph for this formula cell.
@@ -1961,10 +1986,16 @@ function evalFormulaCellInGroup(
       id: formulaCell.id,
     });
 
-    writeExecFunctionGlobalDataCell(ctx, formulaCell.r, formulaCell.c, formulaCell.id, {
-      v: CIRCULAR_REF_ERROR,
-      f: calc_funcStr,
-    });
+    writeExecFunctionGlobalDataCell(
+      ctx,
+      formulaCell.r,
+      formulaCell.c,
+      formulaCell.id,
+      {
+        v: CIRCULAR_REF_ERROR,
+        f: calc_funcStr,
+      },
+    );
 
     return;
   }
@@ -2025,10 +2056,16 @@ function evalFormulaCellInGroup(
     id: formulaCell.id,
   });
 
-  writeExecFunctionGlobalDataCell(ctx, formulaCell.r, formulaCell.c, formulaCell.id, {
-    v: v[1],
-    f: v[2],
-  });
+  writeExecFunctionGlobalDataCell(
+    ctx,
+    formulaCell.r,
+    formulaCell.c,
+    formulaCell.id,
+    {
+      v: v[1],
+      f: v[2],
+    },
+  );
 }
 
 function mergeFormulaDeps(
@@ -2061,13 +2098,14 @@ export function applyWorkerFormulaChunkResults(
   output: SnapshotEvalOutput,
   impactedByCircular: Set<string>,
   cycleNodes: Set<string>,
+  calcChainKeys: string[] = [],
+  data?: CellMatrix | null,
 ) {
   ensureExecFunctionGlobalData(ctx);
-  Object.assign(ctx.formulaCache.execFunctionGlobalData, output.execFunctionGlobalData);
+  const calcChainSet = new Set(calcChainKeys);
 
   for (const result of output.results) {
     const formulaCellKey = `${result.id}:${result.r}:${result.c}`;
-    mergeFormulaDeps(ctx, formulaCellKey, result.deps);
 
     if (impactedByCircular.has(formulaCellKey)) {
       const isInCycle = cycleNodes.has(formulaCellKey);
@@ -2092,6 +2130,25 @@ export function applyWorkerFormulaChunkResults(
       });
       continue;
     }
+
+    if (Array.isArray(result.v)) {
+      evalFormulaCellInGroup(
+        ctx,
+        {
+          r: result.r,
+          c: result.c,
+          id: result.id,
+          calc_funcStr: result.f,
+        },
+        calcChainSet,
+        data,
+        impactedByCircular,
+        cycleNodes,
+      );
+      continue;
+    }
+
+    mergeFormulaDeps(ctx, formulaCellKey, result.deps);
 
     if (result.isError) {
       setCellError(ctx, result.r, result.c, {
@@ -2222,6 +2279,9 @@ export function execFunctionGroup(
       originKey,
       ctx.formulaCache.revDepsByCell,
     );
+    ctx.formulaCache.formulasWithWideRangeDeps.forEach((formulaKey) => {
+      dependents.add(formulaKey);
+    });
     if (dependents.size > 0) {
       calcChainsToProcess = calcChains.filter((cell) =>
         dependents.has(`${cell.id}:${cell.r}:${cell.c}`),
@@ -2582,6 +2642,17 @@ export function execFunctionGroup(
       cycleNodes: Array.from(cycleNodes),
       nextIndex: 0,
       total: formulaRunList.length,
+      debug: {
+        mode: 'main-thread',
+        lastChunkMs: 0,
+        lastChunkSize: 0,
+        completedChunks: 0,
+        fallbackChunks: 0,
+        workerAvailable: false,
+        unsafeFormulaCount: 0,
+        workerFormulaCount: 0,
+        lastError: null,
+      },
     };
     ctx.isFormulaCalculating = true;
     return;

@@ -10,6 +10,23 @@ export const FORMULA_WORKER_THRESHOLD = 100;
 /** Formulas evaluated per worker message (larger — runs off main thread). */
 export const FORMULA_WORKER_CHUNK_SIZE = 150;
 
+/** Maximum time to wait for a worker chunk before falling back to the real engine. */
+export const FORMULA_WORKER_CHUNK_TIMEOUT_MS = 30_000;
+
+export type FormulaEvalDebugMode = 'worker' | 'main-thread' | 'fallback';
+
+export type FormulaEvalDebug = {
+  mode: FormulaEvalDebugMode;
+  lastChunkMs: number;
+  lastChunkSize: number;
+  completedChunks: number;
+  fallbackChunks: number;
+  workerAvailable: boolean;
+  unsafeFormulaCount: number;
+  workerFormulaCount: number;
+  lastError: string | null;
+};
+
 export type FormulaAsyncEvalJob = {
   formulaRunList: Array<{
     r: number;
@@ -23,6 +40,7 @@ export type FormulaAsyncEvalJob = {
   cycleNodes: string[];
   nextIndex: number;
   total: number;
+  debug?: FormulaEvalDebug;
 };
 
 export function isFormulaEvalPending(ctx: {
@@ -30,4 +48,16 @@ export function isFormulaEvalPending(ctx: {
   formulaAsyncEval?: FormulaAsyncEvalJob | null;
 }): boolean {
   return !!(ctx.isFormulaCalculating && ctx.formulaAsyncEval);
+}
+
+const WORKER_UNSAFE_FORMULA_RE =
+  /\b(SEQUENCE|FILTER|SORT|SORTBY|UNIQUE|TRANSPOSE|ARRAYFORMULA|INDIRECT|OFFSET|INDEX|SPARKLINE)\s*\(/i;
+
+/**
+ * The worker snapshot evaluator intentionally handles only scalar formulas that
+ * mirror the main engine well. Dynamic/spill/range-indirection formulas stay on
+ * the main thread so `spillSortResult` and special range logic remain authoritative.
+ */
+export function isFormulaWorkerUnsafe(calcFuncStr: string): boolean {
+  return WORKER_UNSAFE_FORMULA_RE.test(calcFuncStr);
 }

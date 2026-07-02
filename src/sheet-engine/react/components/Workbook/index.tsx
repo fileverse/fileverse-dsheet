@@ -47,8 +47,10 @@ import {
   isUsInsertDateTimeQuoteShortcut,
 } from '@sheet-engine/core/events/keyboard-shortcut-utils';
 import {
+  FORMULA_ASYNC_CHUNK_SIZE,
   FORMULA_WORKER_CHUNK_SIZE,
   FORMULA_WORKER_THRESHOLD,
+  isFormulaWorkerUnsafe,
 } from '@sheet-engine/core/modules/formula-async-eval';
 import {
   buildSnapshotEvalInput,
@@ -155,6 +157,8 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     );
 
     const [context, setContext] = useState(defaultContext(refs));
+    const contextRef = useRef(context);
+    contextRef.current = context;
     // const { formula } = locale(context);
 
     const [moreToolbarItems, setMoreToolbarItems] =
@@ -1404,13 +1408,17 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       };
     }, [onPaste]);
 
+    const isFormulaCalculating = !!context.isFormulaCalculating;
+    const formulaAsyncEvalTotal = context.formulaAsyncEval?.total;
+
     // Drain deferred formula eval: main-thread chunks (small jobs) or Web Worker (large jobs).
     useEffect(() => {
-      if (!context.isFormulaCalculating || !context.formulaAsyncEval) {
+      if (!isFormulaCalculating || formulaAsyncEvalTotal == null) {
         return;
       }
 
       let cancelled = false;
+      let frameId: number | null = null;
 
       const finishJobIfComplete = (draft: Context) => {
         const job = draft.formulaAsyncEval;
@@ -1422,78 +1430,166 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         draft.isFormulaCalculating = false;
       };
 
-      const drain = async () => {
-        if (cancelled) return;
-        const job = context.formulaAsyncEval;
-        if (!job) return;
+      const waitForNextFrame = () =>
+        new Promise<void>((resolve) => {
+          frameId = requestAnimationFrame(() => {
+            frameId = null;
+            resolve();
+          });
+        });
 
-        const useWorker = job.total >= FORMULA_WORKER_THRESHOLD;
+      const drainLoop = async () => {
+        while (!cancelled) {
+          const job = contextRef.current.formulaAsyncEval;
+          if (!contextRef.current.isFormulaCalculating || !job) return;
 
-        if (useWorker) {
-          const chunkEnd = Math.min(
-            job.nextIndex + FORMULA_WORKER_CHUNK_SIZE,
-            job.formulaRunList.length,
-          );
-          const formulas = job.formulaRunList.slice(job.nextIndex, chunkEnd);
-          try {
-            const input = buildSnapshotEvalInput(context, formulas);
-            const output = await evalFormulasInBackground(input);
-            if (cancelled) return;
+          const startIndex = job.nextIndex;
+          if (startIndex >= job.total) {
             setContextWithProduce(
               (draft) => {
-                const liveJob = draft.formulaAsyncEval;
-                if (!liveJob) return;
-                applyWorkerFormulaChunkResults(
-                  draft,
-                  output,
-                  new Set(liveJob.impactedByCircular),
-                  new Set(liveJob.cycleNodes),
-                );
-                liveJob.nextIndex = chunkEnd;
                 finishJobIfComplete(draft);
               },
               { noHistory: true },
             );
-          } catch {
-            if (cancelled) return;
+            return;
+          }
+
+          const useWorker = job.total >= FORMULA_WORKER_THRESHOLD;
+          const workerChunkEnd = Math.min(
+            startIndex + FORMULA_WORKER_CHUNK_SIZE,
+            job.formulaRunList.length,
+          );
+          const workerFormulas = job.formulaRunList.slice(
+            startIndex,
+            workerChunkEnd,
+          );
+          const workerUnsafeFormulaCount = workerFormulas.filter((formula) =>
+            isFormulaWorkerUnsafe(formula.calc_funcStr),
+          ).length;
+          const useWorkerForChunk = useWorker && workerUnsafeFormulaCount === 0;
+          const chunkSize = useWorkerForChunk
+            ? FORMULA_WORKER_CHUNK_SIZE
+            : FORMULA_ASYNC_CHUNK_SIZE;
+          const chunkEnd = Math.min(
+            startIndex + chunkSize,
+            job.formulaRunList.length,
+          );
+          const formulas = job.formulaRunList.slice(startIndex, chunkEnd);
+          const unsafeFormulaCount = formulas.filter((formula) =>
+            isFormulaWorkerUnsafe(formula.calc_funcStr),
+          ).length;
+          const startedAt = performance.now();
+
+          if (useWorkerForChunk) {
+            try {
+              const input = buildSnapshotEvalInput(
+                contextRef.current,
+                formulas,
+              );
+              const output = await evalFormulasInBackground(input);
+              if (cancelled) return;
+              setContextWithProduce(
+                (draft) => {
+                  const liveJob = draft.formulaAsyncEval;
+                  if (!liveJob || liveJob.nextIndex !== startIndex) return;
+                  applyWorkerFormulaChunkResults(
+                    draft,
+                    output,
+                    new Set(liveJob.impactedByCircular),
+                    new Set(liveJob.cycleNodes),
+                    liveJob.calcChainKeys,
+                    getFlowdata(draft),
+                  );
+                  const elapsed = performance.now() - startedAt;
+                  liveJob.nextIndex = chunkEnd;
+                  liveJob.debug = {
+                    mode: 'worker',
+                    lastChunkMs: elapsed,
+                    lastChunkSize: formulas.length,
+                    completedChunks: (liveJob.debug?.completedChunks ?? 0) + 1,
+                    fallbackChunks: liveJob.debug?.fallbackChunks ?? 0,
+                    workerAvailable: true,
+                    unsafeFormulaCount,
+                    workerFormulaCount: formulas.length,
+                    lastError: null,
+                  };
+                  finishJobIfComplete(draft);
+                },
+                { noHistory: true },
+              );
+            } catch (e) {
+              if (cancelled) return;
+              const message = e instanceof Error ? e.message : String(e);
+              setContextWithProduce(
+                (draft) => {
+                  const liveJob = draft.formulaAsyncEval;
+                  if (!liveJob || liveJob.nextIndex !== startIndex) return;
+                  runFormulaEvalChunk(
+                    draft,
+                    liveJob,
+                    chunkEnd - liveJob.nextIndex,
+                  );
+                  const elapsed = performance.now() - startedAt;
+                  liveJob.debug = {
+                    mode: 'fallback',
+                    lastChunkMs: elapsed,
+                    lastChunkSize: formulas.length,
+                    completedChunks: (liveJob.debug?.completedChunks ?? 0) + 1,
+                    fallbackChunks: (liveJob.debug?.fallbackChunks ?? 0) + 1,
+                    workerAvailable: false,
+                    unsafeFormulaCount,
+                    workerFormulaCount: 0,
+                    lastError: message,
+                  };
+                  finishJobIfComplete(draft);
+                },
+                { noHistory: true },
+              );
+            }
+          } else {
             setContextWithProduce(
               (draft) => {
                 const liveJob = draft.formulaAsyncEval;
-                if (!liveJob) return;
-                runFormulaEvalChunk(draft, liveJob);
+                if (!liveJob || liveJob.nextIndex !== startIndex) return;
+                runFormulaEvalChunk(
+                  draft,
+                  liveJob,
+                  chunkEnd - liveJob.nextIndex,
+                );
+                const elapsed = performance.now() - startedAt;
+                liveJob.debug = {
+                  mode: 'main-thread',
+                  lastChunkMs: elapsed,
+                  lastChunkSize: formulas.length,
+                  completedChunks: (liveJob.debug?.completedChunks ?? 0) + 1,
+                  fallbackChunks: liveJob.debug?.fallbackChunks ?? 0,
+                  workerAvailable: useWorker,
+                  unsafeFormulaCount,
+                  workerFormulaCount: 0,
+                  lastError:
+                    useWorker && unsafeFormulaCount > 0
+                      ? `${unsafeFormulaCount} formula(s) in this chunk require the main formula engine`
+                      : null,
+                };
                 finishJobIfComplete(draft);
               },
               { noHistory: true },
             );
           }
-          return;
-        }
 
-        setContextWithProduce(
-          (draft) => {
-            const liveJob = draft.formulaAsyncEval;
-            if (!liveJob) return;
-            runFormulaEvalChunk(draft, liveJob);
-            finishJobIfComplete(draft);
-          },
-          { noHistory: true },
-        );
+          await waitForNextFrame();
+        }
       };
 
-      const frameId = requestAnimationFrame(() => {
-        void drain();
-      });
+      void drainLoop();
 
       return () => {
         cancelled = true;
-        cancelAnimationFrame(frameId);
+        if (frameId != null) {
+          cancelAnimationFrame(frameId);
+        }
       };
-    }, [
-      context,
-      context.isFormulaCalculating,
-      context.formulaAsyncEval?.nextIndex,
-      setContextWithProduce,
-    ]);
+    }, [isFormulaCalculating, formulaAsyncEvalTotal, setContextWithProduce]);
 
     // expose APIs
     useImperativeHandle(
@@ -1561,12 +1657,46 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 role="status"
                 aria-live="polite"
               >
-                Calculating formulas…{' '}
-                {Math.min(
-                  context.formulaAsyncEval.nextIndex,
-                  context.formulaAsyncEval.total,
+                <div>
+                  Calculating formulas…{' '}
+                  {Math.min(
+                    context.formulaAsyncEval.nextIndex,
+                    context.formulaAsyncEval.total,
+                  )}
+                  /{context.formulaAsyncEval.total}
+                </div>
+                {context.formulaAsyncEval.debug && (
+                  <div className="fortune-formula-calculating-debug">
+                    <div>
+                      Mode: {context.formulaAsyncEval.debug.mode} | Last chunk:{' '}
+                      {context.formulaAsyncEval.debug.lastChunkSize} in{' '}
+                      {Math.round(context.formulaAsyncEval.debug.lastChunkMs)}ms
+                    </div>
+                    <div>
+                      Chunks: {context.formulaAsyncEval.debug.completedChunks}
+                    </div>
+                    <div>
+                      Fallbacks: {context.formulaAsyncEval.debug.fallbackChunks}
+                    </div>
+                    <div>
+                      Worker:{' '}
+                      {context.formulaAsyncEval.debug.workerAvailable
+                        ? 'ok'
+                        : 'unavailable'}
+                    </div>
+                    {context.formulaAsyncEval.debug.unsafeFormulaCount > 0 && (
+                      <div>
+                        Main-engine formulas this chunk:{' '}
+                        {context.formulaAsyncEval.debug.unsafeFormulaCount}
+                      </div>
+                    )}
+                    {context.formulaAsyncEval.debug.lastError && (
+                      <div className="fortune-formula-calculating-error">
+                        Last error: {context.formulaAsyncEval.debug.lastError}
+                      </div>
+                    )}
+                  </div>
                 )}
-                /{context.formulaAsyncEval.total}
               </div>
             )}
             <SVGDefines currency={mergedSettings.currency} />

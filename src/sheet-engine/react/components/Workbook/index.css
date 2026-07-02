@@ -80,6 +80,7 @@ html::-webkit-scrollbar-button {
   bottom: 12px;
   right: 12px;
   z-index: 1300;
+  max-width: 360px;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -89,4 +90,13 @@ html::-webkit-scrollbar-button {
   border: 1px solid rgba(0, 0, 0, 0.12);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   pointer-events: none;
+}
+
+.fortune-formula-calculating-debug {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.68);
+}
+
+.fortune-formula-calculating-error {
+  color: #b42318;
 }
