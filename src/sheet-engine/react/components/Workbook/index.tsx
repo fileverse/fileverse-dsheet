@@ -1511,6 +1511,11 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                     workerAvailable: true,
                     unsafeFormulaCount,
                     workerFormulaCount: formulas.length,
+                    totalWorkerFormulas:
+                      (liveJob.debug?.totalWorkerFormulas ?? 0) +
+                      formulas.length,
+                    totalMainThreadFormulas:
+                      liveJob.debug?.totalMainThreadFormulas ?? 0,
                     lastError: null,
                   };
                   finishJobIfComplete(draft);
@@ -1539,6 +1544,11 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                     workerAvailable: false,
                     unsafeFormulaCount,
                     workerFormulaCount: 0,
+                    totalWorkerFormulas:
+                      liveJob.debug?.totalWorkerFormulas ?? 0,
+                    totalMainThreadFormulas:
+                      (liveJob.debug?.totalMainThreadFormulas ?? 0) +
+                      formulas.length,
                     lastError: message,
                   };
                   finishJobIfComplete(draft);
@@ -1566,6 +1576,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                   workerAvailable: useWorker,
                   unsafeFormulaCount,
                   workerFormulaCount: 0,
+                  totalWorkerFormulas: liveJob.debug?.totalWorkerFormulas ?? 0,
+                  totalMainThreadFormulas:
+                    (liveJob.debug?.totalMainThreadFormulas ?? 0) +
+                    formulas.length,
                   lastError:
                     useWorker && unsafeFormulaCount > 0
                       ? `${unsafeFormulaCount} formula(s) in this chunk require the main formula engine`
@@ -1677,6 +1691,14 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                     </div>
                     <div>
                       Fallbacks: {context.formulaAsyncEval.debug.fallbackChunks}
+                    </div>
+                    <div>
+                      Worker formulas total:{' '}
+                      {context.formulaAsyncEval.debug.totalWorkerFormulas}
+                    </div>
+                    <div>
+                      Main-engine formulas total:{' '}
+                      {context.formulaAsyncEval.debug.totalMainThreadFormulas}
                     </div>
                     <div>
                       Worker:{' '}

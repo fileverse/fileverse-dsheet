@@ -24,6 +24,8 @@ export type FormulaEvalDebug = {
   workerAvailable: boolean;
   unsafeFormulaCount: number;
   workerFormulaCount: number;
+  totalWorkerFormulas: number;
+  totalMainThreadFormulas: number;
   lastError: string | null;
 };
 

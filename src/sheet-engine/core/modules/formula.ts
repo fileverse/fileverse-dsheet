@@ -2651,6 +2651,8 @@ export function execFunctionGroup(
         workerAvailable: false,
         unsafeFormulaCount: 0,
         workerFormulaCount: 0,
+        totalWorkerFormulas: 0,
+        totalMainThreadFormulas: 0,
         lastError: null,
       },
     };
