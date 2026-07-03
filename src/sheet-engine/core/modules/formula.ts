@@ -593,7 +593,7 @@ export class FormulaCache {
       for (let col = startCol; col <= endCol; col += 1) {
         const cell =
           context?.formulaCache.execFunctionGlobalData?.[
-            `${row}_${col}_${sheetId}`
+          `${row}_${col}_${sheetId}`
           ] || flowdata?.[row]?.[col];
         const v = this.tryGetCellAsNumber(cell);
         if (
@@ -650,8 +650,8 @@ export class FormulaCache {
     const isCryptoDeno =
       typeof cell?.m === 'string'
         ? cell?.m?.includes('ETH') ||
-          cell?.m?.includes('SOL') ||
-          cell?.m?.includes('BTC')
+        cell?.m?.includes('SOL') ||
+        cell?.m?.includes('BTC')
         : false;
     if (isCryptoDeno && typeof cell?.m === 'string') {
       const splitedNumberString = cell.m.split(' ')[0];
@@ -928,7 +928,7 @@ function checkSpecialFunctionRange(
       ctx.calculateSheetId = id;
       const str = function_str
         .split(',')
-        [function_str.split(',').length - 1].split("'")[1]
+      [function_str.split(',').length - 1].split("'")[1]
         .split("'")[0];
 
       const str_nb = _.trim(str);
@@ -940,7 +940,7 @@ function checkSpecialFunctionRange(
         // this.isFunctionRangeSaveChange(str, r, c, index, dynamicArray_compute);
         // console.log(function_str, str, this.isFunctionRangeSave,r,c);
       }
-    } catch {}
+    } catch { }
   }
 }
 
@@ -994,9 +994,8 @@ function isFunctionRange(
           const funcArray = str.split(':');
           function_str += `luckysheet_getSpecialReference(true,'${_.trim(
             funcArray[0],
-          ).replace(/'/g, "\\'")}', luckysheet_function.${
-            funcArray[1]
-          }.f(#lucky#`;
+          ).replace(/'/g, "\\'")}', luckysheet_function.${funcArray[1]
+            }.f(#lucky#`;
         } else {
           function_str += `luckysheet_function.${str}.f(`;
         }
@@ -1748,7 +1747,7 @@ export function execfunction(
       // re-propagate stale "#CIRC!" from prior states during structural recalcs.
       const cell =
         ctx?.formulaCache.execFunctionGlobalData?.[
-          `${parsedKey.r}_${parsedKey.c}_${parsedKey.sheetId}`
+        `${parsedKey.r}_${parsedKey.c}_${parsedKey.sheetId}`
         ];
       if (_.isNil(cell)) continue;
       const raw = cell?.v ?? cell?.m;
@@ -2260,7 +2259,7 @@ export function execFunctionGroup(
     [
       [
         ctx.formulaCache.execFunctionGlobalData[
-          `${origin_r}_${origin_c}_${id}`
+        `${origin_r}_${origin_c}_${id}`
         ],
       ],
     ] = cellCache;
@@ -3378,7 +3377,7 @@ function helpFunctionExe(
       if (
         $cur?.classList?.contains('luckysheet-formula-text-func') ||
         _.trim($cur.textContent || '').toUpperCase() in
-          ctx.formulaCache.functionlistMap
+        ctx.formulaCache.functionlistMap
       ) {
         funcName = $cur.textContent;
         paramindex = null;
@@ -4326,9 +4325,8 @@ function cycleSingleA1RefLock(ref: string): string | null {
     nextColAbs = false;
     nextRowAbs = false;
   }
-  return `${sheetPrefix}${nextColAbs ? '$' : ''}${col.toUpperCase()}${
-    nextRowAbs ? '$' : ''
-  }${row}`;
+  return `${sheetPrefix}${nextColAbs ? '$' : ''}${col.toUpperCase()}${nextRowAbs ? '$' : ''
+    }${row}`;
 }
 
 function cycleReferenceLockToken(refText: string): string | null {
@@ -4537,13 +4535,11 @@ function functionStrChange_range(
       return `${prefix + $row0 + (r1 + 1)}:${$row1}${r2 + 1}`;
     }
     if (Number.isNaN(r1) && Number.isNaN(r2)) {
-      return `${
-        prefix + $col0 + indexToColumnChar(c1)
-      }:${$col1}${indexToColumnChar(c2)}`;
+      return `${prefix + $col0 + indexToColumnChar(c1)
+        }:${$col1}${indexToColumnChar(c2)}`;
     }
-    return `${
-      prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
-    }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
+    return `${prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
+      }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
   }
   if (type === 'add') {
     if (rc === 'row') {
@@ -4600,13 +4596,11 @@ function functionStrChange_range(
       return `${prefix + $row0 + (r1 + 1)}:${$row1}${r2 + 1}`;
     }
     if (Number.isNaN(r1) && Number.isNaN(r2)) {
-      return `${
-        prefix + $col0 + indexToColumnChar(c1)
-      }:${$col1}${indexToColumnChar(c2)}`;
+      return `${prefix + $col0 + indexToColumnChar(c1)
+        }:${$col1}${indexToColumnChar(c2)}`;
     }
-    return `${
-      prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
-    }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
+    return `${prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
+      }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
   }
   return '';
 }
@@ -5209,8 +5203,8 @@ export function rangeSetValue(
     ctx.formulaCache.rangeSelectionActive === true;
   const spanToReplace = !_.isNil(ctx.formulaCache.rangechangeindex)
     ? ($editor.querySelector(
-        `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`,
-      ) as HTMLSpanElement | null)
+      `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`,
+    ) as HTMLSpanElement | null)
     : null;
 
   if (activeRangeFlow && spanToReplace) {
@@ -5857,13 +5851,11 @@ function updateparam(orient: string, txt: string, step: number) {
     return `${prefix + $row0 + row[0]}:${$row1}${row[1]}`;
   }
   if (Number.isNaN(row[0]) && Number.isNaN(row[1])) {
-    return `${
-      prefix + $col0 + indexToColumnChar(col[0])
-    }:${$col1}${indexToColumnChar(col[1])}`;
+    return `${prefix + $col0 + indexToColumnChar(col[0])
+      }:${$col1}${indexToColumnChar(col[1])}`;
   }
-  return `${
-    prefix + $col0 + indexToColumnChar(col[0]) + $row0 + row[0]
-  }:${$col1}${indexToColumnChar(col[1])}${$row1}${row[1]}`;
+  return `${prefix + $col0 + indexToColumnChar(col[0]) + $row0 + row[0]
+    }:${$col1}${indexToColumnChar(col[1])}${$row1}${row[1]}`;
 }
 
 function downparam(txt: string, step: number) {
@@ -6085,14 +6077,12 @@ export function remapFormulaReferencesByMap(
 
       const head = remapOne(col0, row0);
       if (_.isNil(col1) || _.isNil(row1)) {
-        return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${
-          head.nextRow
-        }`;
+        return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${head.nextRow
+          }`;
       }
       const tail = remapOne(col1, row1);
-      return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${
-        head.nextRow
-      }:${colAbs1}${tail.nextCol}${rowAbs1}${tail.nextRow}`;
+      return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${head.nextRow
+        }:${colAbs1}${tail.nextCol}${rowAbs1}${tail.nextRow}`;
     },
   );
 }
@@ -6114,9 +6104,8 @@ function formatRefToken(parts: {
   col: number;
   row: number;
 }) {
-  return `${parts.colAbs ? '$' : ''}${indexToColumnChar(parts.col)}${
-    parts.rowAbs ? '$' : ''
-  }${parts.row + 1}`;
+  return `${parts.colAbs ? '$' : ''}${indexToColumnChar(parts.col)}${parts.rowAbs ? '$' : ''
+    }${parts.row + 1}`;
 }
 
 function moveSingleRefToken(
