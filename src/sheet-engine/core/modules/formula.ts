@@ -47,6 +47,7 @@ import { collectTransitiveFormulaDependents } from './formula-transitive-deps';
 import type { SnapshotEvalOutput } from './formula-snapshot-eval';
 
 let functionHTMLIndex = 0;
+let formulaAsyncEvalJobId = 0;
 let rangeIndexes: number[] = [];
 const operatorPriority: any = {
   '^': 0,
@@ -2640,6 +2641,7 @@ export function execFunctionGroup(
       calcChainKeys: Array.from(calcChainSet),
       impactedByCircular: Array.from(impactedByCircular),
       cycleNodes: Array.from(cycleNodes),
+      workerSnapshotKey: `formula-job-${(formulaAsyncEvalJobId += 1)}`,
       nextIndex: 0,
       total: formulaRunList.length,
       debug: {

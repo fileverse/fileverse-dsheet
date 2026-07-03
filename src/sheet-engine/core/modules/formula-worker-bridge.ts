@@ -17,6 +17,7 @@ import InlineFormulaWorker from './formula-eval.worker.ts?worker&inline';
 let worker: Worker | null = null;
 let workerInitFailed = false;
 let nextRequestId = 0;
+let activeSnapshotKey: string | null = null;
 const pending = new Map<
   number,
   {
@@ -47,6 +48,7 @@ function disposeWorker(err?: Error): void {
   worker?.terminate();
   worker = null;
   workerInitFailed = true;
+  activeSnapshotKey = null;
 }
 
 function getWorker(): Worker | null {
@@ -106,8 +108,47 @@ export function buildSnapshotEvalInput(
   };
 }
 
+export function buildWorkerEvalInput(
+  ctx: Context,
+  formulas: SnapshotFormulaCell[],
+): Omit<SnapshotEvalInput, 'sheets'> {
+  return {
+    execFunctionGlobalData: {
+      ...(ctx.formulaCache.execFunctionGlobalData ?? {}),
+    },
+    formulas,
+  };
+}
+
+export function initFormulaWorkerSnapshot(
+  ctx: Context,
+  snapshotKey: string,
+): boolean {
+  const w = getWorker();
+  if (!w) return false;
+  if (activeSnapshotKey === snapshotKey) return true;
+
+  try {
+    w.postMessage({
+      type: 'init-snapshot',
+      snapshotKey,
+      sheets: ctx.luckysheetfile.map((sheet) => ({
+        id: sheet.id!,
+        name: sheet.name ?? '',
+        data: sheet.data,
+      })),
+    });
+    activeSnapshotKey = snapshotKey;
+    return true;
+  } catch {
+    disposeWorker(new Error('Formula worker snapshot initialization failed'));
+    return false;
+  }
+}
+
 function evalFormulasInWorkerThread(
-  input: SnapshotEvalInput,
+  snapshotKey: string,
+  input: Omit<SnapshotEvalInput, 'sheets'>,
 ): Promise<SnapshotEvalOutput> {
   const w = getWorker();
   if (!w) {
@@ -124,7 +165,7 @@ function evalFormulasInWorkerThread(
 
     pending.set(requestId, { resolve, reject, timeoutId });
     try {
-      w.postMessage({ type: 'eval', requestId, input });
+      w.postMessage({ type: 'eval', requestId, snapshotKey, input });
     } catch (e) {
       pending.delete(requestId);
       clearTimeout(timeoutId);
@@ -139,9 +180,10 @@ function evalFormulasInWorkerThread(
  * rejection so the worker cannot silently leave a recalculation job hanging.
  */
 export async function evalFormulasInBackground(
-  input: SnapshotEvalInput,
+  snapshotKey: string,
+  input: Omit<SnapshotEvalInput, 'sheets'>,
 ): Promise<SnapshotEvalOutput> {
-  return evalFormulasInWorkerThread(input);
+  return evalFormulasInWorkerThread(snapshotKey, input);
 }
 
 /** @deprecated Use evalFormulasInBackground */

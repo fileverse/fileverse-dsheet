@@ -1,10 +1,23 @@
-import type { SnapshotEvalInput, SnapshotEvalOutput } from './formula-snapshot-eval';
+import type {
+  SnapshotEvalInput,
+  SnapshotEvalOutput,
+  SnapshotSheet,
+} from './formula-snapshot-eval';
+
+export type WorkerInitSnapshotRequest = {
+  type: 'init-snapshot';
+  snapshotKey: string;
+  sheets: SnapshotSheet[];
+};
 
 export type WorkerEvalRequest = {
   type: 'eval';
   requestId: number;
-  input: SnapshotEvalInput;
+  snapshotKey: string;
+  input: Omit<SnapshotEvalInput, 'sheets'>;
 };
+
+export type WorkerRequest = WorkerInitSnapshotRequest | WorkerEvalRequest;
 
 export type WorkerEvalResponse = {
   type: 'eval-result';

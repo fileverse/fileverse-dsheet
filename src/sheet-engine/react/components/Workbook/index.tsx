@@ -50,11 +50,13 @@ import {
   FORMULA_ASYNC_CHUNK_SIZE,
   FORMULA_WORKER_CHUNK_SIZE,
   FORMULA_WORKER_THRESHOLD,
+  isFormulaExecutionDebugEnabled,
   isFormulaWorkerUnsafe,
 } from '@sheet-engine/core/modules/formula-async-eval';
 import {
-  buildSnapshotEvalInput,
+  buildWorkerEvalInput,
   evalFormulasInBackground,
+  initFormulaWorkerSnapshot,
 } from '@sheet-engine/core/modules/formula-worker-bridge';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
@@ -1410,6 +1412,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
     const isFormulaCalculating = !!context.isFormulaCalculating;
     const formulaAsyncEvalTotal = context.formulaAsyncEval?.total;
+    const showFormulaExecutionDebug = isFormulaExecutionDebugEnabled();
 
     // Drain deferred formula eval: main-thread chunks (small jobs) or Web Worker (large jobs).
     useEffect(() => {
@@ -1419,6 +1422,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
       let cancelled = false;
       let frameId: number | null = null;
+      let workerOnlyChunkStreak = 0;
 
       const finishJobIfComplete = (draft: Context) => {
         const job = draft.formulaAsyncEval;
@@ -1438,6 +1442,11 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           });
         });
 
+      const waitForMacrotask = () =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, 0);
+        });
+
       const drainLoop = async () => {
         while (!cancelled) {
           const job = contextRef.current.formulaAsyncEval;
@@ -1455,38 +1464,48 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           }
 
           const useWorker = job.total >= FORMULA_WORKER_THRESHOLD;
-          const workerChunkEnd = Math.min(
-            startIndex + FORMULA_WORKER_CHUNK_SIZE,
-            job.formulaRunList.length,
+          const firstFormulaUnsafe = isFormulaWorkerUnsafe(
+            job.formulaRunList[startIndex].calc_funcStr,
           );
-          const workerFormulas = job.formulaRunList.slice(
-            startIndex,
-            workerChunkEnd,
-          );
-          const workerUnsafeFormulaCount = workerFormulas.filter((formula) =>
-            isFormulaWorkerUnsafe(formula.calc_funcStr),
-          ).length;
-          const useWorkerForChunk = useWorker && workerUnsafeFormulaCount === 0;
-          const chunkSize = useWorkerForChunk
+          const useWorkerForChunk = useWorker && !firstFormulaUnsafe;
+          const maxChunkSize = useWorkerForChunk
             ? FORMULA_WORKER_CHUNK_SIZE
             : FORMULA_ASYNC_CHUNK_SIZE;
-          const chunkEnd = Math.min(
-            startIndex + chunkSize,
-            job.formulaRunList.length,
-          );
+          let chunkEnd = startIndex;
+          while (
+            chunkEnd < job.formulaRunList.length &&
+            chunkEnd - startIndex < maxChunkSize
+          ) {
+            const formulaUnsafe = isFormulaWorkerUnsafe(
+              job.formulaRunList[chunkEnd].calc_funcStr,
+            );
+            if (useWorker && formulaUnsafe !== firstFormulaUnsafe) {
+              break;
+            }
+            chunkEnd += 1;
+          }
           const formulas = job.formulaRunList.slice(startIndex, chunkEnd);
           const unsafeFormulaCount = formulas.filter((formula) =>
             isFormulaWorkerUnsafe(formula.calc_funcStr),
           ).length;
           const startedAt = performance.now();
+          let processedByWorkerChunk = false;
 
           if (useWorkerForChunk) {
             try {
-              const input = buildSnapshotEvalInput(
-                contextRef.current,
-                formulas,
+              if (
+                !initFormulaWorkerSnapshot(
+                  contextRef.current,
+                  job.workerSnapshotKey,
+                )
+              ) {
+                throw new Error('Formula worker unavailable');
+              }
+              const input = buildWorkerEvalInput(contextRef.current, formulas);
+              const output = await evalFormulasInBackground(
+                job.workerSnapshotKey,
+                input,
               );
-              const output = await evalFormulasInBackground(input);
               if (cancelled) return;
               setContextWithProduce(
                 (draft) => {
@@ -1522,23 +1541,29 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 },
                 { noHistory: true },
               );
+              processedByWorkerChunk = true;
             } catch (e) {
               if (cancelled) return;
+              workerOnlyChunkStreak = 0;
               const message = e instanceof Error ? e.message : String(e);
               setContextWithProduce(
                 (draft) => {
                   const liveJob = draft.formulaAsyncEval;
                   if (!liveJob || liveJob.nextIndex !== startIndex) return;
+                  const fallbackChunkSize = Math.min(
+                    FORMULA_ASYNC_CHUNK_SIZE,
+                    formulas.length,
+                  );
                   runFormulaEvalChunk(
                     draft,
                     liveJob,
-                    chunkEnd - liveJob.nextIndex,
+                    fallbackChunkSize,
                   );
                   const elapsed = performance.now() - startedAt;
                   liveJob.debug = {
                     mode: 'fallback',
                     lastChunkMs: elapsed,
-                    lastChunkSize: formulas.length,
+                    lastChunkSize: fallbackChunkSize,
                     completedChunks: (liveJob.debug?.completedChunks ?? 0) + 1,
                     fallbackChunks: (liveJob.debug?.fallbackChunks ?? 0) + 1,
                     workerAvailable: false,
@@ -1548,7 +1573,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                       liveJob.debug?.totalWorkerFormulas ?? 0,
                     totalMainThreadFormulas:
                       (liveJob.debug?.totalMainThreadFormulas ?? 0) +
-                      formulas.length,
+                      fallbackChunkSize,
                     lastError: message,
                   };
                   finishJobIfComplete(draft);
@@ -1557,6 +1582,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               );
             }
           } else {
+            workerOnlyChunkStreak = 0;
             setContextWithProduce(
               (draft) => {
                 const liveJob = draft.formulaAsyncEval;
@@ -1591,7 +1617,17 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             );
           }
 
-          await waitForNextFrame();
+          if (processedByWorkerChunk) {
+            workerOnlyChunkStreak += 1;
+            if (workerOnlyChunkStreak >= 3) {
+              workerOnlyChunkStreak = 0;
+              await waitForNextFrame();
+            } else {
+              await waitForMacrotask();
+            }
+          } else {
+            await waitForNextFrame();
+          }
         }
       };
 
@@ -1665,7 +1701,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             onKeyDown={onKeyDown}
             tabIndex={-1}
           >
-            {context.isFormulaCalculating && context.formulaAsyncEval && (
+            {showFormulaExecutionDebug &&
+              context.isFormulaCalculating &&
+              context.formulaAsyncEval && (
               <div
                 className="fortune-formula-calculating-indicator"
                 role="status"

@@ -55,8 +55,8 @@ function tryGetCellAsNumber(cell: Cell | null | undefined) {
   const isCryptoDeno =
     typeof cell?.m === 'string'
       ? cell.m.includes('ETH') ||
-        cell.m.includes('SOL') ||
-        cell.m.includes('BTC')
+      cell.m.includes('SOL') ||
+      cell.m.includes('BTC')
       : false;
   if (isCryptoDeno && typeof cell?.m === 'string') {
     return Number(cell.m.split(' ')[0]);

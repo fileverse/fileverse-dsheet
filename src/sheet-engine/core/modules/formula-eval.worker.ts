@@ -1,15 +1,31 @@
 import type {
   WorkerEvalError,
-  WorkerEvalRequest,
+  WorkerRequest,
   WorkerEvalResponse,
 } from './formula-worker-types';
+import type { SnapshotSheet } from './formula-snapshot-eval';
 import { evalFormulasInSnapshot } from './formula-snapshot-eval';
 
-self.onmessage = (event: MessageEvent<WorkerEvalRequest>) => {
+let snapshotKey: string | null = null;
+let snapshotSheets: SnapshotSheet[] | null = null;
+
+self.onmessage = (event: MessageEvent<WorkerRequest>) => {
   const msg = event.data;
+  if (msg?.type === 'init-snapshot') {
+    snapshotKey = msg.snapshotKey;
+    snapshotSheets = msg.sheets;
+    return;
+  }
+
   if (msg?.type !== 'eval') return;
   try {
-    const output = evalFormulasInSnapshot(msg.input);
+    if (!snapshotSheets || snapshotKey !== msg.snapshotKey) {
+      throw new Error('Formula worker snapshot is not initialized');
+    }
+    const output = evalFormulasInSnapshot({
+      sheets: snapshotSheets,
+      ...msg.input,
+    });
     const response: WorkerEvalResponse = {
       type: 'eval-result',
       requestId: msg.requestId,
