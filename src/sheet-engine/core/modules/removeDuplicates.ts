@@ -15,7 +15,6 @@ import { recalcAutoRowHeightForRow } from './cell';
 import { delFunctionGroup } from './formula';
 import { isInlineStringCell } from './inline-string';
 import { clearCellError } from './error-state-helpers';
-import { deleteRowCol } from './rowcol';
 import { jfrefreshgrid } from './refresh';
 
 export type RemoveDuplicatesError =
@@ -310,45 +309,6 @@ function trimRangeToDataRegion(
   return { row: [r1, effectiveEnd], column: range.column };
 }
 
-function groupDuplicateRowSegments(
-  duplicateRows: number[],
-): { start: number; end: number }[] {
-  if (duplicateRows.length === 0) return [];
-
-  const sorted = [...duplicateRows].sort((a, b) => b - a);
-  const segments: { start: number; end: number }[] = [];
-  let idx = 0;
-
-  while (idx < sorted.length) {
-    let end = sorted[idx]!;
-    let start = end;
-    while (idx + 1 < sorted.length && sorted[idx + 1] === start - 1) {
-      idx += 1;
-      start = sorted[idx]!;
-    }
-    segments.push({ start, end });
-    idx += 1;
-  }
-
-  return segments;
-}
-
-function rowHasDataOutsideAnalyzedColumns(
-  d: CellMatrix,
-  row: number,
-  analyzedColumns: number[],
-): boolean {
-  const analyzedSet = new Set(analyzedColumns);
-  const rowData = d[row];
-  if (!rowData) return false;
-
-  for (let c = 0; c < rowData.length; c += 1) {
-    if (analyzedSet.has(c)) continue;
-    if (cellHasDisplayValue(rowData[c])) return true;
-  }
-  return false;
-}
-
 function clearCellContent(
   ctx: Context,
   d: CellMatrix,
@@ -462,6 +422,122 @@ function clearAnalyzedCellsInRows(
   return clearedCount;
 }
 
+function columnCellHasContent(
+  d: CellMatrix,
+  row: number,
+  column: number,
+): boolean {
+  return (
+    cellHasDisplayValue(d[row]?.[column]) ||
+    getDisplayedCompareValue(d, row, column) !== ''
+  );
+}
+
+function assignCellCopy(
+  ctx: Context,
+  d: CellMatrix,
+  row: number,
+  column: number,
+  cell: Cell | null,
+  changeMap: Map<string, any>,
+): void {
+  const oldCellBefore =
+    d[row]?.[column] != null ? (_.cloneDeep(d[row][column]) as Cell) : null;
+  if (cell == null) {
+    d[row][column] = null;
+  } else {
+    d[row][column] = _.cloneDeep(cell);
+  }
+  const newCellAfter = (d[row]?.[column] as Cell | null) ?? null;
+  if (!_.isEqual(oldCellBefore, newCellAfter)) {
+    const key = `${row}_${column}`;
+    changeMap.set(key, {
+      sheetId: ctx.currentSheetId,
+      path: ['celldata'],
+      value: { r: row, c: column, v: newCellAfter },
+      key,
+      type: newCellAfter == null ? 'delete' : 'update',
+    });
+  }
+}
+
+/** Shift non-empty cells up within each analyzed column only (Google column-scoped behavior). */
+function compactAnalyzedColumns(
+  ctx: Context,
+  dataStartRow: number,
+  endRow: number,
+  analyzedColumns: number[],
+  changeMap: Map<string, any>,
+): void {
+  const d = getFlowdata(ctx);
+  if (!d) return;
+
+  for (const column of analyzedColumns) {
+    let writeRow = dataStartRow;
+    for (let readRow = dataStartRow; readRow <= endRow; readRow += 1) {
+      if (!columnCellHasContent(d, readRow, column)) continue;
+
+      if (readRow !== writeRow) {
+        const srcCell = (d[readRow]?.[column] as Cell | null) ?? null;
+        assignCellCopy(ctx, d, writeRow, column, srcCell, changeMap);
+        clearCellContent(ctx, d, readRow, column, changeMap);
+      }
+      writeRow += 1;
+    }
+    for (let row = writeRow; row <= endRow; row += 1) {
+      if (d[row]?.[column] != null) {
+        clearCellContent(ctx, d, row, column, changeMap);
+      }
+    }
+  }
+}
+
+function applyDuplicateRemoval(
+  ctx: Context,
+  duplicateRows: number[],
+  analyzedColumns: number[],
+  dataStartRow: number,
+  endRow: number,
+): void {
+  const d = getFlowdata(ctx);
+  if (!d || duplicateRows.length === 0) return;
+
+  const changeMap = new Map<string, any>();
+  const rowsToRecalcAutoHeight = new Set<number>();
+
+  for (const row of duplicateRows) {
+    for (const column of analyzedColumns) {
+      const oldCell = d[row]?.[column];
+      const prevHadWrapOrInline =
+        oldCell != null &&
+        ((oldCell.tb === '2' &&
+          !_.isNil(oldCell.v) &&
+          oldCell.v !== '') ||
+          isInlineStringCell(oldCell));
+
+      if (clearCellContent(ctx, d, row, column, changeMap)) {
+        if (prevHadWrapOrInline) {
+          rowsToRecalcAutoHeight.add(row);
+        }
+      }
+    }
+  }
+
+  compactAnalyzedColumns(ctx, dataStartRow, endRow, analyzedColumns, changeMap);
+
+  if (changeMap.size > 0 && ctx.hooks?.updateCellYdoc) {
+    ctx.hooks.updateCellYdoc(Array.from(changeMap.values()));
+  }
+
+  const canvasCtx =
+    ctx.getRefs?.()?.canvas?.current?.getContext('2d') ?? null;
+  if (canvasCtx && rowsToRecalcAutoHeight.size > 0) {
+    for (const rowIndex of rowsToRecalcAutoHeight) {
+      recalcAutoRowHeightForRow(ctx, rowIndex, d, canvasCtx);
+    }
+  }
+}
+
 export function removeDuplicates(
   ctx: Context,
   options: RemoveDuplicatesOptions,
@@ -525,35 +601,14 @@ export function removeDuplicates(
     return { removedCount: 0, remainingCount: 0, error: 'cannotDeleteAllRow' };
   }
 
-  const rowsToClearOnly = duplicateRows.filter((row) =>
-    rowHasDataOutsideAnalyzedColumns(d, row, options.analyzedColumns),
-  );
-  const rowsToDelete = duplicateRows.filter(
-    (row) => !rowHasDataOutsideAnalyzedColumns(d, row, options.analyzedColumns),
-  );
-
-  if (rowsToClearOnly.length > 0) {
-    clearAnalyzedCellsInRows(ctx, rowsToClearOnly, options.analyzedColumns);
-  }
-
-  const segments = groupDuplicateRowSegments(rowsToDelete);
-  for (const segment of segments) {
-    try {
-      deleteRowCol(ctx, {
-        type: 'row',
-        start: segment.start,
-        end: segment.end,
-        id: ctx.currentSheetId,
-      });
-    } catch (e: any) {
-      if (e?.message === 'readOnly') {
-        return { removedCount: 0, remainingCount: 0, error: 'readOnly' };
-      }
-      throw e;
-    }
-  }
-
   if (duplicateRows.length > 0) {
+    applyDuplicateRemoval(
+      ctx,
+      duplicateRows,
+      options.analyzedColumns,
+      dataStartRow,
+      r2,
+    );
     jfrefreshgrid(ctx, null, undefined);
   }
 
