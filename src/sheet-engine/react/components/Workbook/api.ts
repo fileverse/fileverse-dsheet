@@ -28,6 +28,7 @@ import {
   LiveQueryData,
   execFunctionGroup,
   jfrefreshgrid,
+  isFormulaEvalPending,
 } from '@sheet-engine/core';
 import { applyPatches } from 'immer';
 import _ from 'lodash';
@@ -142,7 +143,10 @@ export function generateAPIs(
         } catch (e) {
           // Intentionally ignore; refresh best-effort.
         }
-        draftCtx.formulaCache.execFunctionGlobalData = null;
+        // Async eval still needs execFunctionGlobalData across chunks — clear when done.
+        if (!isFormulaEvalPending(draftCtx)) {
+          draftCtx.formulaCache.execFunctionGlobalData = null;
+        }
       });
     },
 
