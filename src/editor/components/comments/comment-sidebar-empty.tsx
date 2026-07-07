@@ -1,5 +1,7 @@
 import { Button } from '@fileverse/ui';
 
+import emptyCommentSvg from '../../assets/empty-comment.svg';
+
 const CommentSidebarEmpty = ({
   setShowComment,
 }: {
@@ -10,7 +12,7 @@ const CommentSidebarEmpty = ({
       <img
         width={188}
         height={160}
-        src="/assets/empty-comment.svg"
+        src={emptyCommentSvg}
         alt=""
         className="object-contain"
       />

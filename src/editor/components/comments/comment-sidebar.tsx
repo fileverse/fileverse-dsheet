@@ -1,10 +1,9 @@
 // components/CommentsContent.tsx
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { Avatar, Button, DynamicDropdown, LucideIcon, cn } from '@fileverse/ui';
 import { CommentsContentProps, CommentThread } from '../../types/comments';
 import { CommentItem } from './comment-item';
 import { CommentInput } from './comment-input';
-import { CommentSidebarEmpty } from './comment-sidebar-empty';
 import {
   parseCellKey,
   generateWithoutCellKey,
@@ -104,10 +103,6 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
     null,
   );
 
-  const [showComment, setShowComment] = React.useState<boolean>(
-    Object.keys(commentsData).length > 0,
-  );
-
   const [typeFilter, setTypeFilter] = React.useState<TypeFilter>('all');
   const [sheetFilter, setSheetFilter] = React.useState<SheetFilter>('all');
 
@@ -147,10 +142,6 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
 
     return () => clearInterval(interval);
   }, [sheetEditorRef, commentsData]);
-
-  useEffect(() => {
-    setShowComment(Object.keys(commentsData).length > 0);
-  }, [commentsData]);
 
   const filteredComments = React.useMemo(() => {
     const currentSheet = getCurrentSheetSafe(sheetEditorRef);
@@ -294,10 +285,6 @@ export const CommentsContent: React.FC<CommentsContentProps> = ({
         {unauthenticatedFallback ?? null}
       </div>
     );
-  }
-
-  if (!showComment) {
-    return <CommentSidebarEmpty setShowComment={setShowComment} />;
   }
 
   return (
