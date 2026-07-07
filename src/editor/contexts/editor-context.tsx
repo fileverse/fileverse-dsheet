@@ -21,8 +21,13 @@ import {
   updateRowIndices,
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
-import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
+import { SheetUpdateData, DataBlockEvent } from '../types';
 import type { CommentsConfig } from '../types/comments';
+import {
+  ApiKeyStorage,
+  defaultApiKeyStorage,
+} from '../utils/api-key-storage';
+import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
 import { SidebarProvider } from '../components/sidebar/sidebar-context';
 import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
@@ -78,6 +83,16 @@ export interface EditorContextType {
   onCollaboratorsChange?: (collaborators: CollabUser[]) => void;
 
   handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
+
+  apiKeyStorage: ApiKeyStorage;
+  onDataBlockEvent?: (event: DataBlockEvent) => void;
+  openApiKeyModal: OpenApiKeyModalFn;
+  apiKeyModalState: {
+    open: boolean;
+    apiKeyName: string;
+    onSave: (key: string) => void;
+    onClose: () => void;
+  } | null;
 }
 
 // Create the context with a default value
@@ -108,7 +123,8 @@ interface EditorProviderProps {
   } | null>;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
+  apiKeyStorage?: ApiKeyStorage;
+  onDataBlockEvent?: (event: DataBlockEvent) => void;
 }
 
 // Provider component that wraps the app
@@ -131,7 +147,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   editorStateRef,
   enableLiveQuery,
   liveQueryRefreshRate,
-  dataBlockApiKeyHandler,
+  apiKeyStorage: apiKeyStorageProp,
+  onDataBlockEvent,
 }) => {
   // Comments are driven entirely by commentsConfig (the legacy
   // commentData/allowComments props were removed).
@@ -144,6 +161,36 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{
     [key: string]: { [key: string]: any };
   }>({});
+
+  const apiKeyStorage = useMemo(
+    () => apiKeyStorageProp ?? defaultApiKeyStorage,
+    [apiKeyStorageProp],
+  );
+
+  const [apiKeyModalState, setApiKeyModalState] = useState<{
+    open: boolean;
+    apiKeyName: string;
+    onSave: (key: string) => void;
+    onClose: () => void;
+  } | null>(null);
+
+  const openApiKeyModal = useCallback<OpenApiKeyModalFn>(
+    (apiKeyName, callbacks) => {
+      setApiKeyModalState({
+        open: true,
+        apiKeyName,
+        onSave: (key: string) => {
+          setApiKeyModalState(null);
+          callbacks.onSave(key);
+        },
+        onClose: () => {
+          setApiKeyModalState(null);
+          callbacks.onClose();
+        },
+      });
+    },
+    [],
+  );
 
   const updateDataBlockCalcFunctionAfterRowDrag = useCallback(
     (
@@ -381,7 +428,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     setDataBlockCalcFunction,
     enableLiveQuery,
     liveQueryRefreshRate,
-    dataBlockApiKeyHandler,
+    apiKeyStorage,
+    openApiKeyModal,
+    onDataBlockEvent,
     resolvedAllowComments,
     hasCollabContentInitialised,
     collaboration?.enabled === true,
@@ -466,6 +515,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         collaboration?.enabled === true
           ? collaboration.on?.onCollaboratorsChange
           : undefined,
+      apiKeyStorage,
+      onDataBlockEvent,
+      openApiKeyModal,
+      apiKeyModalState,
     };
   }, [
     setIsDataLoaded,
@@ -499,6 +552,10 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     awareness,
     terminateSession,
     collaboration,
+    apiKeyStorage,
+    onDataBlockEvent,
+    openApiKeyModal,
+    apiKeyModalState,
   ]);
 
   return (

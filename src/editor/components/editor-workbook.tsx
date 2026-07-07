@@ -35,7 +35,7 @@ import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
 import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
-import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import { OnboardingHandlerType } from '../types';
 import {
   createAfterColRowChangesHandler,
   createAfterColorChangesHandler,
@@ -52,7 +52,6 @@ import { getCurrentSheetIdSafe } from '../utils/sheet-editor-safe';
 // import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
-type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 function readBooleanFromLocalStorage(key: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -74,13 +73,10 @@ interface EditorWorkbookProps {
   onboardingComplete?: boolean;
   onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandler;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
   commentsConfig?: CommentsConfig;
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
-  storeApiKey?: (apiKeyName: string) => void;
-  onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
   handleSmartContractQuery?: SmartContractQueryHandler;
@@ -103,13 +99,10 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
-  dataBlockApiKeyHandler,
   exportDropdownOpen = false,
   commentsConfig,
   setExportDropdownOpen = () => { },
   dsheetId,
-  storeApiKey,
-  onDataBlockApiResponse,
   onDuneChartEmbed,
   onSheetCountChange,
   handleSmartContractQuery,
@@ -139,6 +132,9 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     collabEnabled,
     collabIsOwner,
     remoteUpdateRef,
+    apiKeyStorage,
+    openApiKeyModal,
+    onDataBlockEvent,
   } = useEditor();
 
   const localUserEditRef = useRef(false);
@@ -415,10 +411,10 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
               // @ts-ignore
               setFetchingURLData,
               onboardingHandler,
-              dataBlockApiKeyHandler,
-              storeApiKey,
+              apiKeyStorage,
+              openApiKeyModal,
+              onDataBlockEvent,
               setInputFetchURLDataBlock,
-              onDataBlockApiResponse,
               setDataBlockCalcFunction,
               dataBlockCalcFunction,
               handleSmartContractQuery,
@@ -560,7 +556,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     effectiveOnboardingComplete,
     onboardingCompleteLocalStorageKey,
     onboardingHandler,
-    dataBlockApiKeyHandler,
     dsheetId,
     exportDropdownOpen,
     getCommentCellUI,

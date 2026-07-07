@@ -4,7 +4,6 @@ import { Cell } from '@sheet-engine/react';
 import { WorkbookInstance } from '@sheet-engine/react';
 import {
   OnboardingHandlerType,
-  DataBlockApiKeyHandlerType,
   ErrorMessageHandlerReturnType,
 } from '../types';
 import { formulaResponseUiSync, USD_FA } from './formula-ui-sync';
@@ -20,11 +19,19 @@ import { updateYdocSheetData } from './update-ydoc';
 import { dataBlockCalcFunctionHandler } from './dataBlockCalcFunction';
 import { ERROR_MESSAGES_FLAG } from '../constants/shared-constants';
 import { getSheetIndex, LiveQueryData, update } from '@sheet-engine/core';
+import * as Y from 'yjs';
 import { isHexValue } from './generic';
 import {
   isSmartContractResponse,
   smartContractQueryHandlerFunction,
 } from './smart-contract-query-handler';
+import { isDatablockError } from './datablock-error-utils';
+import {
+  handleDataBlockError,
+  OpenApiKeyModalFn,
+} from './data-block-error-handler';
+import { ApiKeyStorage } from './api-key-storage';
+import { DataBlockEvent } from '../types';
 
 // Constants
 const DEFAULT_FONT_SIZE = 10;
@@ -59,20 +66,23 @@ interface AfterUpdateCellParams {
   oldValue?: Cell;
   newValue: Cell;
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
+  handleContentPortal?: () => void;
+  dsheetId?: string;
+  ydocRef?: React.MutableRefObject<Y.Doc | null>;
   onboardingComplete: boolean | undefined;
-  setFetchingURLData: (fetching: boolean) => void;
+  setFetchingURLData?: (fetching: boolean) => void;
   onboardingHandler: OnboardingHandlerType | undefined;
-  dataBlockApiKeyHandler: DataBlockApiKeyHandlerType | undefined;
+  apiKeyStorage: ApiKeyStorage;
+  openApiKeyModal: OpenApiKeyModalFn;
+  onDataBlockEvent?: (event: DataBlockEvent) => void;
   handleSmartContractQuery?: SmartContractQueryHandler | undefined;
   handleLiveQueryData?: (
     subsheetIndex: number,
     queryData: LiveQueryData,
   ) => void;
-  setInputFetchURLDataBlock:
+  setInputFetchURLDataBlock?:
     | React.Dispatch<React.SetStateAction<string>>
     | undefined;
-  storeApiKey?: (apiKeyName: string) => void;
-  onDataBlockApiResponse?: (dataBlockName: string) => void;
   setDataBlockCalcFunction?: React.Dispatch<
     React.SetStateAction<{ [key: string]: { [key: string]: any } }>
   >;
@@ -136,18 +146,6 @@ const isCellValueEmpty = (newValue: Cell): boolean => {
   // numbers (including 0) and booleans (including false) are valid cell values
   return false;
 };
-
-type ErrorFlag = (typeof ERROR_MESSAGES_FLAG)[keyof typeof ERROR_MESSAGES_FLAG];
-
-/**
- * Returns true if `msg` contains any of the ERROR_MESSAGES_FLAG values.
- */
-function containsErrorFlag(msg: string): boolean {
-  const flags = Object.values(ERROR_MESSAGES_FLAG) as ErrorFlag[];
-  return (
-    (msg && flags.some((flag) => msg.includes(flag))) || msg?.includes('Error')
-  );
-}
 
 /**
  * Handles onboarding logic and updates row/column if needed
@@ -306,30 +304,34 @@ const processFlvurlPromise = async (
   }
 };
 
-const handleDatablockErroMessage = (
+const handleDatablockError = (
   data: ErrorMessageHandlerReturnType,
-  dataBlockApiKeyHandler: DataBlockApiKeyHandlerType,
   params: Pick<
     AfterUpdateCellParams,
-    'sheetEditorRef' | 'row' | 'column' | 'newValue'
+    | 'sheetEditorRef'
+    | 'row'
+    | 'column'
+    | 'newValue'
+    | 'apiKeyStorage'
+    | 'openApiKeyModal'
+    | 'onDataBlockEvent'
+    | 'handleSmartContractQuery'
   >,
 ): void => {
-  dataBlockApiKeyHandler({
+  void handleDataBlockError({
     data,
     sheetEditorRef: params.sheetEditorRef,
-    executeStringFunction,
     row: params.row,
     column: params.column,
     newValue: params.newValue,
-    formulaResponseUiSync,
+    apiKeyStorage: params.apiKeyStorage,
+    openApiKeyModal: params.openApiKeyModal,
+    onDataBlockEvent: params.onDataBlockEvent,
+    handleSmartContractQuery: params.handleSmartContractQuery,
   });
 };
 
-export const isDatablockError = (value: any) => {
-  const isObject =
-    value !== null && typeof value === 'object' && !Array.isArray(value);
-  return isObject && containsErrorFlag(value.type);
-};
+export { isDatablockError } from './datablock-error-utils';
 
 /**
  * Processes promise resolution for regular formulas
@@ -344,9 +346,9 @@ const processRegularPromise = async (
     | 'column'
     | 'newValue'
     | 'sheetEditorRef'
-    | 'dataBlockApiKeyHandler'
-    | 'storeApiKey'
-    | 'onDataBlockApiResponse'
+    | 'apiKeyStorage'
+    | 'openApiKeyModal'
+    | 'onDataBlockEvent'
     | 'handleSmartContractQuery'
     | 'handleLiveQueryData'
   >,
@@ -364,11 +366,8 @@ const processRegularPromise = async (
         title: _data.type,
         message,
       });
-      if (!params.dataBlockApiKeyHandler) {
-        throw new Error('dataBlockApiKeyHandler missing');
-      }
 
-      handleDatablockErroMessage(_data, params.dataBlockApiKeyHandler, params);
+      handleDatablockError(_data, params);
       return;
     }
 
@@ -429,30 +428,31 @@ const processRegularPromise = async (
     } else {
       handleStringResponse(data as string, params, formulaName);
     }
-    params.onDataBlockApiResponse?.(formulaName as string);
+    params.onDataBlockEvent?.({ type: 'success', functionName: formulaName });
     const workbookContext = params.sheetEditorRef.current?.getWorkbookContext();
     const apiKeyName =
       workbookContext?.formulaCache.functionlistMap[formulaName || '']?.API_KEY;
-    params.storeApiKey?.(apiKeyName);
-  } catch (error: any) {
-    if (
-      error === 'dataBlockApiKeyHandler missing' ||
-      error?.message === 'dataBlockApiKeyHandler missing'
-    ) {
-      throw new Error('dataBlockApiKeyHandler missing');
-    } else {
-      const formulaName = getFormulaName(params.newValue);
-      handleDatablockErroMessage(
-        {
-          type: 'DSHEET_ERROR',
-          message: 'Unexpected Error',
+    if (apiKeyName) {
+      const key = params.apiKeyStorage.get(apiKeyName);
+      if (key && key !== 'DEFAULT_PROXY_MODE') {
+        params.onDataBlockEvent?.({
+          type: 'api-key-saved',
+          apiKeyName,
           functionName: formulaName,
-          reason: error?.message,
-        },
-        params.dataBlockApiKeyHandler!,
-        params,
-      );
+        });
+      }
     }
+  } catch (error: any) {
+    const formulaName = getFormulaName(params.newValue);
+    handleDatablockError(
+      {
+        type: 'DSHEET_ERROR',
+        message: 'Unexpected Error',
+        functionName: formulaName,
+        reason: error?.message,
+      },
+      params,
+    );
   }
 };
 
@@ -472,7 +472,7 @@ const handlePromiseValue = async (
   if (newValue.f && containsFlvurlFunction(newValue.f)) {
     const inputURL = extractUrlFromFlvurlFunction(newValue.f);
     params.setInputFetchURLDataBlock?.(inputURL);
-    params.setFetchingURLData(true);
+    params.setFetchingURLData?.(true);
 
     processFlvurlPromise(promise, params);
     sheetEditorRef.current?.setCellValue(row, column, null);
@@ -667,18 +667,22 @@ const updateDataCalcFunc = ({
     });
   } catch (error: any) {
     const formulaName = getFormulaName(params.newValue);
-    params?.dataBlockApiKeyHandler?.({
-      data: {
+    handleDatablockError(
+      {
         message: `ERROR from updateDataCalcFunc ${error?.message}`,
         type: 'Unexpected error',
         functionName: formulaName,
+      } as ErrorMessageHandlerReturnType,
+      {
+        sheetEditorRef: params.sheetEditorRef,
+        row: params.row,
+        column: params.column,
+        newValue: params.newValue,
+        apiKeyStorage: params.apiKeyStorage,
+        openApiKeyModal: params.openApiKeyModal,
+        onDataBlockEvent: params.onDataBlockEvent,
+        handleSmartContractQuery: params.handleSmartContractQuery,
       },
-      sheetEditorRef: params.sheetEditorRef,
-      executeStringFunction,
-      row: params.row,
-      column: params.column,
-      newValue: params.newValue,
-      formulaResponseUiSync,
-    });
+    );
   }
 };
