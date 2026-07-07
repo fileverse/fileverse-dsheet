@@ -62,6 +62,7 @@ const EditorContent = ({
   handleSmartContractQuery,
   isNewSheet,
   customPanels,
+  theme,
 }: Pick<
   DsheetProps,
   | 'renderNavbar'
@@ -74,6 +75,7 @@ const EditorContent = ({
   | 'setShowFetchURLModal'
   | 'setInputFetchURLDataBlock'
   | 'isNewSheet'
+  | 'theme'
 > & {
   commentsConfig?: CommentsConfig;
   isTemplateOpen?: boolean;
@@ -406,6 +408,7 @@ const EditorContent = ({
             handleSmartContractQuery={handleSmartContractQuery}
             sidebarActivePanel={activePanel}
             sidebarPortalRegistry={sidebarPortalRegistry}
+            theme={theme}
           />
         </TransitionWrapper>
       </div>
@@ -475,6 +478,7 @@ const SpreadsheetEditor = ({
   customPanels,
   apiKeyStorage,
   onDataBlockEvent,
+  theme,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -522,6 +526,7 @@ const SpreadsheetEditor = ({
         onSheetCountChange={onSheetCountChange}
         handleSmartContractQuery={handleSmartContractQuery}
         customPanels={customPanels}
+        theme={theme}
       />
     </EditorProvider>
   );

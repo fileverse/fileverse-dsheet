@@ -64,4 +64,5 @@
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
+  color: hsl(var(--color-text-default));
 }

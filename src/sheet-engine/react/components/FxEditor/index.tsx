@@ -1123,7 +1123,7 @@ const FxEditor: React.FC = () => {
           {/* <SVGIcon name="fx" width={18} height={18} /> */}
           <LucideIcon
             name="DSheetOnlyText"
-            fill="black"
+            fill="hsl(var(--color-text-default))"
             style={{
               width: '14px',
               height: '14px',
@@ -1251,7 +1251,7 @@ const FxEditor: React.FC = () => {
                       >
                         <LucideIcon
                           name="DSheetTextDisabled"
-                          fill="black"
+                          fill="hsl(var(--color-text-default))"
                           style={{
                             width: '14px',
                             height: '14px',

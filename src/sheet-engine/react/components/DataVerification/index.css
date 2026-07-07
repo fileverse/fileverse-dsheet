@@ -12,7 +12,7 @@
 
 #fortune-data-verification .box .box-item {
   padding: 10px;
-  border-bottom: 1px solid #e1e4e8;
+  border-bottom: 1px solid hsl(var(--color-border-default));
 }
 
 #fortune-data-verification .box .box-item .box-item-title {
@@ -24,7 +24,7 @@
 #fortune-data-verification .box .box-item .data-verification-range {
   width: 100%;
   height: 30px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
 }
 
 #fortune-data-verification .box .box-item .show-box-item {
@@ -41,14 +41,14 @@
 #fortune-data-verification .box .box-item .show-box-item .check-box input {
   height: 30px;
   padding: 0 10px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   box-sizing: border-box;
 }
 
 #fortune-data-verification .input-box input {
   height: 30px;
   padding: 4px 10px 4px 10px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   box-sizing: border-box;
   margin-top: 6px;
 }
@@ -77,7 +77,7 @@
 #fortune-data-verification .box .box-item .data-verification-type-select {
   width: 100%;
   height: 30px;
-  border-color: #d4d4d4;
+  border-color: hsl(var(--color-border-default));
   outline-style: none;
 }
 
@@ -110,20 +110,20 @@
 #fortune-data-verification .button-primary {
   background: #0188fb;
   border: 1px solid #0188fb;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   margin-right: 10px;
 }
 
 #fortune-data-verification .button-close {
-  color: #333;
-  background-color: #fff;
-  border: 1px solid #ccc;
+  color: hsl(var(--color-text-default));
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   margin-right: 10px;
 }
 
 #range-dialog {
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
-  background: #fff;
+  background: hsl(var(--color-bg-default));
   border: 1px solid hsl(var(--color-border-default));
   outline: 0;
   position: fixed;
@@ -152,8 +152,8 @@
 }
 
 #range-dialog .dialog-title {
-  background-color: #fff;
-  color: #000;
+  background-color: hsl(var(--color-bg-default));
+  color: hsl(var(--color-text-default));
   cursor: default;
   font-size: 16px;
   font-weight: normal;
@@ -164,7 +164,7 @@
 #range-dialog input {
   height: 30px;
   padding: 0 10px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   outline-style: none;
   user-select: text;
 }
@@ -172,14 +172,14 @@
 #range-dialog .button-primary {
   background: #0188fb;
   border: 1px solid #0188fb;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   margin-right: 10px;
 }
 
 #range-dialog .button-close {
-  color: #333;
-  background-color: #fff;
-  border: 1px solid #ccc;
+  color: hsl(var(--color-text-default));
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   margin-right: 10px;
 }
 
@@ -202,6 +202,7 @@
   box-sizing: border-box;
   cursor: pointer !important;
   border-radius: 4px;
+  color: black;
 }
 
 #luckysheet-dataVerification-dropdown-List .dropdown-List-item:hover {
@@ -223,15 +224,15 @@
 }
 
 .color-picker-reset-btn:hover {
-  background: hsl(var(--color-bg-default-hover, #f2f4f5)) !important;
+  background: hsl(var(--color-bg-default-hover)) !important;
 }
 
 .color-picker:hover {
-  background: hsl(var(--color-bg-default-hover, #f2f4f5)) !important;
+  background: hsl(var(--color-bg-default-hover)) !important;
 }
 
 .color-picker-container {
-  border: 1px solid hsl(var(--color-border-default, #e8ebec)) !important;
+  border: 1px solid hsl(var(--color-border-default)) !important;
   box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.15);
   width: 230px !important;
 }
@@ -252,5 +253,5 @@
 
 .edit-dropdown:hover {
   height: 28px !important;
-  background: hsl(var(--color-bg-default-hover, #f2f4f5)) !important;
+  background: hsl(var(--color-bg-default-hover)) !important;
 }

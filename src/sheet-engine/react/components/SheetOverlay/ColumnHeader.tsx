@@ -474,7 +474,7 @@ const ColumnHeader: React.FC = () => {
             }}
             onClick={(e) => showColumn(e, item)}
           >
-            <div className="">
+            <div className="color-text-default">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="5"
@@ -484,11 +484,11 @@ const ColumnHeader: React.FC = () => {
               >
                 <path
                   d="M0.164574 4.20629L3.54376 7.58548C3.7275 7.76922 4.04167 7.63909 4.04167 7.37924L4.04167 0.620865C4.04167 0.361018 3.7275 0.230885 3.54376 0.414625L0.164575 3.79381C0.0506717 3.90772 0.0506715 4.09239 0.164574 4.20629Z"
-                  fill="#363B3F"
+                  fill="currentColor"
                 />
               </svg>
             </div>
-            <div className="">
+            <div className="color-text-default">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="5"
@@ -498,7 +498,7 @@ const ColumnHeader: React.FC = () => {
               >
                 <path
                   d="M4.68811 4.35359L1.81188 7.22982C1.4969 7.5448 0.958328 7.32172 0.958328 6.87627L0.958328 1.12381C0.958328 0.678362 1.4969 0.455279 1.81188 0.770261L4.68811 3.64649C4.88337 3.84175 4.88337 4.15833 4.68811 4.35359Z"
-                  fill="#363B3F"
+                  fill="currentColor"
                 />
               </svg>
             </div>

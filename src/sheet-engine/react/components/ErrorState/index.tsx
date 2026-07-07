@@ -11,7 +11,7 @@ const ErrorBoxes: React.FC = () => {
   return (
     <div
       style={{
-        borderLeft: `4px solid #FB3449`,
+        borderLeft: `4px solid hsl(var(--color-text-danger))`,
         width: 'auto',
         maxWidth: '280px',
         height: 'auto',
@@ -19,7 +19,7 @@ const ErrorBoxes: React.FC = () => {
         top,
         position: 'absolute',
         padding: '8px',
-        background: '#FFFFFF',
+        background: 'hsl(var(--color-bg-default))',
         zIndex: 100,
         borderRadius: '4px',
       }}

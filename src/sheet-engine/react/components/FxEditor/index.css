@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: row;
   height: 28px;
-  border-bottom: 1px solid #d4d4d4;
+  border-bottom: 1px solid hsl(var(--color-border-default));
 }
 
 .fortune-fx-icon {
@@ -13,7 +13,7 @@
 
 .fortune-name-box-container {
   width: 99px;
-  border-right: 1px solid #d4d4d4;
+  border-right: 1px solid hsl(var(--color-border-default));
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -29,7 +29,7 @@
   white-space: nowrap;
   overflow: hidden;
   -webkit-transform: translateZ(0);
-  background-color: white;
+  background-color: hsl(var(--color-bg-default));
   word-wrap: break-word;
   -webkit-nbsp-mode: space;
   -webkit-line-break: after-white-space;
@@ -60,10 +60,10 @@
   -webkit-transform: translateZ(0);
   -webkit-nbsp-mode: space;
   -webkit-line-break: after-white-space;
-  background-color: white;
+  background-color: hsl(var(--color-bg-default));
   padding-top: 7px;
   box-sizing: border-box;
-  color: black;
+  color: hsl(var(--color-text-default));
   text-align: left;
 }
 .fortune-fx-input[contenteditable="true"] {

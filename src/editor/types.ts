@@ -8,6 +8,9 @@ import { SmartContractQueryHandler } from './utils/after-update-cell';
 import { CollaborationProps } from '../sync-local/types';
 import { CommentsConfig } from './types/comments';
 import type { ApiKeyStorage } from './utils/api-key-storage';
+import type { ThemeKey } from '@sheet-engine/core/theme';
+
+export type { ThemeKey } from '@sheet-engine/core/theme';
 
 export type {
   CommentThread,
@@ -111,6 +114,8 @@ export interface DsheetProps {
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
   customPanels?: PanelConfig[];
+  /** Active theme; drives the canvas/grid palette (chrome themes via the <html> class). */
+  theme?: ThemeKey;
 }
 export type BaseError = {
   message: string;

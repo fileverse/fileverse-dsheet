@@ -120,7 +120,10 @@ const ColorPicker: React.FC<Props> = ({ onPick }) => {
               tabIndex={0}
               style={{
                 backgroundColor: c,
-                border: c === '#ffffff' ? '1px solid #E8EBEC' : 'none',
+                border:
+                  c === '#ffffff'
+                    ? '1px solid hsl(var(--color-border-default))'
+                    : 'none',
               }}
             />
           ))}

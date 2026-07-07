@@ -5,18 +5,18 @@ label {
   min-width: 500px;
 }
 #fortune-location-condition .title {
-  background-color: #fff;
-  color: #000;
+  background-color: hsl(var(--color-bg-default));
+  color: hsl(var(--color-text-default));
   cursor: default;
   font-size: 16px;
   font-weight: normal;
   line-height: 48px;
 }
 #fortune-location-condition .listbox {
-  border: 1px solid #dfdfdf;
+  border: 1px solid hsl(var(--color-border-default));
   padding: 10px;
   font-size: 14px;
-  color: #000;
+  color: hsl(var(--color-text-default));
 }
 #fortune-location-condition .listbox .listItem {
   padding: 5px 0;
@@ -64,11 +64,11 @@ label {
 #fortune-location-condition .button-primary {
   background: #0188fb;
   border: 1px solid #0188fb;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   margin-right: 10px;
 }
 #fortune-location-condition .button-close {
-  color: #333;
-  background-color: #fff;
-  border: 1px solid #ccc;
+  color: hsl(var(--color-text-default));
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
 }

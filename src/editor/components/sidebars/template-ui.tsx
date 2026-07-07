@@ -24,7 +24,7 @@ export const TemplateCard = ({
   onSelect: () => void;
 }) => (
   <div
-    className="flex flex-col flex-shrink-0 gap-3 p-3 rounded-lg border bg-white hover:color-bg-default-hover hover:shadow-xl shadow-[rgba(0,0,0,0.3)] color-border-default cursor-pointer transition-all max-h-[245px]"
+    className="flex flex-col flex-shrink-0 gap-3 p-3 rounded-lg border color-bg-default hover:color-bg-default-hover hover:shadow-xl shadow-[rgba(0,0,0,0.3)] color-border-default cursor-pointer transition-all max-h-[245px]"
     onMouseEnter={onMouseEnter}
     onMouseLeave={onMouseLeave}
     onClick={onSelect}
@@ -75,7 +75,7 @@ export const TemplatePreview = ({ template }: { template: Template }) => (
       animation: 'float 3s ease-in-out infinite',
     }}
   >
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] p-2 border border-gray-200 dark:border-gray-700 w-[750px] h-[500px] relative transition-all duration-300 ease-in-out">
+    <div className="color-bg-default rounded-lg shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] p-2 border color-border-default w-[750px] h-[500px] relative transition-all duration-300 ease-in-out">
       <img
         src={template.fullImage}
         alt={`${template.title} preview`}

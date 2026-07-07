@@ -1187,7 +1187,7 @@ const SheetOverlay: React.FC = () => {
               const height = row - row_pre;
               const usernameStyle: React.CSSProperties = presence.isEns
                 ? {
-                    backgroundColor: '#fff',
+                    backgroundColor: 'hsl(var(--color-bg-default))',
                     color,
                     border: `2px solid ${color}`,
                     left: width - 2,
@@ -1336,7 +1336,7 @@ const SheetOverlay: React.FC = () => {
                     placeholder={context.addDefaultRows.toString()}
                   />{' '}
                   <span style={{ fontSize: 14 }}>{info.row}</span>{' '}
-                  <span style={{ fontSize: 14, color: '#9c9c9c' }}>
+                  <span style={{ fontSize: 14, color: 'hsl(var(--color-text-secondary))' }}>
                     ({info.addLast})
                   </span>
                   <span

@@ -1,7 +1,7 @@
 .luckysheet-sheet-area {
   width: 100%;
   box-sizing: border-box;
-  color: #444;
+  color: hsl(var(--color-text-secondary));
   height: 36px;
   padding: 0 30px 0 8px;
   margin: 0;
@@ -23,7 +23,7 @@
 
 #luckysheet-bottom-pager {
   width: 0;
-  background-color: #fafafc;
+  background-color: hsl(var(--color-bg-secondary));
   z-index: 1;
   flex: 2;
   text-align: right;
@@ -54,21 +54,21 @@
   width: 6px;
   height: 100%;
   z-index: 1;
-  background: rgb(255, 255, 255);
+  background: hsl(var(--color-bg-default));
 }
 
 .fortune-sheettab-container .boundary-left {
   left: 0;
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
-  --tw-gradient-from: #4445;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, #8880);
+  --tw-gradient-from: hsl(var(--color-text-default) / 0.2);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, transparent);
 }
 
 .fortune-sheettab-container .boundary-right {
   right: 0;
   background-image: linear-gradient(to left, var(--tw-gradient-stops));
-  --tw-gradient-from: #4445;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, #8880);
+  --tw-gradient-from: hsl(var(--color-text-default) / 0.2);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, transparent);
 }
 
 .fortune-sheettab-container .fortune-sheettab-container-c {
@@ -95,8 +95,8 @@
   padding: 2px 6px;
   height: 34px;
   line-height: 29px;
-  background-color: #fafafc;
-  color: var(--color-text-default);
+  background-color: hsl(var(--color-bg-secondary));
+  color: hsl(var(--color-text-default));
   min-width: 30px;
   top: 0px;
   position: relative;
@@ -123,7 +123,7 @@
   display: inline-block;
   top: -2px;
   position: relative;
-  color: #a1a1a1;
+  color: hsl(var(--color-text-secondary));
   position: absolute;
   height: 100%;
   width: 15px;
@@ -134,7 +134,7 @@
 .luckysheet-sheet-area
   div.luckysheet-sheets-item
   .luckysheet-sheets-item-menu:hover {
-  color: #2a2a2a;
+  color: hsl(var(--color-text-default));
   cursor: pointer;
 }
 
@@ -161,7 +161,7 @@
 .luckysheet-sheet-area
   div.luckysheet-sheets-item
   .luckysheet-sheets-item-name[contenteditable="true"] {
-  border-bottom: 1px solid #d9d9d9;
+  border-bottom: 1px solid hsl(var(--color-border-default));
   display: inline-block;
   height: 18px;
   line-height: 18px;

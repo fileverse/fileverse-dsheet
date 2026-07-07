@@ -62,7 +62,7 @@ const FunctionMetadata = ({
                   >
                     <PopoverTrigger className="w-full">
                       <div
-                        className="bg-green-100 text-green-800 px-[4px] font-bold text-[8px] rounded-[4px] py-[2px]"
+                        className="color-bg-success color-text-success px-[4px] font-bold text-[8px] rounded-[4px] py-[2px]"
                         onMouseEnter={() => setIsProxyHoverd(true)}
                         onMouseLeave={() => setIsProxyHoverd(false)}
                       >
@@ -77,17 +77,17 @@ const FunctionMetadata = ({
                       sideOffset={20}
                       style={{ maxWidth: '322px', marginLeft: '40px' }}
                     >
-                      <div className="bg-green-50 border border-green-200 rounded-md p-3 group-hover:block">
+                      <div className="color-bg-success-light border color-border-success rounded-md p-3 group-hover:block">
                         <div className="flex items-center gap-2">
                           <LucideIcon
                             name="Zap"
-                            className="text-green-600 w-4 h-4"
+                            className="color-text-success w-4 h-4"
                           />
-                          <p className="text-sm text-green-800 font-medium">
+                          <p className="text-sm color-text-success font-medium">
                             Quick Start Mode
                           </p>
                         </div>
-                        <p className="text-xs text-green-700 mt-1">
+                        <p className="text-xs color-text-success mt-1">
                           No API key needed! We&apos;re using our proxy server
                           so you can test this function immediately.
                         </p>
@@ -106,11 +106,11 @@ const FunctionMetadata = ({
                     }
                   >
                     <div
-                      className={`flex h-[16px] rounded-[4px]  w-[16px] justify-center ${localStorage.getItem(selectedFunction.API_KEY) ? 'bg-[#177E23]' : 'bg-[#e8ebec]'}`}
+                      className={`flex h-[16px] rounded-[4px]  w-[16px] justify-center ${localStorage.getItem(selectedFunction.API_KEY) ? 'color-bg-success' : 'color-bg-secondary'}`}
                     >
                       <LucideIcon
                         name="Key"
-                        className={`${localStorage.getItem(selectedFunction.API_KEY) ? 'text-white' : 'text-[#77818A]'} w-[12px] h-[12px]`}
+                        className={`${localStorage.getItem(selectedFunction.API_KEY) ? 'color-text-inverse' : 'color-text-secondary'} w-[12px] h-[12px]`}
                       />
                     </div>
                   </Tooltip>
@@ -131,7 +131,7 @@ const FunctionMetadata = ({
           <p className="mb-[8px] font-helvetica text-[hsl(var(--color-text-secondary))] font-sans text-xs font-medium leading-4">
             Syntax
           </p>
-          <div className=" bg-[#F2F4F5] break-words w-full leading-[16px] font-medium text-[12px] px-3 py-2 rounded-[4px] border border-[hsl(var(--color-border-default,#E8EBEC))]">
+          <div className=" color-bg-secondary break-words w-full leading-[16px] font-medium text-[12px] px-3 py-2 rounded-[4px] border color-border-default">
             <code className="">
               <span className="font-medium">={selectedFunction.n}</span>
               <span className="">(</span>
@@ -161,7 +161,7 @@ const FunctionMetadata = ({
               return (
                 <div key={data.name}>
                   <p className="text-body-sm">
-                    <code className="text-[hsl(var(--color-text-default)] font-mono text-sm font-bold leading-5">
+                    <code className="color-text-default font-mono text-sm font-bold leading-5">
                       {data.name}
                       {data.require === 'o' && (
                         <code className="!text-[hsl(var(--color-text-secondary))]">
@@ -213,7 +213,7 @@ const FunctionMetadata = ({
 
         {isDatablock && (
           <div className="flex flex-col w-full border-t mt-[3px] pt-[12px] gap-3">
-            <p className="font-medium text-xs text-[#77818a]">Examples</p>
+            <p className="font-medium text-xs color-text-secondary">Examples</p>
             {selectedFunction?.examples?.map(
               (
                 example: {
@@ -225,7 +225,7 @@ const FunctionMetadata = ({
               ) => {
                 return (
                   <div className="flex flex-col gap-[4px]" key={index}>
-                    <div className="flex items-center gap-[4px] self-stretch bg-[#f8f9fa] p-2 rounded border border-solid border-[#e8ebec] break-all">
+                    <div className="flex items-center gap-[4px] self-stretch color-bg-secondary p-2 rounded border border-solid color-border-default break-all">
                       <code>
                         <span className="font-medium text-xs">
                           ={example.title}(

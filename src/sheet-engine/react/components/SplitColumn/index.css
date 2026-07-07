@@ -6,20 +6,20 @@
   width: 464px;
 
   input[type="checkbox"] {
-    accent-color: black;
+    accent-color: hsl(var(--color-text-default));
     appearance: none;
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
-    border: 1.5px solid black;
+    border: 1.5px solid hsl(var(--color-text-default));
     border-radius: 3px;
     position: relative;
     cursor: pointer;
   }
   
   input[type="checkbox"]:checked {
-    background-color: black;
-    border-color: black;
+    background-color: hsl(var(--color-bg-default-inverse));
+    border-color: hsl(var(--color-bg-default-inverse));
   }
   
   /* Smaller tick mark */
@@ -30,7 +30,7 @@
     left: 4px;
     width: 4px;      /* Reduced from default */
     height: 7px;     /* Reduced from default */
-    border: solid white;
+    border: solid hsl(var(--color-text-inverse));
     border-width: 0 1px 1px 0;
     transform: rotate(45deg);
   }
@@ -72,9 +72,9 @@
   margin-bottom: 12px;
 }
 #fortune-split-column .splitColumnData {
-  border: 1px solid #dfdfdf;
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 4px;
-  background-color: #F8F9FA;
+  background-color: hsl(var(--color-bg-secondary));
   padding: 5px;
   margin: 5px 0px;
   height: 100px;
@@ -98,13 +98,13 @@
 #fortune-split-column .button-primary {
   background: #0188fb;
   border: 1px solid #0188fb;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   margin-right: 10px;
 }
 #fortune-split-column .button-close {
-  color: #333;
-  background-color: #fff;
-  border: 1px solid #ccc;
+  color: hsl(var(--color-text-default));
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
 }
 #fortune-split-column table {
   border-collapse: collapse;
@@ -115,7 +115,7 @@
   border-color: inherit;
 }
 #fortune-split-column td {
-  border: 1px solid #333;
+  border: 1px solid hsl(var(--color-border-default));
   display: table-cell;
   vertical-align: inherit;
 }

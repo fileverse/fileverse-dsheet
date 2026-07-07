@@ -21,7 +21,7 @@
   display: inline-block;
   text-align: center;
   width: 100px;
-  border: 1px solid rgb(235, 235, 235);
+  border: 1px solid hsl(var(--color-border-default));
   font-size: 14px;
   line-height: 2;
 }
@@ -29,12 +29,12 @@
 #fortune-search-replace .tabBox span.on {
   background-color: #8c89fe;
   border-color: #726efe;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
 }
 
 #fortune-search-replace .ctBox {
   padding: 5px 10px;
-  border: 1px solid rgb(235, 235, 235);
+  border: 1px solid hsl(var(--color-border-default));
   font-size: 14px;
   min-width: 500px;
 }
@@ -93,8 +93,8 @@
   height: 30px;
   line-height: 29px;
   padding: 0 5px;
-  background-color: #fff;
-  border-bottom: 1px solid #d4d4d4;
+  background-color: hsl(var(--color-bg-default));
+  border-bottom: 1px solid hsl(var(--color-border-default));
   box-sizing: border-box;
   position: sticky;
   left: 0;
@@ -121,14 +121,14 @@
 #fortune-search-replace #searchAllbox .boxMain .boxItem {
   height: 30px;
   line-height: 29px;
-  border-bottom: 1px solid #d4d4d4;
+  border-bottom: 1px solid hsl(var(--color-border-default));
   padding: 0 5px;
   box-sizing: border-box;
 }
 
 #fortune-search-replace #searchAllbox .boxMain .boxItem.on {
   background-color: #8c89fe;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
 }
 
 #fortune-search-replace #searchAllbox .boxMain .boxItem span {
@@ -169,7 +169,7 @@
 /* Add scrollbar styles */
 #fortune-search-replace .table-container {
   scrollbar-width: thin;
-  scrollbar-color: #babac0 transparent;
+  scrollbar-color: hsl(var(--color-text-secondary)) transparent;
 }
 
 #fortune-search-replace .table-container::-webkit-scrollbar {
@@ -182,7 +182,7 @@
 }
 
 #fortune-search-replace .table-container::-webkit-scrollbar-thumb {
-  background-color: #babac0;
+  background-color: hsl(var(--color-text-secondary));
   border-radius: 16px;
 }
 

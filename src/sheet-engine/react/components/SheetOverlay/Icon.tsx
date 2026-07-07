@@ -319,7 +319,7 @@ export const LucideIcons = {
       </svg>
     );
   },
-  AddColLeft: () => {
+  AddColLeft: ({ className, ...props }: React.SVGProps<SVGSVGElement>) => {
     return (
       <svg
         width="18"
@@ -327,21 +327,24 @@ export const LucideIcons = {
         viewBox="0 0 18 18"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        {...props}
+        stroke="none"
       >
         <path
           fillRule="evenodd"
           clipRule="evenodd"
           d="M14.25 0.75C15.4926 0.75 16.5 1.75736 16.5 3V15C16.5 16.2426 15.4926 17.25 14.25 17.25H11.25C10.0074 17.25 9 16.2426 9 15V3C9 1.75736 10.0074 0.75 11.25 0.75H14.25ZM11.25 2.25C10.8358 2.25 10.5 2.58579 10.5 3V15L10.5037 15.0769C10.5422 15.455 10.8617 15.75 11.25 15.75H14.25L14.3269 15.7463C14.6797 15.7104 14.9604 15.4297 14.9963 15.0769L15 15V3C15 2.61174 14.705 2.29216 14.3269 2.25366L14.25 2.25H11.25Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
         <path
           d="M4.5 6C4.91421 6 5.25 6.33579 5.25 6.75V8.25H6.75C7.16421 8.25 7.5 8.58579 7.5 9C7.5 9.41421 7.16421 9.75 6.75 9.75H5.25V11.25C5.25 11.6642 4.91421 12 4.5 12C4.08579 12 3.75 11.6642 3.75 11.25V9.75H2.25C1.83579 9.75 1.5 9.41421 1.5 9C1.5 8.58579 1.83579 8.25 2.25 8.25H3.75V6.75C3.75 6.33579 4.08579 6 4.5 6Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
       </svg>
     );
   },
-  AddColRight: () => {
+  AddColRight: ({ className, ...props }: React.SVGProps<SVGSVGElement>) => {
     return (
       <svg
         width="18"
@@ -349,21 +352,24 @@ export const LucideIcons = {
         viewBox="0 0 18 18"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        {...props}
+        stroke="none"
       >
         <path
           fillRule="evenodd"
           clipRule="evenodd"
           d="M5.75 0.75C6.99264 0.75 8 1.75736 8 3V15C8 16.2426 6.99264 17.25 5.75 17.25H2.75C1.50736 17.25 0.5 16.2426 0.5 15V3C0.5 1.75736 1.50736 0.75 2.75 0.75H5.75ZM2.75 2.25C2.33579 2.25 2 2.58579 2 3V15L2.00366 15.0769C2.04216 15.455 2.36174 15.75 2.75 15.75H5.75L5.8269 15.7463C6.17972 15.7104 6.46041 15.4297 6.49634 15.0769L6.5 15V3C6.5 2.61174 6.205 2.29216 5.8269 2.25366L5.75 2.25H2.75Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
         <path
           d="M12.5 6C12.9142 6 13.25 6.33579 13.25 6.75V8.25H14.75C15.1642 8.25 15.5 8.58579 15.5 9C15.5 9.41421 15.1642 9.75 14.75 9.75H13.25V11.25C13.25 11.6642 12.9142 12 12.5 12C12.0858 12 11.75 11.6642 11.75 11.25V9.75H10.25C9.83579 9.75 9.5 9.41421 9.5 9C9.5 8.58579 9.83579 8.25 10.25 8.25H11.75V6.75C11.75 6.33579 12.0858 6 12.5 6Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
       </svg>
     );
   },
-  AddRowBelowLocal: () => {
+  AddRowBelowLocal: ({ className, ...props }: React.SVGProps<SVGSVGElement>) => {
     return (
       <svg
         width="18"
@@ -371,15 +377,18 @@ export const LucideIcons = {
         viewBox="0 0 18 18"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        {...props}
+        stroke="none"
       >
         <path
           d="M9 10.5C9.41421 10.5 9.75 10.8358 9.75 11.25V12.75H11.25C11.6642 12.75 12 13.0858 12 13.5C12 13.9142 11.6642 14.25 11.25 14.25H9.75V15.75C9.75 16.1642 9.41421 16.5 9 16.5C8.58579 16.5 8.25 16.1642 8.25 15.75V14.25H6.75C6.33579 14.25 6 13.9142 6 13.5C6 13.0858 6.33579 12.75 6.75 12.75H8.25V11.25C8.25 10.8358 8.58579 10.5 9 10.5ZM15 3.75C15 3.33579 14.6642 3 14.25 3H3.75C3.33579 3 3 3.33579 3 3.75V6.75C3 7.16421 3.33579 7.5 3.75 7.5H14.25C14.6642 7.5 15 7.16421 15 6.75V3.75ZM16.5 6.75C16.5 7.99264 15.4926 9 14.25 9H3.75C2.50736 9 1.5 7.99264 1.5 6.75V3.75C1.5 2.50736 2.50736 1.5 3.75 1.5H14.25C15.4926 1.5 16.5 2.50736 16.5 3.75V6.75Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
       </svg>
     );
   },
-  AddRowAboveLocal: () => {
+  AddRowAboveLocal: ({ className, ...props }: React.SVGProps<SVGSVGElement>) => {
     return (
       <svg
         width="24"
@@ -387,16 +396,19 @@ export const LucideIcons = {
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
+        className={className}
+        {...props}
+        stroke="none"
       >
         <path
           d="M12 2C12.5523 2 13 2.44772 13 3V5H15C15.5523 5 16 5.44772 16 6C16 6.55228 15.5523 7 15 7H13V9C13 9.55228 12.5523 10 12 10C11.4477 10 11 9.55228 11 9V7H9C8.44772 7 8 6.55228 8 6C8 5.44772 8.44772 5 9 5H11V3C11 2.44772 11.4477 2 12 2Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
         <path
           fillRule="evenodd"
           clipRule="evenodd"
           d="M22 19C22 20.6569 20.6569 22 19 22H5C3.34315 22 2 20.6569 2 19V15C2 13.3431 3.34315 12 5 12H19C20.6569 12 22 13.3431 22 15V19ZM20 15C20 14.4477 19.5523 14 19 14H5C4.44772 14 4 14.4477 4 15V19C4 19.5523 4.44772 20 5 20H19C19.5523 20 20 19.5523 20 19V15Z"
-          fill="#363B3F"
+          fill="currentColor"
         />
       </svg>
     );

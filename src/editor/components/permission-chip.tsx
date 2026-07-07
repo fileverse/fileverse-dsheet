@@ -17,10 +17,10 @@ export const PermissionChip: React.FC<PermissionChipProps> = ({
       >
         <LucideIcon
           name="MessageSquareText"
-          className="w-4 h-4 text-gray-800"
+          className="w-4 h-4 color-text-default"
         />
         <span
-          className="dsheet-text dsheet-text--chip text-xs text-black"
+          className="dsheet-text dsheet-text--chip text-xs color-text-default"
           data-testid="permission-chip-label"
         >
           View and comment
@@ -35,9 +35,9 @@ export const PermissionChip: React.FC<PermissionChipProps> = ({
       data-testid="permission-chip"
       role="status"
     >
-      <LucideIcon name="Eye" className="w-4 h-4 text-gray-800" />
+      <LucideIcon name="Eye" className="w-4 h-4 color-text-default" />
       <span
-        className="dsheet-text dsheet-text--chip text-xs text-black"
+        className="dsheet-text dsheet-text--chip text-xs color-text-default"
         data-testid="permission-chip-label"
       >
         View only

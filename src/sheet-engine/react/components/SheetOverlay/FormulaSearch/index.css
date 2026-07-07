@@ -1,18 +1,18 @@
 .luckysheet-formula-search-c-p {
   position: absolute;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  color: #535353;
+  color: hsl(var(--color-text-default));
   font-size: 12px;
-  background: #fff;
+  background: hsl(var(--color-bg-default));
   z-index: 1003;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 10px;
 }
 
 .luckysheet-formula-search-c {
-  color: #535353;
+  color: hsl(var(--color-text-default));
   font-size: 12px;
-  background: #fff;
+  background: hsl(var(--color-bg-default));
   width: 300px;
   max-height: 350px;
   overflow: hidden;
@@ -20,7 +20,7 @@
 }
 
 .luckysheet-formula-search-c .luckysheet-formula-search-item {
-  background: #fff;
+  background: hsl(var(--color-bg-default));
   padding: 5px 10px;
   cursor: pointer;
 }
@@ -29,7 +29,7 @@
   .luckysheet-formula-search-item
   .luckysheet-formula-search-detail {
   display: none;
-  color: #77818a;
+  color: hsl(var(--color-text-secondary));
 }
 
 .luckysheet-formula-search-c
@@ -42,9 +42,9 @@
   display: block;
   height: 64px;
   box-sizing: border-box;
-  border-top: 1px solid #ebebeb;
-  border-bottom: 1px solid #ebebeb;
-  background: #f2f4f5;
+  border-top: 1px solid hsl(var(--color-border-default));
+  border-bottom: 1px solid hsl(var(--color-border-default));
+  background: hsl(var(--color-bg-secondary));
 }
 
 .luckysheet-formula-search-c
@@ -75,7 +75,7 @@
   width: 100%;
   height: 24px;
   line-height: 24px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   padding: 0 10px;
   box-sizing: border-box;
   font-size: 12px;
@@ -89,7 +89,7 @@
   width: 50%;
   height: 24px;
   line-height: 24px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   box-sizing: border-box;
   font-size: 12px;
 }
@@ -102,23 +102,23 @@
 #formulaTypeList {
   width: 300px;
   height: 170px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   overflow-y: scroll;
 }
 
 .formulaList {
   width: 300px;
   height: 170px;
-  border: 1px solid #d4d4d4;
+  border: 1px solid hsl(var(--color-border-default));
   overflow-y: scroll;
 }
 
 .listBox {
   padding: 5px;
-  border-bottom: 1px solid #d4d4d4;
+  border-bottom: 1px solid hsl(var(--color-border-default));
 }
 
 .listBox.on {
   background-color: #8c89fe;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
 }

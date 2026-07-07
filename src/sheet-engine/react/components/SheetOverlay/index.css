@@ -22,7 +22,7 @@
   position: relative;
   flex-shrink: 0;
   outline-style: none;
-  color: #5e5e5e;
+  color: hsl(var(--color-text-secondary));
   overflow: hidden;
   padding: 0;
   margin-top: -2px;
@@ -56,7 +56,7 @@
 }
 
 .fortune-col-header {
-  color: #5e5e5e;
+  color: hsl(var(--color-text-secondary));
   overflow: hidden;
   padding: 0;
   cursor: default;
@@ -67,7 +67,7 @@
 }
 
 .fortune-col-header-hover {
-  color: #5e5e5e;
+  color: hsl(var(--color-text-secondary));
   cursor: default;
   position: absolute;
   z-index: 11;
@@ -86,7 +86,7 @@
 }
 
 .fortune-col-header-selected {
-  color: #5e5e5e;
+  color: hsl(var(--color-text-secondary));
   cursor: default;
   position: absolute;
   z-index: 10;
@@ -99,13 +99,13 @@
 .fortune-left-top {
   width: 44.5px;
   height: 18.5px;
-  border: solid 0 #dfdfdf;
+  border: solid 0 hsl(var(--color-border-default));
   position: relative;
   padding-top: 0;
   border-width: 0 1px 1px 0;
   padding-left: 0;
   cursor: pointer;
-  background-color: white;
+  background-color: hsl(var(--color-bg-default));
 }
 
 .fortune-add-row-button {
@@ -120,9 +120,9 @@
   line-height: 20px;
   outline: none;
   cursor: pointer;
-  color: rgb(38, 42, 51);
-  background-color: rgb(255, 255, 255);
-  border: 1px solid rgb(200, 200, 200);
+  color: hsl(var(--color-text-default));
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
 }
 
 .luckysheet-cell-selected-focus {
@@ -321,7 +321,7 @@
   width: 16px;
   height: 16px;
   border: 0.5px solid rgba(0, 0, 0, 0.15);
-  background-color: #ffffff;
+  background-color: hsl(var(--color-bg-default));
   box-sizing: border-box;
   border-radius: 50%;
 }
@@ -389,7 +389,11 @@
   -moz-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4); */
   /* box-shadow: 0 2px 5px rgb(0 0 0 / 40%); */
   word-wrap: break-word;
-  background-color: rgb(255, 255, 255);
+  /* Match the canvas cell exactly: these vars are published from the active grid palette by
+     the Workbook theme effect (fallbacks = the original light values). The #efc703 border +
+     #f2f217 outline above stay literal — selection accent. */
+  background-color: var(--grid-cell-bg, rgb(255, 255, 255));
+  color: var(--grid-cell-text, #000000);
   font-size: 13px;
   right: auto;
   overflow-y: auto;
@@ -451,7 +455,7 @@
   /*background-color: #fff;*/
   text-align: left;
   font-size: 11pt;
-  color: #000000;
+  color: hsl(var(--color-text-default));
   text-decoration: none;
 }
 
@@ -494,7 +498,7 @@
 
 .luckysheet-cell-flow-column-line {
   position: absolute;
-  border-right: 1px solid #d4d4d4;
+  border-right: 1px solid hsl(var(--color-border-default));
   height: inherit;
 }
 
@@ -511,7 +515,7 @@
 
 .luckysheet-cell-flow-row-line {
   position: absolute;
-  border-bottom: 1px solid #d4d4d4;
+  border-bottom: 1px solid hsl(var(--color-border-default));
   width: inherit;
 }
 
@@ -556,7 +560,7 @@
   left: 0;
   width: 3px;
   height: 100%;
-  background-color: #ddd;
+  background-color: hsl(var(--color-border-default));
   cursor: grab;
   z-index: 20;
 }
@@ -566,13 +570,13 @@
   top: 0;
   height: 3px;
   width: 100%;
-  background-color: #ddd;
+  background-color: hsl(var(--color-border-default));
   cursor: grab;
   z-index: 20;
 }
 
 .fortune-freeze-drag-line {
-  border-color: #ccc;
+  border-color: hsl(var(--color-border-default));
   border-style: solid;
   z-index: 15;
   cursor: ew-resize;
@@ -722,7 +726,7 @@
   position: absolute;
   height: 6px;
   width: 6px;
-  background: #ffffff;
+  background: hsl(var(--color-bg-default));
   border: 2px solid #0188fb;
   pointer-events: all;
   border-radius: 6px;
@@ -808,7 +812,7 @@
   font-weight: 400;
   white-space: nowrap;
   box-sizing: content-box;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   border-radius: 4px;
   border-bottom-left-radius: 0px;
   transition: opacity 0.25s ease;
@@ -890,7 +894,7 @@
 }
 
 .luckysheet-filter-options:hover .caret.down {
-  border-top-color: #ffffff;
+  border-top-color: hsl(var(--color-text-inverse));
 }
 
 .luckysheet-filter-selected {
@@ -973,7 +977,7 @@
 * {
   scrollbar-width: auto;
   /* Firefox: normal thickness */
-  scrollbar-color: #888 transparent;
+  scrollbar-color: hsl(var(--color-text-secondary)) transparent;
   /* thumb | track */
 }
 
@@ -990,14 +994,14 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #888;
+  background: hsl(var(--color-text-secondary));
   /* scrollbar thumb color */
   border-radius: 7px;
   /* rounded edges like mac */
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: hsl(var(--color-text-default));
   /* darker on hover */
   /* scrollbar */
 }
@@ -1016,9 +1020,9 @@
   padding-left: 2px;
   padding-right: 2px;
   padding-top: 1px;
-  background-color: rgba(255, 255, 255, 1);
+  background-color: hsl(var(--color-bg-default));
   border-radius: var(--border-radius-sm, 4px);
-  border: 1px solid #bdc4c8;
+  border: 1px solid hsl(var(--color-border-default));
 }
 
 .rotate-row-icon {
@@ -1033,7 +1037,7 @@
 }
 
 .hide-btn-row:hover {
-  background-color: white;
-  border: 1px solid #bdc4c8;
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 4px;
 }

@@ -8,7 +8,7 @@
   font-family:
     'Helvetica Neue', Helvetica, Arial, 'PingFang SC', 'Hiragino Sans GB',
     'Heiti SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif;
-  background-color: white;
+  background-color: hsl(var(--color-bg-default));
   position: relative;
   outline: none;
 }
@@ -28,7 +28,7 @@
 }
 
 .fortune-modal-container {
-  background: rgba(255, 255, 255, 0.5);
+  background: hsl(var(--color-bg-default) / 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -56,7 +56,7 @@ html::-webkit-scrollbar-button {
   align-items: center;
   width: 100%;
   position: relative;
-  background-color: rgb(255, 255, 255);
+  background-color: hsl(var(--color-bg-default));
 }
 
 /*
