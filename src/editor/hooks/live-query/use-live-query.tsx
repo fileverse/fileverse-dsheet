@@ -10,14 +10,20 @@ import { getFlowdata, getSheetIndex } from '@sheet-engine/core';
 import { executeStringFunction } from '../../utils/executeStringFunction';
 import { formulaResponseUiSync } from '../../utils/formula-ui-sync';
 import { isSupported } from './helpers';
-import { DataBlockApiKeyHandlerType } from '../../types';
-import { isDatablockError } from '../../utils/after-update-cell';
+import { isDatablockError } from '../../utils/datablock-error-utils';
+import { handleDataBlockError } from '../../utils/data-block-error-handler';
+import type { ApiKeyStorage } from '../../utils/api-key-storage';
+import type { OpenApiKeyModalFn } from '../../utils/data-block-error-handler';
+import type { DataBlockEvent } from '../../types';
+import { defaultApiKeyStorage } from '../../utils/api-key-storage';
 
 export const LIVE_QUERY_ERROR = 'LIVE_QUERY_ERROR';
 
 export const useLiveQuery = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
+  apiKeyStorage: ApiKeyStorage = defaultApiKeyStorage,
+  openApiKeyModal?: OpenApiKeyModalFn,
+  onDataBlockEvent?: (event: DataBlockEvent) => void,
   enableLiveQuery = false,
   refreshRate = 20000,
 ) => {
@@ -92,7 +98,18 @@ export const useLiveQuery = (
           });
           if (isDatablockError(result)) {
             result.type = LIVE_QUERY_ERROR;
-            dataBlockApiKeyHandler?.({ data: result } as any);
+            if (openApiKeyModal) {
+              await handleDataBlockError({
+                data: result,
+                sheetEditorRef,
+                row,
+                column,
+                newValue: cachedCellData as any,
+                apiKeyStorage,
+                openApiKeyModal,
+                onDataBlockEvent,
+              });
+            }
             return;
           }
           const newPriceDataResponse = result as Array<Record<string, number>>;
@@ -146,14 +163,22 @@ export const useLiveQuery = (
         }
       }
     } catch (error: any) {
-      const data = {
-        data: {
-          message: error?.message || 'Live query failed',
-          functionName: 'COINGECKO',
-          type: LIVE_QUERY_ERROR,
-        },
-      } as any;
-      dataBlockApiKeyHandler?.(data);
+      if (openApiKeyModal) {
+        await handleDataBlockError({
+          data: {
+            message: error?.message || 'Live query failed',
+            functionName: 'COINGECKO',
+            type: LIVE_QUERY_ERROR,
+          },
+          sheetEditorRef,
+          row: functionRecord.data.row,
+          column: functionRecord.data.column,
+          newValue: functionRecord.cellData as any,
+          apiKeyStorage,
+          openApiKeyModal,
+          onDataBlockEvent,
+        });
+      }
     }
   };
 
@@ -181,13 +206,22 @@ export const useLiveQuery = (
       }
       await Promise.allSettled(queries);
     } catch (error: any) {
-      dataBlockApiKeyHandler?.({
-        data: {
-          message: error?.message || 'Live query failed',
-          functionName: 'COINGECKO',
-          type: LIVE_QUERY_ERROR,
-        },
-      } as any);
+      if (openApiKeyModal) {
+        await handleDataBlockError({
+          data: {
+            message: error?.message || 'Live query failed',
+            functionName: 'COINGECKO',
+            type: LIVE_QUERY_ERROR,
+          },
+          sheetEditorRef,
+          row: 0,
+          column: 0,
+          newValue: {} as any,
+          apiKeyStorage,
+          openApiKeyModal,
+          onDataBlockEvent,
+        });
+      }
     } finally {
       isLiveQueryIntervalRunningRef.current = false;
     }

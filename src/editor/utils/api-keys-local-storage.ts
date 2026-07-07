@@ -49,6 +49,9 @@ export class ApiKeyStorageHelper {
     if (!key) return;
     localStorage.setItem(keyName, key);
   }
+  static removeApiKey(keyName: string) {
+    localStorage.removeItem(keyName);
+  }
   static getAllSupportedApiKeys() {
     const result: Record<string, string> = {};
 
@@ -79,6 +82,9 @@ export const clearApiKeys = () => {
 };
 export const saveApiKey = (keyName: string, key: string) => {
   ApiKeyStorageHelper.saveApiKey(keyName, key);
+};
+export const removeApiKey = (keyName: string) => {
+  ApiKeyStorageHelper.removeApiKey(keyName);
 };
 export const getListOfRateLimitedKeys = () => {
   return ApiKeyStorageHelper.getListOfRateLimitedKeys();

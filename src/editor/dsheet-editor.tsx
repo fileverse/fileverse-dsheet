@@ -7,11 +7,11 @@ import {
   DsheetProps,
   EditorValues,
   OnboardingHandlerType,
-  DataBlockApiKeyHandlerType,
 } from './types';
 import SkeletonLoader from './components/skeleton-loader';
 import { EditorProvider, useEditor } from './contexts/editor-context';
 import { EditorWorkbook } from './components/editor-workbook';
+import { ApiKeyModal } from './components/api-key-modal/api-key-modal';
 import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
 import { TransitionWrapper } from './components/transition-wrapper';
 import { PermissionChip } from './components/permission-chip';
@@ -35,7 +35,6 @@ import { CommentsConfig } from './types/comments';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
-type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 /**
  * EditorContent - Internal component that renders the editor content
@@ -50,7 +49,6 @@ const EditorContent = ({
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
-  dataBlockApiKeyHandler,
   isTemplateOpen,
   exportDropdownOpen,
   setExportDropdownOpen,
@@ -59,8 +57,6 @@ const EditorContent = ({
   selectedTemplate,
   setFetchingURLData,
   setInputFetchURLDataBlock,
-  storeApiKey,
-  onDataBlockApiResponse,
   onDuneChartEmbed,
   onSheetCountChange,
   handleSmartContractQuery,
@@ -77,7 +73,6 @@ const EditorContent = ({
   | 'setFetchingURLData'
   | 'setShowFetchURLModal'
   | 'setInputFetchURLDataBlock'
-  | 'storeApiKey'
   | 'isNewSheet'
 > & {
   commentsConfig?: CommentsConfig;
@@ -87,9 +82,6 @@ const EditorContent = ({
   onboardingComplete?: boolean;
   onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandler;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
-  storeApiKey?: (apiKeyName: string) => void;
-  onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
   handleSmartContractQuery?: SmartContractQueryHandler;
@@ -106,6 +98,7 @@ const EditorContent = ({
     setDataBlockCalcFunction,
     initialiseLiveQueryData,
     setSelectedTemplate: contextSetSelectedTemplate,
+    apiKeyModalState,
   } = useEditor();
 
   const { activePanel, isOpen, openPanel, closePanel, togglePanel } =
@@ -405,12 +398,9 @@ const EditorContent = ({
               onboardingCompleteLocalStorageKey
             }
             onboardingHandler={onboardingHandler}
-            dataBlockApiKeyHandler={dataBlockApiKeyHandler}
             exportDropdownOpen={exportDropdownOpen}
             setExportDropdownOpen={setExportDropdownOpen}
             dsheetId={dsheetId}
-            storeApiKey={storeApiKey}
-            onDataBlockApiResponse={onDataBlockApiResponse}
             onDuneChartEmbed={onDuneChartEmbed}
             onSheetCountChange={onSheetCountChange}
             handleSmartContractQuery={handleSmartContractQuery}
@@ -428,6 +418,15 @@ const EditorContent = ({
       />
       {hoveredTemplate && !isMobile && (
         <TemplatePreview template={hoveredTemplate} />
+      )}
+
+      {apiKeyModalState && (
+        <ApiKeyModal
+          open={apiKeyModalState.open}
+          apiKeyName={apiKeyModalState.apiKeyName}
+          onSave={apiKeyModalState.onSave}
+          onClose={apiKeyModalState.onClose}
+        />
       )}
     </div>
   );
@@ -456,15 +455,12 @@ const SpreadsheetEditor = ({
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
   commentsConfig,
-  dataBlockApiKeyHandler,
   setFetchingURLData,
   setShowFetchURLModal,
   setInputFetchURLDataBlock,
   sheetEditorRef: externalSheetEditorRef,
-  storeApiKey,
   onDuneChartEmbed,
   onSheetCountChange,
-  onDataBlockApiResponse,
   isAuthorized,
   getDocumentTitle,
   updateDocumentTitle,
@@ -477,6 +473,8 @@ const SpreadsheetEditor = ({
   enableLiveQuery,
   collaboration,
   customPanels,
+  apiKeyStorage,
+  onDataBlockEvent,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -499,7 +497,8 @@ const SpreadsheetEditor = ({
       editorStateRef={editorStateRef}
       liveQueryRefreshRate={liveQueryRefreshRate}
       enableLiveQuery={enableLiveQuery}
-      dataBlockApiKeyHandler={dataBlockApiKeyHandler}
+      apiKeyStorage={apiKeyStorage}
+      onDataBlockEvent={onDataBlockEvent}
     >
       <EditorContent
         commentsConfig={commentsConfig}
@@ -514,18 +513,13 @@ const SpreadsheetEditor = ({
         onboardingComplete={onboardingComplete}
         onboardingCompleteLocalStorageKey={onboardingCompleteLocalStorageKey}
         onboardingHandler={onboardingHandler as OnboardingHandler}
-        dataBlockApiKeyHandler={
-          dataBlockApiKeyHandler as DataBlockApiKeyHandler
-        }
         isTemplateOpen={isTemplateOpen}
         exportDropdownOpen={exportDropdownOpen}
         setExportDropdownOpen={setExportDropdownOpen}
         dsheetId={dsheetId}
         selectedTemplate={selectedTemplate}
-        storeApiKey={storeApiKey}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
-        onDataBlockApiResponse={onDataBlockApiResponse}
         handleSmartContractQuery={handleSmartContractQuery}
         customPanels={customPanels}
       />

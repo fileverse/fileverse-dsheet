@@ -7,6 +7,7 @@ import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
 import { SmartContractQueryHandler } from './utils/after-update-cell';
 import { CollaborationProps } from '../sync-local/types';
 import { CommentsConfig } from './types/comments';
+import type { ApiKeyStorage } from './utils/api-key-storage';
 
 export type {
   CommentThread,
@@ -50,34 +51,21 @@ export type OnboardingHandlerType = (params: {
   sheetEditorRef: React.RefObject<WorkbookInstance | null>;
 }) => { row: number; column: number };
 
-// Define the data block API key handler type
-export type DataBlockApiKeyHandlerType = (params: {
-  data: ErrorMessageHandlerReturnType;
-  sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  executeStringFunction: ({
-    functionCallString,
-    sheetEditorRef,
-    dataBlockRow,
-    dataBlockColumn,
-    handleSmartContractQuery,
-  }: {
-    functionCallString: string;
-    sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-    dataBlockRow: number;
-    dataBlockColumn: number;
-    handleSmartContractQuery: SmartContractQueryHandler;
-  }) => Promise<unknown>;
-  row: number;
-  column: number;
-  newValue: Cell;
-  formulaResponseUiSync: (params: {
-    row: number;
-    column: number;
-    newValue: Record<string, string>;
-    apiData: Array<Record<string, object>>;
-    sheetEditorRef: React.RefObject<WorkbookInstance | null>;
-  }) => void;
-}) => void;
+export type DataBlockEventType =
+  | 'success'
+  | 'error'
+  | 'api-key-required'
+  | 'api-key-saved'
+  | 'retry';
+
+export interface DataBlockEvent {
+  type: DataBlockEventType;
+  functionName?: string;
+  errorType?: string;
+  apiKeyName?: string;
+}
+
+export type { ApiKeyStorage } from './utils/api-key-storage';
 
 export interface DsheetProps {
   isNewSheet: boolean;
@@ -104,15 +92,16 @@ export interface DsheetProps {
   /** When `onboardingComplete` is omitted, read `localStorage.getItem(key)==='true'` (default key `onboardingComplete`). */
   onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandlerType;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>;
   commentsConfig?: CommentsConfig;
   toggleTemplateSidebar?: () => void;
   sheetEditorRef?: RefObject<
     WorkbookInstance & { refreshIndexedDB: () => Promise<void> }
   >;
-  storeApiKey?: (apiKeyName: string) => void;
-  onDataBlockApiResponse?: (dataBlockName: string) => void;
+  /** Override where datablock API keys are stored (default: localStorage). */
+  apiKeyStorage?: ApiKeyStorage;
+  /** Optional lifecycle events for analytics / side-effects. */
+  onDataBlockEvent?: (event: DataBlockEvent) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
   editorStateRef?: React.MutableRefObject<{
