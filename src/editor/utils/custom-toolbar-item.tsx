@@ -80,22 +80,26 @@ export const getCustomToolbarItems = ({
   | undefined;
 }) => {
   return [
-    {
-      key: 'Smart Contract',
-      tooltip: 'Smart Contract',
-      icon: (
-        <SmartContractButton
-          handleImportSmartContract={() =>
-            setShowSmartContractModal?.((prev: boolean) => {
-              return !prev;
-            })
-          }
-          handleViewSmartContract={() =>
-            document.getElementById('view-smart-contract')?.click()
-          }
-        />
-      ),
-    },
+    ...(setShowSmartContractModal
+      ? [
+          {
+            key: 'Smart Contract',
+            tooltip: 'Smart Contract',
+            icon: (
+              <SmartContractButton
+                handleImportSmartContract={() =>
+                  setShowSmartContractModal?.((prev: boolean) => {
+                    return !prev;
+                  })
+                }
+                handleViewSmartContract={() =>
+                  document.getElementById('view-smart-contract')?.click()
+                }
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: 'import-export',
       tooltip: 'Import/Export',

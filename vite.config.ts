@@ -49,6 +49,9 @@ export default defineConfig({
         '@fileverse-dev/formulajs',
         '@fileverse-dev/dsheets-templates',
         '@tippyjs/react',
+        'viem',
+        'viem/chains',
+        'viem/ens',
       ],
       output: {
         globals: {

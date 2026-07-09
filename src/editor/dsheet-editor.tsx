@@ -17,8 +17,6 @@ import { TransitionWrapper } from './components/transition-wrapper';
 import { PermissionChip } from './components/permission-chip';
 import '@sheet-engine/react/index.css';
 import './styles/index.css';
-import { SmartContractQueryHandler } from './utils/after-update-cell';
-import { Workbook } from '@sheet-engine/react';
 import { useSidebar } from './components/sidebar/sidebar-context';
 import { useSidebarPortalRegistryHandle } from './components/sidebar/sidebar-portal-registry';
 import { EditorRightSidebar } from './components/sidebar/editor-right-sidebar';
@@ -32,6 +30,12 @@ import { useMediaQuery } from 'usehooks-ts';
 import { CommentsContent } from './components/comments/comment-sidebar';
 import { setEnsResolutionUrl } from './components/comments/ens/ens-cache';
 import { CommentsConfig } from './types/comments';
+import { SmartContractModal } from './components/smart-contract/smart-contract-modal';
+import { SmartContractListView } from './components/smart-contract/smart-contract-view-list';
+import { SmartContractReadingIntro } from './components/smart-contract/smart-contract-reading-intro';
+import { SmartContractReadingErrorToast } from './components/smart-contract/error-toast';
+import { SMART_CONTRACT_PANEL_ID } from './utils/smart-contract/constants';
+import './components/smart-contract/index.css';
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -59,7 +63,6 @@ const EditorContent = ({
   setInputFetchURLDataBlock,
   onDuneChartEmbed,
   onSheetCountChange,
-  handleSmartContractQuery,
   isNewSheet,
   customPanels,
   theme,
@@ -86,7 +89,6 @@ const EditorContent = ({
   onboardingHandler?: OnboardingHandler;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
-  handleSmartContractQuery?: SmartContractQueryHandler;
   customPanels?: PanelConfig[];
 }) => {
   const {
@@ -101,6 +103,8 @@ const EditorContent = ({
     initialiseLiveQueryData,
     setSelectedTemplate: contextSetSelectedTemplate,
     apiKeyModalState,
+    isAuthorized,
+    smartContract,
   } = useEditor();
 
   const { activePanel, isOpen, openPanel, closePanel, togglePanel } =
@@ -123,6 +127,27 @@ const EditorContent = ({
   const isMobile = useMediaQuery('(max-width: 840px)', { defaultValue: false });
 
   const builtInPanels: PanelConfig[] = [
+    ...(smartContract.enabled
+      ? [
+          {
+            id: SMART_CONTRACT_PANEL_ID,
+            header: { title: 'My smart contracts' },
+            width: '380px',
+            content: (
+              <SmartContractListView
+                userSmartContracts={smartContract.userSmartContracts}
+                onDelete={smartContract.onDelete}
+                handleSearch={smartContract.handleSearch}
+                onOpenImportModal={() =>
+                  smartContract.setShowSmartContractModal(true)
+                }
+                fetchContractAbi={smartContract.fetchContractAbi}
+                isAuthorized={isAuthorized}
+              />
+            ),
+          },
+        ]
+      : []),
     ...(commentsConfig
       ? [
         {
@@ -341,7 +366,12 @@ const EditorContent = ({
       <button
         id="smartcontract-button"
         className="hidden"
-        onClick={() => openPanel('smart-contract-list-view')}
+        onClick={() => openPanel(SMART_CONTRACT_PANEL_ID)}
+      />
+      <button
+        id="view-smart-contract"
+        className="hidden"
+        onClick={() => openPanel(SMART_CONTRACT_PANEL_ID)}
       />
       <button
         id="function-button"
@@ -405,7 +435,6 @@ const EditorContent = ({
             dsheetId={dsheetId}
             onDuneChartEmbed={onDuneChartEmbed}
             onSheetCountChange={onSheetCountChange}
-            handleSmartContractQuery={handleSmartContractQuery}
             sidebarActivePanel={activePanel}
             sidebarPortalRegistry={sidebarPortalRegistry}
             theme={theme}
@@ -430,6 +459,28 @@ const EditorContent = ({
           onSave={apiKeyModalState.onSave}
           onClose={apiKeyModalState.onClose}
         />
+      )}
+
+      {smartContract.enabled && (
+        <>
+          <SmartContractModal
+            showSmartContractModal={smartContract.showSmartContractModal}
+            setShowSmartContractModal={smartContract.setShowSmartContractModal}
+            onSaveContract={smartContract.onImportContract}
+            registryMapRef={smartContract.registryMapRef}
+          />
+          <SmartContractReadingIntro
+            isAuthorized={isAuthorized}
+            onOpenPanel={openPanel}
+          />
+          <SmartContractReadingErrorToast
+            smartContractReadingError={smartContract.smartContractReadingError}
+            setSmartContractReadingError={
+              smartContract.setSmartContractReadingError
+            }
+            openPanel={openPanel}
+          />
+        </>
       )}
     </div>
   );
@@ -467,9 +518,7 @@ const SpreadsheetEditor = ({
   isAuthorized,
   getDocumentTitle,
   updateDocumentTitle,
-  setShowSmartContractModal,
   editorStateRef,
-  handleSmartContractQuery,
   setSelectedTemplate,
   isNewSheet,
   liveQueryRefreshRate,
@@ -478,6 +527,7 @@ const SpreadsheetEditor = ({
   customPanels,
   apiKeyStorage,
   onDataBlockEvent,
+  smartContracts,
   theme,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
@@ -485,7 +535,6 @@ const SpreadsheetEditor = ({
   return (
     <EditorProvider
       setSelectedTemplate={setSelectedTemplate}
-      setShowSmartContractModal={setShowSmartContractModal}
       getDocumentTitle={getDocumentTitle}
       updateDocumentTitle={updateDocumentTitle}
       dsheetId={dsheetId}
@@ -503,6 +552,7 @@ const SpreadsheetEditor = ({
       enableLiveQuery={enableLiveQuery}
       apiKeyStorage={apiKeyStorage}
       onDataBlockEvent={onDataBlockEvent}
+      smartContracts={smartContracts}
     >
       <EditorContent
         commentsConfig={commentsConfig}
@@ -524,7 +574,6 @@ const SpreadsheetEditor = ({
         selectedTemplate={selectedTemplate}
         onDuneChartEmbed={onDuneChartEmbed}
         onSheetCountChange={onSheetCountChange}
-        handleSmartContractQuery={handleSmartContractQuery}
         customPanels={customPanels}
         theme={theme}
       />
