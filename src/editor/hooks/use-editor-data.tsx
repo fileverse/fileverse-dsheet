@@ -282,8 +282,18 @@ export const useEditorData = (
     if (dataInitialized.current) return;
 
     try {
+      console.log('[RTC] use-editor-data: reading ydoc.getArray(dsheetId)', {
+        dsheetId,
+        allShareKeys: Array.from(ydocRef.current.share.keys()),
+      });
       const sheetArray = ydocRef.current.getArray(dsheetId);
+      console.log('[RTC] use-editor-data: sheetArray length BEFORE migrate', {
+        length: sheetArray.length,
+      });
       migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
+      console.log('[RTC] use-editor-data: sheetArray length AFTER migrate', {
+        length: sheetArray.length,
+      });
 
       // @ts-ignore
       const plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map>);
@@ -301,6 +311,12 @@ export const useEditorData = (
 
       dataInitialized.current = true;
       setIsDataLoaded(true);
+      console.log(
+        '[RTC] use-editor-data: collab sheet data initialised, setIsDataLoaded(true)',
+        {
+          sheetCount: plain.length,
+        },
+      );
 
       if (setForceSheetRender) {
         setForceSheetRender((prev) => prev + 1);
@@ -657,9 +673,7 @@ export const useEditorData = (
                   }
                 }
                 if (
-                  mapFieldKeys.some((k) =>
-                    SURGICAL_OBJECT_FIELD_KEYS.has(k),
-                  ) ||
+                  mapFieldKeys.some((k) => SURGICAL_OBJECT_FIELD_KEYS.has(k)) ||
                   mapFieldKeys.includes('filter_select')
                 ) {
                   filterUpdates.set(sheetId, { sheetId, sheetMap });
@@ -880,10 +894,9 @@ export const useEditorData = (
       const applyRemoteDataVerification = () => {
         for (const { sheetId, dvMap } of dataVerificationUpdates.values()) {
           try {
-            sheetEditorRef.current?.setSheetDataVerification?.(
-              dvMap.toJSON(),
-              { id: sheetId },
-            );
+            sheetEditorRef.current?.setSheetDataVerification?.(dvMap.toJSON(), {
+              id: sheetId,
+            });
           } catch (error) {
             console.warn(
               '[DSheet] Skipped remote dataVerification apply — workbook not ready',
@@ -979,7 +992,10 @@ export const useEditorData = (
           const plain = ySheetArrayToPlain(sheetArray as any);
           currentDataRef.current = plain;
         } catch (e) {
-          console.error('[DSheet] ySheetArrayToPlain after remote update failed', e);
+          console.error(
+            '[DSheet] ySheetArrayToPlain after remote update failed',
+            e,
+          );
         }
       };
 

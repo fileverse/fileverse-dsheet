@@ -430,16 +430,20 @@ export class SocketClient {
       }, 30000);
 
       this._socket.on('connect', () => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(connectionTimeout);
-        }
+        // Transport connected — does NOT mean the server will ever send a
+        // handshake. Timer stays armed until '/server/handshake' actually
+        // arrives, so a stalled handshake still times out instead of hanging
+        // 'connecting' forever.
         this._webSocketStatus = SocketStatusEnum.CONNECTING;
         resolve();
       });
 
       // Server handshake event — triggers auth flow
       this._socket.on('/server/handshake', (message) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(connectionTimeout);
+        }
         this._handleHandShake(message, config).catch((err) => {
           config.onHandShakeError(err);
         });
