@@ -4,9 +4,9 @@ import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import { Cell } from '@sheet-engine/react';
 import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
-import { SmartContractQueryHandler } from './utils/after-update-cell';
 import { CollaborationProps } from '../sync-local/types';
 import { CommentsConfig } from './types/comments';
+import type { SmartContractConfig } from './types/smart-contract';
 import type { ApiKeyStorage } from './utils/api-key-storage';
 import type { ThemeKey } from '@sheet-engine/core/theme';
 
@@ -73,7 +73,6 @@ export type { ApiKeyStorage } from './utils/api-key-storage';
 export interface DsheetProps {
   isNewSheet: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
-  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
@@ -110,7 +109,8 @@ export interface DsheetProps {
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
-  handleSmartContractQuery?: SmartContractQueryHandler;
+  /** Smart contract config: execution + UI in package; consumer owns persistence via callbacks. */
+  smartContracts?: SmartContractConfig;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
   customPanels?: PanelConfig[];

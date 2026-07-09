@@ -18,7 +18,6 @@ import { useEditor } from '../contexts/editor-context';
 import { useCollabAwareness } from '../hooks/use-collab-awareness';
 import {
   afterUpdateCell,
-  SmartContractQueryHandler,
 } from '../utils/after-update-cell';
 import { dataVerificationYdocUpdate } from '../utils/data-verification-ydoc-update';
 import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
@@ -63,7 +62,6 @@ function readBooleanFromLocalStorage(key: string): boolean {
 }
 
 interface EditorWorkbookProps {
-  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setFetchingURLData?: (fetching: boolean) => void;
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
@@ -79,7 +77,6 @@ interface EditorWorkbookProps {
   dsheetId: string;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
-  handleSmartContractQuery?: SmartContractQueryHandler;
   sidebarActivePanel?: string | null;
   sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
   sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
@@ -105,7 +102,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   dsheetId,
   onDuneChartEmbed,
   onSheetCountChange,
-  handleSmartContractQuery,
   sidebarActivePanel = null,
   sidebarPortalRegistry = null,
   sidebarPortalRenderers = {},
@@ -113,7 +109,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
 }) => {
   const {
     setSelectedTemplate,
-    setShowSmartContractModal,
     sheetEditorRef,
     ydocRef,
     currentDataRef,
@@ -135,6 +130,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     apiKeyStorage,
     openApiKeyModal,
     onDataBlockEvent,
+    smartContract,
   } = useEditor();
 
   const localUserEditRef = useRef(false);
@@ -364,7 +360,9 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
               : []
             : getCustomToolbarItems({
               handleContentPortal: handleOnChangePortalUpdate,
-              setShowSmartContractModal,
+              setShowSmartContractModal: smartContract.enabled
+                ? smartContract.setShowSmartContractModal
+                : undefined,
               getDocumentTitle,
               updateDocumentTitle,
               setExportDropdownOpen,
@@ -413,7 +411,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
               setInputFetchURLDataBlock,
               setDataBlockCalcFunction,
               dataBlockCalcFunction,
-              handleSmartContractQuery,
+              handleSmartContractQuery: smartContract.handleSmartContractQuery,
               handleLiveQueryData: handleLiveQuery,
               collabEnabled,
               collabIsOwner,

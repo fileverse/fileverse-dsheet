@@ -27,6 +27,8 @@ import {
   defaultApiKeyStorage,
 } from '../utils/api-key-storage';
 import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
+import type { SmartContractConfig } from '../types/smart-contract';
+import { useSmartContract, type UseSmartContractReturn } from '../hooks/use-smart-contract';
 import { SidebarProvider } from '../components/sidebar/sidebar-context';
 import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
@@ -92,6 +94,7 @@ export interface EditorContextType {
     onSave: (key: string) => void;
     onClose: () => void;
   } | null;
+  smartContract: UseSmartContractReturn;
 }
 
 // Create the context with a default value
@@ -100,7 +103,6 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 // Props for the provider component
 interface EditorProviderProps {
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
-  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
@@ -124,12 +126,12 @@ interface EditorProviderProps {
   liveQueryRefreshRate?: number;
   apiKeyStorage?: ApiKeyStorage;
   onDataBlockEvent?: (event: DataBlockEvent) => void;
+  smartContracts?: SmartContractConfig;
 }
 
 // Provider component that wraps the app
 export const EditorProvider: React.FC<EditorProviderProps> = ({
   setSelectedTemplate,
-  setShowSmartContractModal,
   getDocumentTitle,
   updateDocumentTitle,
   children,
@@ -148,6 +150,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   liveQueryRefreshRate,
   apiKeyStorage: apiKeyStorageProp,
   onDataBlockEvent,
+  smartContracts,
 }) => {
   // Comments are driven entirely by commentsConfig (the legacy
   // commentData/allowComments props were removed).
@@ -165,6 +168,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     () => apiKeyStorageProp ?? defaultApiKeyStorage,
     [apiKeyStorageProp],
   );
+
+  const smartContract = useSmartContract(smartContracts);
 
   const [apiKeyModalState, setApiKeyModalState] = useState<{
     open: boolean;
@@ -466,7 +471,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const contextValue: EditorContextType = useMemo(() => {
     return {
       setSelectedTemplate,
-      setShowSmartContractModal,
+      setShowSmartContractModal: smartContract.setShowSmartContractModal,
       getDocumentTitle,
       updateDocumentTitle,
       dataBlockCalcFunction,
@@ -507,10 +512,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       onDataBlockEvent,
       openApiKeyModal,
       apiKeyModalState,
+      smartContract,
     };
   }, [
     setIsDataLoaded,
-    setShowSmartContractModal,
+    smartContract,
     getDocumentTitle,
     updateDocumentTitle,
     dataBlockCalcFunction,
