@@ -19,6 +19,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
   isOwner,
   currentUserName,
   removeCommentFromCell,
+  closePopup,
   dragHandler,
   isHover = false,
   disabled = false,
@@ -48,7 +49,7 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
   // since there's nothing else to display.
   if (!comment) {
     return (
-      <div className="flex flex-col w-[298px] color-bg-secondary border-radius-sm border-width-md  space-sm">
+      <div className="flex flex-col w-[298px] color-bg-secondary border-radius-sm  space-sm">
         <CommentInput
           id={textareaId}
           placeholder="Type your comment"
@@ -170,7 +171,9 @@ export const CommentCellUI: React.FC<CommentCellUIProps> = ({
               autoFocus
               isStaticButton
               cancelComment={() => {
-                cancelComment();
+                // Thread exists — don't delete the cell. Just close the popup,
+                // same as pressing Escape.
+                closePopup?.();
               }}
               focusTrap
             />

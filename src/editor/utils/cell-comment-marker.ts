@@ -66,6 +66,15 @@ export const hideCellCommentMarker = (
   });
 };
 
+export const closeCellCommentPopup = (sheetEditorRef: SheetEditorRefLike) => {
+  const setContext = getSetContext(sheetEditorRef);
+  if (!setContext) return;
+
+  setContext((context) => {
+    (context as { editingCommentBox?: unknown }).editingCommentBox = undefined;
+  });
+};
+
 /**
  * Restores the comment indicator on a cell.
  *

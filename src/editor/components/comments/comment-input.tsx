@@ -20,6 +20,13 @@ export const CommentInput: React.FC<CommentInputProps> = ({
     onSend(id);
   };
 
+  const handleCancel = () => {
+    const inputElement = document.getElementById(id) as HTMLTextAreaElement;
+    if (inputElement) inputElement.value = '';
+    setShouldShowButtons(false);
+    cancelComment && cancelComment();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Tab') {
       e.stopPropagation();
@@ -118,7 +125,7 @@ export const CommentInput: React.FC<CommentInputProps> = ({
             <Button
               ref={cancelButtonRef}
               variant={'secondary'}
-              onClick={cancelComment}
+              onClick={handleCancel}
               className="px-4 py-2 w-20 min-w-20 h-9 font-medium text-sm"
               onMouseEnter={() => (preventCloseButtonRef.current = true)}
               onMouseLeave={() => (preventCloseButtonRef.current = false)}

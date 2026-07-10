@@ -16,7 +16,7 @@ const FormulaHint = (props: any) => {
   const { showFormulaHint, handleShowFormulaHint, commaCount, functionName } =
     props;
   const dragHasMoved = useRef(false);
-  const { context } = useContext(WorkbookContext);
+  const { context, setContext } = useContext(WorkbookContext);
   const isFxOwner = getFormulaEditorOwner(context) === 'fx';
   const firstSelection = context.luckysheet_select_save?.[0];
   const { formulaMore } = locale(context);
@@ -646,6 +646,16 @@ const FormulaHint = (props: any) => {
               >
                 <div
                   onClick={() => {
+                    // The hint may show a caret-resolved function (e.g. the
+                    // inner call in a nested formula) that differs from
+                    // context.functionHint. The functions panel resolves the
+                    // formula from context.functionHint, so sync it to the
+                    // function this hint is actually displaying before opening.
+                    if (fn?.n) {
+                      setContext((draft) => {
+                        draft.functionHint = String(fn.n);
+                      });
+                    }
                     document.getElementById('function-button')?.click();
                   }}
                   className="color-text-link cursor-pointer text-helper-text-sm"

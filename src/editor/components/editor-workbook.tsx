@@ -46,7 +46,10 @@ import {
 } from './editor-workbook-sync';
 import { CommentsConfig } from '../types/comments';
 import { CommentCellUI } from './comments/comment-cell-popup';
-import { hideCellCommentMarker } from '../utils/cell-comment-marker';
+import {
+  hideCellCommentMarker,
+  closeCellCommentPopup,
+} from '../utils/cell-comment-marker';
 import { getCurrentSheetIdSafe } from '../utils/sheet-editor-safe';
 // import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
@@ -152,6 +155,10 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     [sheetEditorRef],
   );
 
+  const closeCommentPopup = useCallback(() => {
+    closeCellCommentPopup(sheetEditorRef);
+  }, [sheetEditorRef]);
+
   const getCommentCellUI = useMemo(() => {
     if (!hasComments) return undefined;
     return (
@@ -181,13 +188,14 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           sheetEditorRef={sheetEditorRef as never}
           currentUserName={cfg.userName}
           removeCommentFromCell={removeCommentFromCell}
+          closePopup={closeCommentPopup}
           dragHandler={dragHandler}
           isHover={isHover}
           disabled={cfg.disabled}
         />
       );
     };
-  }, [hasComments, sheetEditorRef, removeCommentFromCell]);
+  }, [hasComments, sheetEditorRef, removeCommentFromCell, closeCommentPopup]);
 
   // Block metadata → ydoc echoes only while a remote apply is in flight
   // (remoteApplyDepth > 0). User-initiated edits run when depth is zero.

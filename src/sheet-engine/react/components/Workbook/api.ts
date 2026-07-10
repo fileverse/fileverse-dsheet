@@ -675,35 +675,58 @@ export function generateAPIs(
           [col_index] = last.column;
         }
       }
-      const formulaTxt = `<span dir="auto" class="luckysheet-formula-text-color">=</span><span dir="auto" class="luckysheet-formula-text-color">${filteredFunctionList[
-        selectedFuncIndex
-      ].n.toUpperCase()}</span><span dir="auto" class="luckysheet-formula-text-color">(</span>`;
+      const funcName = filteredFunctionList[selectedFuncIndex].n.toUpperCase();
+      const formulaTxt = `<span dir="auto" class="luckysheet-formula-text-color">=</span><span dir="auto" class="luckysheet-formula-text-color">${funcName}</span><span dir="auto" class="luckysheet-formula-text-color">(</span>`;
       const { functionlist } = locale(context);
-      setContext((ctx) => {
-        if (cellInput != null && globalCache != null) {
+
+      if (cellInput == null || globalCache == null) return;
+
+      // Populate function metadata + caret once the formula HTML is in the editor.
+      const applyFunctionState = (ctx: Context) => {
+        const spans = cellInput.childNodes;
+        if (!_.isEmpty(spans)) {
+          setCaretPosition(ctx, spans[spans.length - 1] as HTMLSpanElement, 0, 1);
+        }
+        ctx.functionHint = funcName;
+        ctx.functionCandidates = [];
+        if (_.isEmpty(ctx.formulaCache.functionlistMap)) {
+          for (let i = 0; i < functionlist.length; i += 1) {
+            ctx.formulaCache.functionlistMap[functionlist[i].n] =
+              functionlist[i];
+          }
+        }
+      };
+
+      const isEditing = (context.luckysheetCellUpdate?.length ?? 0) > 0;
+
+      if (isEditing) {
+        // Editor already active and focused: write synchronously.
+        setContext((ctx) => {
           ctx.luckysheetCellUpdate = [row_index, col_index];
           globalCache.doNotUpdateCell = true;
           cellInput.innerHTML = formulaTxt;
-          const spans = cellInput.childNodes;
-          if (!_.isEmpty(spans)) {
-            setCaretPosition(
-              ctx,
-              spans[spans.length - 1] as HTMLSpanElement,
-              0,
-              1,
-            );
-          }
-          ctx.functionHint =
-            filteredFunctionList[selectedFuncIndex].n.toUpperCase();
-          ctx.functionCandidates = [];
-          if (_.isEmpty(ctx.formulaCache.functionlistMap)) {
-            for (let i = 0; i < functionlist.length; i += 1) {
-              ctx.formulaCache.functionlistMap[functionlist[i].n] =
-                functionlist[i];
-            }
-          }
+          applyFunctionState(ctx);
           callback?.();
-        }
+        });
+        return;
+      }
+
+      // Cold entry (cell selected, not editing): enter edit mode first, then
+      // write the formula + focus AFTER React commits the edit-mode DOM.
+      // Doing both in one tick leaves the contenteditable unfocused, so the
+      // insert did not take until a second click (matches the toolbar path).
+      globalCache.doNotFocus = true;
+      globalCache.doNotUpdateCell = true;
+      setContext((ctx) => {
+        ctx.luckysheetCellUpdate = [row_index, col_index];
+      });
+      requestAnimationFrame(() => {
+        cellInput.innerHTML = formulaTxt;
+        cellInput.focus({ preventScroll: true });
+        setContext((ctx) => {
+          applyFunctionState(ctx);
+        });
+        callback?.();
       });
     },
     getLocaleContext: () => {

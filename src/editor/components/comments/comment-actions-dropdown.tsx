@@ -113,7 +113,10 @@ export const CommentActionsDropdown: React.FC<CommentActionsDropdownProps> = ({
   );
 
   return (
-    <div onClick={(e) => e.stopPropagation()}>
+    <div
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <DynamicDropdown
         key={dropdownKey}
         align="end"

@@ -120,6 +120,7 @@ export interface CommentCellUIProps {
   sheetEditorRef?: React.RefObject<SheetEditorRef>;
   currentUserName?: string;
   removeCommentFromCell: (row: number, col: number) => void;
+  closePopup?: () => void;
   dragHandler: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void;
   isHover?: boolean;
   disabled?: boolean;

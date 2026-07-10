@@ -19,8 +19,8 @@ const useFunctions = (
     if (!workbook) return;
     const fn =
       workbook.formulaCache.functionlistMap[
-        // @ts-ignore
-        workbook.functionHint
+      // @ts-ignore
+      workbook.functionHint
       ];
     if (fn) setSearchText(fn.n);
   }, [sheetEditorRef]);
@@ -91,12 +91,31 @@ const useFunctions = (
     });
   }, [allFunctions, groupedFunctions.byCategory, searchText, selectedCategory]);
 
+  const prevSearchRef = React.useRef('');
+
   // Keep selection + index stable as the list changes.
   useEffect(() => {
     if (!filteredFunctionList.length) {
       setSelectedFunction(null);
       setFunctionIndex(0);
+      prevSearchRef.current = searchText.trim();
       return;
+    }
+
+    const query = searchText.trim();
+    const searchChanged = query !== prevSearchRef.current;
+    prevSearchRef.current = query;
+
+    if (searchChanged && query) {
+      const queryUpper = query.toUpperCase();
+      const exactIdx = filteredFunctionList.findIndex(
+        (fn) => String(fn.n || '').toUpperCase() === queryUpper
+      );
+      if (exactIdx !== -1) {
+        setSelectedFunction(filteredFunctionList[exactIdx]);
+        setFunctionIndex(exactIdx);
+        return;
+      }
     }
 
     if (!selectedFunction) {
@@ -115,7 +134,7 @@ const useFunctions = (
     }
 
     setFunctionIndex(idx);
-  }, [filteredFunctionList, selectedFunction]);
+  }, [filteredFunctionList, selectedFunction, searchText]);
 
   const selectedCategoryName = useMemo(() => {
     return selectedCategory;

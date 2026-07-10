@@ -29,6 +29,7 @@ export const datepickerStyles = `
     color: hsl(var(--color-text-default));
     background-color: hsl(var(--color-bg-default));
     cursor: pointer;
+    color: hsl(var(--color-text-secondary));
   }
   
   .datepicker-input::-webkit-calendar-picker-indicator {

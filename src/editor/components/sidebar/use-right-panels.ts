@@ -40,32 +40,17 @@ export const useRightPanels = (
 
   const isMobile = useMediaQuery('(max-width: 840px)', { defaultValue: false });
 
-  // Initialize from localStorage on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const savedPanel = localStorage.getItem(ACTIVE_PANEL_KEY) as PanelId | null;
     const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
 
-    if (
-      savedPanel &&
-      savedState === 'true' &&
-      savedPanel !== 'data-verification' &&
-      savedPanel !== 'conditional-format'
-    ) {
-      if (isReadMode && savedPanel !== 'comments') {
-        setActivePanel('comments');
-      } else {
-        setActivePanel(savedPanel);
-      }
-      setIsOpen(true);
-    } else if (savedState === null) {
+    if (savedState === null) {
       // First-time user — auto-open templates on the owner editor only.
       if (!isReadMode && !isMobile) {
         setActivePanel('templates');
         setIsOpen(true);
       }
     }
-    // savedState === 'false' → stay closed.
   }, [isReadMode, isMobile]);
 
   // Keep isOpen in sync with activePanel
