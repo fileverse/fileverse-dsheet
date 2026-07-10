@@ -178,8 +178,6 @@ export class SyncManager {
     this.roomKeyBytes = toUint8Array(config.roomKey);
     this.isOwner = config.isOwner;
 
-    const initialUpdate = fromUint8Array(Y.encodeStateAsUpdate(this.ydoc));
-
     this.socketClient = new SocketClient({
       wsUrl: config.wsUrl,
       roomKey: config.roomKey,
@@ -194,6 +192,16 @@ export class SyncManager {
     this.send({ type: 'CONNECT' });
 
     try {
+      // Never broadcast from a destroyed doc — refuse loudly instead of
+      // silently seeding the room with an empty full-state update.
+      if (this.ydoc.isDestroyed) {
+        throw new Error(
+          'SyncManager: refusing to connect with a destroyed Y.Doc',
+        );
+      }
+
+      const initialUpdate = fromUint8Array(Y.encodeStateAsUpdate(this.ydoc));
+
       await this.connectSocket();
       // After successful handshake, transition to syncing
       this.send({ type: 'AUTH_SUCCESS' });
@@ -230,6 +238,20 @@ export class SyncManager {
   async disconnect(): Promise<void> {
     if (this._status === 'idle' || this._status === 'terminated') return;
     await this.awaitFlush();
+    // Re-check after the await: handleConnectionError's own socket teardown
+    // synchronously fires this same disconnect() (via the socket's native
+    // 'disconnect' event) before it has sent ERROR. By the time we resume
+    // here ERROR has already landed — bail instead of clobbering it with a
+    // RESET the consumer never gets to see. Fresh read (not `this._status`
+    // again) so TS doesn't carry over the narrowing from the check above —
+    // the field can change out from under us during the await.
+    const statusAfterFlush = this._status as CollabStatus;
+    if (
+      statusAfterFlush === 'idle' ||
+      statusAfterFlush === 'terminated' ||
+      statusAfterFlush === 'error'
+    )
+      return;
     await this.disconnectInternal();
   }
 
@@ -373,7 +395,9 @@ export class SyncManager {
 
     let collabError: CollabError;
 
-    if (
+    if (errorName === 'PoisonedRoomError') {
+      collabError = createCollabError('POISONED_ROOM', error.message);
+    } else if (
       errorName === 'SocketConnectionTimeoutError' ||
       errorMessage.includes('timed out')
     ) {
@@ -407,6 +431,12 @@ export class SyncManager {
   private async handleReconnection(): Promise<void> {
     try {
       this.send({ type: 'RECONNECTED' });
+
+      if (this.ydoc.isDestroyed) {
+        throw new Error(
+          'SyncManager: refusing to reconnect with a destroyed Y.Doc',
+        );
+      }
 
       const initialUpdate = fromUint8Array(Y.encodeStateAsUpdate(this.ydoc));
       await this.syncLatestCommit(initialUpdate);
@@ -573,6 +603,11 @@ export class SyncManager {
       }
 
       const updates: Uint8Array[] = [];
+      // Tracks a failed commit-content fetch/decrypt — a transient storage
+      // problem, not proof the room is poisoned. Gates the poisoned-room
+      // check below so a bad IPFS fetch isn't misreported as "ask the owner
+      // to reopen the sheet" when a retry would likely just work.
+      let commitContentFetchFailed = false;
 
       if (history?.cid && this.servicesRef?.fetchFromStorage) {
         const content = await this.servicesRef.fetchFromStorage(history.cid);
@@ -588,7 +623,10 @@ export class SyncManager {
               'SyncManager: failed to decrypt commit content, skipping',
               err,
             );
+            commitContentFetchFailed = true;
           }
+        } else {
+          commitContentFetchFailed = true;
         }
       }
 
@@ -626,6 +664,41 @@ export class SyncManager {
       if (updates.length) {
         const mergedState = Y.mergeUpdates(updates);
         Y.applyUpdate(this.ydoc, mergedState, 'self');
+      }
+
+      // Detect a poisoned room: server had history for this room but the doc
+      // came out empty or with dangling deltas (base structs never arrived —
+      // e.g. an owner session that broadcast from a stale doc). Surface as an
+      // error instead of silently landing on an empty, unrecoverable sheet.
+      //
+      // store.clients (not share.size) is the "is this doc really empty"
+      // signal — getArray()/getMap() calls elsewhere in the app register a
+      // root type on `share` with zero structs, so `share.size` goes
+      // non-zero on mount regardless of whether any real content exists.
+      // store.clients only grows from actual content operations.
+      const serverClaimedHistory =
+        Boolean(history?.data) ||
+        Boolean(encryptedUpdates && encryptedUpdates.length > 0);
+
+      if (serverClaimedHistory) {
+        const isDangling = this.ydoc.store.pendingStructs !== null;
+        const isEmptyDespiteHistory = this.ydoc.store.clients.size === 0;
+        if (isDangling || isEmptyDespiteHistory) {
+          if (commitContentFetchFailed) {
+            // Known cause: couldn't retrieve/decrypt the commit snapshot.
+            // Storage/network hiccup, not proof the room itself is broken —
+            // let the normal retry loop run again instead of telling the
+            // user to go bug the owner.
+            throw new Error(
+              'Failed to sync commit content from storage — retry may succeed',
+            );
+          }
+          const error = new Error(
+            'Room history failed to integrate — base structs missing (poisoned room)',
+          );
+          error.name = 'PoisonedRoomError';
+          throw error;
+        }
       }
 
       this.uncommittedUpdatesIdList = uncommittedChangesId;
@@ -1024,6 +1097,11 @@ export class SyncManager {
           `SyncManager: ${label} attempt ${attempt + 1} failed`,
           err,
         );
+
+        // Poisoned-room detection is deterministic against the same server
+        // data — retrying re-fetches and re-decrypts the entire room
+        // history for a result that can't change. Fail fast.
+        if (lastError.name === 'PoisonedRoomError') break;
 
         if (attempt === MAX_RETRIES) break;
 

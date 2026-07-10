@@ -316,6 +316,7 @@ const SpreadsheetEditor = ({
   liveQueryRefreshRate,
   enableLiveQuery,
   collaboration,
+  onContentSyncStatusChange,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -340,6 +341,7 @@ const SpreadsheetEditor = ({
       liveQueryRefreshRate={liveQueryRefreshRate}
       enableLiveQuery={enableLiveQuery}
       dataBlockApiKeyHandler={dataBlockApiKeyHandler}
+      onContentSyncStatusChange={onContentSyncStatusChange}
     >
       <EditorContent
         commentData={commentData}

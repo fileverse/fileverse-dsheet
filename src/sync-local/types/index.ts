@@ -47,6 +47,7 @@ export type CollabErrorCode =
   | 'AUTH_FAILED'
   | 'SYNC_FAILED'
   | 'TIMEOUT'
+  | 'POISONED_ROOM'
   | 'UNKNOWN';
 
 export type CollabError = {

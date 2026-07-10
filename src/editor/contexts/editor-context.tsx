@@ -107,6 +107,9 @@ interface EditorProviderProps {
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
   dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
+  onContentSyncStatusChange?: (
+    status: 'initializing' | 'syncing' | 'synced' | 'error',
+  ) => void;
 }
 
 // Provider component that wraps the app
@@ -131,6 +134,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   enableLiveQuery,
   liveQueryRefreshRate,
   dataBlockApiKeyHandler,
+  onContentSyncStatusChange,
 }) => {
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
@@ -240,6 +244,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     collaboration,
     onCollabUpdate,
   );
+
+  // Let host apps gate collab start/resume on real sync completion.
+  useEffect(() => {
+    onContentSyncStatusChange?.(syncStatus);
+  }, [syncStatus, onContentSyncStatusChange]);
 
   // Imperatively update the local collaborator's display name in awareness and
   // re-broadcast so peers see the new name (mirrors ddoc's
