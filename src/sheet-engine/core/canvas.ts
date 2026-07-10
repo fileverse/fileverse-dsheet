@@ -2494,11 +2494,19 @@ export class Canvas {
         renderCtx.save();
         renderCtx.globalAlpha = opacity;
         if (!isDataVlidationAvailable) {
-          this.cellTextRender(textInfo, renderCtx, { pos_x, pos_y });
+          this.cellTextRender(textInfo, renderCtx, {
+            pos_x,
+            pos_y,
+            cfTextColor: checksCF?.textColor,
+          });
         }
         renderCtx.restore();
       } else if (!isDataVlidationAvailable) {
-        this.cellTextRender(textInfo, renderCtx, { pos_x, pos_y });
+        this.cellTextRender(textInfo, renderCtx, {
+          pos_x,
+          pos_y,
+          cfTextColor: checksCF?.textColor,
+        });
       }
 
       renderCtx.restore();
@@ -2742,10 +2750,18 @@ export class Canvas {
     if (opacity < 0.999) {
       renderCtx.save();
       renderCtx.globalAlpha = opacity;
-      this.cellTextRender(textInfo, renderCtx, { pos_x, pos_y });
+      this.cellTextRender(textInfo, renderCtx, {
+        pos_x,
+        pos_y,
+        cfTextColor: checksCF?.textColor,
+      });
       renderCtx.restore();
     } else {
-      this.cellTextRender(textInfo, renderCtx, { pos_x, pos_y });
+      this.cellTextRender(textInfo, renderCtx, {
+        pos_x,
+        pos_y,
+        cfTextColor: checksCF?.textColor,
+      });
     }
 
     renderCtx.restore();
@@ -2948,7 +2964,7 @@ export class Canvas {
       const word = values[i];
       if (word.inline === true && word.style) {
         ctx.font = word.style.fontset;
-        ctx.fillStyle = word.style.fc;
+        ctx.fillStyle = option.cfTextColor ?? word.style.fc;
       } else {
         ctx.font = word.style;
       }

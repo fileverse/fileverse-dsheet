@@ -4,6 +4,19 @@ import { formulaResponseUiSync } from './formula-ui-sync';
 import { executeStringFunction } from './executeStringFunction';
 import { SmartContractQueryHandler } from './after-update-cell';
 
+const isReferencedCell = (
+  dataBlock: {
+    rowRefrenced?: number[];
+    columnRefrenced?: number[];
+  },
+  currentRow: number,
+  currentColumn: number,
+): boolean =>
+  dataBlock.rowRefrenced?.some(
+    (row, index) =>
+      row === currentRow && dataBlock.columnRefrenced?.[index] === currentColumn,
+  ) ?? false;
+
 export const dataBlockCalcFunctionHandler = ({
   dataBlockCalcFunction,
   sheetEditorRef,
@@ -38,13 +51,21 @@ export const dataBlockCalcFunctionHandler = ({
           ?.match(/^=([A-Za-z0-9_]+)\s*\(/)?.[1]
           ?.toUpperCase();
 
-        const isCurrentIncludedInReference =
-          dataBlock?.rowRefrenced?.includes(currentRow) &&
-          dataBlock.columnRefrenced?.includes(currentColumn) &&
-          dataBlock.formulaName?.includes(currentFormulaName);
-        if (!isCurrentIncludedInReference) return;
+        const isCurrentIncludedInReference = isReferencedCell(
+          dataBlock,
+          currentRow,
+          currentColumn,
+        );
+        const formulaNameMatches =
+          !dataBlock.formulaName ||
+          !currentFormulaName ||
+          dataBlock.formulaName === currentFormulaName;
+
+        if (!isCurrentIncludedInReference || !formulaNameMatches) return;
         if (!dataBlockValue || dataBlockValue?.v === '') return;
-        const funcString = dataBlockValue?.f?.split('=')[1] as string;
+        const formulaSource = dataBlockValue?.f ?? dataBlock.formula;
+        const funcString = formulaSource?.split('=')[1] as string;
+        if (!funcString) return;
         sheetEditorRef.current?.setCellValue(dataBlock.row, dataBlock.column, {
           ...dataBlockValue,
           m: 'Updating...',
@@ -55,7 +76,7 @@ export const dataBlockCalcFunctionHandler = ({
           sheetEditorRef,
           dataBlockRow: dataBlock.row,
           dataBlockColumn: dataBlock.column,
-          newValue: dataBlockValue,
+          newValue: { ...dataBlockValue, f: formulaSource },
           handleSmartContractQuery,
         })
           .then((result) => {
