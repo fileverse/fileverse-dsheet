@@ -650,6 +650,7 @@ const updateDataCalcFunc = ({
 
       const newItem = {
         formulaName,
+        formula: params.newValue.f,
         row: params.row,
         column: params.column,
         rowRefrenced,

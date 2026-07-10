@@ -707,17 +707,22 @@ const Toolbar: React.FC<{
 
     const conditionalFormatClick = useCallback(
       (selectedCells: any) => {
-        const selection = api.getSelection(context);
-        if (!selection && !selectedCells) {
-          setContext((ctx) => {
+        setContext((ctx) => {
+          const selection =
+            Array.isArray(selectedCells) && selectedCells.length > 0
+              ? selectedCells
+              : api.getSelection(ctx);
+          if (selection?.length) {
+            ctx.luckysheet_select_save = selection;
+          } else {
             api.setSelection(ctx, [{ row: [0, 0], column: [0, 0] }], {
-              id: context.currentSheetId,
+              id: ctx.currentSheetId,
             });
-          });
-        }
+          }
+        });
         document.getElementById('conditional-format-button')?.click();
       },
-      [context, setContext],
+      [setContext],
     );
 
     const { openRemoveDuplicatesDialog } = useRemoveDuplicatesDialog();
