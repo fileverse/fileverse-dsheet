@@ -360,7 +360,7 @@ export class SocketClient {
         response?.errorCode === ServerErrorCode.APP_MISMATCH
           ? 'This link belongs to a different Fileverse app'
           : (response?.error || 'Unknown error') +
-            `, statusCode: ${response?.statusCode}`;
+          `, statusCode: ${response?.statusCode}`;
       const error = new Error(errorMessage);
       config.onHandShakeError(error, response.statusCode);
       return;
@@ -416,7 +416,7 @@ export class SocketClient {
         transports: ['websocket', 'polling'],
       });
 
-      // Safety net: reject if connection isn't established within 60s
+      // Safety net: reject if connection isn't established within 30s
       const connectionTimeout = setTimeout(() => {
         if (!settled) {
           settled = true;

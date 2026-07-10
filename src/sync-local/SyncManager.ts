@@ -603,6 +603,11 @@ export class SyncManager {
       }
 
       const updates: Uint8Array[] = [];
+      // Tracks a failed commit-content fetch/decrypt — a transient storage
+      // problem, not proof the room is poisoned. Gates the poisoned-room
+      // check below so a bad IPFS fetch isn't misreported as "ask the owner
+      // to reopen the sheet" when a retry would likely just work.
+      let commitContentFetchFailed = false;
 
       if (history?.cid && this.servicesRef?.fetchFromStorage) {
         const content = await this.servicesRef.fetchFromStorage(history.cid);
@@ -618,7 +623,10 @@ export class SyncManager {
               'SyncManager: failed to decrypt commit content, skipping',
               err,
             );
+            commitContentFetchFailed = true;
           }
+        } else {
+          commitContentFetchFailed = true;
         }
       }
 
@@ -662,13 +670,29 @@ export class SyncManager {
       // came out empty or with dangling deltas (base structs never arrived —
       // e.g. an owner session that broadcast from a stale doc). Surface as an
       // error instead of silently landing on an empty, unrecoverable sheet.
+      //
+      // store.clients (not share.size) is the "is this doc really empty"
+      // signal — getArray()/getMap() calls elsewhere in the app register a
+      // root type on `share` with zero structs, so `share.size` goes
+      // non-zero on mount regardless of whether any real content exists.
+      // store.clients only grows from actual content operations.
       const serverClaimedHistory =
         Boolean(history?.data) ||
         Boolean(encryptedUpdates && encryptedUpdates.length > 0);
+
       if (serverClaimedHistory) {
         const isDangling = this.ydoc.store.pendingStructs !== null;
-        const isEmptyDespiteHistory = this.ydoc.share.size === 0;
+        const isEmptyDespiteHistory = this.ydoc.store.clients.size === 0;
         if (isDangling || isEmptyDespiteHistory) {
+          if (commitContentFetchFailed) {
+            // Known cause: couldn't retrieve/decrypt the commit snapshot.
+            // Storage/network hiccup, not proof the room itself is broken —
+            // let the normal retry loop run again instead of telling the
+            // user to go bug the owner.
+            throw new Error(
+              'Failed to sync commit content from storage — retry may succeed',
+            );
+          }
           const error = new Error(
             'Room history failed to integrate — base structs missing (poisoned room)',
           );
@@ -1073,6 +1097,11 @@ export class SyncManager {
           `SyncManager: ${label} attempt ${attempt + 1} failed`,
           err,
         );
+
+        // Poisoned-room detection is deterministic against the same server
+        // data — retrying re-fetches and re-decrypts the entire room
+        // history for a result that can't change. Fail fast.
+        if (lastError.name === 'PoisonedRoomError') break;
 
         if (attempt === MAX_RETRIES) break;
 
