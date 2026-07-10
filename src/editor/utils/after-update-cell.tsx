@@ -265,6 +265,7 @@ const handleStringResponse = (
     ...extraProperties,
     isDataBlockFormula: true,
   });
+  params.sheetEditorRef.current?.clearCellError(params.row, params.column);
 };
 
 /**
@@ -415,6 +416,7 @@ const processRegularPromise = async (
           m: 'No Data',
           isDataBlockFormula: true,
         });
+        params.sheetEditorRef.current?.clearCellError(params.row, params.column);
       } else {
         // @ts-ignore
         handleArrayResponse(data, params, formulaName);
@@ -425,6 +427,7 @@ const processRegularPromise = async (
         m: 'No Data',
         isDataBlockFormula: true,
       });
+      params.sheetEditorRef.current?.clearCellError(params.row, params.column);
     } else {
       handleStringResponse(data as string, params, formulaName);
     }
