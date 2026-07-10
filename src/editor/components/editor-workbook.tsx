@@ -185,6 +185,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     window.editorRef = sheetEditorRef.current;
     // @ts-ignore
     window.ydocRef = ydocRef.current;
+    // @ts-ignore
+    window.currentDataRef = currentDataRef;
     // @ts-ignore move this to firward ref
     window.setForceRenderEditor = setForceSheetRender;
     return () => {
@@ -192,6 +194,8 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
       delete window.editorRef;
       // @ts-ignore
       delete window.ydocRef;
+      // @ts-ignore
+      delete window.currentDataRef;
       // @ts-ignore
       delete window.setForceRenderEditor;
     };
