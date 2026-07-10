@@ -129,6 +129,7 @@ export const formulaResponseUiSync = ({
         newValue,
       })
     ) {
+      sheetEditorRef.current?.clearCellError(row, column);
       return;
     }
     range = {
@@ -265,6 +266,7 @@ export const formulaResponseUiSync = ({
     //@ts-ignore
     sheetEditorRef.current?.setCellValuesByRange(data, range, {}, false);
   }
+  sheetEditorRef.current?.clearCellError(row, column);
 };
 
 export const getCellClone = (
@@ -379,6 +381,7 @@ const tryInsertSingleValueIntoFormulaCell = ({
     {},
     true,
   );
+  sheetEditorRef.current?.clearCellError(row, column);
 
   return true;
 };
