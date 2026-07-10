@@ -529,6 +529,7 @@ const SpreadsheetEditor = ({
   onDataBlockEvent,
   smartContracts,
   theme,
+  onContentSyncStatusChange,
 }: DsheetProps): JSX.Element => {
   const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
 
@@ -553,6 +554,7 @@ const SpreadsheetEditor = ({
       apiKeyStorage={apiKeyStorage}
       onDataBlockEvent={onDataBlockEvent}
       smartContracts={smartContracts}
+      onContentSyncStatusChange={onContentSyncStatusChange}
     >
       <EditorContent
         commentsConfig={commentsConfig}

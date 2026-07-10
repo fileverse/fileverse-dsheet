@@ -360,7 +360,7 @@ export class SocketClient {
         response?.errorCode === ServerErrorCode.APP_MISMATCH
           ? 'This link belongs to a different Fileverse app'
           : (response?.error || 'Unknown error') +
-            `, statusCode: ${response?.statusCode}`;
+          `, statusCode: ${response?.statusCode}`;
       const error = new Error(errorMessage);
       config.onHandShakeError(error, response.statusCode);
       return;
@@ -416,7 +416,7 @@ export class SocketClient {
         transports: ['websocket', 'polling'],
       });
 
-      // Safety net: reject if connection isn't established within 60s
+      // Safety net: reject if connection isn't established within 30s
       const connectionTimeout = setTimeout(() => {
         if (!settled) {
           settled = true;
@@ -430,16 +430,20 @@ export class SocketClient {
       }, 30000);
 
       this._socket.on('connect', () => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(connectionTimeout);
-        }
+        // Transport connected — does NOT mean the server will ever send a
+        // handshake. Timer stays armed until '/server/handshake' actually
+        // arrives, so a stalled handshake still times out instead of hanging
+        // 'connecting' forever.
         this._webSocketStatus = SocketStatusEnum.CONNECTING;
         resolve();
       });
 
       // Server handshake event — triggers auth flow
       this._socket.on('/server/handshake', (message) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(connectionTimeout);
+        }
         this._handleHandShake(message, config).catch((err) => {
           config.onHandShakeError(err);
         });

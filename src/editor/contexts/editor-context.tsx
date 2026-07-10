@@ -128,6 +128,9 @@ interface EditorProviderProps {
   apiKeyStorage?: ApiKeyStorage;
   onDataBlockEvent?: (event: DataBlockEvent) => void;
   smartContracts?: SmartContractConfig;
+  onContentSyncStatusChange?: (
+    status: 'initializing' | 'syncing' | 'synced' | 'error',
+  ) => void;
 }
 
 // Provider component that wraps the app
@@ -152,6 +155,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   apiKeyStorage: apiKeyStorageProp,
   onDataBlockEvent,
   smartContracts,
+  onContentSyncStatusChange,
 }) => {
   // Comments are driven entirely by commentsConfig (the legacy
   // commentData/allowComments props were removed).
@@ -298,6 +302,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     collaboration,
     onCollabUpdate,
   );
+
+  // Let host apps gate collab start/resume on real sync completion.
+  useEffect(() => {
+    onContentSyncStatusChange?.(syncStatus);
+  }, [syncStatus, onContentSyncStatusChange]);
 
   // Imperatively update the local collaborator's display name in awareness and
   // re-broadcast so peers see the new name (mirrors ddoc's

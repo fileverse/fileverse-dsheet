@@ -103,14 +103,28 @@ export const useEditorSync = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dsheetId]);
 
-  // Main effect: only runs when dsheetId/enableIndexeddbSync/isReadOnly changes.
-  // Does NOT include collabEnabled — starting/stopping collaboration must not
-  // destroy and recreate the ydoc (data loss).
+  // Doc-lifecycle effect: owns ydocRef only. Deps = [dsheetId] deliberately —
+  // recreating the doc on enableIndexeddbSync/isReadOnly changes is what let
+  // SyncManager (bound once, see useSyncManager) end up pointed at a stale,
+  // destroyed doc while the editor kept editing a new one. See collab
+  // stale-Y.Doc-split design doc for the full incident writeup.
   useEffect(() => {
     if (!ydocRef.current) {
       ydocRef.current = new Y.Doc();
     }
 
+    return () => {
+      if (ydocRef.current) {
+        ydocRef.current.destroy();
+        ydocRef.current = null;
+      }
+    };
+  }, [dsheetId]);
+
+  // Persistence effect: attaches/detaches IndexedDB sync on the existing doc.
+  // Never touches ydocRef — that's what keeps doc identity stable across
+  // enableIndexeddbSync/isReadOnly flips (e.g. content arriving post-mount).
+  useEffect(() => {
     if (isReadOnly) {
       setSyncStatus('synced');
       isSyncedRef.current = true;
@@ -138,13 +152,9 @@ export const useEditorSync = (
         persistenceRef.current.destroy();
         persistenceRef.current = null;
       }
-      if (ydocRef.current) {
-        ydocRef.current.destroy();
-        ydocRef.current = null;
-      }
       isSyncedRef.current = false;
     };
-  }, [dsheetId, enableIndexeddbSync, isReadOnly]);
+  }, [dsheetId, enableIndexeddbSync, isReadOnly, initialiseEditorIndexedDB]);
 
   // Separate effect: connect to collab when collaboration is enabled AFTER the
   // ydoc/IDB is already synced (e.g. user clicks "Start Collaboration").

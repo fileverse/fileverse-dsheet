@@ -106,6 +106,12 @@ export interface DsheetProps {
   onDataBlockEvent?: (event: DataBlockEvent) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
+  /** Fires whenever local content-sync status changes. Host apps should gate
+   * collab start/resume on 'synced' — starting before local content is fully
+   * synced is what let the RTC layer bind to a stale doc in the past. */
+  onContentSyncStatusChange?: (
+    status: 'initializing' | 'syncing' | 'synced' | 'error',
+  ) => void;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
   } | null>;
