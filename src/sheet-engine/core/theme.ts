@@ -9,7 +9,7 @@
  * `ThemeKey` is copied verbatim from `fileverse-ddoc` `package/types.ts` so the dsheet `theme`
  * prop is type-identical to ddoc's and a host app can pass the same value to both editors.
  *
- * See docs/superpowers/specs/2026-06-30-dsheet-canvas-theming-design.md
+ * See docs/DROP-IN-PACKAGE-AND-THEMING.md §7 (Theming)
  */
 
 export type ThemeKey =
