@@ -1,10 +1,10 @@
 .fortune-toolbar {
   display: flex;
   flex-direction: row;
-  /* background: #fafafc; */
+  background: hsl(var(--color-bg-default));
   position: relative;
   padding: 4px 8px;
-  border-bottom: 1px solid #e8ebec;
+  border-bottom: 1px solid hsl(var(--color-border-default));
   white-space: nowrap;
   align-items: center;
   gap: 4px;
@@ -60,7 +60,7 @@
   width: 1px;
   height: 20px;
   margin: 0 6px;
-  background-color: #e0e0e0;
+  background-color: hsl(var(--color-border-default));
   flex-shrink: 0;
 }
 
@@ -72,10 +72,10 @@
 }
 
 .fortune-toolbar-menu-divider {
-  width: "100%";
+  width: '100%';
   height: 1px;
   margin: 8px 0px;
-  background-color: #e0e0e0;
+  background-color: hsl(var(--color-border-default));
 }
 
 .fortune-toolbar-button,
@@ -122,12 +122,12 @@
 }
 
 .fortune-toolbar-button:hover {
-  background-color: #f2f4f5;
+  background-color: hsl(var(--color-bg-default-hover));
   cursor: pointer;
 }
 
 .fortune-toolbar-combo-arrow:hover {
-  background-color: #f2f4f5;
+  background-color: hsl(var(--color-bg-default-hover));
   cursor: pointer;
   height: 30px;
   border-radius: 0px 4px 4px 0px;
@@ -157,7 +157,7 @@
   padding: 0.5rem;
   border: 1px solid hsl(var(--color-border-default));
   border-radius: 8px;
-  background: white;
+  background: hsl(var(--color-bg-default));
   min-width: 240px;
 }
 
@@ -169,7 +169,7 @@
   gap: 2px;
   overflow-y: auto;
   scroll-behavior: smooth;
-  background: rgb(255, 255, 255);
+  background: hsl(var(--color-bg-default));
   transition: all 0.2s ease;
   border-radius: 0px 0px 4px 4px;
 }
@@ -262,6 +262,8 @@
 
 .fortune-tooltip {
   visibility: hidden;
+  /* Tooltip kept a fixed dark surface across all themes (no tooltip token in pinned ui;
+     the inverse-* pair would flip to white-on-white in dark). Matches Phase 1 decision. */
   background-color: #666;
   color: #fff;
   text-align: center;
@@ -290,7 +292,7 @@
   right: 80px;
   max-width: 348px;
   box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
-  background: white;
+  background: hsl(var(--color-bg-default));
   flex-wrap: wrap;
   z-index: 1002;
   padding: 8px;
@@ -310,7 +312,7 @@
   text-align: right;
   opacity: 0.5;
   filter: alpha(opacity=50);
-  color: #000;
+  color: hsl(var(--color-text-default));
   user-select: none;
   font-family: Arial;
   line-height: 100%;
@@ -319,7 +321,7 @@
 .toolbar-item-sub-menu {
   position: absolute;
   box-shadow: 0 2px 4px rgb(0 0 0 / 20%);
-  background: #fff;
+  background: hsl(var(--color-bg-default));
   border: 1px solid rgba(0, 0, 0, 0.2);
   cursor: default;
   font-size: 12px;
@@ -347,13 +349,13 @@
 
 #fortune-custom-color .color-reset {
   position: relative;
-  color: #333;
+  color: hsl(var(--color-text-default));
   cursor: pointer;
   list-style: none;
   white-space: nowrap;
   vertical-align: middle;
   user-select: none;
-  background: white;
+  background: hsl(var(--color-bg-default));
   padding: 4px 8px;
   height: 30px;
   border-radius: 4px;
@@ -375,7 +377,7 @@
   margin: auto;
   padding: 10px;
   border-radius: 6px;
-  background: white;
+  background: hsl(var(--color-bg-default));
   display: flex;
   align-items: center;
   margin: 1px 0px;
@@ -402,7 +404,7 @@
 .button-primary {
   background: #0188fb;
   border: 1px solid #0188fb;
-  color: #fff;
+  color: hsl(var(--color-text-inverse));
   margin-right: -4px;
 }
 
@@ -424,7 +426,7 @@
 }
 
 .fortune-border-select-option:hover {
-  background: #efefef;
+  background: hsl(var(--color-bg-default-hover));
   cursor: pointer;
 }
 
@@ -438,7 +440,7 @@
 }
 
 .fortune-border-style-picker-menu:hover {
-  background: #efefef;
+  background: hsl(var(--color-bg-default-hover));
   cursor: pointer;
 }
 

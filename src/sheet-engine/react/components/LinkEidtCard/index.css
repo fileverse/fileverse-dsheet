@@ -1,11 +1,11 @@
 .fortune-link-modify-modal {
   position: absolute;
   overflow: hidden;
-  background-color: #fff;
+  background-color: hsl(var(--color-bg-default));
   z-index: 300;
   padding: 16px 20px 20px 20px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e5e5e5;
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 8px;
 }
 
@@ -18,8 +18,8 @@
 
 .fortune-link-card {
   position: absolute;
-  background-color: #fff;
-  border: 1px solid #e5e5e5;
+  background-color: hsl(var(--color-bg-default));
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 8px;
   padding: 16px;
   width: fit-content;
@@ -51,7 +51,7 @@
   width: 100%;
   min-width: 0;
   padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid hsl(var(--color-border-default));
 }
 
 .fortune-link-card__multi-row:last-of-type {
@@ -101,7 +101,7 @@
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: #666;
+  color: hsl(var(--color-text-secondary));
   z-index: 1;
   display: flex;
   align-items: center;
@@ -149,7 +149,7 @@
 
 .fortune-link-modify-modal .link-content {
   margin-right: 6px;
-  color: #2674fb;
+  color: hsl(var(--color-text-link));
 }
 
 .fortune-link-card__link-truncate {
@@ -211,7 +211,7 @@
   width: 20px;
   height: 20px;
   flex-shrink: 0;
-  color: #202124;
+  color: hsl(var(--color-text-default));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -227,7 +227,7 @@
 .fortune-link-card__favicon-fallback--sheet {
   width: 16px;
   height: 16px;
-  color: #5f6368;
+  color: hsl(var(--color-text-secondary));
 }
 
 .fortune-link-card__preview-text {
@@ -244,15 +244,15 @@
   white-space: nowrap;
   font-size: 12px;
   line-height: 1.35;
-  color: #202124;
+  color: hsl(var(--color-text-default));
 }
 
 .fortune-link-card__preview-image-wrap {
   margin-top: 4px;
-  border: 1px solid #d8d8d8;
+  border: 1px solid hsl(var(--color-border-default));
   border-radius: 16px;
   overflow: hidden;
-  background: #fff;
+  background: hsl(var(--color-bg-default));
 }
 
 .fortune-link-card__preview-image {
@@ -266,7 +266,7 @@
 .fortune-link-card__preview-description {
   margin-top: 4px;
   padding: 2px 0;
-  color: #3c4043;
+  color: hsl(var(--color-text-secondary));
   font-size: 13px;
   line-height: 1.4;
   overflow: hidden;
@@ -297,7 +297,7 @@
   width: 1px;
   height: 16px;
   margin: 0px 6px;
-  background-color: #e0e0e0;
+  background-color: hsl(var(--color-border-default));
   flex-shrink: 0;
 }
 
@@ -305,8 +305,18 @@
   padding: 6px;
 }
 
+.fortune-link-card__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fortune-link-card__action svg {
+  display: block;
+}
+
 .fortune-link-modify-modal .fortune-toolbar-button:hover {
-  background-color: rgba(0, 0, 0, 0.06);
+  background-color: hsl(var(--color-bg-default-hover));
   cursor: pointer;
 }
 
@@ -314,7 +324,7 @@
   width: 380px;
   padding: 22px;
   user-select: auto;
-  background-color: #fff;
+  background-color: hsl(var(--color-bg-default));
 }
 
 .fortune-link-modify-line {
@@ -331,7 +341,7 @@
 .fortune-link-modify-title {
   font-size: 14px;
   font-weight: 500;
-  color: #333333;
+  color: hsl(var(--color-text-default));
   margin-bottom: 4px;
 }
 
@@ -371,13 +381,13 @@
 }
 
 .fortune-link-modify-cell-selector:hover {
-  background-color: rgba(0, 0, 0, 0.06);
+  background-color: hsl(var(--color-bg-default-hover));
 }
 
 .fortune-link-modify-modal .modal-title {
   font-weight: 600;
   font-size: 18px;
-  color: rgba(0, 0, 0, 0.88);
+  color: hsl(var(--color-text-default));
   margin-bottom: 16px;
   line-height: 24px;
 }
@@ -400,12 +410,12 @@
 }
 
 .fortune-link-modify-modal .modal-icon-close:hover {
-  background-color: rgba(0, 0, 0, 0.06);
+  background-color: hsl(var(--color-bg-default-hover));
 }
 
 .fortune-link-modify-modal .validation-input-tip {
   font-size: 12px;
-  color: #ef4e2f;
+  color: hsl(var(--color-text-danger));
   margin-top: 4px;
 }
 
@@ -420,22 +430,22 @@
   justify-content: flex-end;
   padding-top: 20px;
   margin-top: 8px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--color-border-default));
 }
 
 .fortune-link-modify-modal.range-selection-modal .modal-footer {
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid hsl(var(--color-border-default));
 }
 
 /* Error state styling for fileverse/ui components */
 .fortune-link-modify-modal .error-input input,
 .fortune-link-card .error-input input {
-  border-color: #ef4e2f !important;
+  border-color: hsl(var(--color-border-danger)) !important;
 }
 
 .fortune-link-modify-modal .error-input input:focus,
 .fortune-link-card .error-input input:focus {
-  border-color: #ef4e2f !important;
-  box-shadow: 0 0 0 2px rgba(239, 78, 47, 0.2) !important;
+  border-color: hsl(var(--color-border-danger)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--color-border-danger) / 0.2) !important;
 }

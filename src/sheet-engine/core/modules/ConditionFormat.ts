@@ -217,26 +217,43 @@ export function parseDdMmYyyyToSerial(s: string): number | null {
   return datenum_local(d, 0);
 }
 
-/** Visible / editable plain text for date CF parsing (inlineStr + m + literal string `v`). */
-function getCfDatePlainTextFromCell(cell: any): string {
+/** Plain text from a cell for CF rules (inlineStr runs, m, or literal v). */
+function getCfPlainTextFromCell(cell: any, trim = false): string {
   if (!cell) return '';
   if (cell.ct?.t === 'inlineStr' && Array.isArray(cell.ct?.s)) {
-    return cell.ct.s
+    const text = cell.ct.s
       .map((seg: any) => (seg?.v != null ? String(seg.v) : ''))
-      .join('')
-      .trim();
+      .join('');
+    return trim ? text.trim() : text;
   }
   if (cell.m != null && String(cell.m).trim() !== '') {
-    return String(cell.m).trim();
+    const m = String(cell.m);
+    return trim ? m.trim() : m;
   }
   if (
     cell.v != null &&
     typeof cell.v === 'string' &&
     !String(cell.v).startsWith('=')
   ) {
-    return String(cell.v).trim();
+    const v = String(cell.v);
+    return trim ? v.trim() : v;
+  }
+  if (cell.v != null && !isRealNull(cell.v) && typeof cell.v !== 'string') {
+    return String(cell.v);
   }
   return '';
+}
+
+function isCfCellEmpty(cell: any): boolean {
+  if (_.isNil(cell)) return true;
+  if (getCfPlainTextFromCell(cell, true) !== '') return false;
+  if (!_.isNil(cell.v) && !isRealNull(cell.v)) return false;
+  return true;
+}
+
+/** Visible / editable plain text for date CF parsing (inlineStr + m + literal string `v`). */
+function getCfDatePlainTextFromCell(cell: any): string {
+  return getCfPlainTextFromCell(cell, true);
 }
 
 /**
@@ -1163,10 +1180,12 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 }
                 // 单元格值
                 const cell = d[r][c];
-                const isEmptyCell =
-                  _.isNil(cell) || _.isNil(cell.v) || isRealNull(cell.v);
-                const cellVal = isEmptyCell ? null : cell.v;
-                const cellText = isEmptyCell ? '' : String(cell.v);
+                const isEmptyCell = isCfCellEmpty(cell);
+                const cellText = getCfPlainTextFromCell(cell);
+                const cellVal =
+                  isEmptyCell || _.isNil(cell?.v) || isRealNull(cell.v)
+                    ? cellText || null
+                    : cell.v;
                 const needleText =
                   conditionValue0 == null ? '' : String(conditionValue0);
                 const cellTextLower = cellText.toLowerCase();
@@ -1334,8 +1353,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 c += 1
               ) {
                 const cell = _.isNil(d[r]) || _.isNil(d[r][c]) ? null : d[r][c];
-                const isEmpty =
-                  _.isNil(cell) || _.isNil(cell.v) || isRealNull(cell.v);
+                const isEmpty = isCfCellEmpty(cell);
                 if (isEmpty && !(`${r}_${c}` in computeMap)) {
                   computeMap[`${r}_${c}`] = {
                     textColor,
@@ -1360,8 +1378,7 @@ export function compute(ctx: Context, ruleArr: any, d: CellMatrix) {
                 c += 1
               ) {
                 const cell = _.isNil(d[r]) || _.isNil(d[r][c]) ? null : d[r][c];
-                const isEmpty =
-                  _.isNil(cell) || _.isNil(cell.v) || isRealNull(cell.v);
+                const isEmpty = isCfCellEmpty(cell);
                 if (!isEmpty && !(`${r}_${c}` in computeMap)) {
                   computeMap[`${r}_${c}`] = {
                     textColor,

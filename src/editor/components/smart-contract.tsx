@@ -52,8 +52,8 @@ export const SmartContractButton = ({
                 window.history.replaceState({}, '', url.toString());
                 setOpen(false);
               }}
-              className="dsheet-text-block w-full flex cursor-pointer rounded-md flex-col p-2"
-              style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
+              className="dsheet-text-block w-full flex cursor-pointer rounded-md flex-col p-2 color-bg-secondary"
+              style={{ marginBottom: '8px' }}
               data-testid="smart-contract-auth-prompt"
             >
               <p

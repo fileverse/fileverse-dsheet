@@ -76,26 +76,30 @@ export const getCustomToolbarItems = ({
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
   toggleTemplateSidebar: (() => void) | undefined;
   setShowFetchURLModal:
-    | React.Dispatch<React.SetStateAction<boolean>>
-    | undefined;
+  | React.Dispatch<React.SetStateAction<boolean>>
+  | undefined;
 }) => {
   return [
-    {
-      key: 'Smart Contract',
-      tooltip: 'Smart Contract',
-      icon: (
-        <SmartContractButton
-          handleImportSmartContract={() =>
-            setShowSmartContractModal?.((prev: boolean) => {
-              return !prev;
-            })
-          }
-          handleViewSmartContract={() =>
-            document.getElementById('view-smart-contract')?.click()
-          }
-        />
-      ),
-    },
+    ...(setShowSmartContractModal
+      ? [
+          {
+            key: 'Smart Contract',
+            tooltip: 'Smart Contract',
+            icon: (
+              <SmartContractButton
+                handleImportSmartContract={() =>
+                  setShowSmartContractModal?.((prev: boolean) => {
+                    return !prev;
+                  })
+                }
+                handleViewSmartContract={() =>
+                  document.getElementById('view-smart-contract')?.click()
+                }
+              />
+            ),
+          },
+        ]
+      : []),
     {
       key: 'import-export',
       tooltip: 'Import/Export',

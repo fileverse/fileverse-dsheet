@@ -459,7 +459,7 @@ const RowHeader: React.FC = () => {
             }}
             onClick={(e) => showRow(e, item)}
           >
-            <div className="rotate-row-icon">
+            <div className="rotate-row-icon color-text-default">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="5"
@@ -469,11 +469,11 @@ const RowHeader: React.FC = () => {
               >
                 <path
                   d="M0.164574 4.20629L3.54376 7.58548C3.7275 7.76922 4.04167 7.63909 4.04167 7.37924L4.04167 0.620865C4.04167 0.361018 3.7275 0.230885 3.54376 0.414625L0.164575 3.79381C0.0506717 3.90772 0.0506715 4.09239 0.164574 4.20629Z"
-                  fill="#363B3F"
+                  fill="currentColor"
                 />
               </svg>
             </div>
-            <div className="rotate-90">
+            <div className="rotate-90 color-text-default">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="5"
@@ -483,7 +483,7 @@ const RowHeader: React.FC = () => {
               >
                 <path
                   d="M0.164574 4.20629L3.54376 7.58548C3.7275 7.76922 4.04167 7.63909 4.04167 7.37924L4.04167 0.620865C4.04167 0.361018 3.7275 0.230885 3.54376 0.414625L0.164575 3.79381C0.0506717 3.90772 0.0506715 4.09239 0.164574 4.20629Z"
-                  fill="#363B3F"
+                  fill="currentColor"
                 />
               </svg>
             </div>

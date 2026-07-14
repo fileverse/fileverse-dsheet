@@ -45,9 +45,13 @@ export default defineConfig({
         'immer',
         'dayjs',
         '@fileverse/ui',
+        '@fileverse/ens',
         '@fileverse-dev/formulajs',
         '@fileverse-dev/dsheets-templates',
         '@tippyjs/react',
+        'viem',
+        'viem/chains',
+        'viem/ens',
       ],
       output: {
         globals: {

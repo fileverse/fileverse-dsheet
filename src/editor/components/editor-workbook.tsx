@@ -1,12 +1,8 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, {
-  ComponentProps,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Workbook } from '@sheet-engine/react';
+import type { SidebarPortalRegistryHandle, SidebarPortalRenderer } from '@sheet-engine/react';
+import type { ThemeKey } from '@sheet-engine/core/theme';
 import { Cell } from '@sheet-engine/react';
 import {
   TOOL_BAR_ITEMS,
@@ -22,7 +18,6 @@ import { useEditor } from '../contexts/editor-context';
 import { useCollabAwareness } from '../hooks/use-collab-awareness';
 import {
   afterUpdateCell,
-  SmartContractQueryHandler,
 } from '../utils/after-update-cell';
 import { dataVerificationYdocUpdate } from '../utils/data-verification-ydoc-update';
 import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
@@ -39,7 +34,7 @@ import { handleExportToCSV } from '../utils/csv-export';
 import { handleExportToJSON } from '../utils/json-export';
 import { useXLSXImport } from '../hooks/use-xlsx-import';
 import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
-import { OnboardingHandlerType, DataBlockApiKeyHandlerType } from '../types';
+import { OnboardingHandlerType } from '../types';
 import {
   createAfterColRowChangesHandler,
   createAfterColorChangesHandler,
@@ -49,10 +44,16 @@ import {
   syncCurrentSheetField,
   updateAllCell,
 } from './editor-workbook-sync';
+import { CommentsConfig } from '../types/comments';
+import { CommentCellUI } from './comments/comment-cell-popup';
+import {
+  hideCellCommentMarker,
+  closeCellCommentPopup,
+} from '../utils/cell-comment-marker';
+import { getCurrentSheetIdSafe } from '../utils/sheet-editor-safe';
 // import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
-type DataBlockApiKeyHandler = DataBlockApiKeyHandlerType;
 
 function readBooleanFromLocalStorage(key: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -64,60 +65,53 @@ function readBooleanFromLocalStorage(key: string): boolean {
 }
 
 interface EditorWorkbookProps {
-  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setShowFetchURLModal?: React.Dispatch<React.SetStateAction<boolean>>;
   setFetchingURLData?: (fetching: boolean) => void;
   setInputFetchURLDataBlock?: React.Dispatch<React.SetStateAction<string>>;
   isReadOnly?: boolean;
   allowSheetDownload?: boolean;
-  allowComments?: boolean;
   toggleTemplateSidebar?: () => void;
   onboardingComplete?: boolean;
   onboardingCompleteLocalStorageKey?: string;
   onboardingHandler?: OnboardingHandler;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandler;
   exportDropdownOpen?: boolean;
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  commentData?: Object;
-  getCommentCellUI?: ComponentProps<typeof Workbook>['getCommentCellUI'];
+  commentsConfig?: CommentsConfig;
   setExportDropdownOpen?: React.Dispatch<React.SetStateAction<boolean>>;
   dsheetId: string;
-  storeApiKey?: (apiKeyName: string) => void;
-  onDataBlockApiResponse?: (dataBlockName: string) => void;
   onDuneChartEmbed?: () => void;
   onSheetCountChange?: (sheetCount: number) => void;
-  handleSmartContractQuery?: SmartContractQueryHandler;
+  sidebarActivePanel?: string | null;
+  sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
+  sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
+  theme?: ThemeKey;
 }
 
 /**
  * EditorWorkbook component handles rendering the Fortune Workbook with proper configuration
  */
-export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
+const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   setInputFetchURLDataBlock,
   setShowFetchURLModal,
   setFetchingURLData,
   isReadOnly = false,
   allowSheetDownload = false,
-  allowComments = false,
   toggleTemplateSidebar,
   onboardingComplete,
   onboardingCompleteLocalStorageKey,
   onboardingHandler,
-  dataBlockApiKeyHandler,
   exportDropdownOpen = false,
-  commentData,
-  getCommentCellUI,
+  commentsConfig,
   setExportDropdownOpen = () => { },
   dsheetId,
-  storeApiKey,
-  onDataBlockApiResponse,
   onDuneChartEmbed,
   onSheetCountChange,
-  handleSmartContractQuery,
+  sidebarActivePanel = null,
+  sidebarPortalRegistry = null,
+  sidebarPortalRenderers = {},
+  theme,
 }) => {
   const {
     setSelectedTemplate,
-    setShowSmartContractModal,
     sheetEditorRef,
     ydocRef,
     currentDataRef,
@@ -136,9 +130,72 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     collabEnabled,
     collabIsOwner,
     remoteUpdateRef,
+    apiKeyStorage,
+    openApiKeyModal,
+    onDataBlockEvent,
+    smartContract,
   } = useEditor();
 
   const localUserEditRef = useRef(false);
+
+  // Read the latest commentsConfig at call time via a ref so `getCommentCellUI`
+  // keeps a STABLE identity. Otherwise a new commentsConfig object on every
+  // comment action would churn the prop and re-render the memoized Workbook
+  // (visible canvas glitch). FortuneCore calls getCommentCellUI lazily, so
+  // ref.current is always fresh when a popup actually renders.
+  const commentsConfigRef = useRef(commentsConfig);
+  commentsConfigRef.current = commentsConfig;
+  const hasComments = !!commentsConfig;
+  const allowComments = hasComments;
+
+  const removeCommentFromCell = useCallback(
+    (row: number, col: number) => {
+      hideCellCommentMarker(sheetEditorRef, row, col);
+    },
+    [sheetEditorRef],
+  );
+
+  const closeCommentPopup = useCallback(() => {
+    closeCellCommentPopup(sheetEditorRef);
+  }, [sheetEditorRef]);
+
+  const getCommentCellUI = useMemo(() => {
+    if (!hasComments) return undefined;
+    return (
+      row: number,
+      col: number,
+      dragHandler: (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => void,
+      isHover?: boolean,
+    ) => {
+      const cfg = commentsConfigRef.current;
+      if (!cfg) return null;
+      const isAuthed = cfg.isAuthenticated ?? true;
+      const sheetId = getCurrentSheetIdSafe(sheetEditorRef);
+      const key = `${sheetId}_${row}_${col}`;
+      const comment = cfg.commentsData[key];
+      if (!isAuthed) return cfg.unauthenticatedFallback ?? null;
+      return (
+        <CommentCellUI
+          row={row}
+          col={col}
+          sheetId={sheetId}
+          comment={comment}
+          onSendComment={(_k, textareaId) => cfg.onSendComment(key, textareaId)}
+          onAction={cfg.onCommentAction}
+          ownerAddress={cfg.ownerAddress}
+          currentUserAddress={cfg.currentUserAddress}
+          isOwner={cfg.isOwner}
+          sheetEditorRef={sheetEditorRef as never}
+          currentUserName={cfg.userName}
+          removeCommentFromCell={removeCommentFromCell}
+          closePopup={closeCommentPopup}
+          dragHandler={dragHandler}
+          isHover={isHover}
+          disabled={cfg.disabled}
+        />
+      );
+    };
+  }, [hasComments, sheetEditorRef, removeCommentFromCell, closeCommentPopup]);
 
   // Block metadata → ydoc echoes only while a remote apply is in flight
   // (remoteApplyDepth > 0). User-initiated edits run when depth is zero.
@@ -259,8 +316,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     [dsheetId, handleOnChangePortalUpdate],
   );
 
-  // Memoized workbook component to avoid unnecessary re-renders
-  return useMemo(() => {
+  // Memoize stable Workbook props; sidebar portal props are merged after to avoid
+  // rebuilding customToolbarItems (which glitches the toolbar) on panel switches.
+  const workbookElement = useMemo(() => {
     // Create a unique key to force re-render when needed
     const workbookKey = `workbook-${dsheetId}-${forceSheetRender}`;
 
@@ -278,6 +336,7 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
         isFlvReadOnly={isReadOnly}
         isRTCActive={collabEnabled}
         isAuthorized={isAuthorized}
+        theme={theme}
         key={workbookKey}
         ref={sheetEditorRef}
         suppressInitialCellSelection={
@@ -313,7 +372,9 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               : []
             : getCustomToolbarItems({
               handleContentPortal: handleOnChangePortalUpdate,
-              setShowSmartContractModal,
+              setShowSmartContractModal: smartContract.enabled
+                ? smartContract.setShowSmartContractModal
+                : undefined,
               getDocumentTitle,
               updateDocumentTitle,
               setExportDropdownOpen,
@@ -356,13 +417,13 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
               // @ts-ignore
               setFetchingURLData,
               onboardingHandler,
-              dataBlockApiKeyHandler,
-              storeApiKey,
+              apiKeyStorage,
+              openApiKeyModal,
+              onDataBlockEvent,
               setInputFetchURLDataBlock,
-              onDataBlockApiResponse,
               setDataBlockCalcFunction,
               dataBlockCalcFunction,
-              handleSmartContractQuery,
+              handleSmartContractQuery: smartContract.handleSmartContractQuery,
               handleLiveQueryData: handleLiveQuery,
               collabEnabled,
               collabIsOwner,
@@ -501,12 +562,20 @@ export const EditorWorkbook: React.FC<EditorWorkbookProps> = ({
     effectiveOnboardingComplete,
     onboardingCompleteLocalStorageKey,
     onboardingHandler,
-    dataBlockApiKeyHandler,
     dsheetId,
     exportDropdownOpen,
-    commentData,
+    getCommentCellUI,
     syncStatus,
     isAuthorized,
     dataBlockCalcFunction,
+    theme,
   ]);
+
+  return React.cloneElement(workbookElement, {
+    sidebarActivePanel,
+    sidebarPortalRegistry,
+    sidebarPortalRenderers,
+  });
 };
+
+export const EditorWorkbook = React.memo(EditorWorkbookComponent);

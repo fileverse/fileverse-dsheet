@@ -36,7 +36,9 @@ const NotationBoxes: React.FC = () => {
     if (!context.editingCommentBox) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      setContext((draft) => { draft.editingCommentBox = undefined; });
+      setContext((draft) => {
+        draft.editingCommentBox = undefined;
+      });
       e.stopPropagation();
     };
     window.addEventListener('keydown', onKeyDown, true);
@@ -98,6 +100,7 @@ const NotationBoxes: React.FC = () => {
                 top,
                 zIndex: isEditing ? 500 : 400,
                 boxShadow: '0 1px 1px #0000002e,0 4px 8px #0000001a',
+                borderRadius: '4px',
               }}
               onMouseDown={(e) => {
                 e.stopPropagation();

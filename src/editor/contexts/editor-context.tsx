@@ -21,7 +21,17 @@ import {
   updateRowIndices,
   updateColumnIndices,
 } from '../utils/update-index-after-drag';
-import { DataBlockApiKeyHandlerType, SheetUpdateData } from '../types';
+import { SheetUpdateData, DataBlockEvent } from '../types';
+import type { CommentsConfig } from '../types/comments';
+import {
+  ApiKeyStorage,
+  defaultApiKeyStorage,
+} from '../utils/api-key-storage';
+import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
+import type { SmartContractConfig } from '../types/smart-contract';
+import { useSmartContract, type UseSmartContractReturn } from '../hooks/use-smart-contract';
+import { SidebarProvider } from '../components/sidebar/sidebar-context';
+import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
   CollaborationProps,
   CollabState,
@@ -75,6 +85,17 @@ export interface EditorContextType {
   onCollaboratorsChange?: (collaborators: CollabUser[]) => void;
 
   handleLiveQuery: (subsheetIndex: number, data: LiveQueryData) => void;
+
+  apiKeyStorage: ApiKeyStorage;
+  onDataBlockEvent?: (event: DataBlockEvent) => void;
+  openApiKeyModal: OpenApiKeyModalFn;
+  apiKeyModalState: {
+    open: boolean;
+    apiKeyName: string;
+    onSave: (key: string) => void;
+    onClose: () => void;
+  } | null;
+  smartContract: UseSmartContractReturn;
 }
 
 // Create the context with a default value
@@ -82,9 +103,7 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 
 // Props for the provider component
 interface EditorProviderProps {
-  allowComments?: boolean;
   setSelectedTemplate?: React.Dispatch<React.SetStateAction<string>>;
-  setShowSmartContractModal?: React.Dispatch<React.SetStateAction<boolean>>;
   getDocumentTitle?: (dsheetId: string) => Promise<string>;
   updateDocumentTitle?: (title: string) => void;
   isAuthorized: boolean;
@@ -97,7 +116,7 @@ interface EditorProviderProps {
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
-  commentData?: object;
+  commentsConfig?: CommentsConfig;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
     terminateSession?: () => void;
@@ -106,7 +125,9 @@ interface EditorProviderProps {
   } | null>;
   enableLiveQuery?: boolean;
   liveQueryRefreshRate?: number;
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType;
+  apiKeyStorage?: ApiKeyStorage;
+  onDataBlockEvent?: (event: DataBlockEvent) => void;
+  smartContracts?: SmartContractConfig;
   onContentSyncStatusChange?: (
     status: 'initializing' | 'syncing' | 'synced' | 'error',
   ) => void;
@@ -115,7 +136,6 @@ interface EditorProviderProps {
 // Provider component that wraps the app
 export const EditorProvider: React.FC<EditorProviderProps> = ({
   setSelectedTemplate,
-  setShowSmartContractModal,
   getDocumentTitle,
   updateDocumentTitle,
   children,
@@ -124,24 +144,62 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   portalContent = '',
   enableIndexeddbSync = true,
   isReadOnly = false,
-  allowComments = false,
   onChange,
   externalEditorRef,
   collaboration,
-  commentData,
+  commentsConfig,
   isAuthorized,
   editorStateRef,
   enableLiveQuery,
   liveQueryRefreshRate,
-  dataBlockApiKeyHandler,
+  apiKeyStorage: apiKeyStorageProp,
+  onDataBlockEvent,
+  smartContracts,
   onContentSyncStatusChange,
 }) => {
+  // Comments are driven entirely by commentsConfig (the legacy
+  // commentData/allowComments props were removed).
+  const resolvedCommentData = commentsConfig?.commentsData;
+  const resolvedAllowComments = !!commentsConfig;
+
   const [forceSheetRender, setForceSheetRender] = useState<number>(1);
   const internalEditorRef = useRef<WorkbookInstance | null>(null);
   const sheetEditorRef = externalEditorRef || internalEditorRef;
   const [dataBlockCalcFunction, setDataBlockCalcFunction] = useState<{
     [key: string]: { [key: string]: any };
   }>({});
+
+  const apiKeyStorage = useMemo(
+    () => apiKeyStorageProp ?? defaultApiKeyStorage,
+    [apiKeyStorageProp],
+  );
+
+  const smartContract = useSmartContract(smartContracts);
+
+  const [apiKeyModalState, setApiKeyModalState] = useState<{
+    open: boolean;
+    apiKeyName: string;
+    onSave: (key: string) => void;
+    onClose: () => void;
+  } | null>(null);
+
+  const openApiKeyModal = useCallback<OpenApiKeyModalFn>(
+    (apiKeyName, callbacks) => {
+      setApiKeyModalState({
+        open: true,
+        apiKeyName,
+        onSave: (key: string) => {
+          setApiKeyModalState(null);
+          callbacks.onSave(key);
+        },
+        onClose: () => {
+          setApiKeyModalState(null);
+          callbacks.onClose();
+        },
+      });
+    },
+    [],
+  );
 
   const updateDataBlockCalcFunctionAfterRowDrag = useCallback(
     (
@@ -379,13 +437,15 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     isReadOnly,
     handleOnChangePortalUpdate,
     syncStatus,
-    commentData,
+    resolvedCommentData,
     dataBlockCalcFunction,
     setDataBlockCalcFunction,
     enableLiveQuery,
     liveQueryRefreshRate,
-    dataBlockApiKeyHandler,
-    allowComments,
+    apiKeyStorage,
+    openApiKeyModal,
+    onDataBlockEvent,
+    resolvedAllowComments,
     hasCollabContentInitialised,
     collaboration?.enabled === true,
   );
@@ -432,7 +492,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   const contextValue: EditorContextType = useMemo(() => {
     return {
       setSelectedTemplate,
-      setShowSmartContractModal,
+      setShowSmartContractModal: smartContract.setShowSmartContractModal,
       getDocumentTitle,
       updateDocumentTitle,
       dataBlockCalcFunction,
@@ -469,10 +529,15 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         collaboration?.enabled === true
           ? collaboration.on?.onCollaboratorsChange
           : undefined,
+      apiKeyStorage,
+      onDataBlockEvent,
+      openApiKeyModal,
+      apiKeyModalState,
+      smartContract,
     };
   }, [
     setIsDataLoaded,
-    setShowSmartContractModal,
+    smartContract,
     getDocumentTitle,
     updateDocumentTitle,
     dataBlockCalcFunction,
@@ -502,11 +567,17 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     awareness,
     terminateSession,
     collaboration,
+    apiKeyStorage,
+    onDataBlockEvent,
+    openApiKeyModal,
+    apiKeyModalState,
   ]);
 
   return (
     <EditorContext.Provider value={contextValue}>
-      {children}
+      <SidebarPortalRegistryProvider>
+        <SidebarProvider isReadMode={isReadOnly}>{children}</SidebarProvider>
+      </SidebarPortalRegistryProvider>
     </EditorContext.Provider>
   );
 };

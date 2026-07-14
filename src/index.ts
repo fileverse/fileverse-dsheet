@@ -9,7 +9,28 @@ export { FLVURL } from '@fileverse-dev/formulajs';
 export { loadLocale } from '@sheet-engine/core';
 
 // Types
-export type { ErrorMessageHandlerReturnType } from './editor/types';
+export type { ErrorMessageHandlerReturnType, DataBlockEvent, DataBlockEventType, ApiKeyStorage } from './editor/types';
+export type { PanelConfig, PanelId, BuiltInPanelType } from './editor/types';
+export type {
+  CommentThread,
+  CommentReply,
+  CommentActionParams,
+  CommentsConfig,
+} from './editor/types/comments';
+export { CommentAction } from './editor/types/comments';
+export { CommentsContent } from './editor/components/comments/comment-sidebar';
+export { CommentCellUI } from './editor/components/comments/comment-cell-popup';
+export { useEnsStatus } from './editor/components/comments/ens/use-ens-status';
+export type { EnsStatus } from './editor/components/comments/ens/ens-cache';
+export type {
+  SmartContractConfig,
+  SmartContractEvent,
+  SmartContractEventType,
+  ContractConfig,
+  ContractRegistry,
+  NewContractInput,
+} from './editor/types/smart-contract';
+export { SupportedChain } from './editor/types/smart-contract';
 export type { WorkbookInstance } from '@sheet-engine/react';
 export type {
   CollaborationProps,
@@ -35,6 +56,12 @@ export { TEMPLATES } from '@fileverse-dev/dsheets-templates/template-metadata-li
 
 // Import/Export utilities
 export { handleCSVUpload } from './editor/utils/csv-import';
+export {
+  importSpreadsheetFile,
+  type ImportSpreadsheetFileOptions,
+  type ImportSpreadsheetFileResult,
+  type SpreadsheetImportFileType,
+} from './editor/utils/spreadsheet-import';
 export { handleExportToXLSX } from './editor/utils/xlsx-export';
 export { handleExportToCSV } from './editor/utils/csv-export';
 export { handleExportToJSON } from './editor/utils/json-export';

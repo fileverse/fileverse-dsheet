@@ -7,7 +7,9 @@ import isEqual from 'lodash/isEqual';
 import * as Y from 'yjs';
 import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { useLiveQuery } from './live-query/use-live-query';
-import { DataBlockApiKeyHandlerType } from '../types';
+import type { ApiKeyStorage } from '../utils/api-key-storage';
+import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
+import type { DataBlockEvent } from '../types';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 import { migrateSheetArrayIfNeeded } from '../utils/migrate-new-yjs';
 import {
@@ -38,7 +40,9 @@ export const useEditorData = (
   >,
   enableLiveQuery = false,
   liveQueryRefreshRate?: number,
-  dataBlockApiKeyHandler?: DataBlockApiKeyHandlerType,
+  apiKeyStorage?: ApiKeyStorage,
+  openApiKeyModal?: OpenApiKeyModalFn,
+  onDataBlockEvent?: (event: DataBlockEvent) => void,
   allowComments?: boolean,
   hasCollabContentInitialised?: boolean,
   collabEnabled = false,
@@ -66,7 +70,9 @@ export const useEditorData = (
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
-    dataBlockApiKeyHandler,
+    apiKeyStorage,
+    openApiKeyModal,
+    onDataBlockEvent,
     enableLiveQuery,
     liveQueryRefreshRate,
   );

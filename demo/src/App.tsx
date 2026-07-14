@@ -1,7 +1,12 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { DSheetEditor, WorkbookInstance } from '../../src/index';
-import type { CollaborationProps, CollabState } from '../../src/index';
+import { DSheetEditor, WorkbookInstance, CommentAction } from '../../src/index';
+import type {
+  CollaborationProps,
+  CollabState,
+  CommentThread,
+  CommentActionParams,
+} from '../../src/index';
 import {
   Button,
   Tag,
@@ -10,6 +15,8 @@ import {
   DynamicDropdown,
   Toaster,
   toast,
+  ThemeToggle,
+  useTheme,
 } from '@fileverse/ui';
 import { useMediaQuery } from 'usehooks-ts';
 import { crypto as cryptoUtils } from './crypto';
@@ -23,6 +30,7 @@ import {
 function App() {
   const isMediaMax1280px = useMediaQuery('(max-width: 1280px)');
   const sheetEditorRef = useRef<WorkbookInstance>(null);
+  const { theme } = useTheme();
 
   // --- Sheet identity ---
   const [dsheetId] = useState<string>(() => {
@@ -46,6 +54,88 @@ function App() {
     },
     [dsheetId],
   );
+
+  // --- In-memory comment store (plays the role of the consumer's useComments) ---
+  const [commentsData, setCommentsData] = useState<
+    Record<string, CommentThread>
+  >({});
+
+  const readTextarea = (id: string) =>
+    (document.getElementById(id) as HTMLTextAreaElement | null)?.value?.trim() ??
+    '';
+
+  const onSendComment = useCallback(
+    (key: string, textareaId: string) => {
+      const content = readTextarea(textareaId);
+      if (!content) return;
+      setCommentsData((prev) => {
+        const existing = prev[key];
+        if (existing) {
+          // reply
+          return {
+            ...prev,
+            [key]: {
+              ...existing,
+              replies: [
+                ...existing.replies,
+                {
+                  id: `r-${Date.now()}`,
+                  username: 'demo-user',
+                  content,
+                  createdAt: new Date().toISOString(),
+                  commentIndex: existing.replies.length,
+                },
+              ],
+            },
+          };
+        }
+        return {
+          ...prev,
+          [key]: {
+            id: `c-${Date.now()}`,
+            key,
+            dsheetId,
+            username: 'demo-user',
+            content,
+            createdAt: new Date().toISOString(),
+            commentIndex: 0,
+            replies: [],
+          },
+        };
+      });
+      const el = document.getElementById(
+        textareaId,
+      ) as HTMLTextAreaElement | null;
+      if (el) el.value = '';
+    },
+    [dsheetId],
+  );
+
+  const onCommentAction = useCallback((a: CommentActionParams) => {
+    setCommentsData((prev) => {
+      const c = prev[a.commentKey];
+      if (!c) return prev;
+      if (a.action === CommentAction.DELETE && !a.isReply) {
+        const next = { ...prev };
+        delete next[a.commentKey];
+        return next;
+      }
+      if (a.action === CommentAction.DELETE && a.isReply) {
+        return {
+          ...prev,
+          [a.commentKey]: {
+            ...c,
+            replies: c.replies.filter((r) => r.id !== a.commentId),
+          },
+        };
+      }
+      if (a.action === CommentAction.RESOLVE)
+        return { ...prev, [a.commentKey]: { ...c, isResolved: true } };
+      if (a.action === CommentAction.UNRESOLVE)
+        return { ...prev, [a.commentKey]: { ...c, isResolved: false } };
+      return prev;
+    });
+  }, []);
 
   // --- Collab state ---
   const [collabEnabled, setCollabEnabled] = useState(false);
@@ -194,7 +284,8 @@ function App() {
 
 
   // --- Navbar (memoized — stable reference, no re-renders from collab/save state) ---
-  const renderNavbar = useCallback((): JSX.Element => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderNavbar = useCallback((editorValues?: any): JSX.Element => {
     return (
       <>
         <div className="flex items-center gap-[12px]">
@@ -227,6 +318,19 @@ function App() {
         </div>
 
         <div className="flex gap-2">
+          <ThemeToggle />
+
+          <button
+            type="button"
+            onClick={() => editorValues?.openPanel('comments')}
+            style={{
+              border: '1px solid #ccc',
+              borderRadius: 6,
+              padding: '2px 8px',
+            }}
+          >
+            Comments
+          </button>
           {isMediaMax1280px ? (
             <DynamicDropdown
               key="navbar-more-actions"
@@ -337,6 +441,7 @@ function App() {
               <Toaster position="bottom-right" duration={3000} />
               <DSheetEditor
                 isReadOnly={false}
+                theme={theme}
                 renderNavbar={renderNavbar}
                 dsheetId={dsheetId}
                 onChange={handleSheetChange}
@@ -345,6 +450,17 @@ function App() {
                 isAuthorized={false}
                 isNewSheet={isNewSheet}
                 collaboration={collaboration}
+                commentsConfig={{
+                  commentsData,
+                  onSendComment,
+                  onCommentAction,
+                  userName: 'demo-user',
+                  currentUserAddress: 'demo-user',
+                  isOwner: true,
+                  isAuthenticated: true,
+                  // ENS test: set a real mainnet RPC URL via Vite env to exercise resolution.
+                  ensResolutionUrl: import.meta.env.VITE_ENS_RPC_URL,
+                }}
               />
             </div>
           }

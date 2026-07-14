@@ -1,7 +1,7 @@
 // @ts-ignore
 import { Parser, ERROR_REF } from '@sheet-engine/formula-parser';
 import _ from 'lodash';
-import type { Cell, Rect, Selection } from '../types';
+import type { Cell, CellMatrix, Rect, Selection } from '../types';
 import { Context, getFlowdata } from '../context';
 import {
   columnCharToIndex,
@@ -30,8 +30,24 @@ import {
   setCellError,
   spillSortResult,
 } from '.';
+import {
+  FORMULA_ASYNC_CHUNK_SIZE,
+  FORMULA_ASYNC_EVAL_THRESHOLD,
+  type FormulaAsyncEvalJob,
+} from './formula-async-eval';
+import {
+  beginRangeValuePassCache,
+  clearRangeValuePassCache,
+  collectGlobalDataKeysInRange,
+  makeRangePassCacheKey,
+  sliceRangeFragmentForOrigin,
+  type RangePassCacheEntry,
+} from './formula-range-cache';
+import { collectTransitiveFormulaDependents } from './formula-transitive-deps';
+import type { SnapshotEvalOutput } from './formula-snapshot-eval';
 
 let functionHTMLIndex = 0;
+let formulaAsyncEvalJobId = 0;
 let rangeIndexes: number[] = [];
 const operatorPriority: any = {
   '^': 0,
@@ -235,6 +251,26 @@ function parseCellKey(
   return { sheetId, r, c };
 }
 
+/** In-pass formula value cache; must be a plain object while a recalc pass runs. */
+function ensureExecFunctionGlobalData(ctx: Context) {
+  if (ctx.formulaCache.execFunctionGlobalData == null) {
+    ctx.formulaCache.execFunctionGlobalData = {};
+  }
+}
+
+function writeExecFunctionGlobalDataCell(
+  ctx: Context,
+  r: number,
+  c: number,
+  sheetId: string,
+  value: { v: unknown; f: unknown },
+) {
+  if (ctx.formulaCache.execFunctionGlobalData == null) {
+    ensureExecFunctionGlobalData(ctx);
+  }
+  ctx.formulaCache.execFunctionGlobalData[`${r}_${c}_${sheetId}`] = value;
+}
+
 // FormulaCache is defined as class to avoid being frozen by immer
 export class FormulaCache {
   parser: any;
@@ -312,10 +348,26 @@ export class FormulaCache {
   revDepsByCell: Map<string, Set<string>>;
 
   /**
+   * Formulas that referenced a range too large to fully expand into `revDepsByCell`.
+   * These must be included on incremental recalcs because a single-cell edit may
+   * affect them even when no precise reverse edge exists.
+   */
+  formulasWithWideRangeDeps: Set<string>;
+
+  /**
    * Dependency collection state for the currently-parsed formula, set by `execfunction`.
    * When null, dependency recording is disabled.
    */
-  activeDepCollection: null | { originKey: string; deps: Set<string> };
+  activeDepCollection: null | {
+    originKey: string;
+    deps: Set<string>;
+    hasWideRangeDep: boolean;
+  };
+
+  /** Step 2: per execFunctionGroup pass cache for materialized range reads. */
+  rangeValuePassCache?: Map<string, RangePassCacheEntry>;
+
+  rangeValuePassCacheStats?: { hits: number; misses: number };
 
   constructor() {
     const that = this;
@@ -335,6 +387,7 @@ export class FormulaCache {
     this.cellTextToIndexList = {};
     this.depsByCell = new Map();
     this.revDepsByCell = new Map();
+    this.formulasWithWideRangeDeps = new Set();
     this.activeDepCollection = null;
     this.parser = new Parser();
     this.parser.on(
@@ -348,10 +401,10 @@ export class FormulaCache {
         if (id == null) throw Error(ERROR_REF);
         recordDep(toCellKey(id, cellCoord.row.index, cellCoord.column.index));
         const flowdata = getFlowdata(context, id);
+        const cacheKey = `${cellCoord.row.index}_${cellCoord.column.index}_${id}`;
         const cell =
-          context?.formulaCache.execFunctionGlobalData?.[
-            `${cellCoord.row.index}_${cellCoord.column.index}_${id}`
-          ] || flowdata?.[cellCoord.row.index]?.[cellCoord.column.index];
+          context?.formulaCache.execFunctionGlobalData?.[cacheKey] ||
+          flowdata?.[cellCoord.row.index]?.[cellCoord.column.index];
         const v = that.tryGetCellAsNumber(cell);
         done(v);
       },
@@ -367,7 +420,6 @@ export class FormulaCache {
             : getSheetIdByName(context, startCellCoord.sheetName);
         if (id == null) throw Error(ERROR_REF);
         const flowdata = getFlowdata(context, id);
-        const fragment = [];
         let startRow = startCellCoord.row.index;
         let endRow = endCellCoord.row.index;
         let startCol = startCellCoord.column.index;
@@ -383,10 +435,8 @@ export class FormulaCache {
           endCol = flowdata?.[0].length ?? 0;
         }
         if (emptyRow && emptyCol) throw Error(ERROR_REF);
-        let cryptoDenomination = '';
-        let cryptoDecimal = 0;
 
-        // Record dependencies for cycle detection. Unlike value aggregation below (which skips origin),
+        // Record dependencies for cycle detection.
         // dependency recording must include the origin cell when it lies within the referenced range.
         if (that.activeDepCollection) {
           const originRow = typeof options === 'object' ? options.row : null;
@@ -410,52 +460,105 @@ export class FormulaCache {
                 recordDep(toCellKey(id, row, col));
               }
             }
-          } else if (originInRange) {
-            // Still record self-in-range to detect circular refs.
-            recordDep(toCellKey(id, originRow, originCol));
+          } else {
+            that.activeDepCollection.hasWideRangeDep = true;
+            if (originInRange) {
+              // Still record self-in-range to detect circular refs.
+              recordDep(toCellKey(id, originRow, originCol));
+            }
           }
         }
 
-        for (let row = startRow; row <= endRow; row += 1) {
-          const colFragment = [];
+        const originRow = typeof options === 'object' ? options.row : null;
+        const originCol = typeof options === 'object' ? options.column : null;
+        const skippedOrigin =
+          originRow != null &&
+          originCol != null &&
+          originRow >= startRow &&
+          originRow <= endRow &&
+          originCol >= startCol &&
+          originCol <= endCol;
 
-          for (let col = startCol; col <= endCol; col += 1) {
-            if (
-              typeof options === 'object' &&
-              row === options.row &&
-              col === options.column
-            ) {
-              continue;
-            }
-            const cell =
-              context?.formulaCache.execFunctionGlobalData?.[
-                `${row}_${col}_${id}`
-              ] || flowdata?.[row]?.[col];
-            const v = that.tryGetCellAsNumber(cell);
-            // FLV crypto denomination --START--
-            if (
-              (cell?.m?.includes('ETH') ||
-                cell?.m?.includes('SOL') ||
-                cell?.m?.includes('BTC')) &&
-              cryptoDenomination !== 'Error'
-            ) {
-              const visualString = cell?.m.split(' ');
-              if (
-                cryptoDenomination !== '' &&
-                cryptoDenomination !== visualString[1]
-              ) {
-                cryptoDenomination = 'Error';
-              } else {
-                cryptoDenomination = visualString[1];
-              }
-              cryptoDecimal = visualString[0].includes('.')
-                ? visualString[0].split('.')[1]?.length
-                : 0;
-            }
-            colFragment.push(v);
+        let fragment: any[][] | null = null;
+        let cryptoDenomination = '';
+        let cryptoDecimal = 0;
+
+        if (that.rangeValuePassCache) {
+          const cacheKey = makeRangePassCacheKey(
+            id,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+          );
+          const fingerprint = collectGlobalDataKeysInRange(
+            context.formulaCache.execFunctionGlobalData ?? {},
+            id,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+          );
+          const cached = that.rangeValuePassCache.get(cacheKey);
+          if (cached && cached.globalDataKeysFingerprint === fingerprint) {
+            that.rangeValuePassCacheStats!.hits += 1;
+            fragment = sliceRangeFragmentForOrigin(
+              cached.fragment,
+              startRow,
+              startCol,
+              skippedOrigin ? originRow : null,
+              skippedOrigin ? originCol : null,
+            );
+            cryptoDenomination = cached.cryptoDenomination;
+            cryptoDecimal = cached.cryptoDecimal;
+          } else {
+            that.rangeValuePassCacheStats!.misses += 1;
+            const built = that.materializeFullRangeFragment(
+              context,
+              id,
+              flowdata,
+              startRow,
+              endRow,
+              startCol,
+              endCol,
+            );
+            that.rangeValuePassCache.set(cacheKey, {
+              fragment: built.fragment,
+              cryptoDenomination: built.cryptoDenomination,
+              cryptoDecimal: built.cryptoDecimal,
+              globalDataKeysFingerprint: fingerprint,
+            });
+            fragment = sliceRangeFragmentForOrigin(
+              built.fragment,
+              startRow,
+              startCol,
+              skippedOrigin ? originRow : null,
+              skippedOrigin ? originCol : null,
+            );
+            cryptoDenomination = built.cryptoDenomination;
+            cryptoDecimal = built.cryptoDecimal;
           }
-          fragment.push(colFragment);
+        } else {
+          const built = that.materializeFullRangeFragment(
+            context,
+            id,
+            flowdata,
+            startRow,
+            endRow,
+            startCol,
+            endCol,
+          );
+          fragment = sliceRangeFragmentForOrigin(
+            built.fragment,
+            startRow,
+            startCol,
+            skippedOrigin ? originRow : null,
+            skippedOrigin ? originCol : null,
+          );
+          cryptoDenomination = built.cryptoDenomination;
+          cryptoDecimal = built.cryptoDecimal;
         }
+
         if (cryptoDenomination === 'Error') {
           cryptoDenomination = '';
           cryptoDecimal = 0;
@@ -466,6 +569,63 @@ export class FormulaCache {
         }
       },
     );
+  }
+
+  materializeFullRangeFragment(
+    context: Context,
+    sheetId: string,
+    flowdata: CellMatrix | null | undefined,
+    startRow: number,
+    endRow: number,
+    startCol: number,
+    endCol: number,
+  ): {
+    fragment: any[][];
+    cryptoDenomination: string;
+    cryptoDecimal: number;
+  } {
+    const fragment: any[][] = [];
+    let cryptoDenomination = '';
+    let cryptoDecimal = 0;
+
+    for (let row = startRow; row <= endRow; row += 1) {
+      const colFragment: any[] = [];
+      for (let col = startCol; col <= endCol; col += 1) {
+        const cell =
+          context?.formulaCache.execFunctionGlobalData?.[
+          `${row}_${col}_${sheetId}`
+          ] || flowdata?.[row]?.[col];
+        const v = this.tryGetCellAsNumber(cell);
+        if (
+          (cell?.m?.includes('ETH') ||
+            cell?.m?.includes('SOL') ||
+            cell?.m?.includes('BTC')) &&
+          cryptoDenomination !== 'Error'
+        ) {
+          const visualString = cell?.m.split(' ');
+          if (
+            cryptoDenomination !== '' &&
+            cryptoDenomination !== visualString[1]
+          ) {
+            cryptoDenomination = 'Error';
+          } else {
+            cryptoDenomination = visualString[1];
+          }
+          cryptoDecimal = visualString[0].includes('.')
+            ? visualString[0].split('.')[1]?.length
+            : 0;
+        }
+        colFragment.push(v);
+      }
+      fragment.push(colFragment);
+    }
+
+    if (cryptoDenomination === 'Error') {
+      cryptoDenomination = '';
+      cryptoDecimal = 0;
+    }
+
+    return { fragment, cryptoDenomination, cryptoDecimal };
   }
 
   tryGetCellAsNumber(cell: Cell) {
@@ -490,8 +650,8 @@ export class FormulaCache {
     const isCryptoDeno =
       typeof cell?.m === 'string'
         ? cell?.m?.includes('ETH') ||
-          cell?.m?.includes('SOL') ||
-          cell?.m?.includes('BTC')
+        cell?.m?.includes('SOL') ||
+        cell?.m?.includes('BTC')
         : false;
     if (isCryptoDeno && typeof cell?.m === 'string') {
       const splitedNumberString = cell.m.split(' ')[0];
@@ -768,7 +928,7 @@ function checkSpecialFunctionRange(
       ctx.calculateSheetId = id;
       const str = function_str
         .split(',')
-        [function_str.split(',').length - 1].split("'")[1]
+      [function_str.split(',').length - 1].split("'")[1]
         .split("'")[0];
 
       const str_nb = _.trim(str);
@@ -780,7 +940,7 @@ function checkSpecialFunctionRange(
         // this.isFunctionRangeSaveChange(str, r, c, index, dynamicArray_compute);
         // console.log(function_str, str, this.isFunctionRangeSave,r,c);
       }
-    } catch {}
+    } catch { }
   }
 }
 
@@ -834,9 +994,8 @@ function isFunctionRange(
           const funcArray = str.split(':');
           function_str += `luckysheet_getSpecialReference(true,'${_.trim(
             funcArray[0],
-          ).replace(/'/g, "\\'")}', luckysheet_function.${
-            funcArray[1]
-          }.f(#lucky#`;
+          ).replace(/'/g, "\\'")}', luckysheet_function.${funcArray[1]
+            }.f(#lucky#`;
         } else {
           function_str += `luckysheet_function.${str}.f(`;
         }
@@ -1187,6 +1346,7 @@ export function delFunctionGroup(
 
   // Remove dependency edges for this cell (it is no longer a formula).
   const originKey = `${id}:${r}:${c}`;
+  ctx.formulaCache.formulasWithWideRangeDeps.delete(originKey);
   const prevDeps = ctx.formulaCache?.depsByCell?.get(originKey);
   if (prevDeps) {
     prevDeps.forEach((depKey) => {
@@ -1371,6 +1531,9 @@ export function execfunction(
   notInsertFunc?: boolean,
 ) {
   const originalTxt = txt;
+  if (_.isNil(id)) {
+    id = ctx.currentSheetId;
+  }
   if (
     txt?.toUpperCase().includes('NETWORKDAYS.INTL') ||
     txt?.toUpperCase().includes('WORKDAY.INTL')
@@ -1383,10 +1546,6 @@ export function execfunction(
 
   if (!checkBracketNum(txt)) {
     txt += ')';
-  }
-
-  if (_.isNil(id)) {
-    id = ctx.currentSheetId;
   }
 
   ctx.calculateSheetId = id;
@@ -1515,11 +1674,17 @@ export function execfunction(
   const sheetId = id || ctx.currentSheetId;
   const originKey = `${sheetId}:${r}:${c}`;
   const deps = new Set<string>();
-  ctx.formulaCache.activeDepCollection = { originKey, deps };
+  ctx.formulaCache.formulasWithWideRangeDeps.delete(originKey);
+  ctx.formulaCache.activeDepCollection = {
+    originKey,
+    deps,
+    hasWideRangeDep: false,
+  };
 
   ctx.formulaCache.parser.context = ctx;
   const parserExpression = normalizeDateArithmeticForParser(txt.substring(1));
   let parsedResponse: { error: any; result: any };
+  let hasWideRangeDep = false;
   try {
     parsedResponse = ctx.formulaCache.parser.parse(parserExpression, {
       sheetId,
@@ -1527,7 +1692,12 @@ export function execfunction(
       column: c,
     });
   } finally {
+    hasWideRangeDep =
+      ctx.formulaCache.activeDepCollection?.hasWideRangeDep ?? false;
     ctx.formulaCache.activeDepCollection = null;
+  }
+  if (hasWideRangeDep) {
+    ctx.formulaCache.formulasWithWideRangeDeps.add(originKey);
   }
 
   // Update dependency graph for this formula cell.
@@ -1577,7 +1747,7 @@ export function execfunction(
       // re-propagate stale "#CIRC!" from prior states during structural recalcs.
       const cell =
         ctx?.formulaCache.execFunctionGlobalData?.[
-          `${parsedKey.r}_${parsedKey.c}_${parsedKey.sheetId}`
+        `${parsedKey.r}_${parsedKey.c}_${parsedKey.sheetId}`
         ];
       if (_.isNil(cell)) continue;
       const raw = cell?.v ?? cell?.m;
@@ -1773,6 +1943,272 @@ export function groupValuesRefresh(ctx: Context) {
   }
 }
 
+type FormulaRunListCell = {
+  r: number;
+  c: number;
+  id: string;
+  calc_funcStr: string;
+  level?: number;
+};
+
+function evalFormulaCellInGroup(
+  ctx: Context,
+  formulaCell: FormulaRunListCell,
+  calcChainSet: Set<string>,
+  data: CellMatrix | null | undefined,
+  impactedByCircular: Set<string>,
+  cycleNodes: Set<string>,
+) {
+  ensureExecFunctionGlobalData(ctx);
+  if ((formulaCell as { level?: unknown }).level === (Math as any).max) {
+    return;
+  }
+
+  const { calc_funcStr } = formulaCell;
+
+  const formulaCellKey = `${formulaCell.id}:${formulaCell.r}:${formulaCell.c}`;
+  if (impactedByCircular.has(formulaCellKey)) {
+    const isInCycle = cycleNodes.has(formulaCellKey);
+    const message = isInCycle
+      ? 'Circular dependency.'
+      : 'Circular dependency (upstream).';
+    setCellError(ctx, formulaCell.r, formulaCell.c, {
+      row_column: `${formulaCell.r}_${formulaCell.c}`,
+      title: CIRCULAR_REF_TITLE,
+      message,
+    });
+
+    ctx.groupValuesRefreshData.push({
+      r: formulaCell.r,
+      c: formulaCell.c,
+      v: CIRCULAR_REF_ERROR,
+      f: calc_funcStr,
+      id: formulaCell.id,
+    });
+
+    writeExecFunctionGlobalDataCell(
+      ctx,
+      formulaCell.r,
+      formulaCell.c,
+      formulaCell.id,
+      {
+        v: CIRCULAR_REF_ERROR,
+        f: calc_funcStr,
+      },
+    );
+
+    return;
+  }
+
+  const v = execfunction(
+    ctx,
+    calc_funcStr,
+    formulaCell.r,
+    formulaCell.c,
+    formulaCell.id,
+    calcChainSet,
+  );
+
+  const valueData = v?.[1];
+  const valueFunction = v?.[2];
+
+  if (Array.isArray(valueData)) {
+    const spilled = spillSortResult(
+      ctx,
+      formulaCell.r,
+      formulaCell.c,
+      { v: valueData, f: valueFunction },
+      data ?? undefined,
+    );
+
+    if (spilled) {
+      const matrixTopLeftValue = Array.isArray(valueData[0])
+        ? valueData[0][0]
+        : valueData[0];
+
+      ctx.groupValuesRefreshData.push({
+        r: formulaCell.r,
+        c: formulaCell.c,
+        v: matrixTopLeftValue,
+        f: valueFunction,
+        spe: v[3],
+        id: formulaCell.id,
+      });
+
+      writeExecFunctionGlobalDataCell(
+        ctx,
+        formulaCell.r,
+        formulaCell.c,
+        formulaCell.id,
+        { v: matrixTopLeftValue, f: valueFunction },
+      );
+
+      return;
+    }
+  }
+
+  ctx.groupValuesRefreshData.push({
+    r: formulaCell.r,
+    c: formulaCell.c,
+    v: v[1],
+    f: v[2],
+    spe: v[3],
+    id: formulaCell.id,
+  });
+
+  writeExecFunctionGlobalDataCell(
+    ctx,
+    formulaCell.r,
+    formulaCell.c,
+    formulaCell.id,
+    {
+      v: v[1],
+      f: v[2],
+    },
+  );
+}
+
+function mergeFormulaDeps(
+  ctx: Context,
+  originKey: string,
+  deps: Iterable<string>,
+) {
+  const depSet = new Set(deps);
+  const prevDeps =
+    ctx.formulaCache.depsByCell.get(originKey) ?? new Set<string>();
+  ctx.formulaCache.depsByCell.set(originKey, depSet);
+  prevDeps.forEach((depKey) => {
+    if (depSet.has(depKey)) return;
+    const rev = ctx.formulaCache.revDepsByCell.get(depKey);
+    if (!rev) return;
+    rev.delete(originKey);
+    if (rev.size === 0) ctx.formulaCache.revDepsByCell.delete(depKey);
+  });
+  depSet.forEach((depKey) => {
+    if (prevDeps.has(depKey)) return;
+    const rev = ctx.formulaCache.revDepsByCell.get(depKey) ?? new Set<string>();
+    rev.add(originKey);
+    ctx.formulaCache.revDepsByCell.set(depKey, rev);
+  });
+}
+
+/** Apply worker chunk output onto the live context (main thread only). */
+export function applyWorkerFormulaChunkResults(
+  ctx: Context,
+  output: SnapshotEvalOutput,
+  impactedByCircular: Set<string>,
+  cycleNodes: Set<string>,
+  calcChainKeys: string[] = [],
+  data?: CellMatrix | null,
+) {
+  ensureExecFunctionGlobalData(ctx);
+  const calcChainSet = new Set(calcChainKeys);
+
+  for (const result of output.results) {
+    const formulaCellKey = `${result.id}:${result.r}:${result.c}`;
+
+    if (impactedByCircular.has(formulaCellKey)) {
+      const isInCycle = cycleNodes.has(formulaCellKey);
+      const message = isInCycle
+        ? 'Circular dependency.'
+        : 'Circular dependency (upstream).';
+      setCellError(ctx, result.r, result.c, {
+        row_column: `${result.r}_${result.c}`,
+        title: CIRCULAR_REF_TITLE,
+        message,
+      });
+      ctx.groupValuesRefreshData.push({
+        r: result.r,
+        c: result.c,
+        v: CIRCULAR_REF_ERROR,
+        f: result.f,
+        id: result.id,
+      });
+      writeExecFunctionGlobalDataCell(ctx, result.r, result.c, result.id, {
+        v: CIRCULAR_REF_ERROR,
+        f: result.f,
+      });
+      continue;
+    }
+
+    if (Array.isArray(result.v)) {
+      evalFormulaCellInGroup(
+        ctx,
+        {
+          r: result.r,
+          c: result.c,
+          id: result.id,
+          calc_funcStr: result.f,
+        },
+        calcChainSet,
+        data,
+        impactedByCircular,
+        cycleNodes,
+      );
+      continue;
+    }
+
+    mergeFormulaDeps(ctx, formulaCellKey, result.deps);
+
+    if (result.isError) {
+      setCellError(ctx, result.r, result.c, {
+        row_column: `${result.r}_${result.c}`,
+        title: 'Error',
+        message: String(result.v ?? 'Unknown Error'),
+      });
+    } else {
+      clearCellError(ctx, result.r, result.c);
+    }
+
+    ctx.groupValuesRefreshData.push({
+      r: result.r,
+      c: result.c,
+      v: result.v,
+      f: result.f,
+      id: result.id,
+    });
+    writeExecFunctionGlobalDataCell(ctx, result.r, result.c, result.id, {
+      v: result.v,
+      f: result.f,
+    });
+  }
+}
+
+/** Run up to `chunkSize` formulas from an async job. Returns true when job is complete. */
+export function runFormulaEvalChunk(
+  ctx: Context,
+  job: FormulaAsyncEvalJob,
+  chunkSize = FORMULA_ASYNC_CHUNK_SIZE,
+): boolean {
+  ensureExecFunctionGlobalData(ctx);
+  const calcChainSet = new Set(job.calcChainKeys);
+  const impactedByCircular = new Set(job.impactedByCircular);
+  const cycleNodes = new Set(job.cycleNodes);
+  const data = getFlowdata(ctx);
+  const end = Math.min(job.nextIndex + chunkSize, job.formulaRunList.length);
+
+  for (let i = job.nextIndex; i < end; i += 1) {
+    const formulaCell = job.formulaRunList[i];
+    evalFormulaCellInGroup(
+      ctx,
+      formulaCell,
+      calcChainSet,
+      data,
+      impactedByCircular,
+      cycleNodes,
+    );
+  }
+
+  job.nextIndex = end;
+  const complete = end >= job.formulaRunList.length;
+  if (complete) {
+    ctx.formulaCache.execFunctionExist = undefined;
+    clearRangeValuePassCache(ctx.formulaCache);
+    ctx.formulaCache.execFunctionGlobalData = null;
+  }
+  return complete;
+}
+
 export function execFunctionGroup(
   ctx: Context,
   origin_r: number,
@@ -1784,6 +2220,10 @@ export function execFunctionGroup(
 ) {
   if (_.isNil(data)) {
     data = getFlowdata(ctx);
+  }
+
+  if (_.isNil(id)) {
+    id = ctx.currentSheetId;
   }
 
   // if (!window.luckysheet_compareWith) {
@@ -1802,12 +2242,8 @@ export function execFunctionGroup(
   // Start each group execution with a fresh pass-local cache so circular
   // propagation only reads values produced in the current recalculation pass.
   ctx.formulaCache.execFunctionGlobalData = {};
+  beginRangeValuePassCache(ctx.formulaCache);
   // let luckysheetfile = getluckysheetfile();
-  // let dynamicArray_compute = luckysheetfile[getSheetIndex(ctx.currentSheetId)_.isNil(]["dynamicArray_compute"]) ? {} : luckysheetfile[getSheetIndex(ctx.currentSheetId)]["dynamicArray_compute"];
-
-  if (_.isNil(id)) {
-    id = ctx.currentSheetId;
-  }
 
   const originKey = `${id}:${origin_r}:${origin_c}`;
   const cycleNodes = findCycleNodesFrom(originKey, ctx.formulaCache.depsByCell);
@@ -1823,7 +2259,7 @@ export function execFunctionGroup(
     [
       [
         ctx.formulaCache.execFunctionGlobalData[
-          `${origin_r}_${origin_c}_${id}`
+        `${origin_r}_${origin_c}_${id}`
         ],
       ],
     ] = cellCache;
@@ -1831,6 +2267,27 @@ export function execFunctionGroup(
 
   // { "r": r, "c": c, "id": id, "func": func}
   const calcChains = getAllFunctionGroup(ctx);
+  let calcChainsToProcess = calcChains;
+  if (
+    !isForce &&
+    !_.isNil(origin_r) &&
+    !_.isNil(origin_c) &&
+    !_.isNil(id) &&
+    ctx.formulaCache.revDepsByCell.size > 0
+  ) {
+    const dependents = collectTransitiveFormulaDependents(
+      originKey,
+      ctx.formulaCache.revDepsByCell,
+    );
+    ctx.formulaCache.formulasWithWideRangeDeps.forEach((formulaKey) => {
+      dependents.add(formulaKey);
+    });
+    if (dependents.size > 0) {
+      calcChainsToProcess = calcChains.filter((cell) =>
+        dependents.has(`${cell.id}:${cell.r}:${cell.c}`),
+      );
+    }
+  }
   const formulaObjects: any = {};
 
   const sheets = ctx.luckysheetfile;
@@ -1902,8 +2359,8 @@ export function execFunctionGroup(
 
   // 创建公式缓存及其范围的缓存
   // console.time("1");
-  for (let i = 0; i < calcChains.length; i += 1) {
-    const formulaCell = calcChains[i];
+  for (let i = 0; i < calcChainsToProcess.length; i += 1) {
+    const formulaCell = calcChainsToProcess[i];
     const key = `r${formulaCell.r}c${formulaCell.c}i${formulaCell.id}`;
     const calc_funcStr = getcellFormula(
       ctx,
@@ -2171,109 +2628,55 @@ export function execFunctionGroup(
   // console.timeEnd("3");
 
   // console.time("4");
+  if (formulaRunList.length >= FORMULA_ASYNC_EVAL_THRESHOLD) {
+    ctx.formulaAsyncEval = {
+      formulaRunList: formulaRunList.map((f: any) => ({
+        r: f.r,
+        c: f.c,
+        id: f.id,
+        calc_funcStr: f.calc_funcStr,
+        level: f.level,
+      })),
+      calcChainKeys: Array.from(calcChainSet),
+      impactedByCircular: Array.from(impactedByCircular),
+      cycleNodes: Array.from(cycleNodes),
+      workerSnapshotKey: `formula-job-${(formulaAsyncEvalJobId += 1)}`,
+      nextIndex: 0,
+      total: formulaRunList.length,
+      debug: {
+        mode: 'main-thread',
+        lastChunkMs: 0,
+        lastChunkSize: 0,
+        completedChunks: 0,
+        fallbackChunks: 0,
+        workerAvailable: false,
+        unsafeFormulaCount: 0,
+        workerFormulaCount: 0,
+        totalWorkerFormulas: 0,
+        totalMainThreadFormulas: 0,
+        lastError: null,
+      },
+    };
+    ctx.isFormulaCalculating = true;
+    return;
+  }
+
   for (let i = 0; i < formulaRunList.length; i += 1) {
     const formulaCell = formulaRunList[i];
-    if (formulaCell.level === Math.max) {
-      continue;
-    }
-
-    const { calc_funcStr } = formulaCell;
-
-    const formulaCellKey = `${formulaCell.id}:${formulaCell.r}:${formulaCell.c}`;
-    if (impactedByCircular.has(formulaCellKey)) {
-      const isInCycle = cycleNodes.has(formulaCellKey);
-      const message = isInCycle
-        ? 'Circular dependency.'
-        : 'Circular dependency (upstream).';
-      setCellError(ctx, formulaCell.r, formulaCell.c, {
-        row_column: `${formulaCell.r}_${formulaCell.c}`,
-        title: CIRCULAR_REF_TITLE,
-        message,
-      });
-
-      ctx.groupValuesRefreshData.push({
-        r: formulaCell.r,
-        c: formulaCell.c,
-        v: CIRCULAR_REF_ERROR,
-        f: calc_funcStr,
-        id: formulaCell.id,
-      });
-
-      ctx.formulaCache.execFunctionGlobalData[
-        `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
-      ] = {
-        v: CIRCULAR_REF_ERROR,
-        f: calc_funcStr,
-      };
-
-      continue;
-    }
-
-    const v = execfunction(
+    evalFormulaCellInGroup(
       ctx,
-      calc_funcStr,
-      formulaCell.r,
-      formulaCell.c,
-      formulaCell.id,
+      formulaCell,
       calcChainSet,
+      data,
+      impactedByCircular,
+      cycleNodes,
     );
-
-    const valueData = v?.[1];
-    const valueFunction = v?.[2];
-
-    if (Array.isArray(valueData)) {
-      // spill to grid
-      const spilled = spillSortResult(
-        ctx,
-        formulaCell.r,
-        formulaCell.c,
-        { v: valueData, f: valueFunction },
-        data, // flowdata for this sheet
-      );
-
-      if (spilled) {
-        const matrixTopLeftValue = Array.isArray(valueData[0])
-          ? valueData[0][0]
-          : valueData[0];
-
-        ctx.groupValuesRefreshData.push({
-          r: formulaCell.r,
-          c: formulaCell.c,
-          v: matrixTopLeftValue,
-          f: valueFunction,
-          spe: v[3],
-          id: formulaCell.id,
-        });
-
-        ctx.formulaCache.execFunctionGlobalData[
-          `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
-        ] = { v: matrixTopLeftValue, f: valueFunction };
-
-        continue;
-      }
-    }
-
-    ctx.groupValuesRefreshData.push({
-      r: formulaCell.r,
-      c: formulaCell.c,
-      v: v[1],
-      f: v[2],
-      spe: v[3],
-      id: formulaCell.id,
-    });
-
-    // _this.execFunctionGroupData[u.r][u.c] = value;
-    ctx.formulaCache.execFunctionGlobalData[
-      `${formulaCell.r}_${formulaCell.c}_${formulaCell.id}`
-    ] = {
-      v: v[1],
-      f: v[2],
-    };
   }
   // console.log(formulaRunList);
   // console.timeEnd("4");
 
   ctx.formulaCache.execFunctionExist = undefined;
+  clearRangeValuePassCache(ctx.formulaCache);
 }
 
 function findrangeindex(ctx: Context, v: string, vp: string) {
@@ -2974,7 +3377,7 @@ function helpFunctionExe(
       if (
         $cur?.classList?.contains('luckysheet-formula-text-func') ||
         _.trim($cur.textContent || '').toUpperCase() in
-          ctx.formulaCache.functionlistMap
+        ctx.formulaCache.functionlistMap
       ) {
         funcName = $cur.textContent;
         paramindex = null;
@@ -3922,9 +4325,8 @@ function cycleSingleA1RefLock(ref: string): string | null {
     nextColAbs = false;
     nextRowAbs = false;
   }
-  return `${sheetPrefix}${nextColAbs ? '$' : ''}${col.toUpperCase()}${
-    nextRowAbs ? '$' : ''
-  }${row}`;
+  return `${sheetPrefix}${nextColAbs ? '$' : ''}${col.toUpperCase()}${nextRowAbs ? '$' : ''
+    }${row}`;
 }
 
 function cycleReferenceLockToken(refText: string): string | null {
@@ -4133,13 +4535,11 @@ function functionStrChange_range(
       return `${prefix + $row0 + (r1 + 1)}:${$row1}${r2 + 1}`;
     }
     if (Number.isNaN(r1) && Number.isNaN(r2)) {
-      return `${
-        prefix + $col0 + indexToColumnChar(c1)
-      }:${$col1}${indexToColumnChar(c2)}`;
+      return `${prefix + $col0 + indexToColumnChar(c1)
+        }:${$col1}${indexToColumnChar(c2)}`;
     }
-    return `${
-      prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
-    }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
+    return `${prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
+      }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
   }
   if (type === 'add') {
     if (rc === 'row') {
@@ -4196,13 +4596,11 @@ function functionStrChange_range(
       return `${prefix + $row0 + (r1 + 1)}:${$row1}${r2 + 1}`;
     }
     if (Number.isNaN(r1) && Number.isNaN(r2)) {
-      return `${
-        prefix + $col0 + indexToColumnChar(c1)
-      }:${$col1}${indexToColumnChar(c2)}`;
+      return `${prefix + $col0 + indexToColumnChar(c1)
+        }:${$col1}${indexToColumnChar(c2)}`;
     }
-    return `${
-      prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
-    }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
+    return `${prefix + $col0 + indexToColumnChar(c1) + $row0 + (r1 + 1)
+      }:${$col1}${indexToColumnChar(c2)}${$row1}${r2 + 1}`;
   }
   return '';
 }
@@ -4805,8 +5203,8 @@ export function rangeSetValue(
     ctx.formulaCache.rangeSelectionActive === true;
   const spanToReplace = !_.isNil(ctx.formulaCache.rangechangeindex)
     ? ($editor.querySelector(
-        `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`,
-      ) as HTMLSpanElement | null)
+      `span[rangeindex='${ctx.formulaCache.rangechangeindex}']`,
+    ) as HTMLSpanElement | null)
     : null;
 
   if (activeRangeFlow && spanToReplace) {
@@ -5453,13 +5851,11 @@ function updateparam(orient: string, txt: string, step: number) {
     return `${prefix + $row0 + row[0]}:${$row1}${row[1]}`;
   }
   if (Number.isNaN(row[0]) && Number.isNaN(row[1])) {
-    return `${
-      prefix + $col0 + indexToColumnChar(col[0])
-    }:${$col1}${indexToColumnChar(col[1])}`;
+    return `${prefix + $col0 + indexToColumnChar(col[0])
+      }:${$col1}${indexToColumnChar(col[1])}`;
   }
-  return `${
-    prefix + $col0 + indexToColumnChar(col[0]) + $row0 + row[0]
-  }:${$col1}${indexToColumnChar(col[1])}${$row1}${row[1]}`;
+  return `${prefix + $col0 + indexToColumnChar(col[0]) + $row0 + row[0]
+    }:${$col1}${indexToColumnChar(col[1])}${$row1}${row[1]}`;
 }
 
 function downparam(txt: string, step: number) {
@@ -5681,14 +6077,12 @@ export function remapFormulaReferencesByMap(
 
       const head = remapOne(col0, row0);
       if (_.isNil(col1) || _.isNil(row1)) {
-        return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${
-          head.nextRow
-        }`;
+        return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${head.nextRow
+          }`;
       }
       const tail = remapOne(col1, row1);
-      return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${
-        head.nextRow
-      }:${colAbs1}${tail.nextCol}${rowAbs1}${tail.nextRow}`;
+      return `${sheetPrefix || ''}${colAbs0}${head.nextCol}${rowAbs0}${head.nextRow
+        }:${colAbs1}${tail.nextCol}${rowAbs1}${tail.nextRow}`;
     },
   );
 }
@@ -5710,9 +6104,8 @@ function formatRefToken(parts: {
   col: number;
   row: number;
 }) {
-  return `${parts.colAbs ? '$' : ''}${indexToColumnChar(parts.col)}${
-    parts.rowAbs ? '$' : ''
-  }${parts.row + 1}`;
+  return `${parts.colAbs ? '$' : ''}${indexToColumnChar(parts.col)}${parts.rowAbs ? '$' : ''
+    }${parts.row + 1}`;
 }
 
 function moveSingleRefToken(

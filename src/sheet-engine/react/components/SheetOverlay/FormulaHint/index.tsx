@@ -16,7 +16,7 @@ const FormulaHint = (props: any) => {
   const { showFormulaHint, handleShowFormulaHint, commaCount, functionName } =
     props;
   const dragHasMoved = useRef(false);
-  const { context } = useContext(WorkbookContext);
+  const { context, setContext } = useContext(WorkbookContext);
   const isFxOwner = getFormulaEditorOwner(context) === 'fx';
   const firstSelection = context.luckysheet_select_save?.[0];
   const { formulaMore } = locale(context);
@@ -148,13 +148,23 @@ const FormulaHint = (props: any) => {
     return `${r}, ${g}, ${b}`;
   };
 
-  const bgColor = (BRAND_SECONDARY_COLOR: string) => {
-    const bg = BRAND_SECONDARY_COLOR
-      ? `rgb(${hexToRgbString(BRAND_SECONDARY_COLOR)}, 0.4)`
-      : '#FFDF0A';
+  const bgColor = (BRAND_SECONDARY_COLOR: string) =>
+    `rgb(${hexToRgbString(BRAND_SECONDARY_COLOR)}, 0.55)`;
 
-    return bg;
-  };
+  const activeParameterClass = (index: number) =>
+    commaCount === index && !fn.BRAND_SECONDARY_COLOR
+      ? ' luckysheet-arguments-help-parameter-active'
+      : '';
+
+  const activeParameterStyle = (index: number) =>
+    commaCount === index && fn.BRAND_SECONDARY_COLOR
+      ? {
+          backgroundColor: bgColor(fn.BRAND_SECONDARY_COLOR),
+          boxShadow: `inset 0 0 0 1px ${fn.BRAND_SECONDARY_COLOR}`,
+          borderRadius: '3px',
+          padding: '1px 3px',
+        }
+      : undefined;
 
   useEffect(() => {
     setShowDelayedHint(false);
@@ -194,15 +204,13 @@ const FormulaHint = (props: any) => {
           >
             <button
               type="button"
-              className="fortune-formula-hint__icon fortune-formula-hint__action flex items-center justify-center w-4 h-4 rounded-full"
+              className="fortune-formula-hint__icon fortune-formula-hint__action flex items-center justify-center w-4 h-4 rounded-full color-bg-default-inverse color-text-inverse"
               style={{
-                backgroundColor: 'black',
                 zIndex: 2000,
                 position: 'absolute',
                 left: '327px',
                 top: '-8px',
                 padding: '2.4px',
-                color: 'white',
               }}
               onClick={handleShowFormulaHint}
               aria-label="Close formula hint"
@@ -218,7 +226,7 @@ const FormulaHint = (props: any) => {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="lucide lucide-x-icon lucide-x color-white"
+                className="lucide lucide-x-icon lucide-x"
               >
                 <path d="M18 6 6 18" />
                 <path d="m6 6 12 12" />
@@ -241,7 +249,7 @@ const FormulaHint = (props: any) => {
               borderColor: fn?.BRAND_SECONDARY_COLOR
                 ? fn?.BRAND_SECONDARY_COLOR
                 : 'rgba(0, 0, 0, 0.2)',
-              backgroundColor: `${fn.BRAND_COLOR ? fn.BRAND_COLOR : '#F8F9FA'}`,
+              backgroundColor: `${fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'}`,
               width: '340px',
               padding: '0px',
             }}
@@ -279,7 +287,7 @@ const FormulaHint = (props: any) => {
               data-testid="formula-hint-heading"
               style={{
                 backgroundColor: `${
-                  fn.BRAND_COLOR ? fn.BRAND_COLOR : '#F8F9FA'
+                  fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'
                 }`,
                 padding: '10px',
                 borderRadius: '10px',
@@ -318,14 +326,11 @@ const FormulaHint = (props: any) => {
                     return (
                       <>
                         <code
-                          className="luckysheet-arguments-help-parameter font-family-mono mb-1 mt-2 color-text-default"
+                          className={`luckysheet-arguments-help-parameter font-family-mono mb-1 mt-2 color-text-default${activeParameterClass(i)}`}
                           dir="auto"
                           key={name}
                           style={{
-                            backgroundColor:
-                              commaCount === i
-                                ? bgColor(fn.BRAND_SECONDARY_COLOR)
-                                : 'transparent',
+                            ...activeParameterStyle(i),
                             fontWeight: 'bold',
                           }}
                         >
@@ -370,7 +375,9 @@ const FormulaHint = (props: any) => {
                   <div
                     style={{
                       borderRadius: '4px',
-                      backgroundColor: `${isKeyAdded ? '#177E23' : '#e8ebec'}`,
+                      backgroundColor: isKeyAdded
+                        ? 'hsl(var(--color-bg-success))'
+                        : 'hsl(var(--color-border-default))',
                       width: '16px',
                       height: '16px',
                     }}
@@ -379,7 +386,9 @@ const FormulaHint = (props: any) => {
                     <LucideIcon
                       name="Key"
                       style={{
-                        color: isKeyAdded ? 'white' : '#77818A',
+                        color: isKeyAdded
+                          ? 'hsl(var(--color-text-inverse))'
+                          : 'hsl(var(--color-text-secondary))',
                         width: '12px',
                         height: '12px',
                       }}
@@ -401,7 +410,7 @@ const FormulaHint = (props: any) => {
                 id="function-details"
                 style={{
                   backgroundColor: `${
-                    fn.BRAND_COLOR ? fn.BRAND_COLOR : '#F8F9FA'
+                    fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'
                   }`,
                   maxHeight: '284px',
                   overflowY: 'scroll',
@@ -413,9 +422,11 @@ const FormulaHint = (props: any) => {
                     className="luckysheet-formula-help-content-api"
                     style={{
                       borderLeft: `4px solid ${
-                        isKeyAdded ? '#177E23' : '#e8ebec'
+                        isKeyAdded
+                          ? 'hsl(var(--color-bg-success))'
+                          : 'hsl(var(--color-border-default))'
                       }`,
-                      backgroundColor: 'white',
+                      backgroundColor: 'hsl(var(--color-bg-default))',
                       padding: '8px',
                       paddingBottom: '2px',
                       margin: '4px 4px 0px 4px',
@@ -499,7 +510,7 @@ const FormulaHint = (props: any) => {
                 <div
                   id="luckysheet-formula-help-content-example"
                   style={{
-                    backgroundColor: 'white',
+                    backgroundColor: 'hsl(var(--color-bg-default))',
                     padding: '6px',
                     margin: '4px 4px 0px 4px',
                     borderRadius: '4px',
@@ -537,11 +548,15 @@ const FormulaHint = (props: any) => {
                               dir="auto"
                               style={{
                                 color:
-                                  param.type === 'string' ? '#177E23' : 'black',
+                                  param.type === 'string'
+                                    ? 'hsl(var(--color-text-success))'
+                                    : 'hsl(var(--color-text-default))',
                               }}
                             >
                               {param.example}
-                              <span style={{ color: 'black' }}>
+                              <span
+                                style={{ color: 'hsl(var(--color-text-default))' }}
+                              >
                                 {i !== fn.p.length - 1 && ', '}
                               </span>
                             </span>
@@ -580,13 +595,10 @@ const FormulaHint = (props: any) => {
                       <div className="" key={param.name}>
                         <div>
                           <code
-                            className="font-family-mono mb-1 mt-2 color-text-default font-family-mono"
+                            className={`font-family-mono mb-1 mt-2 color-text-default font-family-mono${activeParameterClass(index)}`}
                             style={{
                               fontWeight: 600,
-                              backgroundColor:
-                                commaCount === index
-                                  ? bgColor(fn.BRAND_SECONDARY_COLOR)
-                                  : 'transparent',
+                              ...activeParameterStyle(index),
                             }}
                           >
                             {param.name}
@@ -624,7 +636,7 @@ const FormulaHint = (props: any) => {
               <div
                 style={{
                   backgroundColor: `${
-                    fn.BRAND_COLOR ? fn.BRAND_COLOR : '#F8F9FA'
+                    fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'
                   }`,
                   padding: '8px',
                   borderBottomLeftRadius: '10px',
@@ -634,6 +646,16 @@ const FormulaHint = (props: any) => {
               >
                 <div
                   onClick={() => {
+                    // The hint may show a caret-resolved function (e.g. the
+                    // inner call in a nested formula) that differs from
+                    // context.functionHint. The functions panel resolves the
+                    // formula from context.functionHint, so sync it to the
+                    // function this hint is actually displaying before opening.
+                    if (fn?.n) {
+                      setContext((draft) => {
+                        draft.functionHint = String(fn.n);
+                      });
+                    }
                     document.getElementById('function-button')?.click();
                   }}
                   className="color-text-link cursor-pointer text-helper-text-sm"
@@ -666,7 +688,7 @@ const FormulaHint = (props: any) => {
                         <path d="M12 17h.01" />
                       </svg>
                     </div>
-                    <span className="font-normal text-xs text-[#5c0aff]">
+                    <span className="font-normal text-xs color-text-link">
                       How to use imported contract?
                     </span>
                   </div>

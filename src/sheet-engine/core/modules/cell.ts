@@ -39,6 +39,7 @@ import {
   iscelldata,
   suppressFormulaRangeSelectionForInitialEdit,
 } from './formula';
+import { isFormulaEvalPending } from './formula-async-eval';
 import {
   convertSpanToShareString,
   getHyperlinksFromInlineSegments,
@@ -1685,6 +1686,9 @@ export function updateCell(
           delete curv.f;
           delete curv._formulaEditHtml;
           delete curv.spl;
+          // Drop the previous display string so `setCellValue` recomputes `m`
+          // from the new `v` (otherwise a stale mask like "4" survives a 4->5 edit).
+          delete curv.m;
 
           // FLV crypto denomination --START--
           const decemialCount = oldValue?.m?.toString().includes('.')
@@ -1851,7 +1855,7 @@ export function updateCell(
         (parseFloat(value?.v as string) / oldValue?.baseCurrencyPrice).toFixed(
           decemialCount || 2,
         )
-      } ${coin}`;
+        } ${coin}`;
     }
 
     // FLV crypto denomination --END--
@@ -1884,11 +1888,13 @@ export function updateCell(
               ctx.hooks.afterUpdateCell?.(r, c, oldValue, newValue),
             );
           }
-          ctx.formulaCache.execFunctionGlobalData = null;
+          if (!isFormulaEvalPending(ctx)) {
+            ctx.formulaCache.execFunctionGlobalData = null;
+          }
           return;
         }
       }
-    } catch (_e) {}
+    } catch (_e) { }
 
     // --- hyperlink support ---
     const hyperlinkKey = `${r}_${c}`;
@@ -1996,7 +2002,9 @@ export function updateCell(
       });
     }
 
-    ctx.formulaCache.execFunctionGlobalData = null;
+    if (!isFormulaEvalPending(ctx)) {
+      ctx.formulaCache.execFunctionGlobalData = null;
+    }
   } catch (e) {
     console.error(e);
     cancelNormalSelected(ctx);
@@ -2120,9 +2128,8 @@ export function getRangetxt(
     return sheettxt + indexToColumnChar(column0) + (row0 + 1);
   }
 
-  return `${
-    sheettxt + indexToColumnChar(column0) + (row0 + 1)
-  }:${indexToColumnChar(column1)}${row1 + 1}`;
+  return `${sheettxt + indexToColumnChar(column0) + (row0 + 1)
+    }:${indexToColumnChar(column1)}${row1 + 1}`;
 }
 
 // 把string A1:A2转为选区数组
@@ -2612,12 +2619,12 @@ export function getInlineStringHTML(
         const dataAttrs =
           !options?.useSemanticMarkup && link?.linkType && link?.linkAddress
             ? ` data-link-type='${String(link.linkType).replace(
-                /'/g,
-                '&#39;',
-              )}' data-link-address='${String(link.linkAddress).replace(
-                /'/g,
-                '&#39;',
-              )}'${isPlainLinkDecor ? " data-link-plain='1'" : ''}`
+              /'/g,
+              '&#39;',
+            )}' data-link-address='${String(link.linkAddress).replace(
+              /'/g,
+              '&#39;',
+            )}'${isPlainLinkDecor ? " data-link-plain='1'" : ''}`
             : '';
         if (options?.isRichTextCopy) {
           if (options?.useSemanticMarkup) {
@@ -2898,31 +2905,31 @@ function keepOnlyValueParts(cell: Cell | null | undefined): Cell | null {
 
   const sanitizedInlineCt = keepInlineStringContent
     ? {
-        ...(ct as { fa?: string; t?: string; tb?: string }),
-        s: ((ct as { s?: Array<Record<string, unknown>> }).s || []).map(
-          (seg) => {
-            const cleaned: Record<string, unknown> = {
-              v: String(seg?.v ?? ''),
+      ...(ct as { fa?: string; t?: string; tb?: string }),
+      s: ((ct as { s?: Array<Record<string, unknown>> }).s || []).map(
+        (seg) => {
+          const cleaned: Record<string, unknown> = {
+            v: String(seg?.v ?? ''),
+          };
+          // Keep hyperlink metadata as content.
+          // For hyperlink runs, preserve link decoration (fc/un) so clear-format
+          // does not remove visible link style (blue + underline).
+          const link = seg?.link as
+            | { linkType?: string; linkAddress?: string }
+            | undefined;
+          if (link?.linkType && link?.linkAddress) {
+            cleaned.link = {
+              linkType: link.linkType,
+              linkAddress: link.linkAddress,
             };
-            // Keep hyperlink metadata as content.
-            // For hyperlink runs, preserve link decoration (fc/un) so clear-format
-            // does not remove visible link style (blue + underline).
-            const link = seg?.link as
-              | { linkType?: string; linkAddress?: string }
-              | undefined;
-            if (link?.linkType && link?.linkAddress) {
-              cleaned.link = {
-                linkType: link.linkType,
-                linkAddress: link.linkAddress,
-              };
-              // Keep default hyperlink decoration after clear format.
-              cleaned.fc = 'rgb(0, 0, 255)';
-              cleaned.un = 1;
-            }
-            return cleaned;
-          },
-        ),
-      }
+            // Keep default hyperlink decoration after clear format.
+            cleaned.fc = 'rgb(0, 0, 255)';
+            cleaned.un = 1;
+          }
+          return cleaned;
+        },
+      ),
+    }
     : undefined;
 
   if (

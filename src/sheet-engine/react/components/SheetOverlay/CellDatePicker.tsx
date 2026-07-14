@@ -152,7 +152,7 @@ const CellDatePicker: React.FC<{ variant?: CellDatePickerVariant }> = ({
     <div
       className={cn(
         'luckysheet-cell-date-picker-panel',
-        'pointer-events-auto rounded-lg border border-black/10 bg-white p-2 shadow-md',
+        'pointer-events-auto rounded-lg border color-border-default color-bg-default p-2 shadow-md',
       )}
       style={{
         zIndex: 1005,

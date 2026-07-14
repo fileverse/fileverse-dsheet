@@ -351,8 +351,7 @@ function useEditCellBoxDimensions(
   globalCache: GlobalCache,
 ): { width: number; height: number } | null {
   const editing = (context.luckysheetCellUpdate?.length ?? 0) > 0;
-  const focusCol =
-    firstSelection?.column_focus ?? firstSelection?.column?.[0];
+  const focusCol = firstSelection?.column_focus ?? firstSelection?.column?.[0];
   const focusRow = firstSelection?.row_focus ?? firstSelection?.row?.[0];
 
   const layoutWidth = useMemo(() => {
@@ -689,7 +688,6 @@ const InputBox: React.FC = () => {
     }
     if (firstSelection && context.luckysheetCellUpdate.length > 0) {
       if (refs.globalCache.doNotUpdateCell) {
-        delete refs.globalCache.doNotUpdateCell;
         return;
       }
       // Same cell as last applied layout pass: never re-hydrate from sheet or move
@@ -855,6 +853,10 @@ const InputBox: React.FC = () => {
       resetFormulaHistory();
     }
   }, [context.luckysheetCellUpdate, resetFormulaHistory, refs.globalCache]);
+
+  useEffect(() => {
+    delete refs.globalCache.doNotUpdateCell;
+  }, [context.luckysheetCellUpdate, refs.globalCache]);
 
   // Keep link insert offsets accurate when toolbar/modals steal focus: refresh snapshot on caret moves.
   const contextRefForLinkSnapshot = useRef(context);

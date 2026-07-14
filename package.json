@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "2.1.5",
+  "version": "3.0.0",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -52,7 +52,8 @@
     "@fileverse-dev/dsheets-templates": "^0.0.29",
     "@fileverse-dev/formulajs": "^4.4.53",
     "@fileverse/crypto": "^0.0.22",
-    "@fileverse/ui": "^5.0.0",
+    "@fileverse/ens": "^0.0.4",
+    "@fileverse/ui": "^5.1.9",
     "@noble/ciphers": "^2.2.0",
     "@noble/curves": "^2.2.0",
     "@stablelib/ed25519": "^2.1.0",
@@ -80,7 +81,8 @@
     "xlsx-js-style": "^1.2.0",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
-    "yjs": "^13.6.15"
+    "yjs": "^13.6.15",
+    "viem": "^2.35.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.23",

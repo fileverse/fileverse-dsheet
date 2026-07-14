@@ -400,7 +400,7 @@ const DataVerification: React.FC = () => {
                 size="sm"
                 onClick={rangeOnClick}
                 onChange={rangeOnChange}
-                style={{ cursor: 'pointer', color: '#363B3F' }}
+                style={{ cursor: 'pointer', color: 'hsl(var(--color-text-default))' }}
               />
             }
             aria-hidden="true"

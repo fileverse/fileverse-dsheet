@@ -116,8 +116,8 @@ const CF_DIALOG_DEFAULT_CELL_COLOR = '#DDFBDF';
 function formatStateFromSavedCfRule(rule: any) {
   const f = rule?.format ?? {};
   return {
-    textColor: (f.textColor as string) || CF_DIALOG_DEFAULT_TEXT_COLOR,
-    cellColor: (f.cellColor as string) || CF_DIALOG_DEFAULT_CELL_COLOR,
+    textColor: f.textColor ?? CF_DIALOG_DEFAULT_TEXT_COLOR,
+    cellColor: f.cellColor ?? CF_DIALOG_DEFAULT_CELL_COLOR,
     bold: !!f.bold,
     italic: !!f.italic,
     underline: !!f.underline,
@@ -268,15 +268,15 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
 
     if (buttonClickCreateRef.current) return;
 
-    if (matchedCondition.length >= 0) {
+    if (matchedCondition.length > 0) {
       setCreate(false);
-    }
-
-    if (firstRenderRef.current && matchedCondition.length <= 0) {
+    } else if (firstRenderRef.current) {
+      skipNextSelectionSyncRef.current = true;
       setCreate(true);
+      setEditConditionRange(selectionRangeTxt || '');
       firstRenderRef.current = false;
     }
-  }, [context]);
+  }, [context, create, selectionRangeTxt]);
 
   useEffect(() => {
     if (editConditionRange !== null) return;
@@ -510,8 +510,14 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
         ctx.conditionRules = {
           rulesType: 'greaterThan',
           rulesValue: '',
-          textColor: { check: true, color: '#000000' },
-          cellColor: { check: true, color: '#000000' },
+          textColor: {
+            check: true,
+            color: CF_DIALOG_DEFAULT_TEXT_COLOR,
+          },
+          cellColor: {
+            check: true,
+            color: CF_DIALOG_DEFAULT_CELL_COLOR,
+          },
           font: {
             bold: false,
             italic: false,
@@ -562,37 +568,12 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
     ],
   );
 
-  // rulesValue初始化 (range picker results are handled when dialog closes — see rangeDialogWasOpenRef effect)
+  // Keep rulesType in sync when the user changes condition type in the form.
   useEffect(() => {
     setContext((ctx) => {
       ctx.conditionRules.rulesType = type;
-
-      if (!ctx.rangeDialog) return;
-      const rangeDialogType = ctx.rangeDialog.type;
-      if (rangeDialogType === '') {
-        ctx.conditionRules = {
-          rulesType: type,
-          rulesValue: context.conditionRules.rulesValue || '',
-          textColor: { check: true, color: '#000000' },
-          cellColor: { check: true, color: '#000000' },
-          font: {
-            bold: false,
-            italic: false,
-            underline: false,
-            strikethrough: false,
-          },
-          betweenValue: { value1: '', value2: '' },
-          datePreset: 'today',
-          dateFormat: CF_DATE_DEFAULT_FORMAT,
-          dateValue: '',
-          repeatValue: '0',
-          projectValue: '10',
-        };
-      }
     });
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [type]);
+  }, [type, setContext]);
 
   /*
   const cellHighlightConditionList = [
@@ -914,8 +895,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                     setEditConditionFormatValue(
                       allConditionFormats[key].conditionValue,
                     );
+                    setCreate(true);
+                    buttonClickCreateRef.current = true;
                   }}
-                  className={`group flex items-center border-b border-gray-200 condition-list-parent fortune-condition-rules__item fortune-condition-rules__item--${String(
+                  className={`group flex items-center border-b color-border-default condition-list-parent fortune-condition-rules__item fortune-condition-rules__item--${String(
                     key,
                   )
                     .replace(/[^a-zA-Z0-9-]/g, '-')
@@ -1366,7 +1349,7 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       </SelectItem>
                       <SelectItem
                         value="exact"
-                        className="border-t border-gray-200 mt-1"
+                        className="border-t color-border-default mt-1"
                       >
                         {conditionformat.cfDatePreset_exact}
                       </SelectItem>

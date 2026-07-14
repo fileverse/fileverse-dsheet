@@ -1,6 +1,7 @@
 import { Context, getFlowdata } from '../context';
 import { CellMatrix, Selection } from '../types';
 import { execFunctionGroup } from './formula';
+import { isFormulaEvalPending } from './formula-async-eval';
 
 function runExecFunction(
   ctx: Context,
@@ -19,7 +20,9 @@ function runExecFunction(
   ctx.formulaCache.execFunctionExist.reverse();
   // @ts-ignore
   execFunctionGroup(ctx, null, null, null, null, data);
-  ctx.formulaCache.execFunctionGlobalData = null;
+  if (!isFormulaEvalPending(ctx)) {
+    ctx.formulaCache.execFunctionGlobalData = null;
+  }
 }
 
 export function jfrefreshgrid(

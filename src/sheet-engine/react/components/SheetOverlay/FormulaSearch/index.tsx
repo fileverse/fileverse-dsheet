@@ -180,7 +180,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
             </div>
             {!isAuthorized && (
               <div
-                style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
+                style={{ marginBottom: '8px', backgroundColor: 'hsl(var(--color-bg-secondary))' }}
                 className="w-full flex flex-col p-2 gap-1"
               >
                 <h4 className="font-semibold">dSheets account required</h4>
@@ -188,7 +188,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                   Use more onchain functions by creating a dSheets account.{' '}
                   <span
                     className="sign-fortune"
-                    style={{ color: '#5C0AFF', cursor: 'pointer' }}
+                    style={{ color: 'hsl(var(--color-text-link))', cursor: 'pointer' }}
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -269,11 +269,11 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                           <div
                             style={{
                               borderRadius: '4px',
-                              backgroundColor: `${
-                                localStorage.getItem(v.API_KEY)
-                                  ? '#177E23'
-                                  : '#e8ebec'
-                              }`,
+                              backgroundColor: localStorage.getItem(
+                                v.API_KEY,
+                              )
+                                ? 'hsl(var(--color-bg-success))'
+                                : 'hsl(var(--color-border-default))',
                               width: '16px',
                               height: '16px',
                             }}
@@ -283,8 +283,8 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                               name="Key"
                               style={{
                                 color: localStorage.getItem(v.API_KEY)
-                                  ? 'white'
-                                  : '#77818A',
+                                  ? 'hsl(var(--color-text-inverse))'
+                                  : 'hsl(var(--color-text-secondary))',
                                 width: '12px',
                                 height: '12px',
                               }}
@@ -356,11 +356,11 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                             <div
                               style={{
                                 borderRadius: '4px',
-                                backgroundColor: `${
-                                  localStorage.getItem(v.API_KEY)
-                                    ? '#177E23'
-                                    : '#e8ebec'
-                                }`,
+                                backgroundColor: localStorage.getItem(
+                                  v.API_KEY,
+                                )
+                                  ? 'hsl(var(--color-bg-success))'
+                                  : 'hsl(var(--color-border-default))',
                                 width: '16px',
                                 height: '16px',
                               }}
@@ -370,8 +370,8 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                                 name="Key"
                                 style={{
                                   color: localStorage.getItem(v.API_KEY)
-                                    ? 'white'
-                                    : '#77818A',
+                                    ? 'hsl(var(--color-text-inverse))'
+                                    : 'hsl(var(--color-text-secondary))',
                                   width: '12px',
                                   height: '12px',
                                 }}
@@ -391,7 +391,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
               <span>
                 {!isAuthorized && (
                   <div
-                    style={{ marginBottom: '8px', backgroundColor: '#F8F9FA' }}
+                    style={{ marginBottom: '8px', backgroundColor: 'hsl(var(--color-bg-secondary))' }}
                     className="w-full flex flex-col p-2 gap-1"
                   >
                     <h4
@@ -404,7 +404,7 @@ const FormulaSearch: React.FC<FormulaSearchProps> = ({
                       Use more onchain functions by creating a dSheets account.{' '}
                       <span
                         className="sign-fortune"
-                        style={{ color: '#5C0AFF', cursor: 'pointer' }}
+                        style={{ color: 'hsl(var(--color-text-link))', cursor: 'pointer' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
