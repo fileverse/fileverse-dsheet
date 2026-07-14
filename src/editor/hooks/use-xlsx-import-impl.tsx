@@ -42,6 +42,14 @@ function isCheckboxPair(a: string, b: string): boolean {
 
 const POST_IMPORT_RECALC_MAX_FRAMES = 200;
 
+function generateImportSheetId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `sheet-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function richTextRunsToPlainText(ctS: unknown): string | null {
   if (!Array.isArray(ctS) || ctS.length === 0) return null;
   const text = ctS.map((seg) => String((seg as any)?.v ?? '')).join('');
@@ -622,6 +630,13 @@ export type XlsxImportRuntimeDeps = {
   setFilterToastShown: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
+export type XlsxImportOptions = {
+  headless?: boolean;
+  suppressUiWarnings?: boolean;
+  onWarning?: (warning: string) => void;
+  generateSheetId?: () => string;
+};
+
 /** Full XLSX import pipeline; loaded only when user imports a file. */
 export async function runXlsxFileUpload(
   {
@@ -637,6 +652,7 @@ export async function runXlsxFileUpload(
   event: React.ChangeEvent<HTMLInputElement> | undefined,
   fileArg: File,
   importType?: 'new-dsheet' | 'merge-current-dsheet' | 'new-current-dsheet',
+  options?: XlsxImportOptions,
 ): Promise<void> {
     const input = event?.target;
     if (!input?.files?.length && !fileArg) {
@@ -651,6 +667,7 @@ export async function runXlsxFileUpload(
     /** conditional formatting per sheet: sheetIndex -> luckysheet_conditionformat_save array */
     const conditionFormatBySheet: Record<number, Record<string, unknown>[]> =
       {};
+    let unsupportedFilterWarningReported = false;
 
     return new Promise<void>((resolve, reject) => {
       const reader = new FileReader();
@@ -826,13 +843,18 @@ export async function runXlsxFileUpload(
             // Log table data if present (for inspection purposes)
             const wsTables = (ws as any).tables;
             if (wsTables && Object.keys(wsTables).length > 0) {
-              toast({
-                title: 'Tables are not fully supported',
-                description: 'Table styles will not be applied',
-                variant: 'warning',
-                showCloseButton: true,
-                duration: 40 * 1000,
-              });
+              options?.onWarning?.(
+                'Tables are not fully supported. Table styles will not be applied.',
+              );
+              if (!options?.suppressUiWarnings) {
+                toast({
+                  title: 'Tables are not fully supported',
+                  description: 'Table styles will not be applied',
+                  variant: 'warning',
+                  showCloseButton: true,
+                  duration: 40 * 1000,
+                });
+              }
             }
 
             // Extract data validation for this sheet (row_column keys for dataVerification)
@@ -915,14 +937,22 @@ export async function runXlsxFileUpload(
 
             const autoFilter = (ws as any).autoFilter;
             if (autoFilter) {
+              if (!unsupportedFilterWarningReported) {
+                unsupportedFilterWarningReported = true;
+                options?.onWarning?.(
+                  'Filters are not supported in imported files.',
+                );
+              }
               if (!filterToastShown) {
                 setFilterToastShown(true);
-                toast({
-                  title: 'Filters are not supported in imported files',
-                  variant: 'warning',
-                  showCloseButton: true,
-                  duration: 30 * 1000,
-                });
+                if (!options?.suppressUiWarnings) {
+                  toast({
+                    title: 'Filters are not supported in imported files',
+                    variant: 'warning',
+                    showCloseButton: true,
+                    duration: 30 * 1000,
+                  });
+                }
               }
             }
           }); // close workbook.eachSheet
@@ -961,9 +991,10 @@ export async function runXlsxFileUpload(
                 sheet.column = Math.max(lastCol, 36);
 
                 if (!sheet.id) {
-                  sheet.id = sheetEditorRef.current
-                    ?.getSettings()
-                    .generateSheetId();
+                  sheet.id =
+                    options?.generateSheetId?.() ??
+                    sheetEditorRef.current?.getSettings().generateSheetId() ??
+                    generateImportSheetId();
                 }
                 // Attach freeze pane info
                 if (frozenBySheet[sheetIndex]) {
@@ -1326,7 +1357,9 @@ export async function runXlsxFileUpload(
                 currentDataRef.current = plain;
                 setForceSheetRender((prev: number) => prev + 1);
               }
-              schedulePostImportFormulaRecalc(sheetEditorRef);
+              if (!options?.headless) {
+                schedulePostImportFormulaRecalc(sheetEditorRef);
+              }
               // @ts-expect-error later
               const fileName = removeFileExtension(exportJson?.info?.name);
               updateDocumentTitle?.(fileName);
@@ -1335,9 +1368,11 @@ export async function runXlsxFileUpload(
           );
         } catch (error) {
           console.error('Error loading the workbook', error);
-          alert(
-            'Error loading the workbook. Please ensure it is a valid .xlsx file.',
-          );
+          if (!options?.suppressUiWarnings && typeof alert !== 'undefined') {
+            alert(
+              'Error loading the workbook. Please ensure it is a valid .xlsx file.',
+            );
+          }
           reject(error);
         }
       };

@@ -20,6 +20,7 @@ export const handleCSVUpload = (
   importType?: string,
   handleContentPortal?: any,
   separatorType?: string,
+  options?: { suppressUiWarnings?: boolean },
 ): Promise<void> => {
   const input = event?.target;
   if (!input?.files?.length && !fileArg) {
@@ -49,7 +50,9 @@ export const handleCSVUpload = (
           complete: (results) => {
             if (results.errors.length > 0 && results.data.length === 0) {
               console.error('CSV Parsing errors:', results.errors);
-              alert('Error parsing CSV file');
+              if (!options?.suppressUiWarnings && typeof alert !== 'undefined') {
+                alert('Error parsing CSV file');
+              }
               reject(new Error('Error parsing CSV file'));
               return;
             }

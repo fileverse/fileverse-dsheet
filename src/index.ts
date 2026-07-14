@@ -56,6 +56,12 @@ export { TEMPLATES } from '@fileverse-dev/dsheets-templates/template-metadata-li
 
 // Import/Export utilities
 export { handleCSVUpload } from './editor/utils/csv-import';
+export {
+  importSpreadsheetFile,
+  type ImportSpreadsheetFileOptions,
+  type ImportSpreadsheetFileResult,
+  type SpreadsheetImportFileType,
+} from './editor/utils/spreadsheet-import';
 export { handleExportToXLSX } from './editor/utils/xlsx-export';
 export { handleExportToCSV } from './editor/utils/csv-export';
 export { handleExportToJSON } from './editor/utils/json-export';
