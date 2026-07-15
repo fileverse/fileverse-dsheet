@@ -410,7 +410,7 @@ export const useEditorData = (
      * the live workbook value — otherwise it is a redundant echo (see the
      * cross-peer config remount ping-pong) and must NOT trigger another remount.
      */
-    const LAYOUT_OBJECT_KEYS = new Set(['config', 'frozen']);
+    const LAYOUT_OBJECT_KEYS = new Set(['frozen']);
 
     /** True only when a sheet tab is inserted/removed on the top-level Y.Array. */
     const isSheetTabArrayChange = (event: Y.YEvent<any>): boolean => {
@@ -457,6 +457,12 @@ export const useEditorData = (
         sheetId: string;
         field: string;
         map: Y.Map<any>;
+        changedKeys: Map<string, { action: string }>;
+      };
+      type ConfigSubKeyBatch = {
+        sheetId: string;
+        configMap: Y.Map<any>;
+        changedKeys: Map<string, { action: string }>;
       };
       type ConditionFormatBatch = {
         sheetId: string;
@@ -466,6 +472,7 @@ export const useEditorData = (
       const dataVerificationUpdates = new Map<string, DataVerificationBatch>();
       const filterUpdates = new Map<string, FilterBatch>();
       const mapFieldUpdates = new Map<string, MapFieldBatch>();
+      const configUpdates = new Map<string, ConfigSubKeyBatch>();
       const conditionFormatUpdates = new Map<string, ConditionFormatBatch>();
       const sheetMetaUpdates = new Map<
         string,
@@ -478,6 +485,42 @@ export const useEditorData = (
       const indexOnlyEvents: Y.YEvent<any>[] = [];
       let hasStructural = false;
       const sheetsArr = sheetArray.toArray();
+
+      const mergeYMapChangedKeys = (
+        existing: Map<string, { action: string }> | undefined,
+        event: Y.YMapEvent<any>,
+      ) => {
+        const merged = existing ?? new Map<string, { action: string }>();
+        event.changes.keys.forEach((change, key) => {
+          merged.set(key, change);
+        });
+        return merged;
+      };
+
+      const upsertMapFieldBatch = (
+        batchKey: string,
+        batch: Omit<MapFieldBatch, 'changedKeys'>,
+        event: Y.YMapEvent<any>,
+      ) => {
+        const existing = mapFieldUpdates.get(batchKey);
+        mapFieldUpdates.set(batchKey, {
+          ...batch,
+          changedKeys: mergeYMapChangedKeys(existing?.changedKeys, event),
+        });
+      };
+
+      const upsertConfigBatch = (
+        sheetId: string,
+        configMap: Y.Map<any>,
+        event: Y.YMapEvent<any>,
+      ) => {
+        const existing = configUpdates.get(sheetId);
+        configUpdates.set(sheetId, {
+          sheetId,
+          configMap,
+          changedKeys: mergeYMapChangedKeys(existing?.changedKeys, event),
+        });
+      };
 
       for (const event of events) {
         const path = event.path;
@@ -554,6 +597,27 @@ export const useEditorData = (
           filterUpdates.set(sheetId, { sheetId, sheetMap });
         } else if (
           path.length === 2 &&
+          path[1] === 'config' &&
+          typeof path[0] === 'number'
+        ) {
+          const sheetMap = sheetsArr[path[0] as number];
+          if (!(sheetMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          const sheetId = sheetMap.get('id') as string;
+          const configMap = sheetMap.get('config');
+          if (!sheetId || !(configMap instanceof Y.Map)) {
+            hasStructural = true;
+            continue;
+          }
+          upsertConfigBatch(
+            sheetId,
+            configMap,
+            event as Y.YMapEvent<any>,
+          );
+        } else if (
+          path.length === 2 &&
           (path[1] === 'hyperlink' || path[1] === 'conditionRules') &&
           typeof path[0] === 'number'
         ) {
@@ -569,11 +633,11 @@ export const useEditorData = (
             hasStructural = true;
             continue;
           }
-          mapFieldUpdates.set(`${sheetId}:${field}`, {
-            sheetId,
-            field,
-            map: fieldMap,
-          });
+          upsertMapFieldBatch(
+            `${sheetId}:${field}`,
+            { sheetId, field, map: fieldMap },
+            event as Y.YMapEvent<any>,
+          );
         } else if (
           path.length === 2 &&
           path[1] === 'luckysheet_conditionformat_save' &&
@@ -631,7 +695,8 @@ export const useEditorData = (
                   SURGICAL_OVERLAY_KEYS.has(k) ||
                   SURGICAL_MAP_FIELD_KEYS.has(k) ||
                   SURGICAL_OBJECT_FIELD_KEYS.has(k) ||
-                  k === 'luckysheet_conditionformat_save',
+                  k === 'luckysheet_conditionformat_save' ||
+                  k === 'config',
               )
             ) {
               // color/hide have no imperative WorkbookInstance API — must remount.
@@ -689,13 +754,29 @@ export const useEditorData = (
                   .forEach((field) => {
                     const fieldMap = sheetMap.get(field);
                     if (fieldMap instanceof Y.Map) {
-                      mapFieldUpdates.set(`${sheetId}:${field}`, {
-                        sheetId,
-                        field,
-                        map: fieldMap,
-                      });
+                      upsertMapFieldBatch(
+                        `${sheetId}:${field}`,
+                        { sheetId, field, map: fieldMap },
+                        event as Y.YMapEvent<any>,
+                      );
                     }
                   });
+                if (changedKeys.includes('config')) {
+                  const configMap = sheetMap.get('config');
+                  if (configMap instanceof Y.Map) {
+                    const merged = new Map<string, { action: string }>();
+                    configMap.forEach((_v, k) =>
+                      merged.set(k, { action: 'update' }),
+                    );
+                    configUpdates.set(sheetId, {
+                      sheetId,
+                      configMap,
+                      changedKeys: merged,
+                    });
+                  } else {
+                    hasStructural = true;
+                  }
+                }
                 if (changedKeys.includes('luckysheet_conditionformat_save')) {
                   const rulesArr = sheetMap.get(
                     'luckysheet_conditionformat_save',
@@ -711,10 +792,7 @@ export const useEditorData = (
               }
             }
 
-            // Fix B: a config/frozen-only remote change should remount ONLY if
-            // the value actually differs from the live workbook value. A
-            // redundant echo (identical value, fresh reference) is skipped so
-            // it cannot drive a remount loop.
+            // Fix B: frozen-only remote change remounts only when value differs.
             if (
               changedKeys.length > 0 &&
               changedKeys.every((k) => LAYOUT_OBJECT_KEYS.has(k))
@@ -755,6 +833,7 @@ export const useEditorData = (
           dataVerificationUpdates.size > 0 ||
           filterUpdates.size > 0 ||
           mapFieldUpdates.size > 0 ||
+          configUpdates.size > 0 ||
           conditionFormatUpdates.size > 0
         )
           continue;
@@ -781,6 +860,7 @@ export const useEditorData = (
         ...dataVerificationUpdates.keys(),
         ...filterUpdates.keys(),
         ...Array.from(mapFieldUpdates.values()).map((b) => b.sheetId),
+        ...configUpdates.keys(),
         ...conditionFormatUpdates.keys(),
       ];
       const hasUnknownSheet = remoteSheetIds.some(
@@ -961,18 +1041,52 @@ export const useEditorData = (
       };
 
       const applyRemoteMapFields = () => {
-        for (const { sheetId, field, map } of mapFieldUpdates.values()) {
+        for (const { sheetId, field, map, changedKeys } of mapFieldUpdates.values()) {
           try {
-            const json = map.toJSON();
-            sheetEditorRef.current?.setSheetMapField?.(
+            const updates: Record<string, any> = {};
+            const deleteKeys: string[] = [];
+            changedKeys.forEach(({ action }, key) => {
+              if (action === 'delete') {
+                deleteKeys.push(key);
+              } else {
+                updates[key] = map.get(key);
+              }
+            });
+            sheetEditorRef.current?.patchSheetMapField?.(
               field,
-              Object.keys(json).length > 0 ? json : undefined,
+              updates,
+              deleteKeys,
               { id: sheetId },
             );
           } catch (error) {
             console.warn(
               '[DSheet] Skipped remote map field apply — workbook not ready',
               { sheetId, field, error },
+            );
+          }
+        }
+      };
+
+      const applyRemoteConfig = () => {
+        for (const { sheetId, configMap, changedKeys } of configUpdates.values()) {
+          try {
+            const partial: Record<string, any> = {};
+            const deleteKeys: string[] = [];
+            changedKeys.forEach(({ action }, key) => {
+              if (action === 'delete') {
+                deleteKeys.push(key);
+              } else {
+                partial[key] = configMap.get(key);
+              }
+            });
+            sheetEditorRef.current?.setSheetConfigFields?.(partial, {
+              id: sheetId,
+              deleteKeys,
+            });
+          } catch (error) {
+            console.warn(
+              '[DSheet] Skipped remote config apply — workbook not ready',
+              { sheetId, error },
             );
           }
         }
@@ -1027,6 +1141,9 @@ export const useEditorData = (
         if (mapFieldUpdates.size > 0) {
           applyRemoteMapFields();
         }
+        if (configUpdates.size > 0) {
+          applyRemoteConfig();
+        }
         if (conditionFormatUpdates.size > 0) {
           applyRemoteConditionFormat();
         }
@@ -1038,6 +1155,7 @@ export const useEditorData = (
             dataVerificationUpdates.size > 0 ||
             filterUpdates.size > 0 ||
             mapFieldUpdates.size > 0 ||
+            configUpdates.size > 0 ||
             conditionFormatUpdates.size > 0)
         ) {
           syncPlainSnapshot();
@@ -1079,6 +1197,7 @@ export const useEditorData = (
           dataVerificationUpdates.size > 0 ||
           filterUpdates.size > 0 ||
           mapFieldUpdates.size > 0 ||
+          configUpdates.size > 0 ||
           conditionFormatUpdates.size > 0
         ) {
           syncPlainSnapshot();

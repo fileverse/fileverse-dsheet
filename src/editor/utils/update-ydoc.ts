@@ -364,6 +364,36 @@ export const updateYdocSheetData = (
         return;
       }
 
+      // config sub-keys (borderInfo, merge, rowlen, …) stored as Y.Map on sheet
+      if (path.length === 2 && path[0] === 'config') {
+        const configKey = path[1];
+        let configMap = sheet.get('config');
+        if (!(configMap instanceof Y.Map)) {
+          configMap = new Y.Map();
+          const existing = sheet.get('config');
+          if (
+            existing &&
+            typeof existing === 'object' &&
+            !(existing instanceof Y.Map) &&
+            !safeIsArray(existing)
+          ) {
+            Object.entries(existing as Record<string, unknown>).forEach(
+              ([k, v]) => {
+                configMap.set(k, v);
+              },
+            );
+          }
+          sheet.set('config', configMap);
+        }
+
+        if (type === 'delete') {
+          configMap.delete(configKey);
+        } else {
+          setMapValueSafe(configMap, configKey, value, { skipIfEqual: true });
+        }
+        return;
+      }
+
       /**
        * ===== NORMAL PATH WALK =====
        */

@@ -239,7 +239,7 @@ export const createSheetLengthChangeHandler = ({
         ySheet.set('row', sheet.row ?? 500);
         ySheet.set('column', sheet.column ?? 36);
         ySheet.set('status', 1);
-        ySheet.set('config', sheet.config ?? {});
+        ySheet.set('config', toYMapFromObject(sheet.config ?? {}));
         ySheet.set('celldata', toCellMap(sheet));
         ySheet.set('calcChain', toCalcChainMap(sheet));
         ySheet.set(
