@@ -2,7 +2,7 @@ import { DEFAULT_FONT_SIZE } from '../paste-table-helpers';
 import { getSheetIndex } from '../utils';
 import { Context, getFlowdata } from '../context';
 import { Cell, Sheet } from '../types';
-import { setRowHeight } from '../api';
+import { setRowHeight, setColumnWidth } from '../api';
 
 const DEFAULT_FONT_FAMILY =
   'Helvetica Neue, system-ui, Roboto, Lato, Segoe UI, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Arial, sans-serif';
@@ -220,28 +220,55 @@ export const updateSheetCellSizes = (
   const columnWidthsConfig = config.columnlen;
 
   const defaultRowHeight = sheetFile.defaultRowHeight ?? 19;
+  const defaultColumnWidth = sheetFile.defaultColWidth ?? ctx.defaultcollen ?? 73;
 
+  const rowUpdates: Record<string, number> = {};
   Object.entries(measurements.rowMax).forEach(
     ([rowIndexString, requiredHeight]) => {
       const rowIndex = Number(rowIndexString);
       const currentHeight = rowHeightsConfig[rowIndex] ?? defaultRowHeight;
 
-      if (requiredHeight > currentHeight) {
+      if (
+        requiredHeight > currentHeight &&
+        requiredHeight !== defaultRowHeight
+      ) {
         rowHeightsConfig[rowIndex] = requiredHeight;
+        rowUpdates[String(rowIndex)] = requiredHeight;
+      } else if (
+        requiredHeight <= defaultRowHeight &&
+        rowHeightsConfig[rowIndex] != null
+      ) {
+        delete rowHeightsConfig[rowIndex];
       }
     },
   );
 
+  const colUpdates: Record<string, number> = {};
   Object.entries(measurements.colMax).forEach(
     ([colIndexString, requiredWidth]) => {
       const colIndex = Number(colIndexString);
-      const currentWidth = columnWidthsConfig[colIndex] ?? 0;
+      const currentWidth = columnWidthsConfig[colIndex] ?? defaultColumnWidth;
       const cappedWidth = Math.min(requiredWidth, maxColumnWidth);
 
-      if (cappedWidth > currentWidth) {
+      if (
+        cappedWidth > currentWidth &&
+        cappedWidth !== defaultColumnWidth
+      ) {
         columnWidthsConfig[colIndex] = cappedWidth;
+        colUpdates[String(colIndex)] = cappedWidth;
+      } else if (
+        cappedWidth <= defaultColumnWidth &&
+        columnWidthsConfig[colIndex] != null
+      ) {
+        delete columnWidthsConfig[colIndex];
       }
     },
   );
-  setRowHeight(ctx, rowHeightsConfig);
+
+  if (Object.keys(rowUpdates).length > 0) {
+    setRowHeight(ctx, rowUpdates);
+  }
+  if (Object.keys(colUpdates).length > 0) {
+    setColumnWidth(ctx, colUpdates);
+  }
 };

@@ -17,6 +17,7 @@ import {
 } from '../paste-helpers/calculate-range-cell-size';
 import { scheduleSheetMetadataSyncHooks } from '../modules/sheet-metadata-hooks';
 import { adjustFormulaForPaste } from './formula-adjust';
+import { filterMeaningfulBorderSides } from './paste-border-utils';
 import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
 
 function pushPasteCelldataChange(
@@ -469,19 +470,24 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         }
 
         if (borderInfo[`${h - minh}_${c - minc}`]) {
-          const bd_obj = {
-            rangeType: 'cell',
-            value: {
-              row_index: h,
-              col_index: c,
-              l: borderInfo[`${h - minh}_${c - minc}`].l,
-              r: borderInfo[`${h - minh}_${c - minc}`].r,
-              t: borderInfo[`${h - minh}_${c - minc}`].t,
-              b: borderInfo[`${h - minh}_${c - minc}`].b,
-            },
-          };
+          const sides = filterMeaningfulBorderSides(
+            borderInfo[`${h - minh}_${c - minc}`],
+          );
+          if (sides.l || sides.r || sides.t || sides.b) {
+            const bd_obj = {
+              rangeType: 'cell',
+              value: {
+                row_index: h,
+                col_index: c,
+                l: sides.l,
+                r: sides.r,
+                t: sides.t,
+                b: sides.b,
+              },
+            };
 
-          cfg.borderInfo?.push(bd_obj);
+            cfg.borderInfo?.push(bd_obj);
+          }
         }
 
         // const fontset = luckysheetfontformat(x[c]);
@@ -498,6 +504,8 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
 
       if (currentRowLen !== ctx.defaultrowlen) {
         cfg.rowlen[h] = currentRowLen;
+      } else if (cfg.rowlen?.[h] != null) {
+        delete cfg.rowlen[h];
       }
     }
     if (ctx?.hooks?.updateCellYdoc) {

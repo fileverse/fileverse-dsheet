@@ -2,6 +2,10 @@ import _ from 'lodash';
 import { Context } from './context';
 import { locale } from './locale';
 import { getQKBorder, saveHyperlink } from './modules';
+import {
+  filterMeaningfulBorderSides,
+  isTransparentBorderColor,
+} from './paste/paste-border-utils';
 import { Cell } from './types';
 import { getSheetIndex } from './utils';
 import { setRowHeight, setColumnWidth } from './api';
@@ -11,6 +15,37 @@ import { genarate } from './modules/format';
 import { isRealNum } from './modules/validation';
 
 export const DEFAULT_FONT_SIZE = 10;
+
+function parseTdBorderSide(
+  td: HTMLTableCellElement,
+  side: 'Top' | 'Bottom' | 'Left' | 'Right',
+): [number, string] | null {
+  const shorthand = td.style[`border${side}` as keyof CSSStyleDeclaration] as string;
+  if (
+    shorthand &&
+    (shorthand.startsWith('0px') || shorthand.startsWith('0 '))
+  ) {
+    return null;
+  }
+
+  const width = td.style[`border${side}Width` as keyof CSSStyleDeclaration] as string;
+  const borderStyle = td.style[
+    `border${side}Style` as keyof CSSStyleDeclaration
+  ] as string;
+  const color = td.style[`border${side}Color` as keyof CSSStyleDeclaration] as string;
+
+  if (!width || !borderStyle || borderStyle === 'none' || borderStyle === 'hidden') {
+    return null;
+  }
+
+  const nWidth = parseFloat(width);
+  if (Number.isNaN(nWidth) || nWidth < 1) return null;
+  if (isTransparentBorderColor(color)) return null;
+
+  const qk = getQKBorder(width, borderStyle, color);
+  if (!qk || qk[0] === 0 || isTransparentBorderColor(String(qk[1]))) return null;
+  return [qk[0], qk[1]];
+}
 
 const parseStylesheetPairs = (styleInner: string) => {
   const patternReg = /{([^}]*)}/g;
@@ -180,41 +215,10 @@ function applyBordersAndMerges(
   data: any[][],
 ) {
   // Pre-compute border configs once
-  const topBorder =
-    td.style.borderTop && !td.style.borderTop.startsWith('0px')
-      ? getQKBorder(
-          td.style.borderTopWidth,
-          td.style.borderTopStyle,
-          td.style.borderTopColor,
-        )
-      : null;
-
-  const bottomBorder =
-    td.style.borderBottom && !td.style.borderBottom.startsWith('0px')
-      ? getQKBorder(
-          td.style.borderBottomWidth,
-          td.style.borderBottomStyle,
-          td.style.borderBottomColor,
-        )
-      : null;
-
-  const leftBorder =
-    td.style.borderLeft && !td.style.borderLeft.startsWith('0px')
-      ? getQKBorder(
-          td.style.borderLeftWidth,
-          td.style.borderLeftStyle,
-          td.style.borderLeftColor,
-        )
-      : null;
-
-  const rightBorder =
-    td.style.borderRight && !td.style.borderRight.startsWith('0px')
-      ? getQKBorder(
-          td.style.borderRightWidth,
-          td.style.borderRightStyle,
-          td.style.borderRightColor,
-        )
-      : null;
+  const topBorder = parseTdBorderSide(td, 'Top');
+  const bottomBorder = parseTdBorderSide(td, 'Bottom');
+  const leftBorder = parseTdBorderSide(td, 'Left');
+  const rightBorder = parseTdBorderSide(td, 'Right');
 
   for (let rowOffset = 0; rowOffset < rowSpanCount; rowOffset++) {
     const relativeRow = startRow + rowOffset;
@@ -235,29 +239,41 @@ function applyBordersAndMerges(
 
       if (!(isTopEdge || isBottomEdge || isLeftEdge || isRightEdge)) continue;
 
-      const borderKey = `${relativeRow}_${relativeCol}`;
-      borderInfo[borderKey] ||= {};
+      const cellBorders: { l?: unknown; r?: unknown; t?: unknown; b?: unknown } =
+        {};
 
       if (isTopEdge && topBorder) {
-        borderInfo[borderKey].t = { style: topBorder[0], color: topBorder[1] };
+        cellBorders.t = { style: topBorder[0], color: topBorder[1] };
       }
       if (isBottomEdge && bottomBorder) {
-        borderInfo[borderKey].b = {
+        cellBorders.b = {
           style: bottomBorder[0],
           color: bottomBorder[1],
         };
       }
       if (isLeftEdge && leftBorder) {
-        borderInfo[borderKey].l = {
+        cellBorders.l = {
           style: leftBorder[0],
           color: leftBorder[1],
         };
       }
       if (isRightEdge && rightBorder) {
-        borderInfo[borderKey].r = {
+        cellBorders.r = {
           style: rightBorder[0],
           color: rightBorder[1],
         };
+      }
+
+      if (cellBorders.l || cellBorders.r || cellBorders.t || cellBorders.b) {
+        const meaningful = filterMeaningfulBorderSides(cellBorders);
+        if (
+          meaningful.l ||
+          meaningful.r ||
+          meaningful.t ||
+          meaningful.b
+        ) {
+          borderInfo[`${relativeRow}_${relativeCol}`] = meaningful;
+        }
       }
     }
   }
@@ -528,7 +544,12 @@ export function handlePastedTable(
     if (intColWidth <= 0) return;
     const anchorCol = ctx.luckysheet_select_save![0].column[0];
     const absoluteCol = anchorCol + index;
-    setColumnWidth(ctx, { [absoluteCol]: intColWidth });
+    const defaultColW =
+      ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!]?.defaultColWidth ??
+      ctx.defaultcollen;
+    if (intColWidth !== defaultColW) {
+      setColumnWidth(ctx, { [absoluteCol]: intColWidth });
+    }
   });
 
   const tableRows = containerDiv.querySelectorAll('table tr');
@@ -579,21 +600,24 @@ export function handlePastedTable(
     const explicitRowHeightAttr = tr.getAttribute('height');
     if (!_.isNil(explicitRowHeightAttr)) {
       const explicitRowHeight = parseInt(explicitRowHeightAttr, 10);
+      const defaultRowH = sheetFile.defaultRowHeight ?? ctx.defaultrowlen;
       const hasCustomRowHeight = _.has(
         sheetFile.config?.rowlen,
         targetRowIndex,
       );
       const currentRowHeight = hasCustomRowHeight
         ? sheetFile.config!.rowlen![targetRowIndex]
-        : sheetFile.defaultRowHeight;
+        : defaultRowH;
 
-      if (currentRowHeight !== explicitRowHeight) {
+      if (
+        explicitRowHeight !== defaultRowH &&
+        currentRowHeight !== explicitRowHeight
+      ) {
         rowHeightsConfig[targetRowIndex] = explicitRowHeight;
+        setRowHeight(ctx, {
+          [String(targetRowIndex)]: explicitRowHeight,
+        });
       }
-
-      setRowHeight(ctx, {
-        [String(targetRowIndex)]: explicitRowHeight,
-      });
     }
     tr.querySelectorAll('td, th').forEach((node) => {
       const tdElement = node as HTMLTableCellElement;
