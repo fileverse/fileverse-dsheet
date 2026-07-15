@@ -2,6 +2,8 @@ import _ from 'lodash';
 import { Context } from '../context';
 import { CellMatrix, CellWithRowAndCol, Sheet } from '../types';
 import { getSheetIndex } from '../utils';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
+import { applyCellFormatRangesToData, CellFormatRange, getCellFormatRangeGridBounds } from '../utils/range-format';
 import { SHEET_NOT_FOUND } from './errors';
 
 export type CommonOptions = { index?: number; id?: string };
@@ -14,7 +16,7 @@ export const dataToCelldata = (data: CellMatrix | undefined) => {
   for (let r = 0; r < data.length; r += 1) {
     for (let c = 0; c < data[r].length; c += 1) {
       const v = data[r][c];
-      if (v != null) {
+      if (v != null && shouldPersistCelldataCell(v)) {
         celldata.push({ r, c, v });
       }
     }
@@ -26,6 +28,7 @@ export const celldataToData = (
   celldata: CellWithRowAndCol[],
   rowCount?: number,
   colCount?: number,
+  cellFormatRanges?: CellFormatRange[],
 ) => {
   const lastRow = _.maxBy<CellWithRowAndCol>(celldata, 'r');
   const lastCol = _.maxBy(celldata, 'c');
@@ -35,6 +38,11 @@ export const celldataToData = (
     lastRowNum = Math.max(lastRowNum, rowCount);
     lastColNum = Math.max(lastColNum, colCount);
   }
+  const rangeBounds = getCellFormatRangeGridBounds(cellFormatRanges);
+  if (rangeBounds) {
+    lastRowNum = Math.max(lastRowNum, rangeBounds.maxRow + 1);
+    lastColNum = Math.max(lastColNum, rangeBounds.maxCol + 1);
+  }
   if (lastRowNum && lastColNum) {
     const expandedData: Sheet['data'] = _.times(lastRowNum, () =>
       _.times(lastColNum, () => null),
@@ -42,6 +50,7 @@ export const celldataToData = (
     celldata?.forEach((d) => {
       expandedData[d.r][d.c] = d.v;
     });
+    applyCellFormatRangesToData(expandedData, cellFormatRanges);
     return expandedData;
   }
   return null;

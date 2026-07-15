@@ -1,6 +1,13 @@
 import * as Y from 'yjs';
+import _ from 'lodash';
 import { Sheet } from '@sheet-engine/react';
+import { Cell } from '../../sheet-engine/core/types';
 import { current, isDraft } from 'immer';
+import { celldataEntryEqual, shouldPersistCelldataCell } from '../../sheet-engine/core/utils/cell-persist-utils';
+import {
+  punchHoleInCellFormatRanges,
+  rangesEqual as cellFormatRangesEqual,
+} from '../../sheet-engine/core/utils/range-format';
 
 export type SheetChangePath = {
   sheetId: string;
@@ -108,13 +115,28 @@ function normalizeForYjs<T>(value: T): T {
   return cloneForYjs(plainValue);
 }
 
-function setMapValueSafe(target: Y.Map<any>, key: string, value: any) {
+function setMapValueSafe(
+  target: Y.Map<any>,
+  key: string,
+  value: any,
+  options?: { skipIfEqual?: boolean },
+) {
   const normalizedValue = normalizeForYjs(value);
+  if (options?.skipIfEqual) {
+    const existing = target.get(key);
+    if (celldataEntryEqual(existing, normalizedValue)) {
+      return false;
+    }
+    if (_.isEqual(existing, normalizedValue)) {
+      return false;
+    }
+  }
   try {
     target.set(key, normalizedValue);
   } catch {
     target.set(key, cloneForYjs(normalizedValue));
   }
+  return true;
 }
 
 const getSheetId = (sheet: Y.Map<any> | Record<string, any>) => {
@@ -157,9 +179,39 @@ export const updateYdocSheetData = (
           sheet.set('celldata', cellMap);
         }
 
-        type === 'delete'
-          ? cellMap.delete(key)
-          : setMapValueSafe(cellMap, key, value);
+        if (type === 'delete') {
+          cellMap.delete(key);
+        } else {
+          setMapValueSafe(cellMap, key, value, { skipIfEqual: true });
+
+          const entry = normalizeForYjs(value) as {
+            r?: number;
+            c?: number;
+            v?: unknown;
+          };
+          if (
+            typeof entry?.r === 'number' &&
+            typeof entry?.c === 'number' &&
+            shouldPersistCelldataCell(entry.v as Cell | string | number | boolean | null)
+          ) {
+            let configMap = sheet.get('config');
+            if (!(configMap instanceof Y.Map)) {
+              configMap = new Y.Map();
+              sheet.set('config', configMap);
+            }
+            const existingRanges = configMap.get('cellFormatRanges');
+            const punched = punchHoleInCellFormatRanges(
+              existingRanges,
+              entry.r,
+              entry.c,
+            );
+            if (!cellFormatRangesEqual(existingRanges, punched)) {
+              setMapValueSafe(configMap, 'cellFormatRanges', punched, {
+                skipIfEqual: true,
+              });
+            }
+          }
+        }
         return;
       }
 
@@ -327,7 +379,9 @@ export const updateYdocSheetData = (
         target = next;
       }
 
-      setMapValueSafe(target, path[path.length - 1], value);
+      setMapValueSafe(target, path[path.length - 1], value, {
+        skipIfEqual: true,
+      });
     });
 
     // Keep a single active sheet by order after applying updates

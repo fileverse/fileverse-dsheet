@@ -17,6 +17,24 @@ import {
 } from '../paste-helpers/calculate-range-cell-size';
 import { scheduleSheetMetadataSyncHooks } from '../modules/sheet-metadata-hooks';
 import { adjustFormulaForPaste } from './formula-adjust';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
+
+function pushPasteCelldataChange(
+  changes: any[],
+  ctx: Context,
+  r: number,
+  c: number,
+  cell: Cell | null,
+) {
+  if (!shouldPersistCelldataCell(cell)) return;
+  changes.push({
+    sheetId: ctx.currentSheetId,
+    path: ['celldata'],
+    value: { r, c, v: cell },
+    key: `${r}_${c}`,
+    type: 'update',
+  });
+}
 
 /** Deep-clone a cell for paste targets; avoids double-`cloneDeep` when assigning into the grid. */
 function clonePasteCellValue(cell: any): any {
@@ -474,17 +492,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         //   RowlChange = true;
         // }
 
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r: h,
-            c,
-            v: d[h][c],
-          },
-          key: `${h}_${c}`,
-          type: 'update',
-        });
+        pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
       }
       d[h] = x;
 
@@ -807,17 +815,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
           x[c + curC] = cell;
         }
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r: r + curR,
-            c: c + curC,
-            v: d[r + curR][c + curC],
-          },
-          key: `${r + curR}_${c + curC}`,
-          type: 'update',
-        });
+        pushPasteCelldataChange(changes, ctx, r + curR, c + curC, d[r + curR][c + curC]);
       }
       d[r + curR] = x;
     }
@@ -1152,13 +1150,7 @@ export function pasteHandlerOfCutPaste(
       }
 
       x[c] = _.cloneDeep(value);
-      changes.push({
-        sheetId: ctx.currentSheetId,
-        path: ['celldata'],
-        value: { r: h, c, v: d[h][c] },
-        key: `${h}_${c}`,
-        type: 'update',
-      });
+      pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
 
       if (value != null && copyHasMC && x[c]?.mc) {
         if (x[c]!.mc!.rs != null) {
@@ -1907,13 +1899,7 @@ export function pasteHandlerOfCopyPaste(
           }
           // If afterUpdateCell ran for this cell, it is expected to handle Yjs sync.
           if (!(ctx?.hooks?.afterUpdateCell && afterHookCalled)) {
-            changes.push({
-              sheetId: ctx.currentSheetId,
-              path: ['celldata'],
-              value: { r: h, c, v: d[h][c] },
-              key: `${h}_${c}`,
-              type: 'update',
-            });
+            pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
           }
         }
         d[h] = x;

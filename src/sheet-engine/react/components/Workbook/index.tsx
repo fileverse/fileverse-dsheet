@@ -33,6 +33,7 @@ import {
   updateContextWithSheetData,
   jfrefreshgrid,
 } from '@sheet-engine/core';
+import { applyCellFormatRangesToData, getCellFormatRangeGridBounds } from '@sheet-engine/core/utils/range-format';
 import { activePalette, setActiveGridPalette, type ThemeKey } from '@sheet-engine/core/theme';
 import {
   normalizeDateBaseLocale,
@@ -222,6 +223,13 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           lastRowNum = Math.max(lastRowNum, draftCtx.defaultrowNum);
           lastColNum = Math.max(lastColNum, draftCtx.defaultcolumnNum);
         }
+        const rangeBounds = getCellFormatRangeGridBounds(
+          newData.config?.cellFormatRanges,
+        );
+        if (rangeBounds) {
+          lastRowNum = Math.max(lastRowNum, rangeBounds.maxRow + 1);
+          lastColNum = Math.max(lastColNum, rangeBounds.maxCol + 1);
+        }
         if (lastRowNum && lastColNum) {
           const expandedData: SheetType['data'] = _.times(lastRowNum, () =>
             _.times(lastColNum, () => null),
@@ -244,6 +252,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               }
             }
           });
+          applyCellFormatRangesToData(
+            expandedData,
+            newData.config?.cellFormatRanges,
+          );
           draftCtx.luckysheetfile = produce(draftCtx.luckysheetfile, (d) => {
             d[index!].data = expandedData;
             delete d[index!].celldata;

@@ -14,6 +14,7 @@ import {
   applyRichTextToWorksheet,
   type CellRichTextValue,
 } from './xlsx-richtext-utils';
+import { buildSheetDataMatrixForExport } from '../../sheet-engine/core/utils/range-format';
 import {
   concatInlineStrRunsText,
   getFirstHyperlinkEntry,
@@ -109,7 +110,7 @@ export const handleExportToXLSX = async (
       sheetWithData.map(() => new Map());
 
     sheetWithData.forEach((sheet, index) => {
-      const rows = sheetWithData[index]?.data || [];
+      const rows = buildSheetDataMatrixForExport(sheet);
 
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);
 
@@ -301,7 +302,7 @@ export const handleExportToXLSX = async (
       // already styled above, read formatting properties directly from sheet.data.
       // Rich text (inlineStr) cells are handled separately below — skip them here
       // so we don't interfere with the rich-text pipeline.
-      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+      rows.forEach((row: any[], r: number) => {
         if (!Array.isArray(row)) return;
         row.forEach((v: any, c: number) => {
           if (!v || typeof v !== 'object') return;
@@ -373,7 +374,7 @@ export const handleExportToXLSX = async (
       // RICH TEXT from sheet.data (celldata is often empty for live sheets)
       // aoa_to_sheet leaves inlineStr cells empty since v.v is undefined;
       // set plain-text fallback here and collect runs for Pass 2.
-      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+      rows.forEach((row: any[], r: number) => {
         if (!Array.isArray(row)) return;
         row.forEach((v: any, c: number) => {
           if (!v || v.ct?.t !== 'inlineStr' || !Array.isArray(v.ct.s)) return;

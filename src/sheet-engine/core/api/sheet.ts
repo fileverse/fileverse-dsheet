@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { dataToCelldata, getSheet } from './common';
+import { applyCellFormatRangesToData, getCellFormatRangeGridBounds } from '../utils/range-format';
 import { Context } from '../context';
 import { CellMatrix, CellWithRowAndCol, Sheet } from '../types';
 import { getSheetIndex } from '../utils';
@@ -95,6 +96,11 @@ export function initSheetData(
     lastRowNum = Math.max(lastRowNum, draftCtx.defaultrowNum);
     lastColNum = Math.max(lastColNum, draftCtx.defaultcolumnNum);
   }
+  const rangeBounds = getCellFormatRangeGridBounds(newData.config?.cellFormatRanges);
+  if (rangeBounds) {
+    lastRowNum = Math.max(lastRowNum, rangeBounds.maxRow + 1);
+    lastColNum = Math.max(lastColNum, rangeBounds.maxCol + 1);
+  }
   if (lastRowNum && lastColNum) {
     const expandedData: Sheet['data'] = _.times(lastRowNum, () =>
       _.times(lastColNum, () => null),
@@ -102,6 +108,7 @@ export function initSheetData(
     celldata?.forEach((d) => {
       expandedData[d.r][d.c] = d.v;
     });
+    applyCellFormatRangesToData(expandedData, newData.config?.cellFormatRanges);
     if (draftCtx.luckysheetfile[index] == null) {
       newData.data = expandedData;
       delete newData.celldata;

@@ -9,6 +9,11 @@ import {
   getFilterHiddenRowsUnionFromFilterMap,
   rebuildRowHiddenUnion,
 } from './rowVisibility';
+import {
+  shiftCellFormatRangesOnDelete,
+  shiftCellFormatRangesOnInsert,
+} from '../utils/range-format';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
 
 const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
   Object.entries(merge_new).forEach(([, v]) => {
@@ -166,10 +171,12 @@ const emitCellRangeToYdoc = (
   for (let r = rowStart; r <= rowEnd; r += 1) {
     const row = d[r] || [];
     for (let c = colStart; c <= colEnd; c += 1) {
+      const cell = row?.[c] ?? null;
+      if (!shouldPersistCelldataCell(cell)) continue;
       changes.push({
         sheetId,
         path: ['celldata'],
-        value: { r, c, v: row?.[c] ?? null },
+        value: { r, c, v: cell },
         key: `${r}_${c}`,
         type: 'update',
       });
@@ -177,6 +184,22 @@ const emitCellRangeToYdoc = (
   }
 
   if (changes.length > 0) ctx.hooks.updateCellYdoc(changes);
+};
+
+const emitCellFormatRangesToYdoc = (
+  ctx: Context,
+  sheetId: string,
+  ranges: any[] | undefined,
+) => {
+  if (!ctx?.hooks?.updateCellYdoc) return;
+  ctx.hooks.updateCellYdoc([
+    {
+      sheetId,
+      path: ['config', 'cellFormatRanges'],
+      value: ranges ?? [],
+      type: 'update',
+    },
+  ]);
 };
 
 const markCellRefError = (cell: Cell) => {
@@ -1097,6 +1120,18 @@ export function insertRowCol(
       cfg.borderInfo = borderInfo;
     }
 
+    const prevFormatRanges = cfg.cellFormatRanges;
+    cfg.cellFormatRanges = shiftCellFormatRangesOnInsert(
+      cfg.cellFormatRanges,
+      'row',
+      index,
+      count,
+      direction,
+    );
+    if (!_.isEqual(prevFormatRanges, cfg.cellFormatRanges)) {
+      emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+    }
+
     const arr = [];
     for (let r = 0; r < count; r += 1) {
       const srcRowIdx = usePerRowTemplates ? firstTemplateRow! : index;
@@ -1347,6 +1382,18 @@ export function insertRowCol(
       }
 
       cfg.borderInfo = borderInfo;
+    }
+
+    const prevFormatRangesCol = cfg.cellFormatRanges;
+    cfg.cellFormatRanges = shiftCellFormatRangesOnInsert(
+      cfg.cellFormatRanges,
+      'column',
+      index,
+      count,
+      direction,
+    );
+    if (!_.isEqual(prevFormatRangesCol, cfg.cellFormatRanges)) {
+      emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
     }
 
     for (let i = 0; i < count; i += 1) {
@@ -2536,6 +2583,17 @@ export function deleteRowCol(
   file.hyperlink = newHyperlink;
 
   refreshLocalMergeData(merge_new, file);
+
+  const prevFormatRangesDelete = cfg.cellFormatRanges;
+  cfg.cellFormatRanges = shiftCellFormatRangesOnDelete(
+    cfg.cellFormatRanges,
+    type,
+    start,
+    end,
+  );
+  if (!_.isEqual(prevFormatRangesDelete, cfg.cellFormatRanges)) {
+    emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+  }
 
   // Yjs: row/col deletion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);

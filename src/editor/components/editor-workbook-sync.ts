@@ -2,6 +2,7 @@ import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import isEqual from 'lodash/isEqual';
 import { SheetChangePath, updateYdocSheetData } from '../utils/update-ydoc';
+import { shouldPersistCelldataCell } from '../../sheet-engine/core/utils/cell-persist-utils';
 
 type SyncContext = {
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
@@ -517,6 +518,7 @@ export const updateAllCell = (
         (sheet as any).celldata,
         (sheet as any).row,
         (sheet as any).column,
+        (sheet as any).config?.cellFormatRanges,
       ) ?? undefined;
   }
   if (!Array.isArray(dataMatrix)) return;
@@ -526,10 +528,12 @@ export const updateAllCell = (
     const row = dataMatrix[r];
     if (!Array.isArray(row)) continue;
     for (let c = 0; c < row.length; c++) {
+      const cell = row[c];
+      if (!shouldPersistCelldataCell(cell)) continue;
       changes.push({
         sheetId: subSheetId,
         path: ['celldata'],
-        value: { r, c, v: row[c] },
+        value: { r, c, v: cell },
         key: `${r}_${c}`,
         type: 'update',
       });

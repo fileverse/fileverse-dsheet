@@ -1,3 +1,4 @@
+import type { CellFormatRange } from '../../../core/utils/range-format';
 import {
   addSheet,
   api,
@@ -650,8 +651,9 @@ export function generateAPIs(
       celldata: CellWithRowAndCol[],
       rowCount?: number,
       colCount?: number,
+      cellFormatRanges?: CellFormatRange[],
     ) => {
-      return api.celldataToData(celldata, rowCount, colCount);
+      return api.celldataToData(celldata, rowCount, colCount, cellFormatRanges);
     },
     insertFunction: (
       selectedFuncIndex: number,

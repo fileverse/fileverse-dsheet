@@ -62,6 +62,8 @@ import {
 } from './hyperlink';
 import { cfSplitRange } from './conditionalFormat';
 import { clearMeasureTextCache, getCellTextInfo } from './text';
+import { hasCellMeaningfulContent } from '../utils/cell-persist-utils';
+import { CellFormatRange, upsertCellFormatRange } from '../utils/range-format';
 
 type ToolbarItemClickHandler = (
   ctx: Context,
@@ -90,6 +92,36 @@ function pushToolbarCellDataUpdate(
   ]);
 }
 
+function pushRangeFormatConfigUpdate(
+  changes: any[],
+  ctx: Context,
+  sheetIndex: number,
+  row_st: number,
+  row_ed: number,
+  col_st: number,
+  col_ed: number,
+  attrs: Partial<CellFormatRange>,
+) {
+  ctx.luckysheetfile[sheetIndex].config ||= {};
+  const cfg = ctx.luckysheetfile[sheetIndex].config!;
+  const { ranges, changed } = upsertCellFormatRange(
+    cfg.cellFormatRanges,
+    row_st,
+    row_ed,
+    col_st,
+    col_ed,
+    attrs,
+  );
+  if (!changed) return;
+  cfg.cellFormatRanges = ranges;
+  changes.push({
+    sheetId: ctx.currentSheetId,
+    path: ['config', 'cellFormatRanges'],
+    value: ranges,
+    type: 'update',
+  });
+}
+
 export function updateFormatCell(
   ctx: Context,
   d: CellMatrix,
@@ -106,6 +138,9 @@ export function updateFormatCell(
   }
   if (attr === 'ct') {
     const changes: any = [];
+    let hasEmptyCellFormat = false;
+    let emptyRangeAttrs: Partial<CellFormatRange> | null = null;
+
     for (let r = row_st; r <= row_ed; r += 1) {
       if (!_.isNil(ctx.config.rowhidden) && !_.isNil(ctx.config.rowhidden[r])) {
         continue;
@@ -180,6 +215,11 @@ export function updateFormatCell(
               if (type === 'n') d[r][c]!.ht = 2;
             }
           }
+          hasEmptyCellFormat = true;
+          emptyRangeAttrs = {
+            ct: { fa: foucsStatus, t: type },
+            ...(type === 'n' ? { ht: 2 } : {}),
+          };
           continue;
         }
 
@@ -245,9 +285,24 @@ export function updateFormatCell(
           type: 'update',
         });
       }
-      if (ctx?.hooks?.updateCellYdoc) {
-        ctx.hooks?.updateCellYdoc(changes);
-      }
+    }
+
+    const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
+    if (hasEmptyCellFormat && emptyRangeAttrs && sheetIndex != null) {
+      pushRangeFormatConfigUpdate(
+        changes,
+        ctx,
+        sheetIndex,
+        row_st,
+        row_ed,
+        col_st,
+        col_ed,
+        emptyRangeAttrs,
+      );
+    }
+
+    if (ctx?.hooks?.updateCellYdoc && changes.length > 0) {
+      ctx.hooks?.updateCellYdoc(changes);
     }
   } else {
     if (attr === 'ht') {
@@ -295,6 +350,7 @@ export function updateFormatCell(
       return;
     }
     const changes: any = [];
+    let hasEmptyCellFormat = false;
     for (let r = row_st; r <= row_ed; r += 1) {
       if (!_.isNil(ctx.config.rowhidden) && !_.isNil(ctx.config.rowhidden[r])) {
         continue;
@@ -337,25 +393,56 @@ export function updateFormatCell(
               _.set(cfg, `rowlen.${r}`, rowHeight);
             }
           }
+
+          if (hasCellMeaningfulContent(value)) {
+            changes.push({
+              sheetId: ctx.currentSheetId,
+              path: ['celldata'],
+              value: {
+                r,
+                c,
+                v: d[r][c],
+              },
+              key: `${r}_${c}`,
+              type: 'update',
+            });
+          } else {
+            hasEmptyCellFormat = true;
+          }
+        } else if (value != null && typeof value !== 'object') {
+          d[r][c] = { v: value, [attr]: foucsStatus } as Cell;
+          changes.push({
+            sheetId: ctx.currentSheetId,
+            path: ['celldata'],
+            value: {
+              r,
+              c,
+              v: d[r][c],
+            },
+            key: `${r}_${c}`,
+            type: 'update',
+          });
         } else {
           // @ts-ignore
           d[r][c] = { v: value };
           // @ts-ignore
           d[r][c][attr] = foucsStatus;
+          hasEmptyCellFormat = true;
         }
-
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r,
-            c,
-            v: d[r][c],
-          },
-          key: `${r}_${c}`,
-          type: 'update',
-        });
       }
+    }
+
+    if (hasEmptyCellFormat) {
+      pushRangeFormatConfigUpdate(
+        changes,
+        ctx,
+        sheetIndex,
+        row_st,
+        row_ed,
+        col_st,
+        col_ed,
+        { [attr]: foucsStatus } as Partial<CellFormatRange>,
+      );
     }
 
     if (attr === 'tb' && canvas) {
@@ -379,7 +466,7 @@ export function updateFormatCell(
       }
     }
 
-    if (ctx?.hooks?.updateCellYdoc) {
+    if (ctx?.hooks?.updateCellYdoc && changes.length > 0) {
       ctx.hooks?.updateCellYdoc(changes);
     }
   }
