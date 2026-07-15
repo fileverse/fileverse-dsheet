@@ -172,14 +172,24 @@ const emitCellRangeToYdoc = (
     const row = d[r] || [];
     for (let c = colStart; c <= colEnd; c += 1) {
       const cell = row?.[c] ?? null;
-      if (!shouldPersistCelldataCell(cell)) continue;
-      changes.push({
-        sheetId,
-        path: ['celldata'],
-        value: { r, c, v: cell },
-        key: `${r}_${c}`,
-        type: 'update',
-      });
+      const key = `${r}_${c}`;
+      if (shouldPersistCelldataCell(cell)) {
+        changes.push({
+          sheetId,
+          path: ['celldata'],
+          value: { r, c, v: cell },
+          key,
+          type: 'update',
+        });
+      } else {
+        changes.push({
+          sheetId,
+          path: ['celldata'],
+          key,
+          value: null,
+          type: 'delete',
+        });
+      }
     }
   }
 

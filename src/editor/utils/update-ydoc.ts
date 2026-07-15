@@ -181,7 +181,7 @@ export const updateYdocSheetData = (
 
         if (type === 'delete') {
           cellMap.delete(key);
-        } else {
+        } else if (shouldPersistCelldataCell((value as { v?: unknown })?.v as Cell | string | number | boolean | null)) {
           setMapValueSafe(cellMap, key, value, { skipIfEqual: true });
 
           const entry = normalizeForYjs(value) as {
@@ -211,6 +211,8 @@ export const updateYdocSheetData = (
               });
             }
           }
+        } else {
+          cellMap.delete(key);
         }
         return;
       }
