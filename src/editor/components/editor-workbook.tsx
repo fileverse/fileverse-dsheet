@@ -146,7 +146,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   const commentsConfigRef = useRef(commentsConfig);
   commentsConfigRef.current = commentsConfig;
   const hasComments = !!commentsConfig;
-  const allowComments = hasComments;
+  const allowComments = !commentsConfig?.disabled;
 
   const removeCommentFromCell = useCallback(
     (row: number, col: number) => {

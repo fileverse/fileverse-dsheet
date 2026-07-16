@@ -413,7 +413,7 @@ const EditorContent = ({
               className="dsheet-permission-chip-wrap absolute top-2 right-4 z-20"
               data-testid="dsheet-permission-chip-wrap"
             >
-              <PermissionChip allowComments={!!commentsConfig} />
+              <PermissionChip allowComments={!commentsConfig?.disabled} />
             </div>
           )}
 
