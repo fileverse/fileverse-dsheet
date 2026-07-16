@@ -17,6 +17,54 @@ import {
 } from '../paste-helpers/calculate-range-cell-size';
 import { scheduleSheetMetadataSyncHooks } from '../modules/sheet-metadata-hooks';
 import { adjustFormulaForPaste } from './formula-adjust';
+import { filterMeaningfulBorderSides } from './paste-border-utils';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
+
+function pushPasteCelldataChange(
+  changes: any[],
+  ctx: Context,
+  r: number,
+  c: number,
+  cell: Cell | null,
+) {
+  if (!shouldPersistCelldataCell(cell)) return;
+  changes.push({
+    sheetId: ctx.currentSheetId,
+    path: ['celldata'],
+    value: { r, c, v: cell },
+    key: `${r}_${c}`,
+    type: 'update',
+  });
+}
+
+function pushCellBorderToConfig(
+  cfg: { borderInfo?: any[] },
+  row: number,
+  col: number,
+  sides: { l?: unknown; r?: unknown; t?: unknown; b?: unknown },
+) {
+  const filtered = filterMeaningfulBorderSides(
+    sides as {
+      l?: { style?: number; color?: string };
+      r?: { style?: number; color?: string };
+      t?: { style?: number; color?: string };
+      b?: { style?: number; color?: string };
+    },
+  );
+  if (!filtered.l && !filtered.r && !filtered.t && !filtered.b) return;
+  if (cfg.borderInfo == null) cfg.borderInfo = [];
+  cfg.borderInfo.push({
+    rangeType: 'cell',
+    value: {
+      row_index: row,
+      col_index: col,
+      l: filtered.l,
+      r: filtered.r,
+      t: filtered.t,
+      b: filtered.b,
+    },
+  });
+}
 
 /** Deep-clone a cell for paste targets; avoids double-`cloneDeep` when assigning into the grid. */
 function clonePasteCellValue(cell: any): any {
@@ -451,19 +499,24 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         }
 
         if (borderInfo[`${h - minh}_${c - minc}`]) {
-          const bd_obj = {
-            rangeType: 'cell',
-            value: {
-              row_index: h,
-              col_index: c,
-              l: borderInfo[`${h - minh}_${c - minc}`].l,
-              r: borderInfo[`${h - minh}_${c - minc}`].r,
-              t: borderInfo[`${h - minh}_${c - minc}`].t,
-              b: borderInfo[`${h - minh}_${c - minc}`].b,
-            },
-          };
+          const sides = filterMeaningfulBorderSides(
+            borderInfo[`${h - minh}_${c - minc}`],
+          );
+          if (sides.l || sides.r || sides.t || sides.b) {
+            const bd_obj = {
+              rangeType: 'cell',
+              value: {
+                row_index: h,
+                col_index: c,
+                l: sides.l,
+                r: sides.r,
+                t: sides.t,
+                b: sides.b,
+              },
+            };
 
-          cfg.borderInfo?.push(bd_obj);
+            cfg.borderInfo?.push(bd_obj);
+          }
         }
 
         // const fontset = luckysheetfontformat(x[c]);
@@ -474,22 +527,14 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         //   RowlChange = true;
         // }
 
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r: h,
-            c,
-            v: d[h][c],
-          },
-          key: `${h}_${c}`,
-          type: 'update',
-        });
+        pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
       }
       d[h] = x;
 
       if (currentRowLen !== ctx.defaultrowlen) {
         cfg.rowlen[h] = currentRowLen;
+      } else if (cfg.rowlen?.[h] != null) {
+        delete cfg.rowlen[h];
       }
     }
     if (ctx?.hooks?.updateCellYdoc) {
@@ -807,17 +852,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
           x[c + curC] = cell;
         }
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r: r + curR,
-            c: c + curC,
-            v: d[r + curR][c + curC],
-          },
-          key: `${r + curR}_${c + curC}`,
-          type: 'update',
-        });
+        pushPasteCelldataChange(changes, ctx, r + curR, c + curC, d[r + curR][c + curC]);
       }
       d[r + curR] = x;
     }
@@ -962,7 +997,7 @@ export function pasteHandlerOfCutPaste(
     path: string[];
     value: any;
     key: string;
-    type: 'update';
+    type: 'update' | 'delete';
   }[] = [];
 
   const borderInfoCompute = getBorderInfoCompute(ctx, copySheetId);
@@ -1019,9 +1054,9 @@ export function pasteHandlerOfCutPaste(
         changes.push({
           sheetId: ctx.currentSheetId,
           path: ['celldata'],
-          value: { r: i, c: j, v: null },
           key: `${i}_${j}`,
-          type: 'update',
+          value: null,
+          type: 'delete',
         });
 
         delete dataVerification[`${i}_${j}`];
@@ -1080,42 +1115,13 @@ export function pasteHandlerOfCutPaste(
         borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`] &&
         !borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].s
       ) {
-        const bd_obj = {
-          rangeType: 'cell',
-          value: {
-            row_index: h,
-            col_index: c,
-            l: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].l,
-            r: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].r,
-            t: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].t,
-            b: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].b,
-          },
-        };
-
-        if (cfg.borderInfo == null) {
-          cfg.borderInfo = [];
-        }
-
-        cfg.borderInfo.push(bd_obj);
-      } else if (borderInfoCompute[`${h}_${c}`]) {
-        const bd_obj = {
-          rangeType: 'cell',
-          value: {
-            row_index: h,
-            col_index: c,
-            l: null,
-            r: null,
-            t: null,
-            b: null,
-          },
-        };
-
-        if (cfg.borderInfo == null) {
-          cfg.borderInfo = [];
-        }
-
-        cfg.borderInfo.push(bd_obj);
-      } else if (borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`]) {
+        pushCellBorderToConfig(
+          cfg,
+          h,
+          c,
+          borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`],
+        );
+      } else if (borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`]?.s) {
         const bd_obj = {
           rangeType: 'range',
           borderType: 'border-slash',
@@ -1152,13 +1158,7 @@ export function pasteHandlerOfCutPaste(
       }
 
       x[c] = _.cloneDeep(value);
-      changes.push({
-        sheetId: ctx.currentSheetId,
-        path: ['celldata'],
-        value: { r: h, c, v: d[h][c] },
-        key: `${h}_${c}`,
-        type: 'update',
-      });
+      pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
 
       if (value != null && copyHasMC && x[c]?.mc) {
         if (x[c]!.mc!.rs != null) {
@@ -1683,42 +1683,13 @@ export function pasteHandlerOfCopyPaste(
             borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`] &&
             !borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].s
           ) {
-            const bd_obj = {
-              rangeType: 'cell',
-              value: {
-                row_index: h,
-                col_index: c,
-                l: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].l,
-                r: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].r,
-                t: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].t,
-                b: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].b,
-              },
-            };
-
-            if (_.isNil(cfg.borderInfo)) {
-              cfg.borderInfo = [];
-            }
-
-            cfg.borderInfo.push(bd_obj);
-          } else if (borderInfoCompute[`${h}_${c}`]) {
-            const bd_obj = {
-              rangeType: 'cell',
-              value: {
-                row_index: h,
-                col_index: c,
-                l: null,
-                r: null,
-                t: null,
-                b: null,
-              },
-            };
-
-            if (_.isNil(cfg.borderInfo)) {
-              cfg.borderInfo = [];
-            }
-
-            cfg.borderInfo.push(bd_obj);
-          } else if (borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`]) {
+            pushCellBorderToConfig(
+              cfg,
+              h,
+              c,
+              borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`],
+            );
+          } else if (borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`]?.s) {
             const bd_obj = {
               rangeType: 'range',
               borderType: 'border-slash',
@@ -1907,13 +1878,7 @@ export function pasteHandlerOfCopyPaste(
           }
           // If afterUpdateCell ran for this cell, it is expected to handle Yjs sync.
           if (!(ctx?.hooks?.afterUpdateCell && afterHookCalled)) {
-            changes.push({
-              sheetId: ctx.currentSheetId,
-              path: ['celldata'],
-              value: { r: h, c, v: d[h][c] },
-              key: `${h}_${c}`,
-              type: 'update',
-            });
+            pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
           }
         }
         d[h] = x;

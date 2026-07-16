@@ -61,7 +61,13 @@ import {
   showLinkCard,
 } from './hyperlink';
 import { cfSplitRange } from './conditionalFormat';
+import {
+  removeBorderInfoInSelections,
+  syncBorderInfoToYdoc,
+} from '../utils/border-config-utils';
 import { clearMeasureTextCache, getCellTextInfo } from './text';
+import { hasCellMeaningfulContent } from '../utils/cell-persist-utils';
+import { CellFormatRange, upsertCellFormatRange } from '../utils/range-format';
 
 type ToolbarItemClickHandler = (
   ctx: Context,
@@ -90,6 +96,36 @@ function pushToolbarCellDataUpdate(
   ]);
 }
 
+function pushRangeFormatConfigUpdate(
+  changes: any[],
+  ctx: Context,
+  sheetIndex: number,
+  row_st: number,
+  row_ed: number,
+  col_st: number,
+  col_ed: number,
+  attrs: Partial<CellFormatRange>,
+) {
+  ctx.luckysheetfile[sheetIndex].config ||= {};
+  const cfg = ctx.luckysheetfile[sheetIndex].config!;
+  const { ranges, changed } = upsertCellFormatRange(
+    cfg.cellFormatRanges,
+    row_st,
+    row_ed,
+    col_st,
+    col_ed,
+    attrs,
+  );
+  if (!changed) return;
+  cfg.cellFormatRanges = ranges;
+  changes.push({
+    sheetId: ctx.currentSheetId,
+    path: ['config', 'cellFormatRanges'],
+    value: ranges,
+    type: 'update',
+  });
+}
+
 export function updateFormatCell(
   ctx: Context,
   d: CellMatrix,
@@ -106,6 +142,9 @@ export function updateFormatCell(
   }
   if (attr === 'ct') {
     const changes: any = [];
+    let hasEmptyCellFormat = false;
+    let emptyRangeAttrs: Partial<CellFormatRange> | null = null;
+
     for (let r = row_st; r <= row_ed; r += 1) {
       if (!_.isNil(ctx.config.rowhidden) && !_.isNil(ctx.config.rowhidden[r])) {
         continue;
@@ -180,6 +219,11 @@ export function updateFormatCell(
               if (type === 'n') d[r][c]!.ht = 2;
             }
           }
+          hasEmptyCellFormat = true;
+          emptyRangeAttrs = {
+            ct: { fa: foucsStatus, t: type },
+            ...(type === 'n' ? { ht: 2 } : {}),
+          };
           continue;
         }
 
@@ -245,9 +289,24 @@ export function updateFormatCell(
           type: 'update',
         });
       }
-      if (ctx?.hooks?.updateCellYdoc) {
-        ctx.hooks?.updateCellYdoc(changes);
-      }
+    }
+
+    const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
+    if (hasEmptyCellFormat && emptyRangeAttrs && sheetIndex != null) {
+      pushRangeFormatConfigUpdate(
+        changes,
+        ctx,
+        sheetIndex,
+        row_st,
+        row_ed,
+        col_st,
+        col_ed,
+        emptyRangeAttrs,
+      );
+    }
+
+    if (ctx?.hooks?.updateCellYdoc && changes.length > 0) {
+      ctx.hooks?.updateCellYdoc(changes);
     }
   } else {
     if (attr === 'ht') {
@@ -295,6 +354,7 @@ export function updateFormatCell(
       return;
     }
     const changes: any = [];
+    let hasEmptyCellFormat = false;
     for (let r = row_st; r <= row_ed; r += 1) {
       if (!_.isNil(ctx.config.rowhidden) && !_.isNil(ctx.config.rowhidden[r])) {
         continue;
@@ -337,25 +397,56 @@ export function updateFormatCell(
               _.set(cfg, `rowlen.${r}`, rowHeight);
             }
           }
+
+          if (hasCellMeaningfulContent(value)) {
+            changes.push({
+              sheetId: ctx.currentSheetId,
+              path: ['celldata'],
+              value: {
+                r,
+                c,
+                v: d[r][c],
+              },
+              key: `${r}_${c}`,
+              type: 'update',
+            });
+          } else {
+            hasEmptyCellFormat = true;
+          }
+        } else if (value != null && typeof value !== 'object') {
+          d[r][c] = { v: value, [attr]: foucsStatus } as Cell;
+          changes.push({
+            sheetId: ctx.currentSheetId,
+            path: ['celldata'],
+            value: {
+              r,
+              c,
+              v: d[r][c],
+            },
+            key: `${r}_${c}`,
+            type: 'update',
+          });
         } else {
           // @ts-ignore
           d[r][c] = { v: value };
           // @ts-ignore
           d[r][c][attr] = foucsStatus;
+          hasEmptyCellFormat = true;
         }
-
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r,
-            c,
-            v: d[r][c],
-          },
-          key: `${r}_${c}`,
-          type: 'update',
-        });
       }
+    }
+
+    if (hasEmptyCellFormat) {
+      pushRangeFormatConfigUpdate(
+        changes,
+        ctx,
+        sheetIndex,
+        row_st,
+        row_ed,
+        col_st,
+        col_ed,
+        { [attr]: foucsStatus } as Partial<CellFormatRange>,
+      );
     }
 
     if (attr === 'tb' && canvas) {
@@ -379,7 +470,7 @@ export function updateFormatCell(
       }
     }
 
-    if (ctx?.hooks?.updateCellYdoc) {
+    if (ctx?.hooks?.updateCellYdoc && changes.length > 0) {
       ctx.hooks?.updateCellYdoc(changes);
     }
   }
@@ -1553,81 +1644,28 @@ export function handleClearFormat(ctx: Context) {
         });
       }
     }
-    // 清空表格样式时，清除边框样式
-    const index = getSheetIndex(ctx, ctx.currentSheetId);
-    if (index == null) return false;
-    // 表格边框为空时，不对表格进行操作
-    if (ctx.config.borderInfo == null) return false;
-    const cfg = ctx.config || {};
-    if (cfg.borderInfo && cfg.borderInfo.length > 0) {
-      const source_borderInfo = [];
-
-      for (let i = 0; i < cfg.borderInfo.length; i += 1) {
-        const bd_rangeType = cfg.borderInfo[i].rangeType;
-
-        if (
-          bd_rangeType === 'range' &&
-          cfg.borderInfo[i].borderType !== 'border-slash'
-        ) {
-          const bd_range = cfg.borderInfo[i].range;
-          let bd_emptyRange: any = [];
-
-          for (let j = 0; j < bd_range.length; j += 1) {
-            bd_emptyRange = bd_emptyRange.concat(
-              cfSplitRange(
-                bd_range[j],
-                { row: [rowSt, rowEd], column: [colSt, colEd] },
-                { row: [rowSt, rowEd], column: [colSt, colEd] },
-                'restPart',
-              ),
-            );
-          }
-
-          cfg.borderInfo[i].range = bd_emptyRange;
-
-          source_borderInfo.push(cfg.borderInfo[i]);
-        } else if (bd_rangeType === 'cell') {
-          const bd_r = cfg.borderInfo[i].value.row_index;
-          const bd_c = cfg.borderInfo[i].value.col_index;
-
-          if (
-            !(bd_r >= rowSt && bd_r <= rowEd && bd_c >= colSt && bd_c <= colEd)
-          ) {
-            source_borderInfo.push(cfg.borderInfo[i]);
-          }
-        } else if (
-          bd_rangeType === 'range' &&
-          cfg.borderInfo[i].borderType === 'border-slash' &&
-          !(
-            cfg.borderInfo[i].range[0].row[0] >= rowSt &&
-            cfg.borderInfo[i].range[0].row[0] <= rowEd &&
-            cfg.borderInfo[i].range[0].column[0] >= colSt &&
-            cfg.borderInfo[i].range[0].column[0] <= colEd
-          )
-        ) {
-          source_borderInfo.push(cfg.borderInfo[i]);
-        }
-      }
-
-      ctx.luckysheetfile[index].config!.borderInfo = source_borderInfo;
-      borderInfoChanged = true;
-    }
     return true;
   });
 
+  const index = getSheetIndex(ctx, ctx.currentSheetId);
+  if (index != null && ctx.config.borderInfo?.length) {
+    const selections =
+      ctx.luckysheet_select_save?.map((s) => ({
+        row: s.row as [number, number],
+        column: s.column as [number, number],
+      })) ?? [];
+    const filtered = removeBorderInfoInSelections(
+      ctx.config.borderInfo,
+      selections,
+    );
+    ctx.luckysheetfile[index].config!.borderInfo = filtered;
+    ctx.config.borderInfo = filtered;
+    borderInfoChanged = true;
+  }
+
   if (ctx?.hooks?.updateCellYdoc) {
     if (borderInfoChanged) {
-      const index = getSheetIndex(ctx, ctx.currentSheetId);
-      const borderInfo =
-        index == null
-          ? (ctx.config?.borderInfo ?? [])
-          : (ctx.luckysheetfile[index]?.config?.borderInfo ?? []);
-      ydocChanges.push({
-        sheetId: ctx.currentSheetId,
-        path: ['config', 'borderInfo'],
-        value: borderInfo,
-        type: 'update',
-      });
+      syncBorderInfoToYdoc(ctx, ctx.config?.borderInfo ?? []);
     }
     if (ydocChanges.length > 0) {
       ctx.hooks.updateCellYdoc(ydocChanges);
@@ -1696,6 +1734,22 @@ export function handleBorder(
     cfg.borderInfo = [];
   }
 
+  const selections =
+    ctx.luckysheet_select_save?.map((s) => ({
+      row: s.row as [number, number],
+      column: s.column as [number, number],
+    })) ?? [];
+
+  cfg.borderInfo = removeBorderInfoInSelections(cfg.borderInfo, selections);
+
+  if (type === 'border-none') {
+    const index = getSheetIndex(ctx, ctx.currentSheetId);
+    if (index == null) return;
+    ctx.luckysheetfile[index].config = ctx.config;
+    syncBorderInfoToYdoc(ctx, cfg.borderInfo);
+    return;
+  }
+
   if (type !== 'border-slash') {
     const borderInfo = {
       rangeType: 'range',
@@ -1734,10 +1788,7 @@ export function handleBorder(
   if (index == null) return;
 
   ctx.luckysheetfile[index].config = ctx.config;
-
-  // setTimeout(function () {
-  //   luckysheetrefreshgrid();
-  // }, 1);
+  syncBorderInfoToYdoc(ctx, cfg.borderInfo);
 }
 
 export function handleMerge(ctx: Context, type: string) {

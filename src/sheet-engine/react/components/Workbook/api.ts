@@ -1,3 +1,4 @@
+import type { CellFormatRange } from '../../../core/utils/range-format';
 import {
   addSheet,
   api,
@@ -559,6 +560,74 @@ export function generateAPIs(
         { noHistory: true },
       ),
 
+    /** Merge keys into a map-backed sheet field without replacing the whole map. */
+    patchSheetMapField: (
+      field: string,
+      updates: Record<string, any>,
+      deleteKeys: string[] = [],
+      options: api.CommonOptions = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          const file = draftCtx.luckysheetfile[idx] as Record<string, any>;
+          const current = { ...(file[field] || {}) };
+          Object.entries(updates).forEach(([k, v]) => {
+            if (v == null) delete current[k];
+            else current[k] = v;
+          });
+          deleteKeys.forEach((k) => {
+            delete current[k];
+          });
+          file[field] =
+            Object.keys(current).length > 0 ? current : undefined;
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
+    /** Merge sub-keys into sheet.config without replacing the whole config object. */
+    setSheetConfigFields: (
+      partial: Record<string, any>,
+      options: api.CommonOptions & { deleteKeys?: string[] } = {},
+    ) =>
+      setContext(
+        (draftCtx) => {
+          const idx = getSheetIndex(
+            draftCtx,
+            options.id ?? draftCtx.currentSheetId,
+          );
+          if (idx == null) return;
+          const file = draftCtx.luckysheetfile[idx];
+          file.config = file.config || {};
+          const cfg = file.config as Record<string, any>;
+          Object.entries(partial).forEach(([k, v]) => {
+            if (v == null) delete cfg[k];
+            else cfg[k] = v;
+          });
+          (options.deleteKeys ?? []).forEach((k) => {
+            delete cfg[k];
+          });
+          if (file.id === draftCtx.currentSheetId) {
+            draftCtx.config = file.config!;
+          }
+          try {
+            jfrefreshgrid(draftCtx, null, undefined, false);
+          } catch {
+            // refresh best-effort
+          }
+        },
+        { noHistory: true },
+      ),
+
     setSheetConditionFormatRules: (
       rules: any[],
       options: api.CommonOptions = {},
@@ -650,8 +719,9 @@ export function generateAPIs(
       celldata: CellWithRowAndCol[],
       rowCount?: number,
       colCount?: number,
+      cellFormatRanges?: CellFormatRange[],
     ) => {
-      return api.celldataToData(celldata, rowCount, colCount);
+      return api.celldataToData(celldata, rowCount, colCount, cellFormatRanges);
     },
     insertFunction: (
       selectedFuncIndex: number,

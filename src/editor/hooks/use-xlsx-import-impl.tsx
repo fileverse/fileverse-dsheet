@@ -1020,6 +1020,19 @@ export async function runXlsxFileUpload(
                   sheet.config.columnlen = corrected;
                 }
 
+                const defaultColPx = Math.round(
+                  Number(sheet.defaultColWidth) || 73,
+                );
+                if (sheet.config?.columnlen) {
+                  const filteredCols: Record<string, number> = {};
+                  Object.entries(sheet.config.columnlen).forEach(([col, w]) => {
+                    if (Math.abs(Math.round(Number(w)) - defaultColPx) > 1) {
+                      filteredCols[col] = Number(w);
+                    }
+                  });
+                  sheet.config.columnlen = filteredCols;
+                }
+
                 // Drop rowlen entries at or near the default row height so Fortune
                 // uses its own default for rows the user never manually resized.
                 // Also done before image conversion so nativeRowToPx uses the
@@ -1301,15 +1314,20 @@ export async function runXlsxFileUpload(
                     for (let dr = 0; dr < rs; dr++) {
                       for (let dc = 0; dc < cs; dc++) {
                         const key = `${r + dr}_${c + dc}`;
+                        if (dr !== 0 || dc !== 0) continue;
                         let cell = celldataMap.get(key);
                         if (!cell) {
-                          cell = { r: r + dr, c: c + dc, v: {} };
+                          cell = {
+                            r: r + dr,
+                            c: c + dc,
+                            v: { mc: { r, c, rs, cs } },
+                          };
                           sheet.celldata.push(cell as never);
                           celldataMap.set(key, cell);
+                        } else {
+                          if (!cell.v) cell.v = {};
+                          cell.v.mc = { r, c, rs, cs };
                         }
-                        if (!cell.v) cell.v = {};
-                        cell.v.mc =
-                          dr === 0 && dc === 0 ? { r, c, rs, cs } : { r, c };
                       }
                     }
                   }

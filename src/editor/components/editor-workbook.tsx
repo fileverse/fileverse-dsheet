@@ -27,6 +27,7 @@ import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
 import { filterSelectYdocUpdate } from '../utils/filter-select-ydoc-update';
 import { filterYdocUpdate } from '../utils/filter-ydoc-update';
 import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
+import { configYdocUpdate } from '../utils/config-ydoc-update';
 import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
@@ -514,7 +515,12 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           }),
           afterOrderChanges: handleAfterOrderChanges,
           afterConfigChanges: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'config');
+            configYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
           updateAllCell: (subSheetId: string) => {

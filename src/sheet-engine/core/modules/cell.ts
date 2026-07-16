@@ -28,6 +28,7 @@ import {
   getCanonicalDateEditFormat,
   getDateEditFormatForCell,
 } from './date-base-locale';
+import { punchRectHoleInCellFormatRanges } from '../utils/range-format';
 import { clearCellError } from '../api';
 import {
   delFunctionGroup,
@@ -3001,7 +3002,28 @@ export function clearSelectedCellFormat(ctx: Context) {
   });
 
   if (ctx?.hooks?.updateCellYdoc && changeMap.size > 0) {
-    ctx.hooks.updateCellYdoc(Array.from(changeMap.values()));
+    const changes = Array.from(changeMap.values());
+    activeSheetFile.config ||= {};
+    let nextRanges = activeSheetFile.config.cellFormatRanges;
+    selectedRanges.forEach(({ row: rowRange, column: columnRange }) => {
+      nextRanges = punchRectHoleInCellFormatRanges(
+        nextRanges,
+        rowRange[0],
+        rowRange[1],
+        columnRange[0],
+        columnRange[1],
+      );
+    });
+    if (!_.isEqual(activeSheetFile.config.cellFormatRanges, nextRanges)) {
+      activeSheetFile.config.cellFormatRanges = nextRanges;
+      changes.push({
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'cellFormatRanges'],
+        value: nextRanges,
+        type: 'update',
+      });
+    }
+    ctx.hooks.updateCellYdoc(changes);
   }
 }
 
@@ -3043,7 +3065,28 @@ export function clearRowsCellsFormat(ctx: Context) {
   });
 
   if (ctx?.hooks?.updateCellYdoc && changeMap.size > 0) {
-    ctx.hooks.updateCellYdoc(Array.from(changeMap.values()));
+    const changes = Array.from(changeMap.values());
+    activeSheetFile.config ||= {};
+    let nextRanges = activeSheetFile.config.cellFormatRanges;
+    selectedRanges.forEach(({ row: rowRange }) => {
+      nextRanges = punchRectHoleInCellFormatRanges(
+        nextRanges,
+        rowRange[0],
+        rowRange[1],
+        0,
+        columnCount - 1,
+      );
+    });
+    if (!_.isEqual(activeSheetFile.config.cellFormatRanges, nextRanges)) {
+      activeSheetFile.config.cellFormatRanges = nextRanges;
+      changes.push({
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'cellFormatRanges'],
+        value: nextRanges,
+        type: 'update',
+      });
+    }
+    ctx.hooks.updateCellYdoc(changes);
   }
 }
 
@@ -3089,6 +3132,27 @@ export function clearColumnsCellsFormat(ctx: Context) {
   });
 
   if (ctx?.hooks?.updateCellYdoc && changeMap.size > 0) {
-    ctx.hooks.updateCellYdoc(Array.from(changeMap.values()));
+    const changes = Array.from(changeMap.values());
+    activeSheetFile.config ||= {};
+    let nextRanges = activeSheetFile.config.cellFormatRanges;
+    selectedRanges.forEach(({ column: columnRange }) => {
+      nextRanges = punchRectHoleInCellFormatRanges(
+        nextRanges,
+        0,
+        rowCount - 1,
+        columnRange[0],
+        columnRange[1],
+      );
+    });
+    if (!_.isEqual(activeSheetFile.config.cellFormatRanges, nextRanges)) {
+      activeSheetFile.config.cellFormatRanges = nextRanges;
+      changes.push({
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'cellFormatRanges'],
+        value: nextRanges,
+        type: 'update',
+      });
+    }
+    ctx.hooks.updateCellYdoc(changes);
   }
 }

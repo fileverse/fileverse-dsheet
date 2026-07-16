@@ -1,4 +1,6 @@
 import type { Context } from '../context';
+import { ensureSheetFlowdata } from '../api/sheet';
+import { getSheetsNeededForWorkerSnapshot } from '../api/sheet-flowdata-lifecycle';
 import type {
   SnapshotEvalInput,
   SnapshotEvalOutput,
@@ -18,6 +20,10 @@ let worker: Worker | null = null;
 let workerInitFailed = false;
 let nextRequestId = 0;
 let activeSnapshotKey: string | null = null;
+
+export function invalidateFormulaWorkerSnapshot(): void {
+  activeSnapshotKey = null;
+}
 const pending = new Map<
   number,
   {
@@ -127,6 +133,11 @@ export function initFormulaWorkerSnapshot(
   const w = getWorker();
   if (!w) return false;
   if (activeSnapshotKey === snapshotKey) return true;
+
+  // Hydrate only tabs the worker may read (active refs + sheets with formulas).
+  getSheetsNeededForWorkerSnapshot(ctx).forEach((sheetId) => {
+    ensureSheetFlowdata(ctx, { id: sheetId });
+  });
 
   try {
     w.postMessage({

@@ -33,6 +33,7 @@ import {
   updateContextWithSheetData,
   jfrefreshgrid,
 } from '@sheet-engine/core';
+import { applyCellFormatRangesToData, getCellFormatRangeGridBounds } from '@sheet-engine/core/utils/range-format';
 import { activePalette, setActiveGridPalette, type ThemeKey } from '@sheet-engine/core/theme';
 import {
   normalizeDateBaseLocale,
@@ -59,7 +60,9 @@ import {
   buildWorkerEvalInput,
   evalFormulasInBackground,
   initFormulaWorkerSnapshot,
+  invalidateFormulaWorkerSnapshot,
 } from '@sheet-engine/core/modules/formula-worker-bridge';
+import { syncAndDemoteInactiveFlowdata } from '@sheet-engine/core/api/sheet-flowdata-lifecycle';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
   useMemo,
@@ -165,6 +168,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const [context, setContext] = useState(defaultContext(refs));
     const contextRef = useRef(context);
     contextRef.current = context;
+    const prevSheetIdRef = useRef<string | null>(null);
     // const { formula } = locale(context);
 
     const [moreToolbarItems, setMoreToolbarItems] =
@@ -222,6 +226,13 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           lastRowNum = Math.max(lastRowNum, draftCtx.defaultrowNum);
           lastColNum = Math.max(lastColNum, draftCtx.defaultcolumnNum);
         }
+        const rangeBounds = getCellFormatRangeGridBounds(
+          newData.config?.cellFormatRanges,
+        );
+        if (rangeBounds) {
+          lastRowNum = Math.max(lastRowNum, rangeBounds.maxRow + 1);
+          lastColNum = Math.max(lastColNum, rangeBounds.maxCol + 1);
+        }
         if (lastRowNum && lastColNum) {
           const expandedData: SheetType['data'] = _.times(lastRowNum, () =>
             _.times(lastColNum, () => null),
@@ -244,6 +255,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               }
             }
           });
+          applyCellFormatRangesToData(
+            expandedData,
+            newData.config?.cellFormatRanges,
+          );
           draftCtx.luckysheetfile = produce(draftCtx.luckysheetfile, (d) => {
             d[index!].data = expandedData;
             delete d[index!].celldata;
@@ -924,11 +939,8 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 ensureSheetIndex(draftData, mergedSettings.generateSheetId);
               });
               draftCtx.luckysheetfile = newData;
-              newData.forEach((newDatum) => {
-                const index = getSheetIndex(draftCtx, newDatum.id!) as number;
-                const sheet = draftCtx.luckysheetfile?.[index];
-                initSheetData(draftCtx, sheet, index);
-              });
+              // Inactive tabs stay sparse (celldata only). The active sheet is
+              // hydrated below once currentSheetId is resolved.
             }
             if (mergedSettings.devicePixelRatio > 0) {
               draftCtx.devicePixelRatio = mergedSettings.devicePixelRatio;
@@ -953,6 +965,22 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               }
             }
             if (sheetIdx == null) return;
+
+            const activeSheetId = draftCtx.currentSheetId;
+            const previousSheetId = prevSheetIdRef.current;
+            if (!_.isEmpty(draftCtx.luckysheetfile) && activeSheetId) {
+              if (previousSheetId !== activeSheetId) {
+                syncAndDemoteInactiveFlowdata(
+                  draftCtx,
+                  activeSheetId,
+                  previousSheetId,
+                );
+                if (previousSheetId) {
+                  invalidateFormulaWorkerSnapshot();
+                }
+              }
+              prevSheetIdRef.current = activeSheetId;
+            }
 
             const sheet = draftCtx.luckysheetfile?.[sheetIdx];
             if (!sheet) return;
