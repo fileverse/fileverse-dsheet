@@ -60,7 +60,9 @@ import {
   buildWorkerEvalInput,
   evalFormulasInBackground,
   initFormulaWorkerSnapshot,
+  invalidateFormulaWorkerSnapshot,
 } from '@sheet-engine/core/modules/formula-worker-bridge';
+import { syncAndDemoteInactiveFlowdata } from '@sheet-engine/core/api/sheet-flowdata-lifecycle';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
   useMemo,
@@ -166,6 +168,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const [context, setContext] = useState(defaultContext(refs));
     const contextRef = useRef(context);
     contextRef.current = context;
+    const prevSheetIdRef = useRef<string | null>(null);
     // const { formula } = locale(context);
 
     const [moreToolbarItems, setMoreToolbarItems] =
@@ -962,6 +965,22 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               }
             }
             if (sheetIdx == null) return;
+
+            const activeSheetId = draftCtx.currentSheetId;
+            const previousSheetId = prevSheetIdRef.current;
+            if (!_.isEmpty(draftCtx.luckysheetfile) && activeSheetId) {
+              if (previousSheetId !== activeSheetId) {
+                syncAndDemoteInactiveFlowdata(
+                  draftCtx,
+                  activeSheetId,
+                  previousSheetId,
+                );
+                if (previousSheetId) {
+                  invalidateFormulaWorkerSnapshot();
+                }
+              }
+              prevSheetIdRef.current = activeSheetId;
+            }
 
             const sheet = draftCtx.luckysheetfile?.[sheetIdx];
             if (!sheet) return;

@@ -1,5 +1,6 @@
 import type { Context } from '../context';
 import { ensureSheetFlowdata } from '../api/sheet';
+import { getSheetsNeededForWorkerSnapshot } from '../api/sheet-flowdata-lifecycle';
 import type {
   SnapshotEvalInput,
   SnapshotEvalOutput,
@@ -19,6 +20,10 @@ let worker: Worker | null = null;
 let workerInitFailed = false;
 let nextRequestId = 0;
 let activeSnapshotKey: string | null = null;
+
+export function invalidateFormulaWorkerSnapshot(): void {
+  activeSnapshotKey = null;
+}
 const pending = new Map<
   number,
   {
@@ -129,12 +134,9 @@ export function initFormulaWorkerSnapshot(
   if (!w) return false;
   if (activeSnapshotKey === snapshotKey) return true;
 
-  // Hydrate sparse tabs before posting — worker still receives full dense grids,
-  // but inactive sheets stay sparse until formulas actually need them.
-  ctx.luckysheetfile.forEach((sheet) => {
-    if (!sheet.data) {
-      ensureSheetFlowdata(ctx, { id: sheet.id! });
-    }
+  // Hydrate only tabs the worker may read (active refs + sheets with formulas).
+  getSheetsNeededForWorkerSnapshot(ctx).forEach((sheetId) => {
+    ensureSheetFlowdata(ctx, { id: sheetId });
   });
 
   try {
