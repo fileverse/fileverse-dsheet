@@ -936,11 +936,8 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 ensureSheetIndex(draftData, mergedSettings.generateSheetId);
               });
               draftCtx.luckysheetfile = newData;
-              newData.forEach((newDatum) => {
-                const index = getSheetIndex(draftCtx, newDatum.id!) as number;
-                const sheet = draftCtx.luckysheetfile?.[index];
-                initSheetData(draftCtx, sheet, index);
-              });
+              // Inactive tabs stay sparse (celldata only). The active sheet is
+              // hydrated below once currentSheetId is resolved.
             }
             if (mergedSettings.devicePixelRatio > 0) {
               draftCtx.devicePixelRatio = mergedSettings.devicePixelRatio;

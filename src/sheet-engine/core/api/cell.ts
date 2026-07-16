@@ -11,9 +11,10 @@ import {
   updateDropCell,
   updateFormatCell,
 } from '../modules';
-import { Cell, CellStyle, SingleRange } from '../types';
+import { Cell, CellStyle, SingleRange, Sheet } from '../types';
 import { CommonOptions, getSheet } from './common';
 import { SHEET_NOT_FOUND } from './errors';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
 // @ts-ignore
 import SSF from '../modules/ssf';
 
@@ -197,6 +198,45 @@ export function setCellValue(
  *    `insertUpdateFunctionGroup`, so they stay reactive to future local edits
  *    on both owner and peer.
  */
+function patchSparseCelldata(
+  sheet: Sheet,
+  row: number,
+  column: number,
+  value: any,
+) {
+  if (!sheet.celldata) {
+    sheet.celldata = [];
+  }
+  const idx = sheet.celldata.findIndex((c) => c.r === row && c.c === column);
+  const isDelete =
+    value == null ||
+    (typeof value === 'string' && value.length === 0) ||
+    (value instanceof Object && !shouldPersistCelldataCell(value));
+
+  if (isDelete) {
+    if (idx >= 0) sheet.celldata.splice(idx, 1);
+    return;
+  }
+
+  let cellValue: Cell;
+  if (value instanceof Object) {
+    cellValue = _.cloneDeep(value) as Cell;
+  } else {
+    const str = value.toString();
+    cellValue =
+      str.substr(0, 1) === '=' || str.substr(0, 5) === '<span'
+        ? ({ f: str } as Cell)
+        : ({ v: value, m: str } as Cell);
+  }
+
+  const entry = { r: row, c: column, v: cellValue };
+  if (idx >= 0) {
+    sheet.celldata[idx] = entry;
+  } else {
+    sheet.celldata.push(entry);
+  }
+}
+
 export function applyRemoteCellValue(
   ctx: Context,
   row: number,
@@ -209,10 +249,29 @@ export function applyRemoteCellValue(
   }
 
   const sheet = getSheet(ctx, options);
-  const { data } = sheet;
-  if (!data) return;
-
   const sheetId = (options.id ?? sheet.id ?? ctx.currentSheetId) as string;
+  const { data } = sheet;
+
+  if (!data) {
+    patchSparseCelldata(sheet, row, column, value);
+    if (value == null || value.toString().length === 0) {
+      delFunctionGroup(ctx, row, column, sheetId);
+    } else if (value instanceof Object) {
+      if ((value as Cell).f != null) {
+        insertUpdateFunctionGroup(ctx, row, column, sheetId);
+      } else {
+        delFunctionGroup(ctx, row, column, sheetId);
+      }
+    } else {
+      const str = value.toString();
+      if (str.substr(0, 1) === '=' || str.substr(0, 5) === '<span') {
+        insertUpdateFunctionGroup(ctx, row, column, sheetId);
+      } else {
+        delFunctionGroup(ctx, row, column, sheetId);
+      }
+    }
+    return;
+  }
 
   // Remote clear / delete: drop the value and any formula registration.
   if (value == null || value.toString().length === 0) {

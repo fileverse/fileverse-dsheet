@@ -35,6 +35,7 @@ import {
   FORMULA_ASYNC_EVAL_THRESHOLD,
   type FormulaAsyncEvalJob,
 } from './formula-async-eval';
+import { ensureSheetFlowdata } from '../api/sheet';
 import {
   beginRangeValuePassCache,
   clearRangeValuePassCache,
@@ -797,11 +798,14 @@ export function getcellrange(ctx: Context, txt: string, formulaId?: string) {
     _.forEach(luckysheetfile, (f) => {
       if (sheettxt === f.name) {
         sheetId = f.id;
-        sheetdata = f.data;
+        sheetdata = f.data ?? null;
         return false;
       }
       return true;
     });
+    if (sheetId != null && _.isNil(sheetdata)) {
+      sheetdata = ensureSheetFlowdata(ctx, { id: sheetId });
+    }
   } else {
     let i = formulaId;
     if (_.isNil(i)) {

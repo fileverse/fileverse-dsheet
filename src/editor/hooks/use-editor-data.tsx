@@ -1119,6 +1119,35 @@ export const useEditorData = (
         }
       };
 
+      const patchPlainCelldata = () => {
+        const plain = currentDataRef.current;
+        if (!plain?.length) {
+          syncPlainSnapshot();
+          return;
+        }
+        for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
+          const sheet = plain.find((s) => s.id === sheetId);
+          if (!sheet) continue;
+          if (!sheet.celldata) sheet.celldata = [];
+          changedKeys.forEach(({ action }, key) => {
+            const sep = key.lastIndexOf('_');
+            const r = parseInt(key.slice(0, sep), 10);
+            const c = parseInt(key.slice(sep + 1), 10);
+            const idx = sheet.celldata!.findIndex(
+              (cell) => cell.r === r && cell.c === c,
+            );
+            if (action === 'delete') {
+              if (idx >= 0) sheet.celldata!.splice(idx, 1);
+              return;
+            }
+            const cellObj = celldataMap.get(key);
+            const entry = { r, c, v: cellObj?.v ?? null };
+            if (idx >= 0) sheet.celldata![idx] = entry;
+            else sheet.celldata!.push(entry);
+          });
+        }
+      };
+
       // --- Fall back to remount for structural changes or large cell batches ---
       if (needsStructuralRemount) {
         scheduleStructuralRemount();
@@ -1158,7 +1187,8 @@ export const useEditorData = (
             configUpdates.size > 0 ||
             conditionFormatUpdates.size > 0)
         ) {
-          syncPlainSnapshot();
+          // Metadata-only remote apply — dense flowdata already patched; skip
+          // full ySheetArrayToPlain (local onChange still rebuilds for persist).
           return;
         }
 
@@ -1190,17 +1220,8 @@ export const useEditorData = (
           });
         }
 
-        if (
-          totalCells > 0 ||
-          sheetMetaUpdates.size > 0 ||
-          overlayUpdates.size > 0 ||
-          dataVerificationUpdates.size > 0 ||
-          filterUpdates.size > 0 ||
-          mapFieldUpdates.size > 0 ||
-          configUpdates.size > 0 ||
-          conditionFormatUpdates.size > 0
-        ) {
-          syncPlainSnapshot();
+        if (totalCells > 0) {
+          patchPlainCelldata();
         }
       });
     };

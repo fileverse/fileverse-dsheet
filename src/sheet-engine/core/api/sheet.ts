@@ -122,6 +122,22 @@ export function initSheetData(
   return null;
 }
 
+/** Build dense `data` from sparse `celldata` when a sheet is activated or referenced. */
+export function ensureSheetFlowdata(
+  ctx: Context,
+  options: { index?: number; id?: string } = {},
+): CellMatrix | null {
+  const index =
+    options.index ?? getSheetIndex(ctx, options.id ?? ctx.currentSheetId);
+  if (index == null) return null;
+  const sheet = ctx.luckysheetfile[index];
+  if (!sheet) return null;
+  if (sheet.data?.length) {
+    return sheet.data;
+  }
+  return initSheetData(ctx, index, sheet);
+}
+
 export function hideSheet(ctx: Context, sheetId: string) {
   const index = getSheetIndex(ctx, sheetId) as number;
   ctx.luckysheetfile[index].hide = 1;

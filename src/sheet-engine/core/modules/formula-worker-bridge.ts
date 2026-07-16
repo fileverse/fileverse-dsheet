@@ -1,4 +1,5 @@
 import type { Context } from '../context';
+import { ensureSheetFlowdata } from '../api/sheet';
 import type {
   SnapshotEvalInput,
   SnapshotEvalOutput,
@@ -127,6 +128,14 @@ export function initFormulaWorkerSnapshot(
   const w = getWorker();
   if (!w) return false;
   if (activeSnapshotKey === snapshotKey) return true;
+
+  // Hydrate sparse tabs before posting — worker still receives full dense grids,
+  // but inactive sheets stay sparse until formulas actually need them.
+  ctx.luckysheetfile.forEach((sheet) => {
+    if (!sheet.data) {
+      ensureSheetFlowdata(ctx, { id: sheet.id! });
+    }
+  });
 
   try {
     w.postMessage({
