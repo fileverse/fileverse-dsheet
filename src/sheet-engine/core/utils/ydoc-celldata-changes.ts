@@ -1,0 +1,246 @@
+import _ from 'lodash';
+
+import type { Context } from '../context';
+import type { Cell, CellWithRowAndCol } from '../types';
+import { shouldPersistCelldataCell } from './cell-persist-utils';
+
+export type CelldataYdocChange = {
+  sheetId: string;
+  path: string[];
+  key?: string;
+  value: any;
+  type?: 'update' | 'delete';
+};
+
+/** Cheap equality before deep compare — hot path for structural diffs. */
+export function cellsEqualForYdocPersist(
+  before: unknown,
+  after: unknown,
+): boolean {
+  if (before === after) return true;
+  if (before == null || after == null) return false;
+  if (typeof before !== 'object' || typeof after !== 'object') {
+    return before === after;
+  }
+  const a = before as Cell;
+  const b = after as Cell;
+  if (a.v !== b.v || a.f !== b.f || a.m !== b.m) return false;
+  return _.isEqual(before, after);
+}
+
+function normalizeRange(
+  data: unknown[][] | null | undefined,
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+) {
+  if (!data?.length) return null;
+  const rowEnd = Math.min(r2, data.length - 1);
+  const colEnd = Math.min(c2, (data[0]?.length ?? 0) - 1);
+  const rowStart = Math.max(0, r1);
+  const colStart = Math.max(0, c1);
+  if (rowStart > rowEnd || colStart > colEnd) return null;
+  return { rowStart, rowEnd, colStart, colEnd };
+}
+
+/**
+ * Snapshot persisted cells in a range.
+ * Prefer sparse `celldata` when provided — O(populated cells), not O(range area).
+ */
+export function snapshotPersistedCelldataInRange(
+  data: unknown[][] | null | undefined,
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+  celldata?: CellWithRowAndCol[] | null,
+): Map<string, Cell | string | number | boolean> {
+  const map = new Map<string, Cell | string | number | boolean>();
+  const bounds = normalizeRange(data, r1, r2, c1, c2);
+  if (!bounds) return map;
+  const { rowStart, rowEnd, colStart, colEnd } = bounds;
+
+  if (celldata?.length) {
+    for (const entry of celldata) {
+      if (
+        entry.r < rowStart ||
+        entry.r > rowEnd ||
+        entry.c < colStart ||
+        entry.c > colEnd
+      ) {
+        continue;
+      }
+      if (shouldPersistCelldataCell(entry.v)) {
+        map.set(
+          `${entry.r}_${entry.c}`,
+          entry.v as Cell | string | number | boolean,
+        );
+      }
+    }
+    return map;
+  }
+
+  for (let r = rowStart; r <= rowEnd; r += 1) {
+    const row = data![r];
+    if (!row) continue;
+    for (let c = colStart; c <= colEnd; c += 1) {
+      const cell = row[c];
+      if (cell == null) continue;
+      if (shouldPersistCelldataCell(cell)) {
+        map.set(`${r}_${c}`, cell as Cell | string | number | boolean);
+      }
+    }
+  }
+  return map;
+}
+
+export function appendCelldataDiffChange(
+  changes: CelldataYdocChange[],
+  sheetId: string,
+  r: number,
+  c: number,
+  cell: unknown,
+  beforePersisted?: Map<string, Cell | string | number | boolean>,
+): void {
+  const mapKey = `${r}_${c}`;
+  const beforeCell = beforePersisted?.get(mapKey);
+  const hadBefore = beforePersisted?.has(mapKey) ?? false;
+  const afterPersist = shouldPersistCelldataCell(
+    cell as Cell | string | number | boolean | null,
+  );
+
+  if (afterPersist) {
+    if (hadBefore && cellsEqualForYdocPersist(beforeCell, cell)) return;
+    changes.push({
+      sheetId,
+      path: ['celldata'],
+      value: { r, c, v: cell },
+      key: mapKey,
+      type: 'update',
+    });
+    return;
+  }
+
+  if (hadBefore) {
+    changes.push({
+      sheetId,
+      path: ['celldata'],
+      key: mapKey,
+      value: null,
+      type: 'delete',
+    });
+  }
+}
+
+export function buildCelldataChangesForRange(
+  sheetId: string,
+  data: unknown[][],
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+  beforePersisted?: Map<string, Cell | string | number | boolean>,
+): CelldataYdocChange[] {
+  const bounds = normalizeRange(data, r1, r2, c1, c2);
+  if (!bounds) return [];
+
+  const { rowStart, rowEnd, colStart, colEnd } = bounds;
+  const changes: CelldataYdocChange[] = [];
+
+  for (let r = rowStart; r <= rowEnd; r += 1) {
+    const row = data[r];
+    if (!row && !beforePersisted?.size) continue;
+    for (let c = colStart; c <= colEnd; c += 1) {
+      const cell = row?.[c] ?? null;
+      const mapKey = `${r}_${c}`;
+      if (
+        cell == null &&
+        !beforePersisted?.has(mapKey) &&
+        !shouldPersistCelldataCell(cell)
+      ) {
+        continue;
+      }
+      appendCelldataDiffChange(
+        changes,
+        sheetId,
+        r,
+        c,
+        cell,
+        beforePersisted,
+      );
+    }
+  }
+  return changes;
+}
+
+export function emitCelldataRangeDiffToYdoc(
+  ctx: Context,
+  sheetId: string,
+  data: unknown[][],
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+  beforePersisted?: Map<string, Cell | string | number | boolean>,
+): void {
+  if (!ctx?.hooks?.updateCellYdoc) return;
+  const changes = buildCelldataChangesForRange(
+    sheetId,
+    data,
+    r1,
+    r2,
+    c1,
+    c2,
+    beforePersisted,
+  );
+  if (changes.length > 0) {
+    ctx.hooks.updateCellYdoc(changes);
+  }
+}
+
+export type MergeBounds = {
+  minR: number;
+  minC: number;
+  maxR: number;
+  maxC: number;
+};
+
+/** Disturbed range for insert row/col — snapshot only rows/cols that may shift. */
+export function getInsertRowColSnapshotBounds(
+  type: 'row' | 'column',
+  index: number,
+  direction: 'lefttop' | 'rightbottom',
+  rowCount: number,
+  colCount: number,
+  mergeBounds: MergeBounds | null,
+): { r1: number; r2: number; c1: number; c2: number } {
+  const r2 = Math.max(0, rowCount - 1);
+  const c2 = Math.max(0, colCount - 1);
+  if (type === 'row') {
+    const baseStart = direction === 'lefttop' ? index : index + 1;
+    const r1 = mergeBounds ? Math.min(baseStart, mergeBounds.minR) : baseStart;
+    return { r1: Math.max(0, r1), r2, c1: 0, c2 };
+  }
+  const baseStart = direction === 'lefttop' ? index : index + 1;
+  const c1 = mergeBounds ? Math.min(baseStart, mergeBounds.minC) : baseStart;
+  return { r1: 0, r2, c1: Math.max(0, c1), c2 };
+}
+
+/** Disturbed range for delete row/col — from deletion point to sheet edge. */
+export function getDeleteRowColSnapshotBounds(
+  type: 'row' | 'column',
+  start: number,
+  rowCount: number,
+  colCount: number,
+  mergeBounds: MergeBounds | null,
+): { r1: number; r2: number; c1: number; c2: number } {
+  const r2 = Math.max(0, rowCount - 1);
+  const c2 = Math.max(0, colCount - 1);
+  if (type === 'row') {
+    const r1 = mergeBounds ? Math.min(start, mergeBounds.minR) : start;
+    return { r1: Math.max(0, r1), r2, c1: 0, c2 };
+  }
+  const c1 = mergeBounds ? Math.min(start, mergeBounds.minC) : start;
+  return { r1: 0, r2, c1: Math.max(0, c1), c2 };
+}

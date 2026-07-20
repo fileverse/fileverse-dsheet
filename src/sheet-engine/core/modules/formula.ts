@@ -36,6 +36,7 @@ import {
   type FormulaAsyncEvalJob,
 } from './formula-async-eval';
 import { ensureSheetFlowdata } from '../api/sheet';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
 import {
   beginRangeValuePassCache,
   clearRangeValuePassCache,
@@ -1894,6 +1895,17 @@ function insertUpdateDynamicArray(ctx: Context, dynamicArrayItem: any) {
 export function groupValuesRefresh(ctx: Context) {
   const { luckysheetfile } = ctx;
   if (ctx.groupValuesRefreshData.length > 0) {
+    const ydocChangeMap = new Map<
+      string,
+      {
+        sheetId: string;
+        path: string[];
+        key?: string;
+        value: any;
+        type?: 'update' | 'delete';
+      }
+    >();
+
     for (let i = 0; i < ctx.groupValuesRefreshData.length; i += 1) {
       const item = ctx.groupValuesRefreshData[i];
 
@@ -1921,25 +1933,35 @@ export function groupValuesRefresh(ctx: Context) {
       updateValue.v = item.v;
       updateValue.f = item.f;
       setCellValue(ctx, item.r, item.c, data, updateValue);
-      if (ctx?.hooks?.updateCellYdoc) {
-        ctx.hooks.updateCellYdoc([
-          {
-            sheetId: item.id,
-            path: ['celldata'],
-            value: {
-              r: item.r,
-              c: item.c,
-              v: data?.[item.r]?.[item.c] ?? null,
-            },
-            key: `${item.r}_${item.c}`,
-            type: 'update',
-          },
-        ]);
+
+      const cellValue = data?.[item.r]?.[item.c] ?? null;
+      const mapKey = `${item.r}_${item.c}`;
+      if (shouldPersistCelldataCell(cellValue)) {
+        ydocChangeMap.set(`${item.id}:${mapKey}`, {
+          sheetId: item.id,
+          path: ['celldata'],
+          value: { r: item.r, c: item.c, v: cellValue },
+          key: mapKey,
+          type: 'update',
+        });
+      } else {
+        ydocChangeMap.set(`${item.id}:${mapKey}`, {
+          sheetId: item.id,
+          path: ['celldata'],
+          key: mapKey,
+          value: null,
+          type: 'delete',
+        });
       }
       // server.saveParam("v", item.id, data[item.r][item.c], {
       //     "r": item.r,
       //     "c": item.c
       // });
+    }
+
+    const ydocChanges = Array.from(ydocChangeMap.values());
+    if (ydocChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
+      ctx.hooks.updateCellYdoc(ydocChanges);
     }
 
     // editor.webWorkerFlowDataCache(Store.flowdata); // worker存数据

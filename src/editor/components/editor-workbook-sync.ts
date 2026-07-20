@@ -496,6 +496,7 @@ export const updateAllCell = (
     handleOnChangePortalUpdate,
   }: SyncContext,
   subSheetId: string,
+  caller = 'unknown',
 ) => {
   const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
   const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'updateAllCell');
@@ -547,4 +548,10 @@ export const updateAllCell = (
     changes,
     handleOnChangePortalUpdate,
   );
+
+  if (changes.length > 0) {
+    console.warn(
+      `[Yjs] updateAllCell caller=${caller} sheet=${subSheetId} cells=${changes.length}`,
+    );
+  }
 };

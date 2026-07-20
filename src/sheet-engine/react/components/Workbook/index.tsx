@@ -287,7 +287,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
     const emitYjsFromPatches = useCallback(
       (ctxBefore: Context, ctxAfter: Context, patches: Patch[]) => {
-        const { updateCellYdoc, updateAllCell } = ctxBefore.hooks ?? {};
+        const { updateCellYdoc } = ctxBefore.hooks ?? {};
         if (!updateCellYdoc) return;
 
         const mapFields = new Set([
@@ -350,8 +350,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               const r = path[3] as number;
               const beforeRow = (sheetBefore as any)?.data?.[r] ?? [];
               const afterRow = (sheetAfter as any)?.data?.[r] ?? [];
+              if (beforeRow === afterRow) return;
               const max = Math.max(beforeRow.length ?? 0, afterRow.length ?? 0);
               for (let c = 0; c < max; c += 1) {
+                if (beforeRow[c] === afterRow[c]) continue;
                 if (!_.isEqual(beforeRow[c] ?? null, afterRow[c] ?? null)) {
                   upsertCell(sheetId, r, c);
                 }
@@ -359,26 +361,30 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               return;
             }
 
-            // Whole-matrix replacement ["data"] (rare). If huge, fall back to updateAllCell when available.
+            // Whole-matrix replacement ["data"] (rare). Diff row-by-row instead of full-sheet rewrite.
             if (path.length === 3) {
               const dataAfter = (sheetAfter as any)?.data as
                 | any[][]
                 | undefined;
+              const dataBefore = (sheetBefore as any)?.data as
+                | any[][]
+                | undefined;
               const rows = dataAfter?.length ?? 0;
-              const cols = rows > 0 ? (dataAfter?.[0]?.length ?? 0) : 0;
-              const size = rows * cols;
-              if (size > 50000 && updateAllCell) {
-                updateAllCell(sheetId);
-                return;
+              if (rows > 50000) {
+                console.warn(
+                  `[Yjs] undo/redo whole-matrix diff on large sheet (${rows} rows)`,
+                );
               }
               for (let r = 0; r < rows; r += 1) {
-                const beforeRow = (sheetBefore as any)?.data?.[r] ?? [];
-                const afterRow = (sheetAfter as any)?.data?.[r] ?? [];
+                const beforeRow = dataBefore?.[r] ?? [];
+                const afterRow = dataAfter?.[r] ?? [];
+                if (beforeRow === afterRow) continue;
                 const max = Math.max(
                   beforeRow.length ?? 0,
                   afterRow.length ?? 0,
                 );
                 for (let c = 0; c < max; c += 1) {
+                  if (beforeRow[c] === afterRow[c]) continue;
                   if (!_.isEqual(beforeRow[c] ?? null, afterRow[c] ?? null)) {
                     upsertCell(sheetId, r, c);
                   }

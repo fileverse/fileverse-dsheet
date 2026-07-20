@@ -13,6 +13,10 @@ import {
   type HyperlinkEntry,
 } from '@sheet-engine/core';
 import WorkbookContext from '../../../context';
+import {
+  emitCelldataRangeDiffToYdoc,
+  snapshotPersistedCelldataInRange,
+} from '../../../../core/utils/ydoc-celldata-changes';
 
 export const useRowDragAndDrop = (
   containerRef: RefObject<HTMLDivElement | null>,
@@ -406,6 +410,16 @@ export const useRowDragAndDrop = (
           selectedSourceRowRef.current = selectedSourceRow;
           selectedTargetRowRef.current = selectedTargetRow;
 
+          const numColsBeforeMove = rows[0]?.length ?? 0;
+          const ydocBeforePersisted = snapshotPersistedCelldataInRange(
+            rows,
+            affectedRowStart,
+            affectedRowEnd,
+            0,
+            Math.max(0, numColsBeforeMove - 1),
+            _sheet.celldata,
+          );
+
           // Move selected row block in one splice pair, preserving relative order.
           const movedRows = rows.splice(selectedStart, moveCount);
           rows.splice(targetIndex, 0, ...movedRows);
@@ -736,31 +750,17 @@ export const useRowDragAndDrop = (
             context.currentSheetId,
           );
 
-          // Notify Yjs for every cell in the disturbed range (moved row + all rows in between)
-          const cellChanges: {
-            sheetId: string;
-            path: string[];
-            key?: string;
-            value: any;
-            type?: 'update' | 'delete';
-          }[] = [];
-          const numCols = d?.[0]?.length ?? 0;
-          for (let r = affectedRowStart; r <= affectedRowEnd; r += 1) {
-            const row = rows[r];
-            for (let c = 0; c < numCols; c += 1) {
-              const cell = row?.[c];
-              cellChanges.push({
-                sheetId: draft.currentSheetId,
-                path: ['celldata'],
-                value: { r, c, v: cell ?? null },
-                key: `${r}_${c}`,
-                type: 'update',
-              });
-            }
-          }
-          if (cellChanges.length > 0 && draft.hooks?.updateCellYdoc) {
-            draft.hooks.updateCellYdoc(cellChanges);
-          }
+          // Sync sparse celldata for disturbed rows only (skip unchanged empty cells).
+          emitCelldataRangeDiffToYdoc(
+            draft,
+            draft.currentSheetId,
+            rows,
+            affectedRowStart,
+            affectedRowEnd,
+            0,
+            Math.max(0, (rows[0]?.length ?? 1) - 1),
+            ydocBeforePersisted,
+          );
           const colLen = d?.[0]?.length || 0;
           const colEnd = Math.max(0, colLen - 1);
           api.setSelection(

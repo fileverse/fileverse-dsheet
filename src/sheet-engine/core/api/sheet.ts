@@ -259,7 +259,7 @@ export function copySheet(ctx: Context, sheetId: string) {
   // Duplicating a sheet bypasses per-cell update flows; ensure external sync (e.g. Yjs) gets a full snapshot.
   // Prefer updateAllCell for performance; otherwise emit celldata updates for the new sheet.
   if (ctx?.hooks?.updateAllCell) {
-    ctx.hooks.updateAllCell(newSheetId);
+    ctx.hooks.updateAllCell(newSheetId, 'duplicateSheet');
   } else if (ctx?.hooks?.updateCellYdoc) {
     const changes: any[] = [];
     const celldata = newSheet.celldata || dataToCelldata(newSheet.data);

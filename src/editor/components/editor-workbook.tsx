@@ -523,7 +523,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
             });
           }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          updateAllCell: (subSheetId: string) => {
+          updateAllCell: (subSheetId: string, caller?: string) => {
             setTimeout(() => {
               updateAllCell(
                 {
@@ -533,6 +533,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
                   handleOnChangePortalUpdate,
                 },
                 subSheetId,
+                caller ?? 'hook',
               );
             }, 500);
           },
