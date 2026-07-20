@@ -14,7 +14,6 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { fromUint8Array } from 'js-base64';
 
-import { ySheetArrayToPlain } from '../utils/update-ydoc';
 import { useEditorSync } from '../hooks/use-editor-sync';
 import { useEditorData } from '../hooks/use-editor-data';
 import {
@@ -389,18 +388,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       const encodedUpdate = fromUint8Array(
         Y.encodeStateAsUpdate(ydocRef.current),
       );
-      // Local cell edits update Yjs celldata but do not refresh currentDataRef.
-      // Build plain snapshot from Yjs so parent onChange gets live celldata, not
-      // the stale mount ref (which still has celldata: []).
-      let plain = currentDataRef.current;
-      try {
-        const sheetArray = ydocRef.current.getArray(dsheetId);
-        plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map<any>>);
-        currentDataRef.current = plain;
-      } catch {
-        // Fall back to ref if Yjs → plain conversion fails.
-      }
-      onChange({ data: plain }, encodedUpdate);
+      // Host autosave uses encoded Yjs only; plain snapshot is not rebuilt here
+      // (dsheets.new uses an editor-ready body baseline for init/temp guards).
+      onChange({ data: currentDataRef.current }, encodedUpdate);
     }, 1000);
   }, [onChange, dsheetId]);
 
