@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "3.0.2",
+  "version": "3.0.2-patch.1",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -81,8 +81,10 @@
     "xlsx-js-style": "^1.2.0",
     "y-indexeddb": "^9.0.12",
     "y-protocols": "^1.0.6",
-    "yjs": "^13.6.15",
     "viem": "^2.35.0"
+  },
+  "peerDependencies": {
+    "yjs": ">=13.6.30 <14"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.23",
@@ -110,6 +112,7 @@
     "sass": "^1.77.2",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.2.2",
-    "vite": "^5.0.0"
+    "vite": "^5.0.0",
+    "yjs": "13.6.30"
   }
 }
