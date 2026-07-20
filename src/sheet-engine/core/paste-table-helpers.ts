@@ -42,7 +42,7 @@ function parseTdBorderSide(
   if (Number.isNaN(nWidth) || nWidth < 1) return null;
   if (isTransparentBorderColor(color)) return null;
 
-  const qk = getQKBorder(width, borderStyle, color);
+  const qk = getQKBorder(width, borderStyle, color) as [number, string];
   if (!qk || qk[0] === 0 || isTransparentBorderColor(String(qk[1]))) return null;
   return [qk[0], qk[1]];
 }
@@ -239,8 +239,12 @@ function applyBordersAndMerges(
 
       if (!(isTopEdge || isBottomEdge || isLeftEdge || isRightEdge)) continue;
 
-      const cellBorders: { l?: unknown; r?: unknown; t?: unknown; b?: unknown } =
-        {};
+      const cellBorders: {
+        l?: { style?: number; color?: string };
+        r?: { style?: number; color?: string };
+        t?: { style?: number; color?: string };
+        b?: { style?: number; color?: string };
+      } = {};
 
       if (isTopEdge && topBorder) {
         cellBorders.t = { style: topBorder[0], color: topBorder[1] };
