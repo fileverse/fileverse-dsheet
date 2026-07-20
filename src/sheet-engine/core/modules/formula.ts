@@ -1917,7 +1917,10 @@ export function groupValuesRefresh(ctx: Context) {
       if (idx == null) continue;
 
       const file = luckysheetfile[idx];
-      const { data } = file;
+      let { data } = file;
+      if (_.isNil(data)) {
+        data = ensureSheetFlowdata(ctx, { id: item.id }) ?? undefined;
+      }
       if (_.isNil(data)) {
         continue;
       }

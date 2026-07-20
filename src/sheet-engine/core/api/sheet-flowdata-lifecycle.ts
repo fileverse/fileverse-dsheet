@@ -109,7 +109,13 @@ function sheetsRequiredDenseFingerprint(
     const origin = parseCellKey(originKey);
     if (origin?.sheetId === activeSheetId) activeWide += 1;
   });
-  return `${calcLen}:${activeDeps}:${activeWide}`;
+  let activeRevDepOrigins = 0;
+  ctx.formulaCache.revDepsByCell.forEach((dependents, depKey) => {
+    const dep = parseCellKey(depKey);
+    if (dep?.sheetId !== activeSheetId) return;
+    activeRevDepOrigins += dependents.size;
+  });
+  return `${calcLen}:${activeDeps}:${activeWide}:${activeRevDepOrigins}`;
 }
 
 /** Drop cached dense-sheet set (e.g. after structural workbook changes). */
@@ -129,6 +135,52 @@ function addDepsByCellRefs(
       const dep = parseCellKey(depKey);
       if (dep?.sheetId) required.add(dep.sheetId);
     });
+  });
+}
+
+/** Keep sheets dense when their formulas depend on cells on the active tab. */
+function addRevDepsSheetsForActive(
+  ctx: Context,
+  activeSheetId: string,
+  required: Set<string>,
+): void {
+  ctx.formulaCache.revDepsByCell.forEach((dependents, depKey) => {
+    const dep = parseCellKey(depKey);
+    if (!dep || dep.sheetId !== activeSheetId) return;
+    dependents.forEach((originKey) => {
+      const origin = parseCellKey(originKey);
+      if (origin?.sheetId) required.add(origin.sheetId);
+    });
+  });
+}
+
+/** Unevaluated cross-sheet formulas on inactive tabs that point at the active tab. */
+function scanSheetsReferencingActive(
+  ctx: Context,
+  activeSheetId: string,
+  required: Set<string>,
+): void {
+  ctx.luckysheetfile.forEach((file) => {
+    if (!file.id || file.id === activeSheetId || required.has(file.id)) return;
+    const celldataFormulas = buildCelldataFormulaMap(file);
+    let referencesActive = false;
+    file.calcChain?.forEach((entry) => {
+      if (referencesActive) return;
+      const sheetId = entry.id ?? file.id!;
+      const formula = readFormulaAt(
+        ctx,
+        sheetId,
+        entry.r,
+        entry.c,
+        file,
+        celldataFormulas,
+      );
+      if (typeof formula !== 'string' || !formula.includes('!')) return;
+      collectSheetIdsFromFormulaText(ctx, formula).forEach((id) => {
+        if (id === activeSheetId) referencesActive = true;
+      });
+    });
+    if (referencesActive) required.add(file.id);
   });
 }
 
@@ -238,10 +290,13 @@ function computeSheetsRequiredDense(
     activeFile != null ? buildCelldataFormulaMap(activeFile) : undefined;
 
   addDepsByCellRefs(ctx, activeSheetId, required);
+  addRevDepsSheetsForActive(ctx, activeSheetId, required);
 
   scanSheetFormulasForCrossRefs(ctx, activeSheetId).forEach((id) =>
     required.add(id),
   );
+
+  scanSheetsReferencingActive(ctx, activeSheetId, required);
 
   if (activeFile) {
     addWideRangeFormulaRefs(
@@ -258,7 +313,7 @@ function computeSheetsRequiredDense(
 
 /**
  * Sheets that must keep dense `data` while `activeSheetId` is active:
- * the active tab plus any tab referenced by its formulas (deps graph + text scan).
+ * the active tab, tabs its formulas read, and tabs with formulas that read it.
  */
 export function getSheetsRequiredDense(
   ctx: Context,
