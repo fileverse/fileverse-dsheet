@@ -22,6 +22,7 @@ export const useXLSXImport = ({
   dsheetId,
   currentDataRef,
   updateDocumentTitle,
+  handleContentPortal,
 }: {
   sheetEditorRef: RefObject<WorkbookInstance | null>;
   ydocRef: RefObject<Y.Doc | null>;
@@ -29,6 +30,7 @@ export const useXLSXImport = ({
   dsheetId: string;
   currentDataRef: MutableRefObject<object | null>;
   updateDocumentTitle?: (title: string) => void;
+  handleContentPortal?: () => void;
 }) => {
   const [filterToastShown, setFilterToastShown] = useState(false);
 
@@ -49,6 +51,7 @@ export const useXLSXImport = ({
           updateDocumentTitle,
           filterToastShown,
           setFilterToastShown,
+          handleContentPortal,
         },
         event,
         fileArg,
@@ -63,6 +66,7 @@ export const useXLSXImport = ({
       currentDataRef,
       updateDocumentTitle,
       filterToastShown,
+      handleContentPortal,
     ],
   );
 

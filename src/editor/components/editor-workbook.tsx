@@ -259,6 +259,8 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     };
   }, [isReadOnly]);
 
+  const { handleOnChangePortalUpdate } = useEditor();
+
   // Initialize XLSX import functionality
   const { handleXLSXUpload } = useXLSXImport({
     sheetEditorRef,
@@ -267,6 +269,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     dsheetId,
     currentDataRef,
     updateDocumentTitle,
+    handleContentPortal: handleOnChangePortalUpdate,
   });
 
   usehandleHomepageRedirect({
@@ -293,8 +296,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
       ? ['filter', 'sort', 'comment']
       : ['filter', 'sort']
     : TOOL_BAR_ITEMS;
-
-  const { handleOnChangePortalUpdate } = useEditor();
 
   const syncContext = {
     sheetEditorRef,

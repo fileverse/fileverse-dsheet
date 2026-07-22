@@ -628,6 +628,7 @@ export type XlsxImportRuntimeDeps = {
   updateDocumentTitle?: (title: string) => void;
   filterToastShown: boolean;
   setFilterToastShown: React.Dispatch<React.SetStateAction<boolean>>;
+  handleContentPortal?: () => void;
 };
 
 export type XlsxImportOptions = {
@@ -648,6 +649,7 @@ export async function runXlsxFileUpload(
     updateDocumentTitle,
     filterToastShown,
     setFilterToastShown,
+    handleContentPortal,
   }: XlsxImportRuntimeDeps,
   event: React.ChangeEvent<HTMLInputElement> | undefined,
   fileArg: File,
@@ -1375,6 +1377,10 @@ export async function runXlsxFileUpload(
                 currentDataRef.current = plain;
                 setForceSheetRender((prev: number) => prev + 1);
               }
+              // Mirror CSV import: persist Yjs body to host Dexie (share/publish read IDB content).
+              setTimeout(() => {
+                handleContentPortal?.();
+              }, 200);
               if (!options?.headless) {
                 schedulePostImportFormulaRecalc(sheetEditorRef);
               }
