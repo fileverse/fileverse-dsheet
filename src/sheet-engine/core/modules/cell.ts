@@ -9,6 +9,7 @@ import {
   getContentInParentheses,
   getNumberFormat,
 } from '../utils';
+import { ensureSheetFlowdata } from '../api/sheet';
 import { checkCF, getComputeMap } from './ConditionFormat';
 import { getFailureText, validateCellData } from './dataVerification';
 import {
@@ -2826,7 +2827,8 @@ export function getdatabyselection(
   let d;
   let cfg;
   if (sheetId != null && sheetId !== ctx.currentSheetId) {
-    d = ctx.luckysheetfile[getSheetIndex(ctx, sheetId)!].data;
+    // Cross-sheet copy/paste: source tab may be demoted — rehydrate dense grid.
+    d = ensureSheetFlowdata(ctx, { id: sheetId });
     cfg = ctx.luckysheetfile[getSheetIndex(ctx, sheetId)!].config;
   } else {
     d = getFlowdata(ctx);

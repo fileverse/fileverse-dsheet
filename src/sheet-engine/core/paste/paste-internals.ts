@@ -6,6 +6,7 @@ import { update, genarate } from '../modules/format';
 import { normalizeSelection } from '../modules/selection';
 import { Cell, CellMatrix, HyperlinkEntry } from '../types';
 import { getSheetIndex, isAllowEdit } from '../utils';
+import { ensureSheetFlowdata } from '../api/sheet';
 import { hasPartMC, isRealNum } from '../modules/validation';
 import { getBorderInfoCompute } from '../modules/border';
 import { expandRowsAndColumns, storeSheetParamALL } from '../modules/sheet';
@@ -1206,9 +1207,9 @@ export function pasteHandlerOfCutPaste(
   let source;
   let target;
   if (ctx.currentSheetId !== copySheetId) {
-    // 跨表操作
+    // 跨表操作 — source tab may be demoted to celldata after switch
     const sourceData = _.cloneDeep(
-      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].data!,
+      ensureSheetFlowdata(ctx, { id: copySheetId })!,
     );
     const sourceConfig = _.cloneDeep(
       ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].config,
@@ -1955,7 +1956,9 @@ export function pasteHandlerOfCopyPaste(
 
     // Cache property access to avoid repeated lookups
     const srcHyperlinks = ctx.luckysheetfile[srcIndex].hyperlink;
-    const srcData = ctx.luckysheetfile[srcIndex].data;
+    const srcData = ensureSheetFlowdata(ctx, {
+      id: ctx.luckysheet_copy_save?.dataSheetId as string,
+    });
 
     // Initialize hyperlink registry for target sheet if needed
     if (!ctx.luckysheetfile[targetSheetIndex].hyperlink) {
