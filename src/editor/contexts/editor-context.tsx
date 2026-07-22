@@ -15,6 +15,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { fromUint8Array } from 'js-base64';
 
 import { useEditorSync } from '../hooks/use-editor-sync';
+import { useCelldataCompaction } from '../hooks/use-celldata-compaction';
 import { useEditorData } from '../hooks/use-editor-data';
 import {
   updateRowIndices,
@@ -439,6 +440,19 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     hasCollabContentInitialised,
     collaboration?.enabled === true,
   );
+
+  useCelldataCompaction({
+    dsheetId,
+    ydocRef,
+    sheetEditorRef,
+    currentDataRef,
+    handleOnChangePortalUpdate,
+    syncStatus,
+    isDataLoaded,
+    isReadOnly,
+    remoteUpdateRef,
+    collabSyncing: isCollabSyncing,
+  });
 
   // Keep the stable collab ref in sync with the live currentDataRef
   currentDataForCollabRef.current = currentDataRef.current;
