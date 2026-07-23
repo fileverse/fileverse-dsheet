@@ -29,6 +29,7 @@ import {
   execFunctionGroup,
   jfrefreshgrid,
   isFormulaEvalPending,
+  sanitizeSheetIframes,
 } from '@sheet-engine/core';
 import { applyPatches } from 'immer';
 import _ from 'lodash';
@@ -484,9 +485,10 @@ export function generateAPIs(
           options.id ?? draftCtx.currentSheetId,
         );
         if (idx == null) return;
-        draftCtx.luckysheetfile[idx].iframes = iframes;
+        const safeIframes = sanitizeSheetIframes(iframes);
+        draftCtx.luckysheetfile[idx].iframes = safeIframes;
         if (draftCtx.luckysheetfile[idx].id === draftCtx.currentSheetId) {
-          draftCtx.insertedIframes = iframes;
+          draftCtx.insertedIframes = safeIframes;
         }
       }),
 
