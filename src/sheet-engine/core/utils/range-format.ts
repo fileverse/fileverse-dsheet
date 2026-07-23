@@ -1,6 +1,9 @@
-import _ from 'lodash';
-import { Cell, CellMatrix, CellWithRowAndCol, Sheet } from '../types';
-import { hasCellMeaningfulContent } from './cell-persist-utils';
+import _ from "lodash";
+import { Cell, CellMatrix, CellWithRowAndCol, Sheet } from "../types";
+import {
+  extractCellFormatAttrs,
+  hasCellMeaningfulContent,
+} from "./cell-persist-utils";
 
 export type CellFormatRange = {
   row: [number, number];
@@ -17,16 +20,16 @@ export type CellFormatRange = {
   un?: number;
   cl?: number;
   bg?: string;
-  ct?: Cell['ct'];
+  ct?: Cell["ct"];
 };
 
-const RANGE_FORMAT_KEYS: Array<keyof Omit<CellFormatRange, 'row' | 'column'>> =
-  ['tb', 'ht', 'vt', 'tr', 'fs', 'ff', 'fc', 'bl', 'it', 'un', 'cl', 'bg'];
+const RANGE_FORMAT_KEYS: Array<keyof Omit<CellFormatRange, "row" | "column">> =
+  ["tb", "ht", "vt", "tr", "fs", "ff", "fc", "bl", "it", "un", "cl", "bg"];
 
-const CELL_FORMAT_RANGE_ATTR_KEYS = [...RANGE_FORMAT_KEYS, 'ct'] as const;
+const CELL_FORMAT_RANGE_ATTR_KEYS = [...RANGE_FORMAT_KEYS, "ct"] as const;
 
 function rangeAttrsKey(range: CellFormatRange): string {
-  return JSON.stringify(_.omit(range, ['row', 'column']));
+  return JSON.stringify(_.omit(range, ["row", "column"]));
 }
 
 function isValidRange(range: CellFormatRange): boolean {
@@ -140,7 +143,7 @@ export function normalizeCellFormatRanges(
 function getIntersection(
   a: CellFormatRange,
   b: CellFormatRange,
-): Pick<CellFormatRange, 'row' | 'column'> | null {
+): Pick<CellFormatRange, "row" | "column"> | null {
   const row: [number, number] = [
     Math.max(a.row[0], b.row[0]),
     Math.min(a.row[1], b.row[1]),
@@ -155,7 +158,7 @@ function getIntersection(
 
 function splitRangeOutsideIntersection(
   range: CellFormatRange,
-  intersection: Pick<CellFormatRange, 'row' | 'column'>,
+  intersection: Pick<CellFormatRange, "row" | "column">,
 ): CellFormatRange[] {
   const [rowStart, rowEnd] = range.row;
   const [columnStart, columnEnd] = range.column;
@@ -191,7 +194,7 @@ function splitRangeOutsideIntersection(
 
 function removeRectangleFromRanges(
   ranges: CellFormatRange[] | undefined,
-  rectangle: Pick<CellFormatRange, 'row' | 'column'>,
+  rectangle: Pick<CellFormatRange, "row" | "column">,
 ): CellFormatRange[] {
   const target: CellFormatRange = { ...rectangle };
   const next: CellFormatRange[] = [];
@@ -236,14 +239,14 @@ function compressIndices(indices: number[]): Array<[number, number]> {
  */
 export function remapCellFormatRanges(
   ranges: CellFormatRange[] | undefined,
-  axis: 'row' | 'column',
+  axis: "row" | "column",
   indexMap: Record<number, number>,
 ): CellFormatRange[] {
   if (!ranges?.length) return [];
 
   const remapped: CellFormatRange[] = [];
   ranges.forEach((range) => {
-    const [start, end] = axis === 'row' ? range.row : range.column;
+    const [start, end] = axis === "row" ? range.row : range.column;
     const mappedIndices: number[] = [];
     for (let index = start; index <= end; index += 1) {
       mappedIndices.push(indexMap[index] ?? index);
@@ -251,7 +254,7 @@ export function remapCellFormatRanges(
 
     compressIndices(mappedIndices).forEach(([segmentStart, segmentEnd]) => {
       remapped.push(
-        axis === 'row'
+        axis === "row"
           ? { ...range, row: [segmentStart, segmentEnd] }
           : { ...range, column: [segmentStart, segmentEnd] },
       );
@@ -268,8 +271,8 @@ export function remapCellFormatRanges(
  */
 export function moveCellFormatRanges(
   ranges: CellFormatRange[] | undefined,
-  source: Pick<CellFormatRange, 'row' | 'column'>,
-  target: Pick<CellFormatRange, 'row' | 'column'>,
+  source: Pick<CellFormatRange, "row" | "column">,
+  target: Pick<CellFormatRange, "row" | "column">,
 ): CellFormatRange[] {
   if (!ranges?.length) return [];
 
@@ -389,6 +392,30 @@ export function upsertCellFormatRange(
   return { ranges: next, changed: !rangesEqual(ranges, next) };
 }
 
+/**
+ * When a cell loses meaningful content but keeps style, put that style back
+ * into cellFormatRanges as a 1x1 (normalize merges with neighbours).
+ */
+export function migrateFormatOnlyCellIntoRanges(
+  ranges: CellFormatRange[] | undefined,
+  r: number,
+  c: number,
+  cell: Cell | string | number | boolean | null | undefined,
+): { ranges: CellFormatRange[]; changed: boolean } {
+  const attrs = extractCellFormatAttrs(cell);
+  if (!attrs) {
+    return { ranges: ranges ?? [], changed: false };
+  }
+  return upsertCellFormatRange(
+    ranges,
+    r,
+    r,
+    c,
+    c,
+    attrs as Partial<CellFormatRange>,
+  );
+}
+
 export function punchHoleInCellFormatRanges(
   ranges: CellFormatRange[] | undefined,
   r: number,
@@ -432,10 +459,10 @@ export function punchRectHoleInCellFormatRanges(
 
 export function shiftCellFormatRangesOnInsert(
   ranges: CellFormatRange[] | undefined,
-  type: 'row' | 'column',
+  type: "row" | "column",
   index: number,
   count: number,
-  direction: 'lefttop' | 'rightbottom',
+  direction: "lefttop" | "rightbottom",
 ): CellFormatRange[] {
   if (!ranges?.length) return [];
 
@@ -444,8 +471,8 @@ export function shiftCellFormatRangesOnInsert(
       let [r1, r2] = range.row;
       let [c1, c2] = range.column;
 
-      if (type === 'row') {
-        if (direction === 'lefttop') {
+      if (type === "row") {
+        if (direction === "lefttop") {
           if (index <= r1) {
             r1 += count;
             r2 += count;
@@ -458,7 +485,7 @@ export function shiftCellFormatRangesOnInsert(
         } else if (index < r2) {
           r2 += count;
         }
-      } else if (direction === 'lefttop') {
+      } else if (direction === "lefttop") {
         if (index <= c1) {
           c1 += count;
           c2 += count;
@@ -482,18 +509,18 @@ export function shiftCellFormatRangesOnInsert(
 
 function splitRangeOnDelete(
   range: CellFormatRange,
-  axis: 'row' | 'column',
+  axis: "row" | "column",
   start: number,
   end: number,
   slen: number,
 ): CellFormatRange[] {
-  const [a1, a2] = axis === 'row' ? range.row : range.column;
+  const [a1, a2] = axis === "row" ? range.row : range.column;
 
   if (a2 < start) return [range];
   if (a1 > end) {
     const shifted: [number, number] = [a1 - slen, a2 - slen];
     return [
-      axis === 'row'
+      axis === "row"
         ? { ...range, row: shifted }
         : { ...range, column: shifted },
     ];
@@ -503,14 +530,14 @@ function splitRangeOnDelete(
   const pieces: CellFormatRange[] = [];
   if (a1 < start) {
     pieces.push(
-      axis === 'row'
+      axis === "row"
         ? { ...range, row: [a1, start - 1] }
         : { ...range, column: [a1, start - 1] },
     );
   }
   if (a2 > end) {
     pieces.push(
-      axis === 'row'
+      axis === "row"
         ? { ...range, row: [start, a2 - slen] }
         : { ...range, column: [start, a2 - slen] },
     );
@@ -520,7 +547,7 @@ function splitRangeOnDelete(
 
 export function shiftCellFormatRangesOnDelete(
   ranges: CellFormatRange[] | undefined,
-  type: 'row' | 'column',
+  type: "row" | "column",
   start: number,
   end: number,
 ): CellFormatRange[] {
@@ -552,7 +579,7 @@ export function applyCellFormatRangesToData(
       for (let c = colSt; c <= colEd; c += 1) {
         const existing = row[c];
 
-        if (existing != null && typeof existing === 'object') {
+        if (existing != null && typeof existing === "object") {
           if (hasCellMeaningfulContent(existing)) {
             mergeAttrsIntoCell(existing, range);
           } else {
@@ -578,7 +605,7 @@ export function buildSheetDataMatrixForExport(sheet: {
   celldata?: CellWithRowAndCol[];
   row?: number;
   column?: number;
-  config?: Sheet['config'];
+  config?: Sheet["config"];
 }): CellMatrix {
   if (Array.isArray(sheet.data) && sheet.data.length > 0) {
     return sheet.data;
@@ -588,8 +615,8 @@ export function buildSheetDataMatrixForExport(sheet: {
   const ranges = sheet.config?.cellFormatRanges;
   const rangeBounds = getCellFormatRangeGridBounds(ranges);
 
-  const lastRow = _.maxBy(celldata, 'r');
-  const lastCol = _.maxBy(celldata, 'c');
+  const lastRow = _.maxBy(celldata, "r");
+  const lastCol = _.maxBy(celldata, "c");
   let lastRowNum = (lastRow?.r ?? 0) + 1;
   let lastColNum = (lastCol?.c ?? 0) + 1;
 

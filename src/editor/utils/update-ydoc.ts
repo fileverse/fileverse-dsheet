@@ -1,20 +1,25 @@
-import * as Y from 'yjs';
-import _ from 'lodash';
-import { Sheet } from '@sheet-engine/react';
-import { Cell } from '../../sheet-engine/core/types';
-import { current, isDraft } from 'immer';
-import { celldataEntryEqual, shouldPersistCelldataCell } from '../../sheet-engine/core/utils/cell-persist-utils';
+import * as Y from "yjs";
+import _ from "lodash";
+import { Sheet } from "@sheet-engine/react";
+import { Cell } from "../../sheet-engine/core/types";
+import { current, isDraft } from "immer";
 import {
+  celldataEntryEqual,
+  shouldPersistCelldataCell,
+} from "../../sheet-engine/core/utils/cell-persist-utils";
+import {
+  migrateFormatOnlyCellIntoRanges,
   punchHoleInCellFormatRanges,
   rangesEqual as cellFormatRangesEqual,
-} from '../../sheet-engine/core/utils/range-format';
+  type CellFormatRange,
+} from "../../sheet-engine/core/utils/range-format";
 
 export type SheetChangePath = {
   sheetId: string;
   path: string[]; // ['name'], ['config', 'merge'], ['celldata']
   key?: string; // 👈 only for celldata
   value: any;
-  type?: 'update' | 'delete';
+  type?: "update" | "delete";
 };
 
 function cloneForYjs<T>(value: T): T {
@@ -37,7 +42,7 @@ function deepCloneSafe<T>(value: T): T {
   const seen = new WeakMap<object, any>();
 
   const walk = (input: any): any => {
-    if (input === null || typeof input !== 'object') return input;
+    if (input === null || typeof input !== "object") return input;
 
     if (seen.has(input)) return seen.get(input);
 
@@ -70,7 +75,7 @@ function deepCloneSafe<T>(value: T): T {
     }
     for (let i = 0; i < keys.length; i += 1) {
       const k = keys[i];
-      if (typeof k !== 'string') continue;
+      if (typeof k !== "string") continue;
       try {
         out[k] = walk((input as any)[k]);
       } catch {
@@ -88,7 +93,7 @@ function deepCloneSafe<T>(value: T): T {
  * Fast path: primitives and non-draft objects are returned as-is.
  */
 function toPlain<T>(value: T): T {
-  if (value === null || typeof value !== 'object') return value;
+  if (value === null || typeof value !== "object") return value;
   try {
     if (isDraft(value)) {
       return current(value) as T;
@@ -109,7 +114,7 @@ function toPlain<T>(value: T): T {
 
 function normalizeForYjs<T>(value: T): T {
   const plainValue = toPlain(value);
-  if (plainValue === null || typeof plainValue !== 'object') {
+  if (plainValue === null || typeof plainValue !== "object") {
     return plainValue;
   }
   return cloneForYjs(plainValue);
@@ -140,7 +145,7 @@ function setMapValueSafe(
 }
 
 const getSheetId = (sheet: Y.Map<any> | Record<string, any>) => {
-  if (sheet instanceof Y.Map) return sheet.get('id');
+  if (sheet instanceof Y.Map) return sheet.get("id");
   return (sheet as Record<string, any>)?.id;
 };
 
@@ -160,11 +165,72 @@ export const updateYdocSheetData = (
     for (let i = 0; i < allSheets.length; i += 1) {
       const s = allSheets[i];
       if (!(s instanceof Y.Map)) continue;
-      const id = s.get('id');
-      if (typeof id === 'string' && !sheetById.has(id)) {
+      const id = s.get("id");
+      if (typeof id === "string" && !sheetById.has(id)) {
         sheetById.set(id, s);
       }
     }
+
+    // Batch range mutations per sheet so N format-only deletes in one call
+    // only write cellFormatRanges once (and merge adjacent 1x1s via normalize).
+    const pendingFormatRanges = new Map<string, CellFormatRange[]>();
+    const touchedFormatRangeSheets = new Set<string>();
+
+    const getWorkingFormatRanges = (sheet: Y.Map<any>, sheetId: string) => {
+      const cached = pendingFormatRanges.get(sheetId);
+      if (cached) return cached;
+      let configMap = sheet.get("config");
+      if (!(configMap instanceof Y.Map)) {
+        configMap = new Y.Map();
+        sheet.set("config", configMap);
+      }
+      const existing = configMap.get("cellFormatRanges");
+      const working = Array.isArray(existing) ? existing : [];
+      pendingFormatRanges.set(sheetId, working);
+      return working;
+    };
+
+    const setWorkingFormatRanges = (
+      sheetId: string,
+      ranges: CellFormatRange[],
+    ) => {
+      pendingFormatRanges.set(sheetId, ranges);
+      touchedFormatRangeSheets.add(sheetId);
+    };
+
+    const migrateFormatOnlyToRanges = (
+      sheet: Y.Map<any>,
+      sheetId: string,
+      r: number,
+      c: number,
+      cell: unknown,
+    ) => {
+      const working = getWorkingFormatRanges(sheet, sheetId);
+      const { ranges, changed } = migrateFormatOnlyCellIntoRanges(
+        working,
+        r,
+        c,
+        cell as Cell | string | number | boolean | null | undefined,
+      );
+      if (changed) setWorkingFormatRanges(sheetId, ranges);
+    };
+
+    const cellFromCelldataEntry = (entry: unknown) => {
+      if (entry == null || typeof entry !== "object") return entry;
+      if ("v" in (entry as Record<string, unknown>)) {
+        return (entry as { v?: unknown }).v;
+      }
+      return entry;
+    };
+
+    const parseCellKey = (cellKey: string) => {
+      const sep = cellKey.lastIndexOf("_");
+      if (sep <= 0) return null;
+      const r = Number(cellKey.slice(0, sep));
+      const c = Number(cellKey.slice(sep + 1));
+      if (!Number.isFinite(r) || !Number.isFinite(c)) return null;
+      return { r, c };
+    };
 
     changes.forEach(({ sheetId, path, key, value, type }) => {
       const sheet = sheetById.get(sheetId);
@@ -172,16 +238,37 @@ export const updateYdocSheetData = (
 
       // Sheet fields stored as Y.Map use path + key for granular updates
       // celldata
-      if (path.length === 1 && path[0] === 'celldata' && key) {
-        let cellMap = sheet.get('celldata');
+      if (path.length === 1 && path[0] === "celldata" && key) {
+        let cellMap = sheet.get("celldata");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('celldata', cellMap);
+          sheet.set("celldata", cellMap);
         }
 
-        if (type === 'delete') {
+        if (type === "delete") {
+          // Compaction / explicit delete: if the existing entry is format-only,
+          // restore style into ranges before dropping celldata.
+          const coords = parseCellKey(key);
+          if (coords) {
+            migrateFormatOnlyToRanges(
+              sheet,
+              sheetId,
+              coords.r,
+              coords.c,
+              cellFromCelldataEntry(cellMap.get(key)),
+            );
+          }
           cellMap.delete(key);
-        } else if (shouldPersistCelldataCell((value as { v?: unknown })?.v as Cell | string | number | boolean | null)) {
+        } else if (
+          shouldPersistCelldataCell(
+            (value as { v?: unknown })?.v as
+              | Cell
+              | string
+              | number
+              | boolean
+              | null,
+          )
+        ) {
           setMapValueSafe(cellMap, key, value, { skipIfEqual: true });
 
           const entry = normalizeForYjs(value) as {
@@ -190,137 +277,145 @@ export const updateYdocSheetData = (
             v?: unknown;
           };
           if (
-            typeof entry?.r === 'number' &&
-            typeof entry?.c === 'number' &&
-            shouldPersistCelldataCell(entry.v as Cell | string | number | boolean | null)
+            typeof entry?.r === "number" &&
+            typeof entry?.c === "number" &&
+            shouldPersistCelldataCell(
+              entry.v as Cell | string | number | boolean | null,
+            )
           ) {
-            let configMap = sheet.get('config');
-            if (!(configMap instanceof Y.Map)) {
-              configMap = new Y.Map();
-              sheet.set('config', configMap);
-            }
-            const existingRanges = configMap.get('cellFormatRanges');
+            const working = getWorkingFormatRanges(sheet, sheetId);
             const punched = punchHoleInCellFormatRanges(
-              existingRanges,
+              working,
               entry.r,
               entry.c,
             );
-            if (!cellFormatRangesEqual(existingRanges, punched)) {
-              setMapValueSafe(configMap, 'cellFormatRanges', punched, {
-                skipIfEqual: true,
-              });
+            if (!cellFormatRangesEqual(working, punched)) {
+              setWorkingFormatRanges(sheetId, punched);
             }
           }
         } else {
+          // Content left but style remains: reverse of punch-hole.
+          const entry = normalizeForYjs(value) as {
+            r?: number;
+            c?: number;
+            v?: unknown;
+          };
+          const r =
+            typeof entry?.r === "number" ? entry.r : parseCellKey(key)?.r;
+          const c =
+            typeof entry?.c === "number" ? entry.c : parseCellKey(key)?.c;
+          if (typeof r === "number" && typeof c === "number") {
+            migrateFormatOnlyToRanges(sheet, sheetId, r, c, entry?.v);
+          }
           cellMap.delete(key);
         }
         return;
       }
 
       // calcChain
-      if (path.length === 1 && path[0] === 'calcChain' && key) {
-        let cellMap = sheet.get('calcChain');
+      if (path.length === 1 && path[0] === "calcChain" && key) {
+        let cellMap = sheet.get("calcChain");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('calcChain', cellMap);
+          sheet.set("calcChain", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value?.v);
         return;
       }
 
       // dataBlockCalcFunction
-      if (path.length === 1 && path[0] === 'dataBlockCalcFunction' && key) {
-        let cellMap = sheet.get('dataBlockCalcFunction');
+      if (path.length === 1 && path[0] === "dataBlockCalcFunction" && key) {
+        let cellMap = sheet.get("dataBlockCalcFunction");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('dataBlockCalcFunction', cellMap);
+          sheet.set("dataBlockCalcFunction", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value);
         return;
       }
 
       // liveQueryList
-      if (path.length === 1 && path[0] === 'liveQueryList' && key) {
-        let cellMap = sheet.get('liveQueryList');
+      if (path.length === 1 && path[0] === "liveQueryList" && key) {
+        let cellMap = sheet.get("liveQueryList");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('liveQueryList', cellMap);
+          sheet.set("liveQueryList", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value);
         return;
       }
 
       // dataVerification
-      if (path.length === 1 && path[0] === 'dataVerification' && key) {
-        let cellMap = sheet.get('dataVerification');
+      if (path.length === 1 && path[0] === "dataVerification" && key) {
+        let cellMap = sheet.get("dataVerification");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('dataVerification', cellMap);
+          sheet.set("dataVerification", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value);
         return;
       }
 
       // hyperlink
-      if (path.length === 1 && path[0] === 'hyperlink' && key) {
-        let cellMap = sheet.get('hyperlink');
+      if (path.length === 1 && path[0] === "hyperlink" && key) {
+        let cellMap = sheet.get("hyperlink");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('hyperlink', cellMap);
+          sheet.set("hyperlink", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value);
         return;
       }
 
       // conditionRules
-      if (path.length === 1 && path[0] === 'conditionRules' && key) {
-        let cellMap = sheet.get('conditionRules');
+      if (path.length === 1 && path[0] === "conditionRules" && key) {
+        let cellMap = sheet.get("conditionRules");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('conditionRules', cellMap);
+          sheet.set("conditionRules", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value);
         return;
       }
 
       // filter_select
-      if (path.length === 1 && path[0] === 'filter_select' && key) {
-        let cellMap = sheet.get('filter_select');
+      if (path.length === 1 && path[0] === "filter_select" && key) {
+        let cellMap = sheet.get("filter_select");
         if (!(cellMap instanceof Y.Map)) {
           cellMap = new Y.Map();
-          sheet.set('filter_select', cellMap);
+          sheet.set("filter_select", cellMap);
         }
 
-        type === 'delete'
+        type === "delete"
           ? cellMap.delete(key)
           : setMapValueSafe(cellMap, key, value);
         return;
       }
 
       // filter (object) - replace entire object payload
-      if (path.length === 1 && path[0] === 'filter') {
-        let filterMap = sheet.get('filter');
+      if (path.length === 1 && path[0] === "filter") {
+        let filterMap = sheet.get("filter");
         if (!(filterMap instanceof Y.Map)) {
           filterMap = new Y.Map();
-          sheet.set('filter', filterMap);
+          sheet.set("filter", filterMap);
         }
 
         // clear existing keys
@@ -328,12 +423,12 @@ export const updateYdocSheetData = (
           filterMap.delete(k);
         });
 
-        if (type === 'delete') return;
+        if (type === "delete") return;
 
         const plainValue = toPlain(value) || {};
         if (
           plainValue &&
-          typeof plainValue === 'object' &&
+          typeof plainValue === "object" &&
           !safeIsArray(plainValue)
         ) {
           Object.entries(plainValue).forEach(([k, v]) => {
@@ -344,15 +439,15 @@ export const updateYdocSheetData = (
       }
 
       // luckysheet_conditionformat_save (array) - replace entire array payload
-      if (path.length === 1 && path[0] === 'luckysheet_conditionformat_save') {
-        let cellArray = sheet.get('luckysheet_conditionformat_save');
+      if (path.length === 1 && path[0] === "luckysheet_conditionformat_save") {
+        let cellArray = sheet.get("luckysheet_conditionformat_save");
         if (!(cellArray instanceof Y.Array)) {
           cellArray = new Y.Array();
-          sheet.set('luckysheet_conditionformat_save', cellArray);
+          sheet.set("luckysheet_conditionformat_save", cellArray);
         }
 
         cellArray.delete(0, cellArray.length);
-        if (type === 'delete') return;
+        if (type === "delete") return;
 
         const plainValue = normalizeForYjs(value);
         const payload = safeIsArray(plainValue) ? plainValue : [plainValue];
@@ -365,15 +460,15 @@ export const updateYdocSheetData = (
       }
 
       // config sub-keys (borderInfo, merge, rowlen, …) stored as Y.Map on sheet
-      if (path.length === 2 && path[0] === 'config') {
+      if (path.length === 2 && path[0] === "config") {
         const configKey = path[1];
-        let configMap = sheet.get('config');
+        let configMap = sheet.get("config");
         if (!(configMap instanceof Y.Map)) {
           configMap = new Y.Map();
-          const existing = sheet.get('config');
+          const existing = sheet.get("config");
           if (
             existing &&
-            typeof existing === 'object' &&
+            typeof existing === "object" &&
             !(existing instanceof Y.Map) &&
             !safeIsArray(existing)
           ) {
@@ -383,13 +478,26 @@ export const updateYdocSheetData = (
               },
             );
           }
-          sheet.set('config', configMap);
+          sheet.set("config", configMap);
         }
 
-        if (type === 'delete') {
+        if (type === "delete") {
           configMap.delete(configKey);
+          if (configKey === "cellFormatRanges") {
+            pendingFormatRanges.set(sheetId, []);
+            touchedFormatRangeSheets.delete(sheetId);
+          }
         } else {
           setMapValueSafe(configMap, configKey, value, { skipIfEqual: true });
+          if (configKey === "cellFormatRanges") {
+            const normalized = normalizeForYjs(value);
+            pendingFormatRanges.set(
+              sheetId,
+              Array.isArray(normalized) ? normalized : [],
+            );
+            // Already written to Yjs; don't flush a stale pending copy later.
+            touchedFormatRangeSheets.delete(sheetId);
+          }
         }
         return;
       }
@@ -416,11 +524,27 @@ export const updateYdocSheetData = (
       });
     });
 
+    touchedFormatRangeSheets.forEach((sheetId) => {
+      const sheet = sheetById.get(sheetId);
+      if (!sheet) return;
+      let configMap = sheet.get("config");
+      if (!(configMap instanceof Y.Map)) {
+        configMap = new Y.Map();
+        sheet.set("config", configMap);
+      }
+      setMapValueSafe(
+        configMap,
+        "cellFormatRanges",
+        pendingFormatRanges.get(sheetId) ?? [],
+        { skipIfEqual: true },
+      );
+    });
+
     // Keep a single active sheet by order after applying updates
     for (let i = 0; i < allSheets.length; i += 1) {
       const sheet = allSheets[i];
       if (!(sheet instanceof Y.Map)) continue;
-      sheet.set('status', sheet.get('order') === 0 ? 1 : 0);
+      sheet.set("status", sheet.get("order") === 0 ? 1 : 0);
     }
   });
 
@@ -450,12 +574,12 @@ export function ySheetArrayToPlain(
 
     iterate((value, key) => {
       // celldata: Y.Map → plain object for Fortune sheet format
-      if (key === 'celldata' && value instanceof Y.Map) {
+      if (key === "celldata" && value instanceof Y.Map) {
         obj.celldata = value.toJSON();
         return;
       }
 
-      if (key === 'calcChain' && value instanceof Y.Map) {
+      if (key === "calcChain" && value instanceof Y.Map) {
         const calcChain = value.toJSON();
         if (Object.keys(calcChain).length === 0) return;
         obj.calcChain = calcChain;
@@ -463,7 +587,7 @@ export function ySheetArrayToPlain(
       }
 
       if (
-        key === 'luckysheet_conditionformat_save' &&
+        key === "luckysheet_conditionformat_save" &&
         value instanceof Y.Array
       ) {
         const conditionFormatRules = value.toJSON();
@@ -472,49 +596,49 @@ export function ySheetArrayToPlain(
         return;
       }
 
-      if (key === 'dataBlockCalcFunction' && value instanceof Y.Map) {
+      if (key === "dataBlockCalcFunction" && value instanceof Y.Map) {
         const dataBlockCalcFunction = value.toJSON();
         if (Object.keys(dataBlockCalcFunction).length === 0) return;
         obj.dataBlockCalcFunction = dataBlockCalcFunction;
         return;
       }
 
-      if (key === 'liveQueryList' && value instanceof Y.Map) {
+      if (key === "liveQueryList" && value instanceof Y.Map) {
         const liveQueryList = value.toJSON();
         if (Object.keys(liveQueryList).length === 0) return;
         obj.liveQueryList = liveQueryList;
         return;
       }
 
-      if (key === 'dataVerification' && value instanceof Y.Map) {
+      if (key === "dataVerification" && value instanceof Y.Map) {
         const dataVerification = value.toJSON();
         if (Object.keys(dataVerification).length === 0) return;
         obj.dataVerification = dataVerification;
         return;
       }
 
-      if (key === 'hyperlink' && value instanceof Y.Map) {
+      if (key === "hyperlink" && value instanceof Y.Map) {
         const hyperlink = value.toJSON();
         if (Object.keys(hyperlink).length === 0) return;
         obj.hyperlink = hyperlink;
         return;
       }
 
-      if (key === 'conditionRules' && value instanceof Y.Map) {
+      if (key === "conditionRules" && value instanceof Y.Map) {
         const conditionRules = value.toJSON();
         if (Object.keys(conditionRules).length === 0) return;
         obj.conditionRules = conditionRules;
         return;
       }
 
-      if (key === 'filter_select' && value instanceof Y.Map) {
+      if (key === "filter_select" && value instanceof Y.Map) {
         const filterSelect = value.toJSON();
         if (Object.keys(filterSelect).length === 0) return;
         obj.filter_select = filterSelect;
         return;
       }
 
-      if (key === 'filter' && value instanceof Y.Map) {
+      if (key === "filter" && value instanceof Y.Map) {
         const filter = value.toJSON();
         if (Object.keys(filter).length === 0) return;
         obj.filter = filter;
