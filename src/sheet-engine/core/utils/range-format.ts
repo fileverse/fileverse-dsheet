@@ -20,20 +20,10 @@ export type CellFormatRange = {
   ct?: Cell['ct'];
 };
 
-const RANGE_FORMAT_KEYS: Array<keyof Omit<CellFormatRange, 'row' | 'column'>> = [
-  'tb',
-  'ht',
-  'vt',
-  'tr',
-  'fs',
-  'ff',
-  'fc',
-  'bl',
-  'it',
-  'un',
-  'cl',
-  'bg',
-];
+const RANGE_FORMAT_KEYS: Array<keyof Omit<CellFormatRange, 'row' | 'column'>> =
+  ['tb', 'ht', 'vt', 'tr', 'fs', 'ff', 'fc', 'bl', 'it', 'un', 'cl', 'bg'];
+
+const CELL_FORMAT_RANGE_ATTR_KEYS = [...RANGE_FORMAT_KEYS, 'ct'] as const;
 
 function rangeAttrsKey(range: CellFormatRange): string {
   return JSON.stringify(_.omit(range, ['row', 'column']));
@@ -70,14 +60,31 @@ function createFormatOnlyCell(attrs: Partial<CellFormatRange>): Cell {
   return cell;
 }
 
-function rangesOverlapOrTouch(a: CellFormatRange, b: CellFormatRange): boolean {
+function canMergeRanges(a: CellFormatRange, b: CellFormatRange): boolean {
   const [ar1, ar2] = a.row;
   const [ac1, ac2] = a.column;
   const [br1, br2] = b.row;
   const [bc1, bc2] = b.column;
-  const rowsTouch = ar2 + 1 >= br1 && br2 + 1 >= ar1;
-  const colsTouch = ac2 + 1 >= bc1 && bc2 + 1 >= ac1;
-  return rowsTouch && colsTouch;
+
+  const intersectionRows = Math.max(
+    0,
+    Math.min(ar2, br2) - Math.max(ar1, br1) + 1,
+  );
+  const intersectionColumns = Math.max(
+    0,
+    Math.min(ac2, bc2) - Math.max(ac1, bc1) + 1,
+  );
+  const unionArea =
+    (ar2 - ar1 + 1) * (ac2 - ac1 + 1) +
+    (br2 - br1 + 1) * (bc2 - bc1 + 1) -
+    intersectionRows * intersectionColumns;
+  const boundingArea =
+    (Math.max(ar2, br2) - Math.min(ar1, br1) + 1) *
+    (Math.max(ac2, bc2) - Math.min(ac1, bc1) + 1);
+
+  // Never merge an L-shaped union: its bounding rectangle includes cells that
+  // were not formatted by either range.
+  return unionArea === boundingArea;
 }
 
 function mergeBounds(a: CellFormatRange, b: CellFormatRange): CellFormatRange {
@@ -117,7 +124,7 @@ export function normalizeCellFormatRanges(
       while (changed) {
         changed = false;
         pending = pending.filter((candidate) => {
-          if (!rangesOverlapOrTouch(current, candidate)) return true;
+          if (!canMergeRanges(current, candidate)) return true;
           current = mergeBounds(current, candidate);
           changed = true;
           return false;
@@ -128,6 +135,116 @@ export function normalizeCellFormatRanges(
   });
 
   return merged;
+}
+
+function getIntersection(
+  a: CellFormatRange,
+  b: CellFormatRange,
+): Pick<CellFormatRange, 'row' | 'column'> | null {
+  const row: [number, number] = [
+    Math.max(a.row[0], b.row[0]),
+    Math.min(a.row[1], b.row[1]),
+  ];
+  const column: [number, number] = [
+    Math.max(a.column[0], b.column[0]),
+    Math.min(a.column[1], b.column[1]),
+  ];
+
+  return row[0] <= row[1] && column[0] <= column[1] ? { row, column } : null;
+}
+
+function splitRangeOutsideIntersection(
+  range: CellFormatRange,
+  intersection: Pick<CellFormatRange, 'row' | 'column'>,
+): CellFormatRange[] {
+  const [rowStart, rowEnd] = range.row;
+  const [columnStart, columnEnd] = range.column;
+  const [
+    [intersectionRowStart, intersectionRowEnd],
+    [intersectionColumnStart, intersectionColumnEnd],
+  ] = [intersection.row, intersection.column];
+  const pieces: CellFormatRange[] = [];
+
+  if (rowStart < intersectionRowStart) {
+    pieces.push({ ...range, row: [rowStart, intersectionRowStart - 1] });
+  }
+  if (intersectionRowEnd < rowEnd) {
+    pieces.push({ ...range, row: [intersectionRowEnd + 1, rowEnd] });
+  }
+  if (columnStart < intersectionColumnStart) {
+    pieces.push({
+      ...range,
+      row: [intersectionRowStart, intersectionRowEnd],
+      column: [columnStart, intersectionColumnStart - 1],
+    });
+  }
+  if (intersectionColumnEnd < columnEnd) {
+    pieces.push({
+      ...range,
+      row: [intersectionRowStart, intersectionRowEnd],
+      column: [intersectionColumnEnd + 1, columnEnd],
+    });
+  }
+
+  return pieces;
+}
+
+function rangeWithoutAttrs(
+  range: CellFormatRange,
+  attrs: Partial<CellFormatRange>,
+  row: [number, number],
+  column: [number, number],
+): CellFormatRange | null {
+  const next: CellFormatRange = { ...range, row, column };
+  CELL_FORMAT_RANGE_ATTR_KEYS.forEach((key) => {
+    if (attrs[key] != null) delete next[key];
+  });
+
+  return CELL_FORMAT_RANGE_ATTR_KEYS.some((key) => next[key] != null)
+    ? next
+    : null;
+}
+
+/**
+ * Applies format attributes with "newest write wins" semantics. Existing
+ * ranges retain unrelated attributes, but are split around the new selection
+ * so an old value for the same attribute can never overlap the new value.
+ */
+function replaceOverlappingRangeAttrs(
+  ranges: CellFormatRange[] | undefined,
+  rowSt: number,
+  rowEd: number,
+  colSt: number,
+  colEd: number,
+  attrs: Partial<CellFormatRange>,
+): CellFormatRange[] {
+  const target: CellFormatRange = {
+    row: [rowSt, rowEd],
+    column: [colSt, colEd],
+    ...attrs,
+  };
+  const next: CellFormatRange[] = [];
+
+  (ranges ?? []).forEach((range) => {
+    const intersection = getIntersection(range, target);
+    if (!intersection) {
+      next.push(range);
+      return;
+    }
+
+    next.push(...splitRangeOutsideIntersection(range, intersection));
+
+    const retainedAttrs = rangeWithoutAttrs(
+      range,
+      attrs,
+      intersection.row,
+      intersection.column,
+    );
+    if (retainedAttrs) next.push(retainedAttrs);
+  });
+
+  next.push(target);
+  return normalizeCellFormatRanges(next);
 }
 
 export function getCellFormatRangeGridBounds(
@@ -151,41 +268,15 @@ export function upsertCellFormatRange(
   colEd: number,
   attrs: Partial<CellFormatRange>,
 ): { ranges: CellFormatRange[]; changed: boolean } {
-  const next = [...(ranges ?? [])];
-  const idx = next.findIndex(
-    (range) =>
-      range.row[0] === rowSt &&
-      range.row[1] === rowEd &&
-      range.column[0] === colSt &&
-      range.column[1] === colEd,
+  const next = replaceOverlappingRangeAttrs(
+    ranges,
+    rowSt,
+    rowEd,
+    colSt,
+    colEd,
+    attrs,
   );
-
-  let mergedRanges: CellFormatRange[];
-  if (idx >= 0) {
-    const merged: CellFormatRange = {
-      ...next[idx],
-      ...attrs,
-      row: [rowSt, rowEd],
-      column: [colSt, colEd],
-    };
-    if (attrs.ct) {
-      merged.ct = { ...(next[idx].ct ?? {}), ...attrs.ct };
-    }
-    if (_.isEqual(next[idx], merged)) {
-      return { ranges: normalizeCellFormatRanges(next), changed: false };
-    }
-    next[idx] = merged;
-    mergedRanges = normalizeCellFormatRanges(next);
-    return { ranges: mergedRanges, changed: true };
-  }
-
-  next.push({
-    row: [rowSt, rowEd],
-    column: [colSt, colEd],
-    ...attrs,
-  });
-  mergedRanges = normalizeCellFormatRanges(next);
-  return { ranges: mergedRanges, changed: true };
+  return { ranges: next, changed: !rangesEqual(ranges, next) };
 }
 
 export function punchHoleInCellFormatRanges(
@@ -286,7 +377,7 @@ function splitRangeOnDelete(
   end: number,
   slen: number,
 ): CellFormatRange[] {
-  let [a1, a2] = axis === 'row' ? range.row : range.column;
+  const [a1, a2] = axis === 'row' ? range.row : range.column;
 
   if (a2 < start) return [range];
   if (a1 > end) {
@@ -356,8 +447,8 @@ export function applyCellFormatRangesToData(
             mergeAttrsIntoCell(existing, range);
           } else {
             row[c] = createFormatOnlyCell({
-              ...range,
               ...(existing as Cell),
+              ...range,
             });
           }
         } else if (existing == null) {
@@ -392,7 +483,12 @@ export function buildSheetDataMatrixForExport(sheet: {
   let lastRowNum = (lastRow?.r ?? 0) + 1;
   let lastColNum = (lastCol?.c ?? 0) + 1;
 
-  if (sheet.row != null && sheet.column != null && sheet.row > 0 && sheet.column > 0) {
+  if (
+    sheet.row != null &&
+    sheet.column != null &&
+    sheet.row > 0 &&
+    sheet.column > 0
+  ) {
     lastRowNum = Math.max(lastRowNum, sheet.row);
     lastColNum = Math.max(lastColNum, sheet.column);
   }
