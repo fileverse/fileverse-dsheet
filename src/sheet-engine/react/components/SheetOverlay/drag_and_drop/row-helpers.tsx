@@ -17,6 +17,10 @@ import {
   emitCelldataRangeDiffToYdoc,
   snapshotPersistedCelldataInRange,
 } from '../../../../core/utils/ydoc-celldata-changes';
+import {
+  rangesEqual,
+  remapCellFormatRanges,
+} from '../../../../core/utils/range-format';
 
 export const useRowDragAndDrop = (
   containerRef: RefObject<HTMLDivElement | null>,
@@ -444,6 +448,25 @@ export const useRowDragAndDrop = (
             });
             return map;
           })();
+
+          const previousFormatRanges = _sheet.config?.cellFormatRanges;
+          const nextFormatRanges = remapCellFormatRanges(
+            previousFormatRanges,
+            'row',
+            rowMap,
+          );
+          if (!rangesEqual(previousFormatRanges, nextFormatRanges)) {
+            _sheet.config ||= {};
+            _sheet.config.cellFormatRanges = nextFormatRanges;
+            draft.hooks?.updateCellYdoc?.([
+              {
+                sheetId: draft.currentSheetId,
+                path: ['config', 'cellFormatRanges'],
+                value: nextFormatRanges,
+                type: 'update',
+              },
+            ]);
+          }
 
           // Keep row height metadata in sync with moved row data.
           if (_sheet.config) {

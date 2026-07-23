@@ -20,6 +20,7 @@ import { GlobalCache, HyperlinkEntry } from '../types';
 import { jfrefreshgrid } from './refresh';
 import { CFSplitRange } from './ConditionFormat';
 import { functionMoveReference } from './formula';
+import { moveCellFormatRanges, rangesEqual } from '../utils/range-format';
 
 const dragCellThreshold = 8;
 
@@ -657,6 +658,26 @@ export function onCellsMoveEnd(
   const range = [];
   range.push({ row: last.row, column: last.column });
   range.push({ row: [row_s, row_e], column: [col_s, col_e] });
+
+  const previousFormatRanges =
+    file.config?.cellFormatRanges ?? cfg.cellFormatRanges;
+  const nextFormatRanges = moveCellFormatRanges(
+    previousFormatRanges,
+    {
+      row: [last.row[0], last.row[1]],
+      column: [last.column[0], last.column[1]],
+    },
+    { row: [row_s, row_e], column: [col_s, col_e] },
+  );
+  if (!rangesEqual(previousFormatRanges, nextFormatRanges)) {
+    cfg.cellFormatRanges = nextFormatRanges;
+    cellChanges.push({
+      sheetId: ctx.currentSheetId,
+      path: ['config', 'cellFormatRanges'],
+      value: nextFormatRanges,
+      type: 'update',
+    });
+  }
 
   last.row = [row_s, row_e];
   last.column = [col_s, col_e];

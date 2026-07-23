@@ -189,6 +189,116 @@ function splitRangeOutsideIntersection(
   return pieces;
 }
 
+function removeRectangleFromRanges(
+  ranges: CellFormatRange[] | undefined,
+  rectangle: Pick<CellFormatRange, 'row' | 'column'>,
+): CellFormatRange[] {
+  const target: CellFormatRange = { ...rectangle };
+  const next: CellFormatRange[] = [];
+
+  (ranges ?? []).forEach((range) => {
+    const intersection = getIntersection(range, target);
+    if (!intersection) {
+      next.push(range);
+      return;
+    }
+    next.push(...splitRangeOutsideIntersection(range, intersection));
+  });
+
+  return next;
+}
+
+function compressIndices(indices: number[]): Array<[number, number]> {
+  if (!indices.length) return [];
+  const sorted = [...indices].sort((a, b) => a - b);
+  const segments: Array<[number, number]> = [];
+  let start = sorted[0];
+  let previous = sorted[0];
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const current = sorted[i];
+    if (current === previous || current === previous + 1) {
+      previous = current;
+      continue;
+    }
+    segments.push([start, previous]);
+    start = current;
+    previous = current;
+  }
+  segments.push([start, previous]);
+  return segments;
+}
+
+/**
+ * Remap format ranges after a row or column permutation, such as header
+ * drag-and-drop. A contiguous source range can become multiple rectangles
+ * when the moved indices are no longer contiguous.
+ */
+export function remapCellFormatRanges(
+  ranges: CellFormatRange[] | undefined,
+  axis: 'row' | 'column',
+  indexMap: Record<number, number>,
+): CellFormatRange[] {
+  if (!ranges?.length) return [];
+
+  const remapped: CellFormatRange[] = [];
+  ranges.forEach((range) => {
+    const [start, end] = axis === 'row' ? range.row : range.column;
+    const mappedIndices: number[] = [];
+    for (let index = start; index <= end; index += 1) {
+      mappedIndices.push(indexMap[index] ?? index);
+    }
+
+    compressIndices(mappedIndices).forEach(([segmentStart, segmentEnd]) => {
+      remapped.push(
+        axis === 'row'
+          ? { ...range, row: [segmentStart, segmentEnd] }
+          : { ...range, column: [segmentStart, segmentEnd] },
+      );
+    });
+  });
+
+  return normalizeCellFormatRanges(remapped);
+}
+
+/**
+ * Move format ranges with a cut-and-paste cell block move. Formatting in both
+ * the old source and the overwritten destination is cleared; only the source
+ * intersection is translated to the target rectangle.
+ */
+export function moveCellFormatRanges(
+  ranges: CellFormatRange[] | undefined,
+  source: Pick<CellFormatRange, 'row' | 'column'>,
+  target: Pick<CellFormatRange, 'row' | 'column'>,
+): CellFormatRange[] {
+  if (!ranges?.length) return [];
+
+  const sourceRange: CellFormatRange = { ...source };
+  const rowOffset = target.row[0] - source.row[0];
+  const columnOffset = target.column[0] - source.column[0];
+  const moved: CellFormatRange[] = [];
+
+  ranges.forEach((range) => {
+    const intersection = getIntersection(range, sourceRange);
+    if (!intersection) return;
+    moved.push({
+      ...range,
+      row: [intersection.row[0] + rowOffset, intersection.row[1] + rowOffset],
+      column: [
+        intersection.column[0] + columnOffset,
+        intersection.column[1] + columnOffset,
+      ],
+    });
+  });
+
+  const withoutSource = removeRectangleFromRanges(ranges, source);
+  const withoutSourceOrTarget = removeRectangleFromRanges(
+    withoutSource,
+    target,
+  );
+  return normalizeCellFormatRanges([...withoutSourceOrTarget, ...moved]);
+}
+
 function rangeWithoutAttrs(
   range: CellFormatRange,
   attrs: Partial<CellFormatRange>,
