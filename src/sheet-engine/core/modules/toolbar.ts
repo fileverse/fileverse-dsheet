@@ -68,6 +68,7 @@ import {
 import { clearMeasureTextCache, getCellTextInfo } from './text';
 import { hasCellMeaningfulContent } from '../utils/cell-persist-utils';
 import { CellFormatRange, upsertCellFormatRange } from '../utils/range-format';
+import { assignActiveConfigToSheetFile } from './sheet';
 
 type ToolbarItemClickHandler = (
   ctx: Context,
@@ -118,6 +119,12 @@ function pushRangeFormatConfigUpdate(
   );
   if (!changed) return;
   cfg.cellFormatRanges = ranges;
+  // Keep live ctx.config in sync so sheet-leave persist cannot wipe ranges.
+  const sheetId = ctx.luckysheetfile[sheetIndex]?.id;
+  if (sheetId === ctx.currentSheetId) {
+    ctx.config ||= {};
+    ctx.config.cellFormatRanges = ranges;
+  }
   changes.push({
     sheetId: ctx.currentSheetId,
     path: ['config', 'cellFormatRanges'],
@@ -1745,7 +1752,8 @@ export function handleBorder(
   if (type === 'border-none') {
     const index = getSheetIndex(ctx, ctx.currentSheetId);
     if (index == null) return;
-    ctx.luckysheetfile[index].config = ctx.config;
+    assignActiveConfigToSheetFile(ctx.luckysheetfile[index], ctx.config);
+    ctx.config = ctx.luckysheetfile[index].config!;
     syncBorderInfoToYdoc(ctx, cfg.borderInfo);
     return;
   }
@@ -1787,7 +1795,8 @@ export function handleBorder(
   const index = getSheetIndex(ctx, ctx.currentSheetId);
   if (index == null) return;
 
-  ctx.luckysheetfile[index].config = ctx.config;
+  assignActiveConfigToSheetFile(ctx.luckysheetfile[index], ctx.config);
+  ctx.config = ctx.luckysheetfile[index].config!;
   syncBorderInfoToYdoc(ctx, cfg.borderInfo);
 }
 

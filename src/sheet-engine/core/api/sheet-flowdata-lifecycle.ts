@@ -1,5 +1,6 @@
 import { Context } from '../context';
 import type { Sheet } from '../types';
+import { assignActiveConfigToSheetFile } from '../modules/sheet';
 import { dataToCelldata } from './common';
 import { ensureSheetFlowdata } from './sheet';
 import { getSheetIdByName, getSheetIndex } from '../utils';
@@ -361,6 +362,9 @@ export function demoteSheetToCelldata(ctx: Context, sheetId: string): void {
   if (index == null) return;
   const sheet = ctx.luckysheetfile[index];
   if (!sheet?.data) return;
+  // Format-only empties live in config.cellFormatRanges (kept by
+  // assignActiveConfigToSheetFile / toolbar sync). Do not re-scan dense
+  // data here — that would be O(rows*cols*upsert) on every tab switch.
   sheet.celldata = dataToCelldata(sheet.data);
   delete sheet.data;
 }
@@ -378,7 +382,11 @@ export function syncAndDemoteInactiveFlowdata(
     invalidateSheetsRequiredDenseCache();
     const prevIdx = getSheetIndex(ctx, previousSheetId);
     if (prevIdx != null) {
-      ctx.luckysheetfile[prevIdx].config = ctx.config;
+      // Only the outgoing sheet — never other tabs.
+      assignActiveConfigToSheetFile(
+        ctx.luckysheetfile[prevIdx],
+        ctx.config,
+      );
     }
   }
 

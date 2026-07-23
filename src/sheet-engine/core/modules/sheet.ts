@@ -4,14 +4,38 @@ import { initSheetData } from '../api/sheet';
 import { Context } from '../context';
 import { locale } from '../locale';
 import { Settings } from '../settings';
-import { CellMatrix, Sheet } from '../types';
+import { CellMatrix, Sheet, SheetConfig } from '../types';
 import { generateRandomSheetName, getSheetIndex } from '../utils';
+
+/**
+ * Persist active ctx.config onto ONE sheet file only.
+ * If Immer wrote keys (e.g. cellFormatRanges) on file.config but not ctx.config,
+ * keep those instead of wiping them with a blind replace.
+ * Never touches other sheets.
+ */
+export function assignActiveConfigToSheetFile(
+  file: Sheet,
+  activeConfig: SheetConfig | undefined,
+) {
+  if (activeConfig == null) return;
+  const prev = file.config;
+  const merged: SheetConfig = { ...(prev || {}), ...activeConfig };
+  if (
+    activeConfig.cellFormatRanges == null &&
+    prev?.cellFormatRanges != null
+  ) {
+    merged.cellFormatRanges = prev.cellFormatRanges;
+  }
+  file.config = merged;
+}
 
 function storeSheetParam(ctx: Context) {
   const index = getSheetIndex(ctx, ctx.currentSheetId);
   if (index == null) return;
   const file = ctx.luckysheetfile[index];
-  file.config = ctx.config;
+  assignActiveConfigToSheetFile(file, ctx.config);
+  // Re-alias so later active-sheet mutations stay on the same object.
+  ctx.config = file.config!;
   // file.visibledatarow = ctx.visibledatarow;
   // file.visibledatacolumn = ctx.visibledatacolumn;
   // file.ch_width = ctx.ch_width;
@@ -23,9 +47,6 @@ function storeSheetParam(ctx: Context) {
 
 export function storeSheetParamALL(ctx: Context) {
   storeSheetParam(ctx);
-  const index = getSheetIndex(ctx, ctx.currentSheetId);
-  if (index == null) return;
-  ctx.luckysheetfile[index].config = ctx.config;
 }
 
 export function changeSheet(
