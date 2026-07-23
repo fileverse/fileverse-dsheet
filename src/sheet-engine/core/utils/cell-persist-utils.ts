@@ -73,6 +73,19 @@ export function celldataEntryEqual(existing: unknown, next: unknown): boolean {
   const existingEntry = existing as { r?: number; c?: number; v?: unknown };
   const nextEntry = next as { r?: number; c?: number; v?: unknown };
 
+  // This comparator is only valid for sparse celldata entries. Without this
+  // guard, arbitrary objects/arrays that lack r/c (e.g. cellFormatRanges)
+  // compare as equal because both coordinates are undefined, causing their
+  // Yjs write to be skipped.
+  if (
+    typeof existingEntry.r !== 'number' ||
+    typeof existingEntry.c !== 'number' ||
+    typeof nextEntry.r !== 'number' ||
+    typeof nextEntry.c !== 'number'
+  ) {
+    return false;
+  }
+
   return (
     existingEntry.r === nextEntry.r &&
     existingEntry.c === nextEntry.c &&
