@@ -416,6 +416,44 @@ export function migrateFormatOnlyCellIntoRanges(
   );
 }
 
+/**
+ * Scan a dense-data rectangle and move any format-only cells into
+ * cellFormatRanges. Adjacent identical styles merge via normalize.
+ */
+export function migrateFormatOnlyCellsFromData(
+  ranges: CellFormatRange[] | undefined,
+  data: CellMatrix | null | undefined,
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+): { ranges: CellFormatRange[]; changed: boolean } {
+  if (!data?.length) return { ranges: ranges ?? [], changed: false };
+
+  let next = ranges ?? [];
+  let changed = false;
+  const rowStart = Math.max(0, r1);
+  const rowEnd = Math.min(r2, data.length - 1);
+  if (rowStart > rowEnd) return { ranges: next, changed: false };
+
+  for (let r = rowStart; r <= rowEnd; r += 1) {
+    const row = data[r];
+    if (!row) continue;
+    const colStart = Math.max(0, c1);
+    const colEnd = Math.min(c2, row.length - 1);
+    if (colStart > colEnd) continue;
+    for (let c = colStart; c <= colEnd; c += 1) {
+      const result = migrateFormatOnlyCellIntoRanges(next, r, c, row[c]);
+      if (result.changed) {
+        next = result.ranges;
+        changed = true;
+      }
+    }
+  }
+
+  return { ranges: next, changed };
+}
+
 export function punchHoleInCellFormatRanges(
   ranges: CellFormatRange[] | undefined,
   r: number,

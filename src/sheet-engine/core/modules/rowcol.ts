@@ -10,6 +10,7 @@ import {
   rebuildRowHiddenUnion,
 } from './rowVisibility';
 import {
+  migrateFormatOnlyCellsFromData,
   shiftCellFormatRangesOnDelete,
   shiftCellFormatRangesOnInsert,
 } from '../utils/range-format';
@@ -1563,6 +1564,27 @@ export function insertRowCol(
   }
 
   refreshLocalMergeData(merge_new, file);
+
+  // Inserted template cells keep style but strip content → format-only. Those
+  // never enter celldata; migrate them into cellFormatRanges so refresh keeps bg.
+  if (range) {
+    const migrated = migrateFormatOnlyCellsFromData(
+      cfg.cellFormatRanges,
+      d as any[][],
+      range[0].row[0],
+      range[0].row[1],
+      range[0].column[0],
+      range[0].column[1],
+    );
+    if (migrated.changed) {
+      cfg.cellFormatRanges = migrated.ranges;
+      file.config = cfg;
+      if (file.id === ctx.currentSheetId) {
+        ctx.config = cfg;
+      }
+      emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+    }
+  }
 
   // Yjs: row/col insertion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);
