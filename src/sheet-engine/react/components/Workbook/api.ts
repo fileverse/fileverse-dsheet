@@ -619,6 +619,27 @@ export function generateAPIs(
           if (file.id === draftCtx.currentSheetId) {
             draftCtx.config = file.config!;
           }
+
+          // Format-only empty cells live in config.cellFormatRanges, not dense
+          // cell objects that survive refresh. Remote RTC updates write the
+          // config key but peers already have a dense `data` matrix, so we must
+          // rematerialize: strip format-only cells, then re-apply ranges.
+          const rangesTouched =
+            Object.prototype.hasOwnProperty.call(partial, 'cellFormatRanges') ||
+            (options.deleteKeys ?? []).includes('cellFormatRanges');
+          if (rangesTouched && Array.isArray(file.data) && file.data.length > 0) {
+            const celldata = api.dataToCelldata(file.data);
+            const rebuilt = api.celldataToData(
+              celldata,
+              file.row,
+              file.column,
+              cfg.cellFormatRanges,
+            );
+            if (rebuilt) {
+              file.data = rebuilt;
+            }
+          }
+
           try {
             jfrefreshgrid(draftCtx, null, undefined, false);
           } catch {

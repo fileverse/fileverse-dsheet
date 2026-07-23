@@ -1177,6 +1177,10 @@ export const useEditorData = (
           applyRemoteConditionFormat();
         }
 
+        const cellFormatRangesTouched = Array.from(
+          configUpdates.values(),
+        ).some(({ changedKeys }) => changedKeys.has('cellFormatRanges'));
+
         if (
           totalCells === 0 &&
           (sheetMetaUpdates.size > 0 ||
@@ -1189,6 +1193,11 @@ export const useEditorData = (
         ) {
           // Metadata-only remote apply — dense flowdata already patched; skip
           // full ySheetArrayToPlain (local onChange still rebuilds for persist).
+          // Exception: cellFormatRanges rematerialize densedata visually, but
+          // currentDataRef must still pick up the new config for later remounts.
+          if (cellFormatRangesTouched) {
+            syncPlainSnapshot();
+          }
           return;
         }
 
