@@ -1050,6 +1050,7 @@ const InputBox: React.FC = () => {
       ctx.formulaCache.rangedrag_row_start = false;
       ctx.formulaCache.rangechangeindex = undefined;
       ctx.formulaCache.rangeSelectionActive = null;
+      ctx.formulaCache.formulaKeyboardRefSync = false;
     });
   }, [isInputBoxActive, setContext]);
 
@@ -1232,6 +1233,20 @@ const InputBox: React.FC = () => {
           !!ctx.formulaCache.rangestart ||
           !!ctx.formulaCache.rangedrag_column_start ||
           !!ctx.formulaCache.rangedrag_row_start);
+
+      // Yellow selection stays on the edited cell during formula ref picking.
+      // Without an intentional keyboard/mouse formula-range source, do not treat
+      // that idle selection as a reference — otherwise typing `=` can spuriously
+      // become `=A1` when this effect re-runs (type-over enter-edit race, etc.).
+      if (
+        !preferFuncRange &&
+        ctx.luckysheetCellUpdate.length === 2 &&
+        currentSelection.row_focus === ctx.luckysheetCellUpdate[0] &&
+        currentSelection.column_focus === ctx.luckysheetCellUpdate[1]
+      ) {
+        return;
+      }
+
       const refRange = preferFuncRange
         ? { row: fsr!.row, column: fsr!.column }
         : {
@@ -1472,14 +1487,23 @@ const InputBox: React.FC = () => {
         formulaAnchorCellRef.current == null
       ) {
         // Starting a new formula flow; clear range-selection dirtiness so
-        // the user can start referencing again.
+        // the user can start referencing again. Also drop any stale keyboard
+        // ref-sync state so a re-fired selection effect cannot insert the
+        // edit cell (e.g. `=` → `=A1`).
+        const [anchorRow, anchorCol] = context.luckysheetCellUpdate;
         setContext((draftCtx) => {
           draftCtx.formulaCache.rangeSelectionActive = null;
+          draftCtx.formulaCache.formulaKeyboardRefSync = false;
+          draftCtx.formulaCache.func_selectedrange = undefined;
+          draftCtx.formulaCache.rangestart = false;
+          draftCtx.formulaCache.rangedrag_column_start = false;
+          draftCtx.formulaCache.rangedrag_row_start = false;
+          draftCtx.formulaRangeSelect = undefined;
         });
-        formulaAnchorCellRef.current = [
-          context.luckysheetCellUpdate[0],
-          context.luckysheetCellUpdate[1],
-        ];
+        formulaAnchorCellRef.current = [anchorRow, anchorCol];
+        if (e.key === '=') {
+          suppressAnchorSelectionSyncRef.current = [anchorRow, anchorCol];
+        }
       }
 
       if (e.key === '(' && currentInputIsFormula) {
