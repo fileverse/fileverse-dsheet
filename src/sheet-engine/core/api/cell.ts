@@ -273,10 +273,13 @@ export function applyRemoteCellValue(
     return;
   }
 
-  // Remote clear / delete: drop the value and any formula registration.
+  // Remote clear / delete: drop the whole cell (value + format + comment).
+  // Do NOT use setCellValueInternal(null) — that only strips v/m and leaves
+  // bg/fc/ct/ps, so RTC undo of a styled paste clears text on peers but
+  // format sticks until a later rematerialize (if any).
   if (value == null || value.toString().length === 0) {
     delFunctionGroup(ctx, row, column, sheetId);
-    setCellValueInternal(ctx, row, column, data, value);
+    data[row][column] = null;
     return;
   }
 
