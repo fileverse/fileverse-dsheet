@@ -498,8 +498,16 @@ const FxEditor: React.FC = () => {
         context.luckysheetCellUpdate.length === 2 &&
         formulaAnchorCellRef.current == null
       ) {
+        // Starting a new formula flow — clear stale keyboard/mouse range state so
+        // idle selection on the edit cell cannot become a self-ref (`=` → `=A1`).
         setContext((draftCtx) => {
           draftCtx.formulaCache.rangeSelectionActive = null;
+          draftCtx.formulaCache.formulaKeyboardRefSync = false;
+          draftCtx.formulaCache.func_selectedrange = undefined;
+          draftCtx.formulaCache.rangestart = false;
+          draftCtx.formulaCache.rangedrag_column_start = false;
+          draftCtx.formulaCache.rangedrag_row_start = false;
+          draftCtx.formulaRangeSelect = undefined;
         });
         formulaAnchorCellRef.current = [
           context.luckysheetCellUpdate[0],

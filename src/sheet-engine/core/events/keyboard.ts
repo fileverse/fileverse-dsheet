@@ -1448,6 +1448,19 @@ export async function handleGlobalKeyDown(
           // when the cell currently holds a formula. Use F2 / double-click to edit in place.
           cache.enteredEditByTyping = true;
 
+          // Fresh type-over must not inherit prior formula range-nav flags; otherwise
+          // seeding `=` can race with the InputBox selection-sync effect and become
+          // a self-ref (`=A1`) before the user navigates or clicks a range.
+          // Type-over replaces cell content, so also drop the "opened existing formula"
+          // lock from suppressFormulaRangeSelectionForInitialEdit above.
+          ctx.formulaCache.formulaKeyboardRefSync = false;
+          ctx.formulaCache.func_selectedrange = undefined;
+          ctx.formulaCache.rangestart = false;
+          ctx.formulaCache.rangedrag_column_start = false;
+          ctx.formulaCache.rangedrag_row_start = false;
+          ctx.formulaCache.rangeSelectionActive = null;
+          ctx.formulaCache.keyboardRangeSelectionLock = false;
+
           cellInput.focus();
           const initial = getTypeOverInitialContent(e);
           if (initial !== undefined) {
