@@ -36,6 +36,9 @@ export function assignActiveConfigToSheetFile(
 /**
  * Promote format-only cells in a rectangle into cellFormatRanges.
  * Scans only [r1..r2]×[c1..c2]. Returns new ranges if anything changed.
+ *
+ * Writes through luckysheetfile[i].config (same as toolbar) so Immer undo
+ * history tracks the change and peers get the reverse via afterConfigChanges.
  */
 export function syncFormatOnlyRectIntoRanges(
   ctx: Context,
@@ -56,9 +59,19 @@ export function syncFormatOnlyRectIntoRanges(
     c2,
   );
   if (!migrated.changed) return null;
-  cfg.cellFormatRanges = migrated.ranges;
-  ctx.config ||= {};
-  ctx.config.cellFormatRanges = migrated.ranges;
+
+  const sheetIndex = getSheetIndex(ctx, ctx.currentSheetId);
+  if (sheetIndex != null) {
+    const file = ctx.luckysheetfile[sheetIndex];
+    file.config ||= {};
+    file.config.cellFormatRanges = migrated.ranges;
+    cfg.cellFormatRanges = migrated.ranges;
+    ctx.config = file.config;
+  } else {
+    cfg.cellFormatRanges = migrated.ranges;
+    ctx.config ||= {};
+    ctx.config.cellFormatRanges = migrated.ranges;
+  }
   return migrated.ranges;
 }
 

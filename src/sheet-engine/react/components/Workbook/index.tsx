@@ -300,12 +300,14 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           'conditionRules',
         ]);
 
-        // De-dupe: last patch wins for the same (sheetId + path[0] + key).
+        // De-dupe: last patch wins for the same (sheetId + path + key).
         const changeMap = new Map<string, any>();
 
         const upsert = (change: any) => {
-          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${change.key ?? ''
-            }`;
+          const pathKey = Array.isArray(change.path)
+            ? change.path.join('.')
+            : String(change.path ?? '');
+          const k = `${change.sheetId}:${pathKey}:${change.key ?? ''}`;
           changeMap.set(k, change);
         };
 
@@ -406,6 +408,36 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 type:
                   p.op === 'remove' || p.value == null ? 'delete' : 'update',
               });
+            }
+            return;
+          }
+
+          // Undo/redo of empty-cell formats (toolbar + paste) live here.
+          // afterConfigChanges also syncs, but emit on patch so peers never miss CFR.
+          if (root === 'config') {
+            const configKey = path[3];
+            if (
+              path.length === 3 ||
+              configKey === 'cellFormatRanges' ||
+              configKey === 'borderInfo'
+            ) {
+              const cfgAfter = sheetAfter?.config;
+              if (path.length === 3 || configKey === 'cellFormatRanges') {
+                upsert({
+                  sheetId,
+                  path: ['config', 'cellFormatRanges'],
+                  value: cfgAfter?.cellFormatRanges ?? [],
+                  type: 'update',
+                });
+              }
+              if (path.length === 3 || configKey === 'borderInfo') {
+                upsert({
+                  sheetId,
+                  path: ['config', 'borderInfo'],
+                  value: cfgAfter?.borderInfo ?? [],
+                  type: 'update',
+                });
+              }
             }
           }
         });
