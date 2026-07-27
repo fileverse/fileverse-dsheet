@@ -67,6 +67,15 @@ for (let i = 0; i < operatorArr.length; i += 1) {
 const ZWSP = '\u200b';
 const normalizeFormulaBoundaryText = (s: string) =>
   (s || '').replace(/\u00a0/g, ' ').replace(/\u200b/g, '');
+
+/** Significant char immediately left of caret (trailing spaces ignored). */
+function getSignificantCharBeforeCaret(
+  fullText: string,
+  caretOffset: number,
+): string {
+  return fullText.slice(0, caretOffset).trimEnd().slice(-1);
+}
+
 function formulaDebugPreview(value: any) {
   if (Array.isArray(value)) {
     return {
@@ -4026,6 +4035,17 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
   const caretOffset = normalizeFormulaBoundaryText(
     preCaretRange.toString(),
   ).length;
+  // Use textContent (matches `caretOffset` from Range.toString().length).
+  // innerText would shift these indices by 1 per <br> in multi-line formulas.
+  const fullText = normalizeFormulaBoundaryText(editor.textContent || '');
+
+  // `)` closes a group/call — never a ref insertion point, whether at EOF or
+  // mid-formula (e.g. `=SUM(A1)|+B1`). Previously only the EOF branch checked
+  // this; the mid-formula path only inspected the char *after* the caret.
+  if (getSignificantCharBeforeCaret(fullText, caretOffset) === ')') {
+    return false;
+  }
+
   const slotTextBeforeCaret = getCurrentFormulaSlotTextBeforeCaret(
     editor,
     caretOffset,
@@ -4042,9 +4062,6 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
     return false;
   }
 
-  // Use textContent (matches `caretOffset` from Range.toString().length).
-  // innerText would shift these indices by 1 per <br> in multi-line formulas.
-  const fullText = normalizeFormulaBoundaryText(editor.textContent || '');
   const textAfter = fullText.slice(caretOffset);
   const remaining = textAfter.replace(/^\s+/, '');
   if (remaining.length === 0) {
@@ -4052,16 +4069,13 @@ export function isCaretAtValidFormulaRangeInsertionPoint(
     if (atCaret !== null) {
       return true;
     }
-    const textBefore = fullText.slice(0, caretOffset).trimEnd();
-    const lastCh = textBefore.slice(-1);
+    const lastCh = getSignificantCharBeforeCaret(fullText, caretOffset);
     if (!lastCh) {
-      return false;
-    }
-    if (lastCh === ')') {
       return false;
     }
     // At end-of-formula: only after `=`, `,`, `(`, or an infix operator is it valid to start
     // or extend refs via keyboard/mouse — same idea as blocking bare `=A1` / `=A1:A2`.
+    // (`)` already rejected above.)
     if (/^[=,(+\-*/&%^<>]$/.test(lastCh)) {
       return true;
     }
@@ -4747,16 +4761,6 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
   const parentElement = anchor.parentNode as HTMLElement;
 
   const allowRangeInsertionAtCaret = () => {
-    // If range selection flow is already active, allow insertion/replacement.
-    if (
-      ctx.formulaCache.rangestart ||
-      ctx.formulaCache.rangedrag_column_start ||
-      ctx.formulaCache.rangedrag_row_start ||
-      ctx.formulaCache.rangeSelectionActive === true
-    ) {
-      return true;
-    }
-
     const editor =
       (anchorElement.closest?.(
         '#luckysheet-rich-text-editor, #luckysheet-functionbox-cell',
@@ -4767,6 +4771,20 @@ export function israngeseleciton(ctx: Context, istooltip?: boolean) {
       (document.getElementById(
         'luckysheet-rich-text-editor',
       ) as HTMLElement | null);
+
+    // Active range flow may continue updating a managed ref under the caret,
+    // but must not bypass caret validation when the caret has moved to an
+    // invalid slot (e.g. just after `)` → `=SUM(A1)|+B1`).
+    if (
+      editor &&
+      (ctx.formulaCache.rangestart ||
+        ctx.formulaCache.rangedrag_column_start ||
+        ctx.formulaCache.rangedrag_row_start ||
+        ctx.formulaCache.rangeSelectionActive === true) &&
+      getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+    ) {
+      return true;
+    }
 
     return isCaretAtValidFormulaRangeInsertionPoint(editor);
   };
