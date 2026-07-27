@@ -591,7 +591,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       if (history) {
         setContext((ctx_) => {
           const isBorderUndo = history.patches.some(
-            (onePatch) => onePatch.value?.borderInfo,
+            (onePatch) =>
+              Array.isArray(onePatch.value?.borderInfo) &&
+              onePatch.value.borderInfo.length > 0,
           );
 
           if (history.options?.deleteSheetOp) {
@@ -674,7 +676,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         setContext((ctx_) => {
           const newContext = applyPatches(ctx_, history.patches);
           const isBorderUndo = history.patches.some(
-            (onePatch) => onePatch.value?.borderInfo,
+            (onePatch) =>
+              Array.isArray(onePatch.value?.borderInfo) &&
+              onePatch.value.borderInfo.length > 0,
           );
 
           globalCache.current.undoList.push(history);
@@ -695,16 +699,22 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               : {}),
           };
           if (isBorderUndo) {
-            const nwborderlist = (nw?.config?.borderInfo ?? []).concat(
-              history.patches[0].value?.borderInfo[0],
-            );
-            nw = {
-              ...nw,
-              config: {
-                ...nw.config,
-                borderInfo: nwborderlist,
-              },
-            };
+            // patches[0] is often a cell/data patch — only read borderInfo from
+            // a patch that actually has it, and guard [0] (a?.b[0] still throws).
+            const borderEntry = history.patches.find(
+              (p) => p.value?.borderInfo != null,
+            )?.value?.borderInfo?.[0];
+            if (borderEntry != null) {
+              nw = {
+                ...nw,
+                config: {
+                  ...nw.config,
+                  borderInfo: (nw?.config?.borderInfo ?? []).concat(
+                    borderEntry,
+                  ),
+                },
+              };
+            }
           }
           return nw;
         });

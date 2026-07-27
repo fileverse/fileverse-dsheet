@@ -1128,111 +1128,141 @@ export const useEditorData = (
         for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
           const sheet = plain.find((s) => s.id === sheetId);
           if (!sheet) continue;
-          if (!sheet.celldata) sheet.celldata = [];
+          // ySheetArrayToPlain normally yields an array, but currentDataRef can
+          // briefly hold object-shaped / missing celldata after remounts.
+          // Always bind a real array — `sheet.celldata.findIndex` on undefined
+          // throws inside the Yjs observer and SyncManager drops the update.
+          if (!Array.isArray(sheet.celldata)) {
+            sheet.celldata = sheet.celldata
+              ? (Object.values(sheet.celldata as Record<string, unknown>) as NonNullable<
+                  Sheet['celldata']
+                >)
+              : [];
+          }
+          const celldata = sheet.celldata as NonNullable<Sheet['celldata']>;
           changedKeys.forEach(({ action }, key) => {
             const sep = key.lastIndexOf('_');
             const r = parseInt(key.slice(0, sep), 10);
             const c = parseInt(key.slice(sep + 1), 10);
-            const idx = sheet.celldata!.findIndex(
+            const idx = celldata.findIndex(
               (cell) => cell.r === r && cell.c === c,
             );
             if (action === 'delete') {
-              if (idx >= 0) sheet.celldata!.splice(idx, 1);
+              if (idx >= 0) celldata.splice(idx, 1);
               return;
             }
             const cellObj = celldataMap.get(key);
-            const entry = { r, c, v: cellObj?.v ?? null };
-            if (idx >= 0) sheet.celldata![idx] = entry;
-            else sheet.celldata!.push(entry);
+            const entry = {
+              r,
+              c,
+              v: (cellObj?.v ?? null) as NonNullable<Sheet['celldata']>[number]['v'],
+            };
+            if (idx >= 0) celldata[idx] = entry;
+            else celldata.push(entry);
           });
         }
       };
 
       // --- Fall back to remount for structural changes or large cell batches ---
-      if (needsStructuralRemount) {
-        scheduleStructuralRemount();
-        return;
-      }
-
-      runUnderRemoteApply(remoteApplyGuardRefs, () => {
-        if (sheetMetaUpdates.size > 0) {
-          applyRemoteSheetMeta();
-        }
-        if (overlayUpdates.size > 0) {
-          applyRemoteOverlays();
-        }
-        if (dataVerificationUpdates.size > 0) {
-          applyRemoteDataVerification();
-        }
-        if (filterUpdates.size > 0) {
-          applyRemoteFilters();
-        }
-        if (mapFieldUpdates.size > 0) {
-          applyRemoteMapFields();
-        }
-        if (configUpdates.size > 0) {
-          applyRemoteConfig();
-        }
-        if (conditionFormatUpdates.size > 0) {
-          applyRemoteConditionFormat();
-        }
-
-        const cellFormatRangesTouched = Array.from(
-          configUpdates.values(),
-        ).some(({ changedKeys }) => changedKeys.has('cellFormatRanges'));
-
-        if (
-          totalCells === 0 &&
-          (sheetMetaUpdates.size > 0 ||
-            overlayUpdates.size > 0 ||
-            dataVerificationUpdates.size > 0 ||
-            filterUpdates.size > 0 ||
-            mapFieldUpdates.size > 0 ||
-            configUpdates.size > 0 ||
-            conditionFormatUpdates.size > 0)
-        ) {
-          // Metadata-only remote apply — dense flowdata already patched; skip
-          // full ySheetArrayToPlain (local onChange still rebuilds for persist).
-          // Exception: cellFormatRanges rematerialize densedata visually, but
-          // currentDataRef must still pick up the new config for later remounts.
-          if (cellFormatRangesTouched) {
-            syncPlainSnapshot();
-          }
+      // Keep throws inside the observer: Y.applyUpdate already committed the
+      // update; an uncaught observer error makes SyncManager log "failed to
+      // apply remote Yjs update, skipping" even though the doc was updated.
+      try {
+        if (needsStructuralRemount) {
+          scheduleStructuralRemount();
           return;
         }
 
-        // Surgical path: imperative per-cell updates, zero Workbook remount
-        for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
-          changedKeys.forEach(({ action }, key) => {
-            const sep = key.lastIndexOf('_');
-            const r = parseInt(key.slice(0, sep), 10);
-            const c = parseInt(key.slice(sep + 1), 10);
+        runUnderRemoteApply(remoteApplyGuardRefs, () => {
+          if (sheetMetaUpdates.size > 0) {
+            applyRemoteSheetMeta();
+          }
+          if (overlayUpdates.size > 0) {
+            applyRemoteOverlays();
+          }
+          if (dataVerificationUpdates.size > 0) {
+            applyRemoteDataVerification();
+          }
+          if (filterUpdates.size > 0) {
+            applyRemoteFilters();
+          }
+          if (mapFieldUpdates.size > 0) {
+            applyRemoteMapFields();
+          }
+          if (configUpdates.size > 0) {
+            applyRemoteConfig();
+          }
+          if (conditionFormatUpdates.size > 0) {
+            applyRemoteConditionFormat();
+          }
 
-            try {
-              if (action === 'delete') {
-                sheetEditorRef.current?.applyRemoteCellValue(r, c, null, {
-                  id: sheetId,
-                });
-              } else {
-                const cellObj = celldataMap.get(key);
-                const remoteCell = cellObj?.v ?? null;
-                sheetEditorRef.current?.applyRemoteCellValue(r, c, remoteCell, {
-                  id: sheetId,
-                });
-              }
-            } catch (error) {
-              console.warn(
-                '[DSheet] Skipped remote cell apply — workbook not ready',
-                { sheetId, r, c, error },
-              );
+          const cellFormatRangesTouched = Array.from(
+            configUpdates.values(),
+          ).some(({ changedKeys }) => changedKeys.has('cellFormatRanges'));
+
+          if (
+            totalCells === 0 &&
+            (sheetMetaUpdates.size > 0 ||
+              overlayUpdates.size > 0 ||
+              dataVerificationUpdates.size > 0 ||
+              filterUpdates.size > 0 ||
+              mapFieldUpdates.size > 0 ||
+              configUpdates.size > 0 ||
+              conditionFormatUpdates.size > 0)
+          ) {
+            // Metadata-only remote apply — dense flowdata already patched; skip
+            // full ySheetArrayToPlain (local onChange still rebuilds for persist).
+            // Exception: cellFormatRanges rematerialize densedata visually, but
+            // currentDataRef must still pick up the new config for later remounts.
+            if (cellFormatRangesTouched) {
+              syncPlainSnapshot();
             }
-          });
-        }
+            return;
+          }
 
-        if (totalCells > 0) {
-          patchPlainCelldata();
-        }
-      });
+          // Surgical path: imperative per-cell updates, zero Workbook remount
+          for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
+            changedKeys.forEach(({ action }, key) => {
+              const sep = key.lastIndexOf('_');
+              const r = parseInt(key.slice(0, sep), 10);
+              const c = parseInt(key.slice(sep + 1), 10);
+
+              try {
+                if (action === 'delete') {
+                  sheetEditorRef.current?.applyRemoteCellValue(r, c, null, {
+                    id: sheetId,
+                  });
+                } else {
+                  const cellObj = celldataMap.get(key);
+                  const remoteCell = cellObj?.v ?? null;
+                  sheetEditorRef.current?.applyRemoteCellValue(
+                    r,
+                    c,
+                    remoteCell,
+                    {
+                      id: sheetId,
+                    },
+                  );
+                }
+              } catch (error) {
+                console.warn(
+                  '[DSheet] Skipped remote cell apply — workbook not ready',
+                  { sheetId, r, c, error },
+                );
+              }
+            });
+          }
+
+          if (totalCells > 0) {
+            patchPlainCelldata();
+          }
+        });
+      } catch (error) {
+        console.error(
+          '[DSheet] remote ydoc observer apply failed (ydoc already updated)',
+          error,
+        );
+      }
     };
 
     sheetArray.observeDeep(observerCallback);
