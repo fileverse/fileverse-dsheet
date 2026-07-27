@@ -20,6 +20,10 @@ import { scheduleSheetMetadataSyncHooks } from '../modules/sheet-metadata-hooks'
 import { adjustFormulaForPaste } from './formula-adjust';
 import { filterMeaningfulBorderSides } from './paste-border-utils';
 import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
+import {
+  assignActiveConfigToSheetFile,
+  syncFormatOnlyRectIntoRanges,
+} from '../modules/sheet';
 
 function pushPasteCelldataChange(
   changes: any[],
@@ -34,6 +38,27 @@ function pushPasteCelldataChange(
     path: ['celldata'],
     value: { r, c, v: cell },
     key: `${r}_${c}`,
+    type: 'update',
+  });
+}
+
+/** Paste-rect only: migrate format-only empties → cellFormatRanges + ydoc change. */
+function appendPasteFormatRangeMigration(
+  ctx: Context,
+  cfg: Context['config'],
+  data: CellMatrix | null | undefined,
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+  changes: any[],
+) {
+  const ranges = syncFormatOnlyRectIntoRanges(ctx, cfg, data, r1, r2, c1, c2);
+  if (!ranges) return;
+  changes.push({
+    sheetId: ctx.currentSheetId,
+    path: ['config', 'cellFormatRanges'],
+    value: ranges,
     type: 'update',
   });
 }
@@ -538,27 +563,25 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         delete cfg.rowlen[h];
       }
     }
+    appendPasteFormatRangeMigration(
+      ctx,
+      cfg,
+      d,
+      minh,
+      maxh,
+      minc,
+      maxc,
+      changes,
+    );
     if (ctx?.hooks?.updateCellYdoc) {
       ctx.hooks?.updateCellYdoc(changes);
     }
 
     ctx.luckysheet_select_save = [{ row: [minh, maxh], column: [minc, maxc] }];
 
-    if (addr > 0 || addc > 0 || RowlChange) {
-      // const allParam = {
-      //   cfg,
-      //   RowlChange: true,
-      // };
-      ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!].config = cfg;
-      // jfrefreshgrid(d, ctx.luckysheet_select_save, allParam);
-    } else {
-      // const allParam = {
-      //   cfg,
-      // };
-      ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!].config = cfg;
-      // jfrefreshgrid(d, ctx.luckysheet_select_save, allParam);
-      // selectHightlightShow();
-    }
+    const pasteSheetIdx = getSheetIndex(ctx, ctx.currentSheetId)!;
+    assignActiveConfigToSheetFile(ctx.luckysheetfile[pasteSheetIdx], cfg);
+    ctx.config = ctx.luckysheetfile[pasteSheetIdx].config!;
     jfrefreshgrid(ctx, null, undefined);
     if (data.includes('=')) {
       handleFormulaOnPaste(ctx, d);
@@ -1190,6 +1213,16 @@ export function pasteHandlerOfCutPaste(
   last.row = [minh, maxh];
   last.column = [minc, maxc];
 
+  appendPasteFormatRangeMigration(
+    ctx,
+    cfg,
+    d,
+    minh,
+    maxh,
+    minc,
+    maxc,
+    changes,
+  );
   if (changes.length > 0 && ctx?.hooks?.updateCellYdoc) {
     ctx.hooks.updateCellYdoc(changes);
   }
@@ -2038,6 +2071,17 @@ export function pasteHandlerOfCopyPaste(
       }
     }
   }
+
+  appendPasteFormatRangeMigration(
+    ctx,
+    cfg,
+    d,
+    minh,
+    maxh,
+    minc,
+    maxc,
+    changes,
+  );
 
   if (ctx?.hooks?.updateCellYdoc) {
     if (

@@ -6,6 +6,10 @@ import { locale } from '../locale';
 import { Settings } from '../settings';
 import { CellMatrix, Sheet, SheetConfig } from '../types';
 import { generateRandomSheetName, getSheetIndex } from '../utils';
+import {
+  CellFormatRange,
+  migrateFormatOnlyCellsFromData,
+} from '../utils/range-format';
 
 /**
  * Persist active ctx.config onto ONE sheet file only.
@@ -27,6 +31,35 @@ export function assignActiveConfigToSheetFile(
     merged.cellFormatRanges = prev.cellFormatRanges;
   }
   file.config = merged;
+}
+
+/**
+ * Promote format-only cells in a rectangle into cellFormatRanges.
+ * Scans only [r1..r2]×[c1..c2]. Returns new ranges if anything changed.
+ */
+export function syncFormatOnlyRectIntoRanges(
+  ctx: Context,
+  cfg: SheetConfig | undefined,
+  data: CellMatrix | null | undefined,
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+): CellFormatRange[] | null {
+  if (!cfg || !data?.length) return null;
+  const migrated = migrateFormatOnlyCellsFromData(
+    cfg.cellFormatRanges,
+    data,
+    r1,
+    r2,
+    c1,
+    c2,
+  );
+  if (!migrated.changed) return null;
+  cfg.cellFormatRanges = migrated.ranges;
+  ctx.config ||= {};
+  ctx.config.cellFormatRanges = migrated.ranges;
+  return migrated.ranges;
 }
 
 function storeSheetParam(ctx: Context) {

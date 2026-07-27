@@ -37,8 +37,10 @@ import { locale } from '../locale';
 import { CFSplitRange } from './ConditionFormat';
 import { clearCellError } from './error-state-helpers';
 import { scheduleSheetMetadataSyncHooks } from './sheet-metadata-hooks';
-import { migrateFormatOnlyCellsFromData } from '../utils/range-format';
-import { assignActiveConfigToSheetFile } from './sheet';
+import {
+  assignActiveConfigToSheetFile,
+  syncFormatOnlyRectIntoRanges,
+} from './sheet';
 
 export const selectionCache = {
   isPasteAction: false,
@@ -803,36 +805,26 @@ export function pasteHandlerOfPaintModel(
   }
 
   // Empty painted cells are format-only — not persistable in celldata.
-  // Migrate into cellFormatRanges (apply rect only) and emit with celldata.
-  const migrated = migrateFormatOnlyCellsFromData(
-    cfg.cellFormatRanges,
+  const migratedRanges = syncFormatOnlyRectIntoRanges(
+    ctx,
+    cfg,
     flowdata,
     minh,
     maxh,
     minc,
     maxc,
   );
-  if (migrated.changed) {
-    cfg.cellFormatRanges = migrated.ranges;
-    ctx.config ||= {};
-    ctx.config.cellFormatRanges = migrated.ranges;
-  }
 
   if (ctx?.hooks?.updateCellYdoc) {
-    const ydocBatch = [
-      ...cellChanges,
-      ...dataVerificationYdocChanges,
-      ...(migrated.changed
-        ? [
-            {
-              sheetId: ctx.currentSheetId,
-              path: ['config', 'cellFormatRanges'],
-              value: cfg.cellFormatRanges ?? [],
-              type: 'update' as const,
-            },
-          ]
-        : []),
-    ];
+    const ydocBatch = [...cellChanges, ...dataVerificationYdocChanges];
+    if (migratedRanges) {
+      ydocBatch.push({
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'cellFormatRanges'],
+        value: migratedRanges,
+        type: 'update',
+      });
+    }
     if (ydocBatch.length > 0) {
       ctx.hooks.updateCellYdoc(ydocBatch);
     }
