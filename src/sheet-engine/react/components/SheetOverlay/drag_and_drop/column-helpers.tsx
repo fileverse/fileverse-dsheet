@@ -22,6 +22,7 @@ import {
   rangesEqual,
   remapCellFormatRanges,
 } from '../../../../core/utils/range-format';
+import { remapBorderInfo } from '../../../../core/utils/border-config-utils';
 
 export function numberToColumnName(num: number): string {
   return indexToColumnChar(num);
@@ -470,17 +471,43 @@ export const useColumnDragAndDrop = (
             'column',
             colMap,
           );
+          const previousBorderInfo = _sheet.config?.borderInfo;
+          const nextBorderInfo = previousBorderInfo?.length
+            ? remapBorderInfo(previousBorderInfo, 'column', colMap)
+            : previousBorderInfo;
+
+          const ydocConfigChanges: {
+            sheetId: string;
+            path: string[];
+            value: unknown;
+            type: 'update';
+          }[] = [];
+
           if (!rangesEqual(previousFormatRanges, nextFormatRanges)) {
             _sheet.config ||= {};
             _sheet.config.cellFormatRanges = nextFormatRanges;
-            draft.hooks?.updateCellYdoc?.([
-              {
-                sheetId: draft.currentSheetId,
-                path: ['config', 'cellFormatRanges'],
-                value: nextFormatRanges,
-                type: 'update',
-              },
-            ]);
+            ydocConfigChanges.push({
+              sheetId: draft.currentSheetId,
+              path: ['config', 'cellFormatRanges'],
+              value: nextFormatRanges,
+              type: 'update',
+            });
+          }
+
+          if (previousBorderInfo?.length) {
+            _sheet.config ||= {};
+            _sheet.config.borderInfo = nextBorderInfo;
+            draft.config.borderInfo = nextBorderInfo;
+            ydocConfigChanges.push({
+              sheetId: draft.currentSheetId,
+              path: ['config', 'borderInfo'],
+              value: nextBorderInfo ?? [],
+              type: 'update',
+            });
+          }
+
+          if (ydocConfigChanges.length > 0) {
+            draft.hooks?.updateCellYdoc?.(ydocConfigChanges);
           }
 
           // Keep column width metadata in sync with moved column data.
