@@ -36,6 +36,7 @@ import {
   type FormulaAsyncEvalJob,
 } from './formula-async-eval';
 import { ensureSheetFlowdata } from '../api/sheet';
+import { changeSheet } from './sheet';
 import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
 import {
   beginRangeValuePassCache,
@@ -339,6 +340,12 @@ export class FormulaCache {
   // Persistent owner of the current formula edit session. Unlike
   // document.activeElement, this survives canvas clicks during range picking.
   formulaEditorOwner?: 'cell' | 'fx' | null;
+
+  /**
+   * Set when switching sheets while a formula edit stays open so InputBox/Fx
+   * can restore focus/caret for continued keyboard ref picking.
+   */
+  refocusFormulaEditorAfterSheetSwitch?: boolean;
 
   functionRangeIndex?: number[];
 
@@ -3897,6 +3904,116 @@ export function getFormulaEditorOwner(ctx: Context): 'cell' | 'fx' | null {
   return null;
 }
 
+/**
+ * Record the sheet where the formula edit started so cross-sheet picks can emit
+ * `SheetName!A1` via `rangeSetValue` / `getRangetxt`.
+ */
+export function ensureFormulaRangeToSheet(ctx: Context) {
+  if (!ctx.formulaCache.rangetosheet) {
+    ctx.formulaCache.rangetosheet = ctx.currentSheetId;
+  }
+}
+
+/** True while an in-cell / fx formula edit should survive sheet-tab switches. */
+export function shouldPreserveFormulaEditOnSheetSwitch(ctx: Context): boolean {
+  if (ctx.luckysheetCellUpdate.length === 0) return false;
+  if (ctx.formulaCache.rangetosheet) return true;
+  const editor = getActiveFormulaEditorElement(ctx);
+  return (editor?.innerText || '').trim().startsWith('=');
+}
+
+function saveCurrentSheetViewState(ctx: Context) {
+  ctx.sheetScrollRecord[ctx.currentSheetId] = {
+    scrollLeft: ctx.scrollLeft,
+    scrollTop: ctx.scrollTop,
+    luckysheet_select_status: ctx.luckysheet_select_status,
+    luckysheet_select_save: ctx.luckysheet_select_save,
+    luckysheet_selection_range: ctx.luckysheet_selection_range,
+  };
+}
+
+function clearFormulaPickStateOnSheetSwitch(ctx: Context) {
+  ctx.formulaCache.formulaKeyboardRefSync = false;
+  ctx.formulaCache.func_selectedrange = undefined;
+  ctx.formulaCache.rangestart = false;
+  ctx.formulaCache.rangedrag_column_start = false;
+  ctx.formulaCache.rangedrag_row_start = false;
+  ctx.formulaCache.rangechangeindex = undefined;
+  ctx.formulaRangeSelect = undefined;
+  ctx.formulaCache.refocusFormulaEditorAfterSheetSwitch = true;
+}
+
+/**
+ * Activate another sheet from tab click or Alt/Option+Arrow navigation.
+ * Returns whether the sheet changed and whether formula edit was preserved.
+ */
+export function activateSheetForNavigation(
+  ctx: Context,
+  targetSheetId: string,
+): 'preserved-formula' | 'cancel-edit' | false {
+  if (!targetSheetId || targetSheetId === ctx.currentSheetId) return false;
+
+  const preserveFormula = shouldPreserveFormulaEditOnSheetSwitch(ctx);
+  if (preserveFormula) {
+    // Capture origin sheet before `currentSheetId` changes.
+    ensureFormulaRangeToSheet(ctx);
+  }
+
+  saveCurrentSheetViewState(ctx);
+  ctx.dataVerificationDropDownList = false;
+
+  const targetIdx = getSheetIndex(ctx, targetSheetId);
+  const targetFile = targetIdx != null ? ctx.luckysheetfile[targetIdx] : undefined;
+
+  changeSheet(ctx, targetSheetId);
+
+  if (targetFile?.zoomRatio != null) {
+    ctx.zoomRatio = targetFile.zoomRatio || 1;
+  }
+
+  if (preserveFormula) {
+    clearFormulaPickStateOnSheetSwitch(ctx);
+    return 'preserved-formula';
+  }
+  return 'cancel-edit';
+}
+
+/**
+ * Switch back to the formula's origin sheet (and restore its scroll/selection)
+ * before commit or cancel. Returns true when a switch happened.
+ */
+export function returnToFormulaOriginSheet(ctx: Context): boolean {
+  const origin = ctx.formulaCache.rangetosheet;
+  if (!origin || origin === ctx.currentSheetId) return false;
+
+  ctx.sheetScrollRecord[ctx.currentSheetId] = {
+    scrollLeft: ctx.scrollLeft,
+    scrollTop: ctx.scrollTop,
+    luckysheet_select_status: ctx.luckysheet_select_status,
+    luckysheet_select_save: ctx.luckysheet_select_save,
+    luckysheet_selection_range: ctx.luckysheet_selection_range,
+  };
+
+  changeSheet(ctx, origin);
+
+  const saved = ctx.sheetScrollRecord[origin];
+  if (saved) {
+    ctx.scrollLeft = saved.scrollLeft ?? 0;
+    ctx.scrollTop = saved.scrollTop ?? 0;
+    ctx.luckysheet_select_status = saved.luckysheet_select_status ?? false;
+    if (saved.luckysheet_select_save) {
+      ctx.luckysheet_select_save = saved.luckysheet_select_save;
+    }
+  }
+
+  const file = ctx.luckysheetfile[getSheetIndex(ctx, origin)!];
+  if (file?.zoomRatio != null) {
+    ctx.zoomRatio = file.zoomRatio || 1;
+  }
+
+  return true;
+}
+
 function getActiveFormulaEditorElement(ctx: Context): HTMLDivElement | null {
   const cellEditor = document.getElementById(
     'luckysheet-rich-text-editor',
@@ -4138,7 +4255,12 @@ export function getFormulaRangeIndexForKeyboardSync(
   if (!cell) return null;
 
   const sel = window.getSelection();
-  if (!sel?.anchorNode) return lastIdx;
+  // Focus often leaves the formula editor after a sheet-tab switch. Without a
+  // caret inside the editor, still update the sole/last managed ref (needed for
+  // bare `=Sheet2!A1` continued keyboard nav).
+  if (!sel?.anchorNode || !$editor.contains(sel.anchorNode)) {
+    return lastIdx;
+  }
 
   const caretRange = document.createRange();
   try {
@@ -4155,8 +4277,12 @@ export function getFormulaRangeIndexForKeyboardSync(
     return lastIdx;
   }
 
-  if (caretRange.compareBoundaryPoints(Range.START_TO_START, cellRange) < 0) {
-    return null;
+  try {
+    if (caretRange.compareBoundaryPoints(Range.START_TO_START, cellRange) < 0) {
+      return null;
+    }
+  } catch {
+    return lastIdx;
   }
 
   const afterCell = document.createRange();
@@ -4167,10 +4293,14 @@ export function getFormulaRangeIndexForKeyboardSync(
     return lastIdx;
   }
 
-  if (caretRange.compareBoundaryPoints(Range.START_TO_START, afterCell) >= 0) {
-    if (hasCommaOrAnotherRefAfterRangeCell(cell)) {
-      return null;
+  try {
+    if (caretRange.compareBoundaryPoints(Range.START_TO_START, afterCell) >= 0) {
+      if (hasCommaOrAnotherRefAfterRangeCell(cell)) {
+        return null;
+      }
+      return lastIdx;
     }
+  } catch {
     return lastIdx;
   }
 
@@ -4244,6 +4374,7 @@ export function handleFormulaInput(
       value.substring(0, 1) === '=' &&
       (kcode !== 229 || value.length === 1)
     ) {
+      ensureFormulaRangeToSheet(ctx);
       if (!refreshRangeSelect) rangeIndexes = getRangeIndexes($editor);
       value = functionHTMLGenerate(value);
       if (!refreshRangeSelect && functionHTMLIndex < rangeIndexes.length)
@@ -4959,6 +5090,15 @@ export function isFormulaReferenceInputMode(ctx: Context): boolean {
     ctx.formulaCache.rangeSelectionActive === true &&
     editor &&
     getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+  ) {
+    return true;
+  }
+
+  // Same for bare `=A1` / `=Sheet2!A1` when the insert is still clean but the
+  // caret is no longer inside the span (e.g. after a sheet-tab switch).
+  if (
+    ctx.formulaCache.rangeSelectionActive === true &&
+    isBareCellOrRangeOnlyFormula(inputText)
   ) {
     return true;
   }

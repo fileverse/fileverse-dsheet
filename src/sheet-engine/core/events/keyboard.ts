@@ -14,8 +14,11 @@ import {
   setFormulaEditorOwner,
   getFormulaEditorOwner,
   suppressFormulaRangeSelectionForInitialEdit,
+  ensureFormulaRangeToSheet,
+  returnToFormulaOriginSheet,
   toggleFormulaAbsoluteReferenceAtCaret,
   getFormulaRangeIndexAtCaret,
+  isBareCellOrRangeOnlyFormula,
 } from '../modules/formula';
 import { isInlineStringCell } from '../modules/inline-string';
 import {
@@ -104,6 +107,15 @@ function shouldBlockFormulaRangeKeyboardNavigation(ctx: Context): boolean {
   if (
     ctx.formulaCache.rangeSelectionActive === true &&
     getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+  ) {
+    return false;
+  }
+  // Bare `=A1` / `=Sheet2!A1` after a clean insert: keep driving that single
+  // managed ref even if focus left the span (common after switching sheets —
+  // first arrow inserts, then caret is no longer inside the span).
+  if (
+    ctx.formulaCache.rangeSelectionActive === true &&
+    isBareCellOrRangeOnlyFormula(t)
   ) {
     return false;
   }
@@ -975,6 +987,14 @@ export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
   bumpFormulaKeyboardRangeSync(ctx, navType);
 
   // Keep the formula caret anchored while arrow keys drive sheet selection.
+  // Also re-focus the editor after sheet-tab focus theft so bare `=Sheet!A1`
+  // continued navigation can see the caret on the managed span.
+  if (navType === 'rangeOfFormula') {
+    const editor = getActiveFormulaEditorForKeyboardGuard();
+    if (editor && document.activeElement !== editor) {
+      editor.focus({ preventScroll: true });
+    }
+  }
   e.preventDefault();
 }
 
@@ -1296,6 +1316,7 @@ export async function handleGlobalKeyDown(
   } else if (kstr === 'Escape' && ctx.luckysheetCellUpdate.length > 0) {
     cache.enteredEditByTyping = false;
     clearTypeOverPending(cache);
+    returnToFormulaOriginSheet(ctx);
     cancelNormalSelected(ctx);
     moveHighlightCell(ctx, 'down', 0, 'rangeOfSelect');
     e.preventDefault();
@@ -1463,6 +1484,9 @@ export async function handleGlobalKeyDown(
 
           cellInput.focus();
           const initial = getTypeOverInitialContent(e);
+          if (initial === '=') {
+            ensureFormulaRangeToSheet(ctx);
+          }
           if (initial !== undefined) {
             const shouldSeedPercentSuffix =
               isPercentFormattedCell && /^([0-9]|[.+-])$/.test(initial);

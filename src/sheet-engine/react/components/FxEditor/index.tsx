@@ -21,6 +21,8 @@ import {
   functionHTMLGenerate,
   isAllowEdit,
   suppressFormulaRangeSelectionForInitialEdit,
+  ensureFormulaRangeToSheet,
+  returnToFormulaOriginSheet,
   normalizeSelection,
   snapSheetSelectionFocusToCellPreserveMultiRange,
   advancePrimaryCellInLastMultiSelection,
@@ -292,6 +294,44 @@ const FxEditor: React.FC = () => {
     }
   }, [context.luckysheetCellUpdate, refs.fxInput]);
 
+  useEffect(() => {
+    if (!context.formulaCache.refocusFormulaEditorAfterSheetSwitch) return;
+    if (context.luckysheetCellUpdate.length === 0) return;
+    if (getFormulaEditorOwner(context) !== 'fx') return;
+
+    const editor = refs.fxInput.current;
+    if (!editor) return;
+
+    setContext((ctx) => {
+      ctx.formulaCache.refocusFormulaEditorAfterSheetSwitch = false;
+    });
+
+    requestAnimationFrame(() => {
+      editor.focus({ preventScroll: true });
+      const managed = editor.querySelector(
+        'span.fortune-formula-functionrange-cell',
+      ) as HTMLElement | null;
+      if (managed?.firstChild?.nodeType === Node.TEXT_NODE) {
+        const sel = window.getSelection();
+        const textNode = managed.firstChild;
+        if (sel && textNode) {
+          const range = document.createRange();
+          range.setStart(textNode, textNode.textContent?.length ?? 0);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+    });
+  }, [
+    context.formulaCache.refocusFormulaEditorAfterSheetSwitch,
+    context.currentSheetId,
+    context.luckysheetCellUpdate.length,
+    context,
+    refs.fxInput,
+    setContext,
+  ]);
+
   const onFocus = useCallback(() => {
     if (context.allowEdit === false) {
       return;
@@ -434,18 +474,23 @@ const FxEditor: React.FC = () => {
         const anchor = formulaAnchorCellRef.current;
         if (anchor != null) {
           const [anchorRow, anchorCol] = anchor;
+          const onForeignSheet =
+            !!context.formulaCache.rangetosheet &&
+            context.formulaCache.rangetosheet !== context.currentSheetId;
           // skipNextAnchorSelectionSyncRef.current = true;
           setTimeout(() => {
             setContext((draftCtx) => {
               draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
-              snapSheetSelectionFocusToCellPreserveMultiRange(
-                draftCtx,
-                anchorRow,
-                anchorCol,
-              );
+              if (!onForeignSheet) {
+                snapSheetSelectionFocusToCellPreserveMultiRange(
+                  draftCtx,
+                  anchorRow,
+                  anchorCol,
+                );
+                // Recompute selection box immediately so UI snaps back to anchor cell.
+                moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
+              }
               draftCtx.formulaCache.formulaKeyboardRefSync = false;
-              // Recompute selection box immediately so UI snaps back to anchor cell.
-              moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               markRangeSelectionDirty(draftCtx);
               // Keep completed referenced-cell highlights persistent in Fx editor
               // after delete/backspace, same behavior as in-cell editor.
@@ -501,6 +546,7 @@ const FxEditor: React.FC = () => {
         // Starting a new formula flow — clear stale keyboard/mouse range state so
         // idle selection on the edit cell cannot become a self-ref (`=` → `=A1`).
         setContext((draftCtx) => {
+          ensureFormulaRangeToSheet(draftCtx);
           draftCtx.formulaCache.rangeSelectionActive = null;
           draftCtx.formulaCache.formulaKeyboardRefSync = false;
           draftCtx.formulaCache.func_selectedrange = undefined;
@@ -531,14 +577,19 @@ const FxEditor: React.FC = () => {
           draftCtx.formulaCache.rangeSelectionActive = null;
         });
         const [anchorRow, anchorCol] = formulaAnchorCellRef.current;
+        const onForeignSheet =
+          !!context.formulaCache.rangetosheet &&
+          context.formulaCache.rangetosheet !== context.currentSheetId;
         setTimeout(() => {
           setContext((draftCtx) => {
             draftCtx.luckysheetCellUpdate = [anchorRow, anchorCol];
-            snapSheetSelectionFocusToCellPreserveMultiRange(
-              draftCtx,
-              anchorRow,
-              anchorCol,
-            );
+            if (!onForeignSheet) {
+              snapSheetSelectionFocusToCellPreserveMultiRange(
+                draftCtx,
+                anchorRow,
+                anchorCol,
+              );
+            }
             draftCtx.formulaCache.formulaKeyboardRefSync = false;
             draftCtx.formulaRangeSelect = undefined;
             draftCtx.formulaCache.selectingRangeIndex = -1;
@@ -553,7 +604,9 @@ const FxEditor: React.FC = () => {
                 refs.cellInput.current?.innerHTML ||
                 '',
             );
-            moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
+            if (!onForeignSheet) {
+              moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
+            }
           });
         }, 0);
       }
@@ -759,6 +812,7 @@ const FxEditor: React.FC = () => {
               break;
             }
             case 'Escape': {
+              returnToFormulaOriginSheet(draftCtx);
               cancelNormalSelected(draftCtx);
               moveHighlightCell(draftCtx, 'down', 0, 'rangeOfSelect');
               // $("#luckysheet-functionbox-cell").blur();
