@@ -23,6 +23,7 @@ export default defineConfig({
         index: path.resolve(__dirname, './src/index.ts'),
         constants: path.resolve(__dirname, './src/constants.ts'),
         formula: path.resolve(__dirname, './src/formula.ts'),
+        persistence: path.resolve(__dirname, './src/persistence.ts'),
       },
       formats: ['es'],
       fileName: (format, entryName) =>

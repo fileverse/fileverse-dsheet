@@ -4,6 +4,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
 import { presenceColor } from '../../constants';
+import { flushDsheetContentPersistence } from '../../persistence-utils';
 export const useEditorSync = (
   dsheetId: string,
   enableIndexeddbSync = true,
@@ -102,6 +103,16 @@ export const useEditorSync = (
     // destroy the ydoc. The separate collabEnabled effect handles late connects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dsheetId]);
+
+  const flushIndexedDB = useCallback(
+    () =>
+      flushDsheetContentPersistence(
+        dsheetId,
+        ydocRef.current,
+        persistenceRef.current,
+      ),
+    [dsheetId],
+  );
 
   // Doc-lifecycle effect: owns ydocRef only. Deps = [dsheetId] deliberately —
   // recreating the doc on enableIndexeddbSync/isReadOnly changes is what let
@@ -236,6 +247,7 @@ export const useEditorSync = (
     syncStatus,
     isSyncedRef,
     refreshIndexedDB: initialiseEditorIndexedDB,
+    flushIndexedDB,
     // collab
     collabState,
     isCollabReady,

@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "3.0.2-patch.1",
+  "version": "3.0.2-patch.2",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -21,6 +21,11 @@
       "types": "./dist/formula.d.ts",
       "default": "./dist/formula.js"
     },
+    "./persistence": {
+      "import": "./dist/persistence.js",
+      "types": "./dist/persistence.d.ts",
+      "default": "./dist/persistence.js"
+    },
     "./styles": "./dist/style.css",
     "./types": "./dist/editor/types.d.ts"
   },
@@ -37,7 +42,8 @@
     "build:dist": "vite build",
     "dev:link": "npm run build:dist && cp -r dist/* ../dsheets.new/node_modules/@fileverse-dev/dsheet/dist/ && echo '✓ Copied to dsheets.new'",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:unit": "vitest run"
   },
   "lint-staged": {
     "**/*.{js,jsx,ts,tsx}": [
@@ -76,12 +82,12 @@
     "tailwindcss-animate": "^1.0.7",
     "tiny-emitter": "^2.1.0",
     "uuid": "^8.3.2",
+    "viem": "^2.35.0",
     "vite-plugin-dts": "^3.6.3",
     "xlsx": "^0.18.5",
     "xlsx-js-style": "^1.2.0",
     "y-indexeddb": "^9.0.12",
-    "y-protocols": "^1.0.6",
-    "viem": "^2.35.0"
+    "y-protocols": "^1.0.6"
   },
   "peerDependencies": {
     "yjs": ">=13.6.30 <14"
@@ -104,6 +110,7 @@
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
+    "fake-indexeddb": "^6.2.4",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "postcss": "^8.4.38",
@@ -113,6 +120,7 @@
     "tailwindcss": "^3.4.3",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
+    "vitest": "^3.2.4",
     "yjs": "13.6.30"
   }
 }

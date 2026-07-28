@@ -38,6 +38,7 @@ import type {
   CollabUser,
 } from '../../sync-local/types';
 import type { Awareness } from 'y-protocols/awareness';
+import type { DSheetContentSnapshot } from '../../persistence';
 // Define the shape of the context
 export interface EditorContextType {
   setIsDataLoaded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -119,6 +120,7 @@ interface EditorProviderProps {
   commentsConfig?: CommentsConfig;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
+    flushIndexedDB: () => Promise<DSheetContentSnapshot>;
     terminateSession?: () => void;
     updateCollaboratorName?: (name: string) => void;
     rehydrateAfterCollabSync?: (reason?: string) => boolean;
@@ -289,6 +291,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     isSyncedRef,
     refreshIndexedDB,
+    flushIndexedDB,
     collabState,
     isCollabReady,
     isCollabSyncing,
@@ -461,10 +464,11 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     editorStateRef.current = {
       ...editorStateRef.current,
       refreshIndexedDB,
+      flushIndexedDB,
       rehydrateAfterCollabSync: (reason = 'host') =>
         rehydrateAfterCollabSyncRef.current(reason),
     };
-  }, [editorStateRef, refreshIndexedDB]);
+  }, [editorStateRef, flushIndexedDB, refreshIndexedDB]);
 
   // Force re-render when data changes
   useEffect(() => {
