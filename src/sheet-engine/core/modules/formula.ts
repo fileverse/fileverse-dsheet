@@ -36,6 +36,7 @@ import {
   type FormulaAsyncEvalJob,
 } from './formula-async-eval';
 import { ensureSheetFlowdata } from '../api/sheet';
+import { invalidateSheetsRequiredDenseCache } from '../api/sheet-flowdata-lifecycle';
 import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
 import {
   beginRangeValuePassCache,
@@ -1361,6 +1362,7 @@ export function delFunctionGroup(
       if (rev.size === 0) ctx.formulaCache.revDepsByCell.delete(depKey);
     });
     ctx.formulaCache.depsByCell.delete(originKey);
+    invalidateSheetsRequiredDenseCache();
   }
 
   const file = ctx.luckysheetfile[getSheetIndex(ctx, id)!];
@@ -1383,6 +1385,7 @@ export function delFunctionGroup(
     }
     if (modified) {
       file.calcChain = calcChainClone;
+      invalidateSheetsRequiredDenseCache();
     }
   }
 
@@ -1514,6 +1517,8 @@ export function insertUpdateFunctionGroup(
   //   pos: file.calcChain.length - 1,
   // });
   ctx.luckysheetfile = luckysheetfile;
+  // New calcChain entry can add unevaluated cross-sheet refs that must stay dense.
+  invalidateSheetsRequiredDenseCache();
 }
 
 function replaceDotsInFunctionName(str: string) {
@@ -1724,6 +1729,8 @@ export function execfunction(
     rev.add(originKey);
     ctx.formulaCache.revDepsByCell.set(depKey, rev);
   });
+  // Dense-sheet set depends on which tabs formulas reference.
+  invalidateSheetsRequiredDenseCache();
 
   // Non-iterative circular dependency semantics.
   const cycleNodes = findCycleNodesFrom(originKey, ctx.formulaCache.depsByCell);
@@ -2119,6 +2126,7 @@ function mergeFormulaDeps(
     rev.add(originKey);
     ctx.formulaCache.revDepsByCell.set(depKey, rev);
   });
+  invalidateSheetsRequiredDenseCache();
 }
 
 /** Apply worker chunk output onto the live context (main thread only). */

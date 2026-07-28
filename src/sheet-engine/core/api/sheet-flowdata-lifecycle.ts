@@ -97,26 +97,61 @@ function sheetsRequiredDenseFingerprint(
   ctx: Context,
   activeSheetId: string,
 ): string {
-  const index = getSheetIndex(ctx, activeSheetId);
-  const calcLen =
-    index != null ? ctx.luckysheetfile[index]?.calcChain?.length ?? 0 : 0;
-  let activeDeps = 0;
-  let activeWide = 0;
-  ctx.formulaCache.depsByCell.forEach((_, originKey) => {
+  // Identity of referenced sheets — not just counts. Counts stay stable when a
+  // formula swaps Sheet2!A1 → Sheet3!A1, which would keep the wrong tabs dense.
+  const referenced = new Set<string>();
+
+  ctx.formulaCache.depsByCell.forEach((deps, originKey) => {
     const origin = parseCellKey(originKey);
-    if (origin?.sheetId === activeSheetId) activeDeps += 1;
+    if (!origin || origin.sheetId !== activeSheetId) return;
+    deps.forEach((depKey) => {
+      const dep = parseCellKey(depKey);
+      if (dep?.sheetId) referenced.add(dep.sheetId);
+    });
   });
-  ctx.formulaCache.formulasWithWideRangeDeps.forEach((originKey) => {
-    const origin = parseCellKey(originKey);
-    if (origin?.sheetId === activeSheetId) activeWide += 1;
-  });
-  let activeRevDepOrigins = 0;
+
   ctx.formulaCache.revDepsByCell.forEach((dependents, depKey) => {
     const dep = parseCellKey(depKey);
-    if (dep?.sheetId !== activeSheetId) return;
-    activeRevDepOrigins += dependents.size;
+    if (!dep || dep.sheetId !== activeSheetId) return;
+    dependents.forEach((originKey) => {
+      const origin = parseCellKey(originKey);
+      if (origin?.sheetId) referenced.add(origin.sheetId);
+    });
   });
-  return `${calcLen}:${activeDeps}:${activeWide}:${activeRevDepOrigins}`;
+
+  // Wide-range formulas may omit concrete cells from depsByCell; include their
+  // cross-sheet targets from formula text so dependency edits invalidate cache.
+  const wideParts: string[] = [];
+  ctx.formulaCache.formulasWithWideRangeDeps.forEach((originKey) => {
+    const origin = parseCellKey(originKey);
+    if (!origin || origin.sheetId !== activeSheetId) return;
+    const formula =
+      readFormulaAt(ctx, origin.sheetId, origin.r, origin.c) ?? '';
+    const ids = [...collectSheetIdsFromFormulaText(ctx, formula)].sort();
+    wideParts.push(`${originKey}:${ids.join(',')}`);
+  });
+  wideParts.sort();
+
+  const index = getSheetIndex(ctx, activeSheetId);
+  const activeCalcLen =
+    index != null ? ctx.luckysheetfile[index]?.calcChain?.length ?? 0 : 0;
+
+  // Other tabs' chain sizes — catches newly registered (unevaluated) formulas
+  // that scanSheetsReferencingActive must still see.
+  const foreignChain: string[] = [];
+  ctx.luckysheetfile.forEach((file) => {
+    if (!file.id || file.id === activeSheetId) return;
+    const n = file.calcChain?.length ?? 0;
+    if (n > 0) foreignChain.push(`${file.id}:${n}`);
+  });
+  foreignChain.sort();
+
+  return [
+    activeCalcLen,
+    [...referenced].sort().join(','),
+    wideParts.join('|'),
+    foreignChain.join('|'),
+  ].join('#');
 }
 
 /** Drop cached dense-sheet set (e.g. after structural workbook changes). */
