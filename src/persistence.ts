@@ -4,7 +4,6 @@ import { clearDocument, IndexeddbPersistence } from 'y-indexeddb';
 
 import {
   DEFAULT_DSHEET_PERSISTENCE_TIMEOUT_MS,
-  flushDsheetContentPersistence,
   snapshotDsheetDocument,
   unavailableDsheetContentSnapshot,
   withDsheetPersistenceTimeout,
@@ -181,39 +180,26 @@ export const readDsheetContent = (
   return pending;
 };
 
-/**
- * Merge content through the same persistence provider used by a mounted
- * editor, and resolve only after the applied update is durable.
- */
+/** Merge content into the package-owned Y-IndexedDB document. */
 export const mergeDsheetContent = async (
   dsheetId: string,
   encodedState: string,
   options: DSheetContentReadOptions = {},
 ): Promise<DSheetContentSnapshot> => {
   const timeoutMs = options.timeoutMs ?? DEFAULT_DSHEET_PERSISTENCE_TIMEOUT_MS;
-  let update: Uint8Array;
-  const validationDoc = new Y.Doc();
+  const doc = new Y.Doc();
   try {
-    update = toUint8Array(encodedState);
-    Y.applyUpdate(validationDoc, update);
+    Y.applyUpdate(doc, toUint8Array(encodedState), 'dsheet-package-ingress');
   } catch (error) {
+    doc.destroy();
     return unavailableDsheetContentSnapshot(dsheetId, 'corrupt', error);
-  } finally {
-    validationDoc.destroy();
   }
 
-  const doc = new Y.Doc();
   let persistence: IndexeddbPersistence | null = null;
   try {
     persistence = new IndexeddbPersistence(dsheetId, doc);
     await withDsheetPersistenceTimeout(persistence.whenSynced, timeoutMs);
-    Y.applyUpdate(doc, update, 'dsheet-package-ingress');
-    return await flushDsheetContentPersistence(
-      dsheetId,
-      doc,
-      persistence,
-      options,
-    );
+    return snapshotDsheetDocument(dsheetId, doc);
   } catch (error) {
     return unavailableDsheetContentSnapshot(
       dsheetId,

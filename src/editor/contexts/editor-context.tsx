@@ -120,8 +120,8 @@ interface EditorProviderProps {
   commentsConfig?: CommentsConfig;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
-    flushIndexedDB: () => Promise<DSheetContentSnapshot>;
-    mergeContent?: (encodedState: string) => Promise<DSheetContentSnapshot>;
+    getContentSnapshot: () => DSheetContentSnapshot;
+    mergeContent: (encodedState: string) => DSheetContentSnapshot;
     terminateSession?: () => void;
     updateCollaboratorName?: (name: string) => void;
     rehydrateAfterCollabSync?: (reason?: string) => boolean;
@@ -292,7 +292,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     isSyncedRef,
     refreshIndexedDB,
-    flushIndexedDB,
+    getContentSnapshot,
     mergeContent,
     collabState,
     isCollabReady,
@@ -466,12 +466,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     editorStateRef.current = {
       ...editorStateRef.current,
       refreshIndexedDB,
-      flushIndexedDB,
+      getContentSnapshot,
       mergeContent,
       rehydrateAfterCollabSync: (reason = 'host') =>
         rehydrateAfterCollabSyncRef.current(reason),
     };
-  }, [editorStateRef, flushIndexedDB, mergeContent, refreshIndexedDB]);
+  }, [editorStateRef, getContentSnapshot, mergeContent, refreshIndexedDB]);
 
   // Force re-render when data changes
   useEffect(() => {

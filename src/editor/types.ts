@@ -115,8 +115,8 @@ export interface DsheetProps {
   ) => void;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
-    flushIndexedDB: () => Promise<DSheetContentSnapshot>;
-    mergeContent?: (encodedState: string) => Promise<DSheetContentSnapshot>;
+    getContentSnapshot: () => DSheetContentSnapshot;
+    mergeContent: (encodedState: string) => DSheetContentSnapshot;
   } | null>;
   /** Smart contract config: execution + UI in package; consumer owns persistence via callbacks. */
   smartContracts?: SmartContractConfig;

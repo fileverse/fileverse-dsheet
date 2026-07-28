@@ -1,6 +1,5 @@
 import { fromUint8Array, toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
-import { type IndexeddbPersistence, storeState } from 'y-indexeddb';
 
 export const DEFAULT_DSHEET_PERSISTENCE_TIMEOUT_MS = 8_000;
 
@@ -72,56 +71,34 @@ export const snapshotDsheetDocument = (
   };
 };
 
-export const flushDsheetContentPersistence = async (
-  dsheetId: string,
-  doc: Y.Doc | null,
-  persistence: IndexeddbPersistence | null,
-  options: DSheetContentReadOptions = {},
-): Promise<DSheetContentSnapshot> => {
-  if (!doc || !persistence) {
-    return unavailableDsheetContentSnapshot(
-      dsheetId,
-      'unavailable',
-      new Error('dSheet IndexedDB persistence is not ready'),
-    );
-  }
-
-  const snapshot = snapshotDsheetDocument(dsheetId, doc);
-  try {
-    await withDsheetPersistenceTimeout(
-      storeState(persistence, false),
-      options.timeoutMs ?? DEFAULT_DSHEET_PERSISTENCE_TIMEOUT_MS,
-    );
-    return snapshot;
-  } catch (error) {
-    return unavailableDsheetContentSnapshot(
-      dsheetId,
-      /timed out/i.test(toError(error).message) ? 'timed-out' : 'unavailable',
-      error,
-    );
-  }
-};
-
-export const mergeDsheetContentPersistence = async (
+export const mergeDsheetContentIntoDocument = (
   dsheetId: string,
   encodedState: string,
   doc: Y.Doc | null,
-  persistence: IndexeddbPersistence | null,
-  options: DSheetContentReadOptions = {},
-): Promise<DSheetContentSnapshot> => {
-  if (!doc || !persistence?.synced) {
+): DSheetContentSnapshot => {
+  if (!doc) {
     return unavailableDsheetContentSnapshot(
       dsheetId,
       'unavailable',
-      new Error('dSheet IndexedDB persistence is not ready'),
+      new Error('dSheet document is not ready'),
     );
   }
 
+  let update: Uint8Array;
+  const validationDoc = new Y.Doc();
   try {
-    Y.applyUpdate(doc, toUint8Array(encodedState), 'dsheet-package-ingress');
+    update = toUint8Array(encodedState);
+    Y.applyUpdate(validationDoc, update);
+  } catch (error) {
+    return unavailableDsheetContentSnapshot(dsheetId, 'corrupt', error);
+  } finally {
+    validationDoc.destroy();
+  }
+
+  try {
+    Y.applyUpdate(doc, update, 'dsheet-package-ingress');
+    return snapshotDsheetDocument(dsheetId, doc);
   } catch (error) {
     return unavailableDsheetContentSnapshot(dsheetId, 'corrupt', error);
   }
-
-  return flushDsheetContentPersistence(dsheetId, doc, persistence, options);
 };

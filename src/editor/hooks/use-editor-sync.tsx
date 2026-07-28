@@ -5,8 +5,9 @@ import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
 import { presenceColor } from '../../constants';
 import {
-  flushDsheetContentPersistence,
-  mergeDsheetContentPersistence,
+  mergeDsheetContentIntoDocument,
+  snapshotDsheetDocument,
+  unavailableDsheetContentSnapshot,
 } from '../../persistence-utils';
 export const useEditorSync = (
   dsheetId: string,
@@ -107,24 +108,21 @@ export const useEditorSync = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dsheetId]);
 
-  const flushIndexedDB = useCallback(
+  const getContentSnapshot = useCallback(
     () =>
-      flushDsheetContentPersistence(
-        dsheetId,
-        ydocRef.current,
-        persistenceRef.current,
-      ),
+      ydocRef.current
+        ? snapshotDsheetDocument(dsheetId, ydocRef.current)
+        : unavailableDsheetContentSnapshot(
+            dsheetId,
+            'unavailable',
+            new Error('dSheet document is not ready'),
+          ),
     [dsheetId],
   );
 
   const mergeContent = useCallback(
     (encodedState: string) =>
-      mergeDsheetContentPersistence(
-        dsheetId,
-        encodedState,
-        ydocRef.current,
-        persistenceRef.current,
-      ),
+      mergeDsheetContentIntoDocument(dsheetId, encodedState, ydocRef.current),
     [dsheetId],
   );
 
@@ -261,7 +259,7 @@ export const useEditorSync = (
     syncStatus,
     isSyncedRef,
     refreshIndexedDB: initialiseEditorIndexedDB,
-    flushIndexedDB,
+    getContentSnapshot,
     mergeContent,
     // collab
     collabState,
