@@ -23,13 +23,13 @@ import {
 } from '../utils/update-index-after-drag';
 import { SheetUpdateData, DataBlockEvent } from '../types';
 import type { CommentsConfig } from '../types/comments';
-import {
-  ApiKeyStorage,
-  defaultApiKeyStorage,
-} from '../utils/api-key-storage';
+import { ApiKeyStorage, defaultApiKeyStorage } from '../utils/api-key-storage';
 import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
 import type { SmartContractConfig } from '../types/smart-contract';
-import { useSmartContract, type UseSmartContractReturn } from '../hooks/use-smart-contract';
+import {
+  useSmartContract,
+  type UseSmartContractReturn,
+} from '../hooks/use-smart-contract';
 import { SidebarProvider } from '../components/sidebar/sidebar-context';
 import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
@@ -274,18 +274,27 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     onCollabUpdateRef.current = onChange;
   }, [onChange]);
 
+  const handleContentUpdateNotification = useMemo(
+    () => throttle(() => onContentUpdate?.(), 1000),
+    [onContentUpdate],
+  );
+
   const rehydrateAfterCollabSyncRef = useRef<(reason: string) => boolean>(
     () => false,
   );
 
   // onCollabUpdate: called by SyncManager when a remote update arrives.
-  const onCollabUpdate = useCallback((fullState: string, _chunk: string) => {
-    if (!onCollabUpdateRef.current) return;
-    onCollabUpdateRef.current(
-      { data: currentDataForCollabRef.current },
-      fullState,
-    );
-  }, []);
+  const onCollabUpdate = useCallback(
+    (fullState: string) => {
+      if (!onCollabUpdateRef.current) return;
+      onCollabUpdateRef.current(
+        { data: currentDataForCollabRef.current },
+        fullState,
+      );
+      handleContentUpdateNotification();
+    },
+    [handleContentUpdateNotification],
+  );
 
   // Initialize YJS document, persistence, and optional Socket.IO collab transport
   const {
@@ -385,49 +394,56 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [externalEditorRef]);
 
-  // Notify hosts cheaply when they only need to know content changed. Keep the
-  // legacy onChange snapshot path for consumers that request sheet data.
-  const handleOnChangePortalUpdate = useMemo(() => {
-    if (!onContentUpdate && !onChange) {
-      return () => {};
-    }
+  const handleOnChange = useMemo(
+    () =>
+      throttle(() => {
+        if (!onChange || !ydocRef.current) return;
 
-    return throttle(() => {
-      onContentUpdate?.();
-      if (!onChange || !ydocRef.current) return;
+        const encodedUpdate = fromUint8Array(
+          Y.encodeStateAsUpdate(ydocRef.current),
+        );
+        // Local cell edits update Yjs celldata but do not refresh currentDataRef.
+        // Build the legacy plain snapshot from Yjs only for hosts that still
+        // request onChange.
+        let plain = currentDataRef.current;
+        try {
+          const sheetArray = ydocRef.current.getArray(dsheetId);
+          plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map<any>>);
+          currentDataRef.current = plain;
+        } catch {
+          // Fall back to ref if Yjs → plain conversion fails.
+        }
+        onChange({ data: plain }, encodedUpdate);
+      }, 1000),
+    [onChange, dsheetId],
+  );
 
-      const encodedUpdate = fromUint8Array(
-        Y.encodeStateAsUpdate(ydocRef.current),
-      );
-      // Local cell edits update Yjs celldata but do not refresh currentDataRef.
-      // Build the legacy plain snapshot from Yjs only for hosts that still
-      // request onChange.
-      let plain = currentDataRef.current;
-      try {
-        const sheetArray = ydocRef.current.getArray(dsheetId);
-        plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map<any>>);
-        currentDataRef.current = plain;
-      } catch {
-        // Fall back to ref if Yjs → plain conversion fails.
-      }
-      onChange({ data: plain }, encodedUpdate);
-    }, 1000);
-  }, [onChange, onContentUpdate, dsheetId]);
+  useEffect(
+    () => () => {
+      handleContentUpdateNotification.cancel();
+      handleOnChange.cancel();
+    },
+    [handleOnChange, handleContentUpdateNotification],
+  );
+
+  const handleOnChangePortalUpdate = useCallback(() => {
+    handleOnChange();
+    // Notify hosts cheaply for local changes while preserving the legacy
+    // snapshot callback for consumers that still request sheet data.
+    handleContentUpdateNotification();
+  }, [handleOnChange, handleContentUpdateNotification]);
 
   useEffect(() => {
-    // onContentUpdate runs on the leading edge of real editor changes. The
-    // legacy snapshot callback keeps its beforeunload fallback, but invoking
-    // onContentUpdate here would mark a never-edited blank sheet as changed.
     if (!onChange) return;
 
     const handleBeforeUnload = () => {
-      handleOnChangePortalUpdate();
+      handleOnChange();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [onChange, handleOnChangePortalUpdate]);
+  }, [onChange, handleOnChange]);
 
   // Initialize sheet data
   const {
