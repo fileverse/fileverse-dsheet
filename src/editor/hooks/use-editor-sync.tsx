@@ -4,7 +4,10 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
 import { presenceColor } from '../../constants';
-import { flushDsheetContentPersistence } from '../../persistence-utils';
+import {
+  flushDsheetContentPersistence,
+  mergeDsheetContentPersistence,
+} from '../../persistence-utils';
 export const useEditorSync = (
   dsheetId: string,
   enableIndexeddbSync = true,
@@ -108,6 +111,17 @@ export const useEditorSync = (
     () =>
       flushDsheetContentPersistence(
         dsheetId,
+        ydocRef.current,
+        persistenceRef.current,
+      ),
+    [dsheetId],
+  );
+
+  const mergeContent = useCallback(
+    (encodedState: string) =>
+      mergeDsheetContentPersistence(
+        dsheetId,
+        encodedState,
         ydocRef.current,
         persistenceRef.current,
       ),
@@ -248,6 +262,7 @@ export const useEditorSync = (
     isSyncedRef,
     refreshIndexedDB: initialiseEditorIndexedDB,
     flushIndexedDB,
+    mergeContent,
     // collab
     collabState,
     isCollabReady,

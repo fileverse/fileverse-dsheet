@@ -1,4 +1,4 @@
-import { fromUint8Array } from 'js-base64';
+import { fromUint8Array, toUint8Array } from 'js-base64';
 import * as Y from 'yjs';
 import { type IndexeddbPersistence, storeState } from 'y-indexeddb';
 
@@ -100,4 +100,28 @@ export const flushDsheetContentPersistence = async (
       error,
     );
   }
+};
+
+export const mergeDsheetContentPersistence = async (
+  dsheetId: string,
+  encodedState: string,
+  doc: Y.Doc | null,
+  persistence: IndexeddbPersistence | null,
+  options: DSheetContentReadOptions = {},
+): Promise<DSheetContentSnapshot> => {
+  if (!doc || !persistence?.synced) {
+    return unavailableDsheetContentSnapshot(
+      dsheetId,
+      'unavailable',
+      new Error('dSheet IndexedDB persistence is not ready'),
+    );
+  }
+
+  try {
+    Y.applyUpdate(doc, toUint8Array(encodedState), 'dsheet-package-ingress');
+  } catch (error) {
+    return unavailableDsheetContentSnapshot(dsheetId, 'corrupt', error);
+  }
+
+  return flushDsheetContentPersistence(dsheetId, doc, persistence, options);
 };
