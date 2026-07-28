@@ -114,6 +114,7 @@ interface EditorProviderProps {
   portalContent?: string;
   enableIndexeddbSync?: boolean;
   isReadOnly?: boolean;
+  onContentUpdate?: () => void;
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
@@ -147,6 +148,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   portalContent = '',
   enableIndexeddbSync = true,
   isReadOnly = false,
+  onContentUpdate,
   onChange,
   externalEditorRef,
   collaboration,
@@ -383,20 +385,23 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [externalEditorRef]);
 
-  // Wrapper for onChange to handle type compatibility
+  // Notify hosts cheaply when they only need to know content changed. Keep the
+  // legacy onChange snapshot path for consumers that request sheet data.
   const handleOnChangePortalUpdate = useMemo(() => {
-    if (!onChange) {
-      return () => { };
+    if (!onContentUpdate && !onChange) {
+      return () => {};
     }
 
     return throttle(() => {
-      if (!ydocRef.current) return;
+      onContentUpdate?.();
+      if (!onChange || !ydocRef.current) return;
+
       const encodedUpdate = fromUint8Array(
         Y.encodeStateAsUpdate(ydocRef.current),
       );
       // Local cell edits update Yjs celldata but do not refresh currentDataRef.
-      // Build plain snapshot from Yjs so parent onChange gets live celldata, not
-      // the stale mount ref (which still has celldata: []).
+      // Build the legacy plain snapshot from Yjs only for hosts that still
+      // request onChange.
       let plain = currentDataRef.current;
       try {
         const sheetArray = ydocRef.current.getArray(dsheetId);
@@ -407,9 +412,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       }
       onChange({ data: plain }, encodedUpdate);
     }, 1000);
-  }, [onChange, dsheetId]);
+  }, [onChange, onContentUpdate, dsheetId]);
 
   useEffect(() => {
+    // onContentUpdate runs on the leading edge of real editor changes. The
+    // legacy snapshot callback keeps its beforeunload fallback, but invoking
+    // onContentUpdate here would mark a never-edited blank sheet as changed.
     if (!onChange) return;
 
     const handleBeforeUnload = () => {

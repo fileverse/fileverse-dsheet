@@ -83,6 +83,11 @@ export interface DsheetProps {
   renderNavbar?: (editorValues?: EditorValues) => JSX.Element;
   enableIndexeddbSync?: boolean;
   dsheetId: string;
+  /**
+   * Cheap change signal for hosts that persist sheet bodies through Yjs.
+   * Unlike `onChange`, this does not build a plain sheet or encode the Y.Doc.
+   */
+  onContentUpdate?: () => void;
   onChange?: (updateData: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   username?: string;

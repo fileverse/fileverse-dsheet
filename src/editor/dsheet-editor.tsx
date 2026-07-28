@@ -500,6 +500,7 @@ const SpreadsheetEditor = ({
   enableIndexeddbSync,
   dsheetId = '',
   portalContent,
+  onContentUpdate,
   onChange,
   username,
   selectedTemplate,
@@ -543,6 +544,7 @@ const SpreadsheetEditor = ({
       portalContent={portalContent}
       enableIndexeddbSync={enableIndexeddbSync}
       isReadOnly={isReadOnly}
+      onContentUpdate={onContentUpdate}
       onChange={onChange}
       externalEditorRef={externalSheetEditorRef}
       collaboration={collaboration}
