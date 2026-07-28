@@ -80,6 +80,10 @@ export {
   setFormulaEditorOwner,
   getAllFunctionGroup,
   suppressFormulaRangeSelectionForInitialEdit,
+  ensureFormulaRangeToSheet,
+  shouldPreserveFormulaEditOnSheetSwitch,
+  activateSheetForNavigation,
+  returnToFormulaOriginSheet,
 } from './formula';
 export {
   FORMULA_ASYNC_CHUNK_SIZE,

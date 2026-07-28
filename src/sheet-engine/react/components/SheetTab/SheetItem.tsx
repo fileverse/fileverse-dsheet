@@ -5,6 +5,7 @@ import {
   cancelActiveImgItem,
   getSheetIndex,
   defaultLuckysheetSelectRanges,
+  activateSheetForNavigation,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import React, {
@@ -208,18 +209,11 @@ const SheetItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
       onClick={() => {
         if (isDropPlaceholder) return;
         setContext((draftCtx) => {
-          draftCtx.sheetScrollRecord[draftCtx.currentSheetId] = {
-            scrollLeft: draftCtx.scrollLeft,
-            scrollTop: draftCtx.scrollTop,
-            luckysheet_select_status: draftCtx.luckysheet_select_status,
-            luckysheet_select_save: draftCtx.luckysheet_select_save,
-            luckysheet_selection_range: draftCtx.luckysheet_selection_range,
-          };
-          draftCtx.dataVerificationDropDownList = false;
-          draftCtx.currentSheetId = sheet.id!;
-          draftCtx.zoomRatio = sheet.zoomRatio || 1;
           cancelActiveImgItem(draftCtx, refs.globalCache);
-          cancelNormalSelected(draftCtx);
+          const outcome = activateSheetForNavigation(draftCtx, sheet.id!);
+          if (outcome === 'cancel-edit') {
+            cancelNormalSelected(draftCtx);
+          }
         });
       }}
       tabIndex={0}
