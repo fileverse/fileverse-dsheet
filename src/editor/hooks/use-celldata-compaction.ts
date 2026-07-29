@@ -9,6 +9,7 @@ import {
   planYdocCelldataCompaction,
 } from '../utils/compact-committed-celldata';
 import { updateYdocSheetData } from '../utils/update-ydoc';
+import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
 
 /** Wait for editor + IDB sync, then a quiet window before scanning. */
 const SETTLE_MS = 4_000;
@@ -34,6 +35,7 @@ async function applyCompactionChangesInChunks(
   changes: ReturnType<typeof planYdocCelldataCompaction>['changes'],
   handleOnChangePortalUpdate: () => void,
   isCancelled: () => boolean,
+  sheetEditorRef: RefObject<WorkbookInstance | null>,
 ): Promise<void> {
   for (let i = 0; i < changes.length; i += DELETE_CHUNK_SIZE) {
     if (isCancelled()) return;
@@ -44,6 +46,12 @@ async function applyCompactionChangesInChunks(
       dsheetId,
       chunk,
       isLast ? handleOnChangePortalUpdate : undefined,
+      (commits) => {
+        applyCellFormatRangesCommits(
+          commits,
+          sheetEditorRef.current?.getWorkbookSetContext?.() ?? null,
+        );
+      },
     );
     if (!isLast) {
       await new Promise<void>((resolve) => {
@@ -111,6 +119,7 @@ export function useCelldataCompaction({
               plan.changes,
               handleOnChangePortalUpdate,
               isCancelled,
+              sheetEditorRef,
             );
           } else if (clearedInMemory > 0) {
             handleOnChangePortalUpdate();

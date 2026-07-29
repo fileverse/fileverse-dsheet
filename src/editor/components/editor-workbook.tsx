@@ -29,6 +29,7 @@ import { filterYdocUpdate } from '../utils/filter-ydoc-update';
 import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
 import { configYdocUpdate } from '../utils/config-ydoc-update';
 import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
+import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
@@ -500,6 +501,12 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
               dsheetId,
               changes,
               handleOnChangePortalUpdate,
+              (commits) => {
+                applyCellFormatRangesCommits(
+                  commits,
+                  sheetEditorRef.current?.getWorkbookSetContext?.() ?? null,
+                );
+              },
             );
           },
           afterImagesChange: guardRemoteEcho(() => {

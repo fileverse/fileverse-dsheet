@@ -183,10 +183,14 @@ export const updateYdocSheetData = (
   dsheetId: string,
   changes: SheetChangePath[],
   handleContentPortal: any,
+  onCellFormatRangesCommitted?: (
+    commits: Array<{ sheetId: string; ranges: CellFormatRange[] }>,
+  ) => void,
 ) => {
   if (!ydoc || !changes.length) return;
 
   const sheetArray = ydoc.getArray<any>(dsheetId);
+  const committedFormatRanges = new Map<string, CellFormatRange[]>();
 
   ydoc.transact(() => {
     const allSheets = sheetArray.toArray();
@@ -204,6 +208,13 @@ export const updateYdocSheetData = (
     // only write cellFormatRanges once (and merge adjacent 1x1s via normalize).
     const pendingFormatRanges = new Map<string, CellFormatRange[]>();
     const touchedFormatRangeSheets = new Set<string>();
+
+    const noteCommittedRanges = (
+      sheetId: string,
+      ranges: CellFormatRange[],
+    ) => {
+      committedFormatRanges.set(sheetId, ranges);
+    };
 
     const getWorkingFormatRanges = (sheet: Y.Map<any>, sheetId: string) => {
       const cached = pendingFormatRanges.get(sheetId);
@@ -504,17 +515,17 @@ export const updateYdocSheetData = (
           if (configKey === "cellFormatRanges") {
             pendingFormatRanges.set(sheetId, []);
             touchedFormatRangeSheets.delete(sheetId);
+            noteCommittedRanges(sheetId, []);
           }
         } else {
           setMapValueSafe(configMap, configKey, value, { skipIfEqual: true });
           if (configKey === "cellFormatRanges") {
             const normalized = normalizeForYjs(value);
-            pendingFormatRanges.set(
-              sheetId,
-              Array.isArray(normalized) ? normalized : [],
-            );
+            const ranges = Array.isArray(normalized) ? normalized : [];
+            pendingFormatRanges.set(sheetId, ranges);
             // Already written to Yjs; don't flush a stale pending copy later.
             touchedFormatRangeSheets.delete(sheetId);
+            noteCommittedRanges(sheetId, ranges);
           }
         }
         return;
@@ -551,12 +562,11 @@ export const updateYdocSheetData = (
       const sheet = sheetById.get(sheetId);
       if (!sheet) return;
       const configMap = ensureConfigYMap(sheet);
-      setMapValueSafe(
-        configMap,
-        "cellFormatRanges",
-        pendingFormatRanges.get(sheetId) ?? [],
-        { skipIfEqual: true },
-      );
+      const ranges = pendingFormatRanges.get(sheetId) ?? [];
+      setMapValueSafe(configMap, "cellFormatRanges", ranges, {
+        skipIfEqual: true,
+      });
+      noteCommittedRanges(sheetId, ranges);
     });
 
     // Keep a single active sheet by order after applying updates
@@ -566,6 +576,15 @@ export const updateYdocSheetData = (
       sheet.set("status", sheet.get("order") === 0 ? 1 : 0);
     }
   });
+
+  if (committedFormatRanges.size > 0 && onCellFormatRangesCommitted) {
+    onCellFormatRangesCommitted(
+      Array.from(committedFormatRanges, ([sheetId, ranges]) => ({
+        sheetId,
+        ranges,
+      })),
+    );
+  }
 
   if (handleContentPortal) {
     handleContentPortal();

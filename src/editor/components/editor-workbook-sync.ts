@@ -3,6 +3,7 @@ import * as Y from 'yjs';
 import isEqual from 'lodash/isEqual';
 import { SheetChangePath, updateYdocSheetData } from '../utils/update-ydoc';
 import { shouldPersistCelldataCell } from '../../sheet-engine/core/utils/cell-persist-utils';
+import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
 
 type SyncContext = {
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
@@ -548,6 +549,12 @@ export const updateAllCell = (
     dsheetId,
     changes,
     handleOnChangePortalUpdate,
+    (commits) => {
+      applyCellFormatRangesCommits(
+        commits,
+        sheetEditorRef.current?.getWorkbookSetContext?.() ?? null,
+      );
+    },
   );
 
   if (changes.length > 0) {

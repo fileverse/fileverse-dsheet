@@ -65,6 +65,7 @@ import {
 } from '@sheet-engine/core/modules/formula-worker-bridge';
 import { syncAndDemoteInactiveFlowdata } from '@sheet-engine/core/api/sheet-flowdata-lifecycle';
 import { ensureSheetFlowdata } from '@sheet-engine/core/api/sheet';
+import { setActiveDraftContext } from '@sheet-engine/core/utils/active-draft-context';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
   useMemo,
@@ -540,16 +541,23 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const setContextWithProduce = useCallback(
       (recipe: (ctx: Context) => void, options: SetContextOptions = {}) => {
         setContext((ctx_) => {
+          const runWithDraft = (draft: Context) => {
+            setActiveDraftContext(draft);
+            try {
+              recipe(draft);
+              triggerGroupValuesRefresh(draft);
+            } finally {
+              setActiveDraftContext(null);
+            }
+          };
+
           if (options.noHistory) {
-            return produce(
-              ctx_,
-              concatProducer(recipe, triggerGroupValuesRefresh),
-            );
+            return produce(ctx_, runWithDraft);
           }
 
           const [result, patches, inversePatches] = produceWithPatches(
             ctx_,
-            concatProducer(recipe, triggerGroupValuesRefresh),
+            runWithDraft,
           );
           if (patches.length > 0) {
             if (options.logPatch) {
@@ -663,7 +671,12 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             delete inversedOptions!.addSheet!.value!.data;
           }
           emitOp(newContext, history.inversePatches, inversedOptions, true);
-          emitYjsFromPatches(ctx_, newContext, history.inversePatches);
+          setActiveDraftContext(newContext);
+          try {
+            emitYjsFromPatches(ctx_, newContext, history.inversePatches);
+          } finally {
+            setActiveDraftContext(null);
+          }
           // Sync ctx.config from current sheet after applying inverse patches.
           // This ensures components watching context.config (e.g. Sheet.tsx which
           // recalculates visibledatacolumn) react correctly to config changes.
@@ -709,7 +722,12 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
           globalCache.current.undoList.push(history);
           emitOp(newContext, history.patches, history.options);
-          emitYjsFromPatches(ctx_, newContext, history.patches);
+          setActiveDraftContext(newContext);
+          try {
+            emitYjsFromPatches(ctx_, newContext, history.patches);
+          } finally {
+            setActiveDraftContext(null);
+          }
           // Sync ctx.config from current sheet after applying patches.
           const sheetIdxAfterRedo = getSheetIndex(
             newContext,
