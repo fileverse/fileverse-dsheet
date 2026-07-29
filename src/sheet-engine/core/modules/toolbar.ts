@@ -67,7 +67,7 @@ import {
 } from '../utils/border-config-utils';
 import { clearMeasureTextCache, getCellTextInfo } from './text';
 import { hasCellMeaningfulContent } from '../utils/cell-persist-utils';
-import { CellFormatRange, upsertCellFormatRange } from '../utils/range-format';
+import { CellFormatRange, removeCellFormatRangesInRect, upsertCellFormatRange } from '../utils/range-format';
 import { assignActiveConfigToSheetFile } from './sheet';
 
 type ToolbarItemClickHandler = (
@@ -1670,9 +1670,39 @@ export function handleClearFormat(ctx: Context) {
     borderInfoChanged = true;
   }
 
+  // Range-backed formatting survives strip-of-inline-attrs; punch selections out
+  // of cellFormatRanges (O(ranges), not O(area × ranges)).
+  let formatRangesChanged = false;
+  if (index != null && ctx.luckysheet_select_save?.length) {
+    const sheet = ctx.luckysheetfile[index];
+    sheet.config ||= {};
+    let nextRanges = sheet.config.cellFormatRanges ?? ctx.config?.cellFormatRanges;
+    const prevRanges = nextRanges;
+    ctx.luckysheet_select_save.forEach((selection) => {
+      nextRanges = removeCellFormatRangesInRect(
+        nextRanges,
+        selection.row as [number, number],
+        selection.column as [number, number],
+      );
+    });
+    if (!_.isEqual(prevRanges, nextRanges)) {
+      sheet.config.cellFormatRanges = nextRanges;
+      ctx.config.cellFormatRanges = nextRanges;
+      formatRangesChanged = true;
+    }
+  }
+
   if (ctx?.hooks?.updateCellYdoc) {
     if (borderInfoChanged) {
       syncBorderInfoToYdoc(ctx, ctx.config?.borderInfo ?? []);
+    }
+    if (formatRangesChanged) {
+      ydocChanges.push({
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'cellFormatRanges'],
+        value: ctx.config.cellFormatRanges ?? [],
+        type: 'update',
+      });
     }
     if (ydocChanges.length > 0) {
       ctx.hooks.updateCellYdoc(ydocChanges);
@@ -1747,9 +1777,10 @@ export function handleBorder(
       column: s.column as [number, number],
     })) ?? [];
 
-  cfg.borderInfo = removeBorderInfoInSelections(cfg.borderInfo, selections);
-
+  // Only strip overlapping entries for the eraser. Other border types must
+  // accumulate (border-all then border-top = both), matching pre-strip semantics.
   if (type === 'border-none') {
+    cfg.borderInfo = removeBorderInfoInSelections(cfg.borderInfo, selections);
     const index = getSheetIndex(ctx, ctx.currentSheetId);
     if (index == null) return;
     assignActiveConfigToSheetFile(ctx.luckysheetfile[index], ctx.config);

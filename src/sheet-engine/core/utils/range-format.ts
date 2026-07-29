@@ -479,6 +479,21 @@ export function punchHoleInCellFormatRanges(
   return normalizeCellFormatRanges(out);
 }
 
+/**
+ * Remove format coverage for a whole rectangle in O(ranges), not O(area × ranges).
+ * Prefer this over punching cell-by-cell (select-all clear must stay cheap).
+ */
+export function removeCellFormatRangesInRect(
+  ranges: CellFormatRange[] | undefined,
+  row: [number, number],
+  column: [number, number],
+): CellFormatRange[] {
+  if (!ranges?.length) return [];
+  return normalizeCellFormatRanges(
+    removeRectangleFromRanges(ranges, { row, column }),
+  );
+}
+
 export function punchRectHoleInCellFormatRanges(
   ranges: CellFormatRange[] | undefined,
   rowSt: number,
@@ -486,13 +501,7 @@ export function punchRectHoleInCellFormatRanges(
   colSt: number,
   colEd: number,
 ): CellFormatRange[] {
-  let next = ranges ?? [];
-  for (let r = rowSt; r <= rowEd; r += 1) {
-    for (let c = colSt; c <= colEd; c += 1) {
-      next = punchHoleInCellFormatRanges(next, r, c);
-    }
-  }
-  return next;
+  return removeCellFormatRangesInRect(ranges, [rowSt, rowEd], [colSt, colEd]);
 }
 
 export function shiftCellFormatRangesOnInsert(

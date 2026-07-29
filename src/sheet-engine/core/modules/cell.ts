@@ -3003,7 +3003,7 @@ export function clearSelectedCellFormat(ctx: Context) {
     }
   });
 
-  if (ctx?.hooks?.updateCellYdoc && changeMap.size > 0) {
+  if (ctx?.hooks?.updateCellYdoc) {
     const changes = Array.from(changeMap.values());
     activeSheetFile.config ||= {};
     let nextRanges = activeSheetFile.config.cellFormatRanges;
@@ -3025,7 +3025,9 @@ export function clearSelectedCellFormat(ctx: Context) {
         type: 'update',
       });
     }
-    ctx.hooks.updateCellYdoc(changes);
+    if (changes.length > 0) {
+      ctx.hooks.updateCellYdoc(changes);
+    }
   }
 }
 

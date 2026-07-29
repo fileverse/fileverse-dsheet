@@ -162,7 +162,9 @@ export function removeBorderInfoForSelection(
     }
   }
 
-  return kept.filter((entry) => entry.borderType !== 'border-none');
+  // Keep border-none eraser entries outside the selection. Filtering them
+  // sheet-wide would resurrect borders that legacy docs had cleared.
+  return kept;
 }
 
 export function removeBorderInfoInSelections(
