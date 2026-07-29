@@ -20,6 +20,12 @@ export type SheetChangePath = {
   key?: string; // 👈 only for celldata
   value: any;
   type?: "update" | "delete";
+  /**
+   * Compaction deletes planned earlier may race with edits across idle chunks.
+   * When set, skip the delete if the live celldata entry is now persistable.
+   * Do not set on intentional clears — those must always remove the key.
+   */
+  skipIfPersistable?: boolean;
 };
 
 /**
@@ -251,7 +257,7 @@ export const updateYdocSheetData = (
       return { r, c };
     };
 
-    changes.forEach(({ sheetId, path, key, value, type }) => {
+    changes.forEach(({ sheetId, path, key, value, type, skipIfPersistable }) => {
       const sheet = sheetById.get(sheetId);
       if (!sheet) return;
 
@@ -265,6 +271,16 @@ export const updateYdocSheetData = (
         }
 
         if (type === "delete") {
+          const currentCell = cellFromCelldataEntry(cellMap.get(key));
+          // Stale compaction plan: cell gained real content since planning.
+          if (
+            skipIfPersistable &&
+            shouldPersistCelldataCell(
+              currentCell as Cell | string | number | boolean | null,
+            )
+          ) {
+            return;
+          }
           // Compaction / explicit delete: if the existing entry is format-only,
           // restore style into ranges before dropping celldata.
           const coords = parseCellKey(key);
@@ -274,7 +290,7 @@ export const updateYdocSheetData = (
               sheetId,
               coords.r,
               coords.c,
-              cellFromCelldataEntry(cellMap.get(key)),
+              currentCell,
             );
           }
           cellMap.delete(key);

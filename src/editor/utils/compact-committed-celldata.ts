@@ -77,6 +77,8 @@ export function buildCelldataDeleteChanges(
     key,
     value: null,
     type: 'delete' as const,
+    // Re-check live entry at apply time — plan may be seconds old across idle chunks.
+    skipIfPersistable: true,
   }));
 }
 
