@@ -146,6 +146,8 @@ export type Image = {
   left: number;
   top: number;
   src: string;
+  originWidth?: number;
+  originHeight?: number;
 };
 
 export type ConditionRulesProps = {

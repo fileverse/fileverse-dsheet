@@ -6,7 +6,7 @@ import { handlePastedTable } from '../paste-table-helpers';
 import type { Context } from '../context';
 import { isAllowEdit } from '../utils';
 import { selectionCache } from '../modules/selection';
-import { sanitizeDuneUrl } from '../modules';
+import { sanitizeDuneUrl, pasteImageItem, getImageClipboard } from '../modules';
 import clipboard from '../modules/clipboard';
 import { computeFortuneInternalPasteDecision } from './fortune-internal-paste';
 import {
@@ -91,8 +91,16 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
         pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save, pasteValuesOnly);
       }
       resizePastedCellsToContent(ctx);
-    } else if (txtdata.indexOf('fortune-copy-action-image') > -1) {
-      // imageCtrl.pasteImgItem();
+    } else if (
+      txtdata.indexOf('fortune-copy-action-image') > -1 ||
+      // In-app image copy: system clipboard may lack our HTML marker after Ctrl/Cmd+C
+      (!!getImageClipboard() &&
+        txtdata.indexOf('fortune-copy-action-table') === -1 &&
+        txtdata.indexOf('fortune-copy-action-span') === -1 &&
+        !/<table[\s/>]/i.test(txtdata))
+    ) {
+      e.preventDefault();
+      pasteImageItem(ctx, txtdata);
     } else {
       const shouldHandleAsHtml =
         /<table[\s/>]/i.test(txtdata) || shouldHandleNonTableHtml(txtdata);
@@ -110,7 +118,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
         clipboardData.files.length === 1 &&
         clipboardData.files[0].type.indexOf('image') > -1
       ) {
-        // imageCtrl.insertImg(clipboardData.files[0]);
+        // Image files are async — handled in Workbook onPaste before this path.
       } else {
         txtdata = clipboardData.getData('text/plain');
         const isExcelFormula = txtdata.startsWith('=');
@@ -171,6 +179,15 @@ export function handlePasteByClick(
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit || ctx.isFlvReadOnly) return;
 
+  // Prefer an in-app image copy still sitting in fortune-copy-content
+  // (context-menu paste only reads plain text from the system clipboard).
+  const existing = document.querySelector('#fortune-copy-content');
+  const existingHtml = existing?.innerHTML || '';
+  if (existingHtml.indexOf('fortune-copy-action-image') > -1) {
+    pasteImageItem(ctx, existingHtml);
+    return;
+  }
+
   if (clipboardData) {
     const htmlWithPreservedNewlines = `<pre style="white-space: pre-wrap;">${clipboardData}</pre>`;
     clipboard.writeHtml(htmlWithPreservedNewlines);
@@ -204,7 +221,7 @@ export function handlePasteByClick(
       pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save);
     }
   } else if (data.indexOf('fortune-copy-action-image') > -1) {
-    // imageCtrl.pasteImgItem();
+    pasteImageItem(ctx, data);
   } else if (triggerType !== 'btn') {
     const isExcelFormula = clipboardData.startsWith('=');
 

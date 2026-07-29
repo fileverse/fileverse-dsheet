@@ -1,16 +1,18 @@
 import _ from 'lodash';
 import { cancelPaintModel, checkCF, getComputeMap, getSheetIndex } from '..';
 import { Context } from '../context';
+import { copyActiveImage } from '../modules/image';
 import { copy, selectIsOverlap } from '../modules/selection';
 import { hasPartMC } from '../modules/validation';
 
 export function handleCopy(ctx: Context) {
-  const selection = ctx.luckysheet_select_save;
-  // if (imageCtrl.currentImgId != null) {
-  //   imageCtrl.copyImgItem(event);
-  //   return;
-  // }
+  // Floating image selected — copy it instead of the cell range
+  if (ctx.activeImg != null) {
+    copyActiveImage(ctx);
+    return;
+  }
 
+  const selection = ctx.luckysheet_select_save;
   // // 复制时存在格式刷状态，取消格式刷
   if (ctx.luckysheetPaintModelOn) {
     cancelPaintModel(ctx);

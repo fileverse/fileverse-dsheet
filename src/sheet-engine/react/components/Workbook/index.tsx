@@ -27,6 +27,13 @@ import {
   getFlowdata,
   api,
   handlePasteByClick,
+  insertImage,
+  loadImageFromFile,
+  isAllowEdit,
+  copyActiveImage,
+  cutActiveImage,
+  pasteImageItem,
+  getImageClipboard,
   update, // formatting helper
   loadLocale,
   defaultLuckysheetSelectRanges,
@@ -67,6 +74,7 @@ import { syncAndDemoteInactiveFlowdata } from '@sheet-engine/core/api/sheet-flow
 import { ensureSheetFlowdata } from '@sheet-engine/core/api/sheet';
 import { setActiveDraftContext } from '@sheet-engine/core/utils/active-draft-context';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
+import { selectionCache } from '@sheet-engine/core/modules/selection';
 import React, {
   useMemo,
   useState,
@@ -1253,6 +1261,47 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const { nativeEvent } = e;
         if (isBrowserZoomShortcut(nativeEvent)) return;
 
+        // Floating-image clipboard shortcuts first — must run before the
+        // Alt+I then C insert-column chord, which also listens for KeyC.
+        if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey) {
+          const draftSnapshot = contextRef.current;
+          const activeImgId = draftSnapshot.activeImg;
+          if (e.code === 'KeyC' && activeImgId != null) {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextWithProduce((draftCtx) => {
+              copyActiveImage(draftCtx);
+            });
+            return;
+          }
+          if (
+            e.code === 'KeyX' &&
+            activeImgId != null &&
+            isAllowEdit(draftSnapshot) &&
+            !draftSnapshot.isFlvReadOnly
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextWithProduce((draftCtx) => {
+              cutActiveImage(draftCtx);
+            });
+            return;
+          }
+          if (
+            e.code === 'KeyV' &&
+            getImageClipboard() &&
+            isAllowEdit(draftSnapshot) &&
+            !draftSnapshot.isFlvReadOnly
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            setContextWithProduce((draftCtx) => {
+              pasteImageItem(draftCtx);
+            });
+            return;
+          }
+        }
+
         // @ts-expect-error later
         const { getSelection, getSheet, setSelection } = ref.current;
         const currentSelection = getSelection()?.[0];
@@ -1314,43 +1363,49 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           return;
         }
         if (waitingForRInsertRow && (e.code === 'KeyR' || e.code === 'KeyC')) {
-          const direction = 'rightbottom';
-          let position;
-          let insertRowColOp: SetContextOptions['insertRowColOp'];
-          if (e.code === 'KeyR') {
-            position = getSelection()[0].row[1];
-            insertRowColOp = {
-              type: 'row',
-              index: position,
-              count: 1,
-              direction,
-              id: context.currentSheetId,
-            };
+          // Don't steal Ctrl/Cmd+C copy (or other modified C/R) for insert chord
+          if (e.metaKey || e.ctrlKey) {
+            waitingForRInsertRow = false;
+            clearTimeout(resetInsertRowTimer);
           } else {
-            position = getSelection()[0].column[1];
-            insertRowColOp = {
-              type: 'column',
-              index: position,
-              count: 1,
-              direction,
-              id: context.currentSheetId,
-            };
-          }
-          if (!position) return;
-          const range = context.luckysheet_select_save;
-          setContextWithProduce(
-            (draftCtx) => {
-              if (insertRowColOp) insertRowCol(draftCtx, insertRowColOp);
-              draftCtx.luckysheet_select_save = range;
-            },
-            {
-              insertRowColOp,
-            },
-          );
+            const direction = 'rightbottom';
+            let position;
+            let insertRowColOp: SetContextOptions['insertRowColOp'];
+            if (e.code === 'KeyR') {
+              position = getSelection()[0].row[1];
+              insertRowColOp = {
+                type: 'row',
+                index: position,
+                count: 1,
+                direction,
+                id: context.currentSheetId,
+              };
+            } else {
+              position = getSelection()[0].column[1];
+              insertRowColOp = {
+                type: 'column',
+                index: position,
+                count: 1,
+                direction,
+                id: context.currentSheetId,
+              };
+            }
+            if (!position) return;
+            const range = context.luckysheet_select_save;
+            setContextWithProduce(
+              (draftCtx) => {
+                if (insertRowColOp) insertRowCol(draftCtx, insertRowColOp);
+                draftCtx.luckysheet_select_save = range;
+              },
+              {
+                insertRowColOp,
+              },
+            );
 
-          waitingForRInsertRow = false;
-          clearTimeout(resetInsertRowTimer);
-          e.preventDefault();
+            waitingForRInsertRow = false;
+            clearTimeout(resetInsertRowTimer);
+            e.preventDefault();
+          }
         }
 
         // -------Delete-row-col--------
@@ -1487,8 +1542,17 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
         const focusInSheetOverlay =
           typeof active?.closest === 'function' &&
           active.closest('.fortune-sheet-overlay') != null;
+        const focusInWorkbook =
+          active === workbookContainer.current ||
+          (typeof active?.closest === 'function' &&
+            active.closest('.fortune-container') === workbookContainer.current);
         // deal with multi instance case, only the focused sheet handles the paste
-        if (cellInput.current === active || focusInSheetOverlay) {
+        if (
+          cellInput.current === active ||
+          focusInSheetOverlay ||
+          focusInWorkbook ||
+          context.activeImg != null
+        ) {
           if (!startPaste) return;
           let { clipboardData } = e;
           if (!clipboardData) {
@@ -1496,6 +1560,27 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             // for IE
             clipboardData = window.clipboardData;
           }
+
+          // System clipboard image file (async) — handle outside immer draft
+          const imageFile =
+            clipboardData?.files?.length === 1 &&
+            clipboardData.files[0].type.indexOf('image') > -1
+              ? clipboardData.files[0]
+              : null;
+          if (imageFile) {
+            if (!selectionCache.isPasteAction) return;
+            if (!isAllowEdit(context) || context.isFlvReadOnly) return;
+            selectionCache.isPasteAction = false;
+            e.preventDefault();
+            loadImageFromFile(imageFile).then((image) => {
+              if (!image) return;
+              setContextWithProduce((draftCtx) => {
+                insertImage(draftCtx, image);
+              });
+            });
+            return;
+          }
+
           const txtdata =
             clipboardData!.getData('text/html') ||
             clipboardData!.getData('text/plain');
