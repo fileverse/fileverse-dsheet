@@ -37,6 +37,10 @@ import { locale } from '../locale';
 import { CFSplitRange } from './ConditionFormat';
 import { clearCellError } from './error-state-helpers';
 import { scheduleSheetMetadataSyncHooks } from './sheet-metadata-hooks';
+import {
+  assignActiveConfigToSheetFile,
+  syncFormatOnlyRectIntoRanges,
+} from './sheet';
 
 export const selectionCache = {
   isPasteAction: false,
@@ -800,21 +804,35 @@ export function pasteHandlerOfPaintModel(
     }
   }
 
-  if (cellChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
-    ctx.hooks.updateCellYdoc(
-      dataVerificationYdocChanges.length > 0
-        ? [...cellChanges, ...dataVerificationYdocChanges]
-        : cellChanges,
-    );
-  } else if (
-    dataVerificationYdocChanges.length > 0 &&
-    ctx?.hooks?.updateCellYdoc
-  ) {
-    ctx.hooks.updateCellYdoc(dataVerificationYdocChanges);
+  // Empty painted cells are format-only — not persistable in celldata.
+  const migratedRanges = syncFormatOnlyRectIntoRanges(
+    ctx,
+    cfg,
+    flowdata,
+    minh,
+    maxh,
+    minc,
+    maxc,
+  );
+
+  if (ctx?.hooks?.updateCellYdoc) {
+    const ydocBatch = [...cellChanges, ...dataVerificationYdocChanges];
+    if (migratedRanges) {
+      ydocBatch.push({
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'cellFormatRanges'],
+        value: migratedRanges,
+        type: 'update',
+      });
+    }
+    if (ydocBatch.length > 0) {
+      ctx.hooks.updateCellYdoc(ydocBatch);
+    }
   }
 
   const currFile = ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!];
-  currFile.config = cfg;
+  assignActiveConfigToSheetFile(currFile, cfg);
+  ctx.config = currFile.config!;
   // Only overwrite dataVerification when we actually merged in pasted validations;
   // otherwise we would replace the sheet's dataVerification with null and remove
   // all existing validations on the sheet (e.g. on other rows).

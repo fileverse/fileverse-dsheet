@@ -25,7 +25,7 @@ export type Hooks = {
   cellDataChange?: () => void;
   hyperlinkChange?: () => void;
   updateCellYdoc?: (changes: SheetChangePath[]) => void;
-  updateAllCell?: (sheetId: string) => void;
+  updateAllCell?: (sheetId: string, caller?: string) => void;
   beforeUpdateCell?: (r: number, c: number, value: any) => boolean;
   /** Clears RTC remote-apply lock so local edits can run data-block formulas. */
   onLocalCellEdit?: () => void;

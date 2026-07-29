@@ -6,6 +6,7 @@ import { update, genarate } from '../modules/format';
 import { normalizeSelection } from '../modules/selection';
 import { Cell, CellMatrix, HyperlinkEntry } from '../types';
 import { getSheetIndex, isAllowEdit } from '../utils';
+import { ensureSheetFlowdata } from '../api/sheet';
 import { hasPartMC, isRealNum } from '../modules/validation';
 import { getBorderInfoCompute } from '../modules/border';
 import { expandRowsAndColumns, storeSheetParamALL } from '../modules/sheet';
@@ -17,6 +18,94 @@ import {
 } from '../paste-helpers/calculate-range-cell-size';
 import { scheduleSheetMetadataSyncHooks } from '../modules/sheet-metadata-hooks';
 import { adjustFormulaForPaste } from './formula-adjust';
+import { filterMeaningfulBorderSides } from './paste-border-utils';
+import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
+import {
+  assignActiveConfigToSheetFile,
+  syncFormatOnlyRectIntoRanges,
+} from '../modules/sheet';
+
+function pushPasteCelldataChange(
+  changes: any[],
+  ctx: Context,
+  r: number,
+  c: number,
+  cell: Cell | null,
+  /** True if this position held a persistable cell before the paste overwrite. */
+  hadPersistedBefore = false,
+) {
+  if (shouldPersistCelldataCell(cell)) {
+    changes.push({
+      sheetId: ctx.currentSheetId,
+      path: ['celldata'],
+      value: { r, c, v: cell },
+      key: `${r}_${c}`,
+      type: 'update',
+    });
+    return;
+  }
+  // Empty / format-only paste: local grid is cleared, but Yjs still needs a
+  // delete or peers/reload keep the pre-paste value under the new formatting.
+  if (hadPersistedBefore) {
+    changes.push({
+      sheetId: ctx.currentSheetId,
+      path: ['celldata'],
+      key: `${r}_${c}`,
+      value: null,
+      type: 'delete',
+    });
+  }
+}
+
+/** Paste-rect only: migrate format-only empties → cellFormatRanges + ydoc change. */
+function appendPasteFormatRangeMigration(
+  ctx: Context,
+  cfg: Context['config'],
+  data: CellMatrix | null | undefined,
+  r1: number,
+  r2: number,
+  c1: number,
+  c2: number,
+  changes: any[],
+) {
+  const ranges = syncFormatOnlyRectIntoRanges(ctx, cfg, data, r1, r2, c1, c2);
+  if (!ranges) return;
+  changes.push({
+    sheetId: ctx.currentSheetId,
+    path: ['config', 'cellFormatRanges'],
+    value: ranges,
+    type: 'update',
+  });
+}
+
+function pushCellBorderToConfig(
+  cfg: { borderInfo?: any[] },
+  row: number,
+  col: number,
+  sides: { l?: unknown; r?: unknown; t?: unknown; b?: unknown },
+) {
+  const filtered = filterMeaningfulBorderSides(
+    sides as {
+      l?: { style?: number; color?: string };
+      r?: { style?: number; color?: string };
+      t?: { style?: number; color?: string };
+      b?: { style?: number; color?: string };
+    },
+  );
+  if (!filtered.l && !filtered.r && !filtered.t && !filtered.b) return;
+  if (cfg.borderInfo == null) cfg.borderInfo = [];
+  cfg.borderInfo.push({
+    rangeType: 'cell',
+    value: {
+      row_index: row,
+      col_index: col,
+      l: filtered.l,
+      r: filtered.r,
+      t: filtered.t,
+      b: filtered.b,
+    },
+  });
+}
 
 /** Deep-clone a cell for paste targets; avoids double-`cloneDeep` when assigning into the grid. */
 function clonePasteCellValue(cell: any): any {
@@ -426,6 +515,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
         }
 
+        const hadPersistedBefore = shouldPersistCelldataCell(x[c]);
         x[c] = value;
 
         if (value != null && x?.[c]?.mc) {
@@ -451,19 +541,24 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         }
 
         if (borderInfo[`${h - minh}_${c - minc}`]) {
-          const bd_obj = {
-            rangeType: 'cell',
-            value: {
-              row_index: h,
-              col_index: c,
-              l: borderInfo[`${h - minh}_${c - minc}`].l,
-              r: borderInfo[`${h - minh}_${c - minc}`].r,
-              t: borderInfo[`${h - minh}_${c - minc}`].t,
-              b: borderInfo[`${h - minh}_${c - minc}`].b,
-            },
-          };
+          const sides = filterMeaningfulBorderSides(
+            borderInfo[`${h - minh}_${c - minc}`],
+          );
+          if (sides.l || sides.r || sides.t || sides.b) {
+            const bd_obj = {
+              rangeType: 'cell',
+              value: {
+                row_index: h,
+                col_index: c,
+                l: sides.l,
+                r: sides.r,
+                t: sides.t,
+                b: sides.b,
+              },
+            };
 
-          cfg.borderInfo?.push(bd_obj);
+            cfg.borderInfo?.push(bd_obj);
+          }
         }
 
         // const fontset = luckysheetfontformat(x[c]);
@@ -474,45 +569,42 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         //   RowlChange = true;
         // }
 
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r: h,
-            c,
-            v: d[h][c],
-          },
-          key: `${h}_${c}`,
-          type: 'update',
-        });
+        pushPasteCelldataChange(
+          changes,
+          ctx,
+          h,
+          c,
+          d[h][c],
+          hadPersistedBefore,
+        );
       }
       d[h] = x;
 
       if (currentRowLen !== ctx.defaultrowlen) {
         cfg.rowlen[h] = currentRowLen;
+      } else if (cfg.rowlen?.[h] != null) {
+        delete cfg.rowlen[h];
       }
     }
+    appendPasteFormatRangeMigration(
+      ctx,
+      cfg,
+      d,
+      minh,
+      maxh,
+      minc,
+      maxc,
+      changes,
+    );
     if (ctx?.hooks?.updateCellYdoc) {
       ctx.hooks?.updateCellYdoc(changes);
     }
 
     ctx.luckysheet_select_save = [{ row: [minh, maxh], column: [minc, maxc] }];
 
-    if (addr > 0 || addc > 0 || RowlChange) {
-      // const allParam = {
-      //   cfg,
-      //   RowlChange: true,
-      // };
-      ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!].config = cfg;
-      // jfrefreshgrid(d, ctx.luckysheet_select_save, allParam);
-    } else {
-      // const allParam = {
-      //   cfg,
-      // };
-      ctx.luckysheetfile[getSheetIndex(ctx, ctx.currentSheetId)!].config = cfg;
-      // jfrefreshgrid(d, ctx.luckysheet_select_save, allParam);
-      // selectHightlightShow();
-    }
+    const pasteSheetIdx = getSheetIndex(ctx, ctx.currentSheetId)!;
+    assignActiveConfigToSheetFile(ctx.luckysheetfile[pasteSheetIdx], cfg);
+    ctx.config = ctx.luckysheetfile[pasteSheetIdx].config!;
     jfrefreshgrid(ctx, null, undefined);
     if (data.includes('=')) {
       handleFormulaOnPaste(ctx, d);
@@ -642,6 +734,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
       const x = d[r + curR];
       for (let c = 0; c < clen; c += 1) {
         const originCell = x[c + curC];
+        const hadPersistedBefore = shouldPersistCelldataCell(originCell);
         let value = dataChe[r][c];
         const originalValueStr = String(value);
         const normalizedValueStr = originalValueStr
@@ -807,17 +900,14 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
           x[c + curC] = cell;
         }
-        changes.push({
-          sheetId: ctx.currentSheetId,
-          path: ['celldata'],
-          value: {
-            r: r + curR,
-            c: c + curC,
-            v: d[r + curR][c + curC],
-          },
-          key: `${r + curR}_${c + curC}`,
-          type: 'update',
-        });
+        pushPasteCelldataChange(
+          changes,
+          ctx,
+          r + curR,
+          c + curC,
+          d[r + curR][c + curC],
+          hadPersistedBefore,
+        );
       }
       d[r + curR] = x;
     }
@@ -962,7 +1052,7 @@ export function pasteHandlerOfCutPaste(
     path: string[];
     value: any;
     key: string;
-    type: 'update';
+    type: 'update' | 'delete';
   }[] = [];
 
   const borderInfoCompute = getBorderInfoCompute(ctx, copySheetId);
@@ -1019,9 +1109,9 @@ export function pasteHandlerOfCutPaste(
         changes.push({
           sheetId: ctx.currentSheetId,
           path: ['celldata'],
-          value: { r: i, c: j, v: null },
           key: `${i}_${j}`,
-          type: 'update',
+          value: null,
+          type: 'delete',
         });
 
         delete dataVerification[`${i}_${j}`];
@@ -1080,42 +1170,13 @@ export function pasteHandlerOfCutPaste(
         borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`] &&
         !borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].s
       ) {
-        const bd_obj = {
-          rangeType: 'cell',
-          value: {
-            row_index: h,
-            col_index: c,
-            l: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].l,
-            r: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].r,
-            t: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].t,
-            b: borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`].b,
-          },
-        };
-
-        if (cfg.borderInfo == null) {
-          cfg.borderInfo = [];
-        }
-
-        cfg.borderInfo.push(bd_obj);
-      } else if (borderInfoCompute[`${h}_${c}`]) {
-        const bd_obj = {
-          rangeType: 'cell',
-          value: {
-            row_index: h,
-            col_index: c,
-            l: null,
-            r: null,
-            t: null,
-            b: null,
-          },
-        };
-
-        if (cfg.borderInfo == null) {
-          cfg.borderInfo = [];
-        }
-
-        cfg.borderInfo.push(bd_obj);
-      } else if (borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`]) {
+        pushCellBorderToConfig(
+          cfg,
+          h,
+          c,
+          borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`],
+        );
+      } else if (borderInfoCompute[`${c_r1 + h - minh}_${c_c1 + c - minc}`]?.s) {
         const bd_obj = {
           rangeType: 'range',
           borderType: 'border-slash',
@@ -1151,14 +1212,16 @@ export function pasteHandlerOfCutPaste(
         value = copyData[h - minh][c - minc];
       }
 
+      const hadPersistedBefore = shouldPersistCelldataCell(x[c]);
       x[c] = _.cloneDeep(value);
-      changes.push({
-        sheetId: ctx.currentSheetId,
-        path: ['celldata'],
-        value: { r: h, c, v: d[h][c] },
-        key: `${h}_${c}`,
-        type: 'update',
-      });
+      pushPasteCelldataChange(
+        changes,
+        ctx,
+        h,
+        c,
+        d[h][c],
+        hadPersistedBefore,
+      );
 
       if (value != null && copyHasMC && x[c]?.mc) {
         if (x[c]!.mc!.rs != null) {
@@ -1189,6 +1252,16 @@ export function pasteHandlerOfCutPaste(
   last.row = [minh, maxh];
   last.column = [minc, maxc];
 
+  appendPasteFormatRangeMigration(
+    ctx,
+    cfg,
+    d,
+    minh,
+    maxh,
+    minc,
+    maxc,
+    changes,
+  );
   if (changes.length > 0 && ctx?.hooks?.updateCellYdoc) {
     ctx.hooks.updateCellYdoc(changes);
   }
@@ -1206,9 +1279,9 @@ export function pasteHandlerOfCutPaste(
   let source;
   let target;
   if (ctx.currentSheetId !== copySheetId) {
-    // 跨表操作
+    // 跨表操作 — source tab may be demoted to celldata after switch
     const sourceData = _.cloneDeep(
-      ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].data!,
+      ensureSheetFlowdata(ctx, { id: copySheetId })!,
     );
     const sourceConfig = _.cloneDeep(
       ctx.luckysheetfile[getSheetIndex(ctx, copySheetId)!].config,
@@ -1683,42 +1756,13 @@ export function pasteHandlerOfCopyPaste(
             borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`] &&
             !borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].s
           ) {
-            const bd_obj = {
-              rangeType: 'cell',
-              value: {
-                row_index: h,
-                col_index: c,
-                l: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].l,
-                r: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].r,
-                t: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].t,
-                b: borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`].b,
-              },
-            };
-
-            if (_.isNil(cfg.borderInfo)) {
-              cfg.borderInfo = [];
-            }
-
-            cfg.borderInfo.push(bd_obj);
-          } else if (borderInfoCompute[`${h}_${c}`]) {
-            const bd_obj = {
-              rangeType: 'cell',
-              value: {
-                row_index: h,
-                col_index: c,
-                l: null,
-                r: null,
-                t: null,
-                b: null,
-              },
-            };
-
-            if (_.isNil(cfg.borderInfo)) {
-              cfg.borderInfo = [];
-            }
-
-            cfg.borderInfo.push(bd_obj);
-          } else if (borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`]) {
+            pushCellBorderToConfig(
+              cfg,
+              h,
+              c,
+              borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`],
+            );
+          } else if (borderInfoCompute[`${c_r1 + h - mth}_${c_c1 + c - mtc}`]?.s) {
             const bd_obj = {
               rangeType: 'range',
               borderType: 'border-slash',
@@ -1882,6 +1926,7 @@ export function pasteHandlerOfCopyPaste(
             // }
           }
 
+          const hadPersistedBefore = shouldPersistCelldataCell(x[c]);
           x[c] = value;
 
           if (value != null && copyHasMC && x?.[c]?.mc) {
@@ -1907,13 +1952,14 @@ export function pasteHandlerOfCopyPaste(
           }
           // If afterUpdateCell ran for this cell, it is expected to handle Yjs sync.
           if (!(ctx?.hooks?.afterUpdateCell && afterHookCalled)) {
-            changes.push({
-              sheetId: ctx.currentSheetId,
-              path: ['celldata'],
-              value: { r: h, c, v: d[h][c] },
-              key: `${h}_${c}`,
-              type: 'update',
-            });
+            pushPasteCelldataChange(
+              changes,
+              ctx,
+              h,
+              c,
+              d[h][c],
+              hadPersistedBefore,
+            );
           }
         }
         d[h] = x;
@@ -1990,7 +2036,9 @@ export function pasteHandlerOfCopyPaste(
 
     // Cache property access to avoid repeated lookups
     const srcHyperlinks = ctx.luckysheetfile[srcIndex].hyperlink;
-    const srcData = ctx.luckysheetfile[srcIndex].data;
+    const srcData = ensureSheetFlowdata(ctx, {
+      id: ctx.luckysheet_copy_save?.dataSheetId as string,
+    });
 
     // Initialize hyperlink registry for target sheet if needed
     if (!ctx.luckysheetfile[targetSheetIndex].hyperlink) {
@@ -2070,6 +2118,17 @@ export function pasteHandlerOfCopyPaste(
       }
     }
   }
+
+  appendPasteFormatRangeMigration(
+    ctx,
+    cfg,
+    d,
+    minh,
+    maxh,
+    minc,
+    maxc,
+    changes,
+  );
 
   if (ctx?.hooks?.updateCellYdoc) {
     if (

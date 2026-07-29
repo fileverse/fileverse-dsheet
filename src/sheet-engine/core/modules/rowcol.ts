@@ -9,6 +9,18 @@ import {
   getFilterHiddenRowsUnionFromFilterMap,
   rebuildRowHiddenUnion,
 } from './rowVisibility';
+import {
+  migrateFormatOnlyCellsFromData,
+  shiftCellFormatRangesOnDelete,
+  shiftCellFormatRangesOnInsert,
+} from '../utils/range-format';
+import {
+  emitCelldataDeletesBeyondGrid,
+  emitCelldataRangeDiffToYdoc,
+  getDeleteRowColSnapshotBounds,
+  getInsertRowColSnapshotBounds,
+  snapshotPersistedCelldataInRange,
+} from '../utils/ydoc-celldata-changes';
 
 const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
   Object.entries(merge_new).forEach(([, v]) => {
@@ -21,14 +33,13 @@ const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
 
     for (let i = r; i < r + rs; i += 1) {
       for (let j = c; j < c + cs; j += 1) {
-        if (file?.data?.[i]?.[j]) {
-          file.data[i][j] = { ...file.data[i][j], mc: { r, c } };
+        if (!file?.data?.[i]) continue;
+        if (i === r && j === c) {
+          file.data[i][j] = { ...(file.data[i][j] || {}), mc: { r, c, rs, cs } };
+        } else {
+          file.data[i][j] = { ...(file.data[i][j] || {}), mc: { r, c } };
         }
       }
-    }
-
-    if (file?.data?.[r]?.[c]) {
-      file.data[r][c] = { ...file.data[r][c], mc: { r, c, rs, cs } };
     }
   });
 };
@@ -146,37 +157,34 @@ const emitCellRangeToYdoc = (
   r2: number,
   c1: number,
   c2: number,
+  beforePersisted?: Map<string, Cell | string | number | boolean>,
+) => {
+  emitCelldataRangeDiffToYdoc(
+    ctx,
+    sheetId,
+    d,
+    r1,
+    r2,
+    c1,
+    c2,
+    beforePersisted,
+  );
+};
+
+const emitCellFormatRangesToYdoc = (
+  ctx: Context,
+  sheetId: string,
+  ranges: any[] | undefined,
 ) => {
   if (!ctx?.hooks?.updateCellYdoc) return;
-  if (!d || !Array.isArray(d) || d.length === 0) return;
-  const rowEnd = Math.min(r2, d.length - 1);
-  const colEnd = Math.min(c2, (d[0]?.length ?? 0) - 1);
-  const rowStart = Math.max(0, r1);
-  const colStart = Math.max(0, c1);
-  if (rowStart > rowEnd || colStart > colEnd) return;
-
-  const changes: {
-    sheetId: string;
-    path: string[];
-    key?: string;
-    value: any;
-    type?: 'update' | 'delete';
-  }[] = [];
-
-  for (let r = rowStart; r <= rowEnd; r += 1) {
-    const row = d[r] || [];
-    for (let c = colStart; c <= colEnd; c += 1) {
-      changes.push({
-        sheetId,
-        path: ['celldata'],
-        value: { r, c, v: row?.[c] ?? null },
-        key: `${r}_${c}`,
-        type: 'update',
-      });
-    }
-  }
-
-  if (changes.length > 0) ctx.hooks.updateCellYdoc(changes);
+  ctx.hooks.updateCellYdoc([
+    {
+      sheetId,
+      path: ['config', 'cellFormatRanges'],
+      value: ranges ?? [],
+      type: 'update',
+    },
+  ]);
 };
 
 const markCellRefError = (cell: Cell) => {
@@ -331,6 +339,23 @@ export function insertRowCol(
   if (type === 'column' && d[0] && d[0].length + count >= 1000) {
     throw new Error('maxExceeded');
   }
+
+  const insertSnapBounds = getInsertRowColSnapshotBounds(
+    type,
+    index,
+    direction,
+    d.length,
+    d[0]?.length ?? 1,
+    getMergeBounds(cfg.merge),
+  );
+  const ydocBeforePersisted = snapshotPersistedCelldataInRange(
+    d,
+    insertSnapBounds.r1,
+    insertSnapBounds.r2,
+    insertSnapBounds.c1,
+    insertSnapBounds.c2,
+    file.celldata,
+  );
 
   const snapRowDv =
     usePerRowTemplates && file.dataVerification != null
@@ -1097,6 +1122,18 @@ export function insertRowCol(
       cfg.borderInfo = borderInfo;
     }
 
+    const prevFormatRanges = cfg.cellFormatRanges;
+    cfg.cellFormatRanges = shiftCellFormatRangesOnInsert(
+      cfg.cellFormatRanges,
+      'row',
+      index,
+      count,
+      direction,
+    );
+    if (!_.isEqual(prevFormatRanges, cfg.cellFormatRanges)) {
+      emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+    }
+
     const arr = [];
     for (let r = 0; r < count; r += 1) {
       const srcRowIdx = usePerRowTemplates ? firstTemplateRow! : index;
@@ -1349,6 +1386,18 @@ export function insertRowCol(
       cfg.borderInfo = borderInfo;
     }
 
+    const prevFormatRangesCol = cfg.cellFormatRanges;
+    cfg.cellFormatRanges = shiftCellFormatRangesOnInsert(
+      cfg.cellFormatRanges,
+      'column',
+      index,
+      count,
+      direction,
+    );
+    if (!_.isEqual(prevFormatRangesCol, cfg.cellFormatRanges)) {
+      emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+    }
+
     for (let i = 0; i < count; i += 1) {
       const srcColIdx = usePerColTemplates ? firstTemplateCol! : index;
       let bordersToDupCol: any[] = [];
@@ -1516,6 +1565,27 @@ export function insertRowCol(
 
   refreshLocalMergeData(merge_new, file);
 
+  // Inserted template cells keep style but strip content → format-only. Those
+  // never enter celldata; migrate them into cellFormatRanges so refresh keeps bg.
+  if (range) {
+    const migrated = migrateFormatOnlyCellsFromData(
+      cfg.cellFormatRanges,
+      d as any[][],
+      range[0].row[0],
+      range[0].row[1],
+      range[0].column[0],
+      range[0].column[1],
+    );
+    if (migrated.changed) {
+      cfg.cellFormatRanges = migrated.ranges;
+      file.config = cfg;
+      if (file.id === ctx.currentSheetId) {
+        ctx.config = cfg;
+      }
+      emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+    }
+  }
+
   // Yjs: row/col insertion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);
   if (type === 'row') {
@@ -1531,6 +1601,7 @@ export function insertRowCol(
       d.length - 1,
       0,
       (d[0]?.length ?? 1) - 1,
+      ydocBeforePersisted,
     );
   } else {
     const baseStart = direction === 'lefttop' ? index : index + 1;
@@ -1545,6 +1616,7 @@ export function insertRowCol(
       d.length - 1,
       startC,
       (d[0]?.length ?? 1) - 1,
+      ydocBeforePersisted,
     );
   }
 
@@ -1709,6 +1781,22 @@ export function deleteRowCol(
   }
 
   const slen = end - start + 1;
+
+  const deleteSnapBounds = getDeleteRowColSnapshotBounds(
+    type,
+    start,
+    d.length,
+    d[0]?.length ?? 1,
+    getMergeBounds(cfg.merge),
+  );
+  const ydocBeforePersisted = snapshotPersistedCelldataInRange(
+    d,
+    deleteSnapBounds.r1,
+    deleteSnapBounds.r2,
+    deleteSnapBounds.c1,
+    deleteSnapBounds.c2,
+    file.celldata,
+  );
 
   // 合并单元格配置变动
   if (cfg.merge == null) {
@@ -2537,6 +2625,17 @@ export function deleteRowCol(
 
   refreshLocalMergeData(merge_new, file);
 
+  const prevFormatRangesDelete = cfg.cellFormatRanges;
+  cfg.cellFormatRanges = shiftCellFormatRangesOnDelete(
+    cfg.cellFormatRanges,
+    type,
+    start,
+    end,
+  );
+  if (!_.isEqual(prevFormatRangesDelete, cfg.cellFormatRanges)) {
+    emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+  }
+
   // Yjs: row/col deletion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);
   if (type === 'row') {
@@ -2549,6 +2648,7 @@ export function deleteRowCol(
       d.length - 1,
       0,
       (d[0]?.length ?? 1) - 1,
+      ydocBeforePersisted,
     );
   } else {
     const startC = mergeBounds ? Math.min(start, mergeBounds.minC) : start;
@@ -2560,8 +2660,17 @@ export function deleteRowCol(
       d.length - 1,
       startC,
       (d[0]?.length ?? 1) - 1,
+      ydocBeforePersisted,
     );
   }
+  // Range diffs never visit coords past the new grid — delete those ghosts.
+  emitCelldataDeletesBeyondGrid(
+    ctx,
+    id,
+    ydocBeforePersisted,
+    d.length,
+    d[0]?.length ?? 0,
+  );
 
   if (file.id === ctx.currentSheetId) {
     ctx.config = cfg;

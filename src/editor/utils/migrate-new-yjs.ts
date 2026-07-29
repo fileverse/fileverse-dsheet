@@ -143,10 +143,13 @@ export function migrateSheetArrayIfNeeded(
           return;
         }
 
-        if (key === 'config') {
-          sheetMap.set('config', value);
-          return;
-        }
+      if (key === 'config') {
+        const configMap = new Y.Map();
+        const c = value ? value : {};
+        Object.entries(c as object).forEach(([k, v]) => configMap.set(k, v));
+        sheetMap.set('config', configMap);
+        return;
+      }
 
         // nested object → Y.Map
         if (value && typeof value === 'object' && !Array.isArray(value)) {

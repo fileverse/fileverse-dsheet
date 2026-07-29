@@ -14,6 +14,15 @@ import {
   type HyperlinkEntry,
 } from '@sheet-engine/core';
 import WorkbookContext from '../../../context';
+import {
+  emitCelldataRangeDiffToYdoc,
+  snapshotPersistedCelldataInRange,
+} from '../../../../core/utils/ydoc-celldata-changes';
+import {
+  rangesEqual,
+  remapCellFormatRanges,
+} from '../../../../core/utils/range-format';
+import { remapBorderInfo } from '../../../../core/utils/border-config-utils';
 
 export function numberToColumnName(num: number): string {
   return indexToColumnChar(num);
@@ -415,6 +424,16 @@ export const useColumnDragAndDrop = (
           selectedSourceColRef.current = selectedSourceCol;
           selectedTargetColRef.current = selectedTargetCol;
 
+          const numRowsBeforeMove = rows.length;
+          const ydocBeforePersisted = snapshotPersistedCelldataInRange(
+            rows,
+            0,
+            Math.max(0, numRowsBeforeMove - 1),
+            affectedColStart,
+            affectedColEnd,
+            _sheet.celldata,
+          );
+
           // Move selected column block in each row, preserving relative order.
           for (let j = 0; j < rows.length; j += 1) {
             const row = rows[j];
@@ -445,6 +464,51 @@ export const useColumnDragAndDrop = (
             });
             return map;
           })();
+
+          const previousFormatRanges = _sheet.config?.cellFormatRanges;
+          const nextFormatRanges = remapCellFormatRanges(
+            previousFormatRanges,
+            'column',
+            colMap,
+          );
+          const previousBorderInfo = _sheet.config?.borderInfo;
+          const nextBorderInfo = previousBorderInfo?.length
+            ? remapBorderInfo(previousBorderInfo, 'column', colMap)
+            : previousBorderInfo;
+
+          const ydocConfigChanges: {
+            sheetId: string;
+            path: string[];
+            value: unknown;
+            type: 'update';
+          }[] = [];
+
+          if (!rangesEqual(previousFormatRanges, nextFormatRanges)) {
+            _sheet.config ||= {};
+            _sheet.config.cellFormatRanges = nextFormatRanges;
+            ydocConfigChanges.push({
+              sheetId: draft.currentSheetId,
+              path: ['config', 'cellFormatRanges'],
+              value: nextFormatRanges,
+              type: 'update',
+            });
+          }
+
+          if (previousBorderInfo?.length) {
+            _sheet.config ||= {};
+            _sheet.config.borderInfo = nextBorderInfo;
+            draft.config.borderInfo = nextBorderInfo;
+            ydocConfigChanges.push({
+              sheetId: draft.currentSheetId,
+              path: ['config', 'borderInfo'],
+              value: nextBorderInfo ?? [],
+              type: 'update',
+            });
+          }
+
+          if (ydocConfigChanges.length > 0) {
+            draft.hooks?.updateCellYdoc?.(ydocConfigChanges);
+          }
 
           // Keep column width metadata in sync with moved column data.
           if (_sheet.config) {
@@ -755,31 +819,17 @@ export const useColumnDragAndDrop = (
             targetIndex,
           );
 
-          // Notify Yjs for every cell in the disturbed range (moved column + all columns in between)
-          const cellChanges: {
-            sheetId: string;
-            path: string[];
-            key?: string;
-            value: any;
-            type?: 'update' | 'delete';
-          }[] = [];
-          const numRows = rows.length;
-          for (let r = 0; r < numRows; r += 1) {
-            const row = rows[r];
-            for (let c = affectedColStart; c <= affectedColEnd; c += 1) {
-              const cell = row?.[c];
-              cellChanges.push({
-                sheetId: draft.currentSheetId,
-                path: ['celldata'],
-                value: { r, c, v: cell ?? null },
-                key: `${r}_${c}`,
-                type: 'update',
-              });
-            }
-          }
-          if (cellChanges.length > 0 && draft.hooks?.updateCellYdoc) {
-            draft.hooks.updateCellYdoc(cellChanges);
-          }
+          // Sync sparse celldata for disturbed columns only (skip unchanged empty cells).
+          emitCelldataRangeDiffToYdoc(
+            draft,
+            draft.currentSheetId,
+            rows,
+            0,
+            Math.max(0, rows.length - 1),
+            affectedColStart,
+            affectedColEnd,
+            ydocBeforePersisted,
+          );
           const rowLen = d?.length || 0;
           const rowEnd = Math.max(0, rowLen - 1);
           api.setSelection(
