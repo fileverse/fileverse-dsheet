@@ -3,6 +3,7 @@ import { Context } from '../context';
 import { CellMatrix, CellWithRowAndCol, Sheet } from '../types';
 import { getSheetIndex } from '../utils';
 import { shouldPersistCelldataCell } from '../utils/cell-persist-utils';
+import { applyMergeConfigToData } from '../utils/merge-hydrate';
 import { applyCellFormatRangesToData, CellFormatRange, getCellFormatRangeGridBounds } from '../utils/range-format';
 import { SHEET_NOT_FOUND } from './errors';
 
@@ -29,6 +30,7 @@ export const celldataToData = (
   rowCount?: number,
   colCount?: number,
   cellFormatRanges?: CellFormatRange[],
+  merge?: Record<string, any> | null,
 ) => {
   const lastRow = _.maxBy<CellWithRowAndCol>(celldata, 'r');
   const lastCol = _.maxBy(celldata, 'c');
@@ -51,6 +53,7 @@ export const celldataToData = (
       expandedData[d.r][d.c] = d.v;
     });
     applyCellFormatRangesToData(expandedData, cellFormatRanges);
+    applyMergeConfigToData(expandedData, merge);
     return expandedData;
   }
   return null;

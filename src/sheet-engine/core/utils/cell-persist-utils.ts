@@ -30,12 +30,12 @@ export function hasCellMeaningfulContent(
   const innerV = cell.v;
   if (innerV != null && innerV !== "") return true;
   if (typeof cell.f === "string" && cell.f.length > 0) return true;
-  if (cell.mc != null) {
-    // Merge anchor lives in config.merge; shadow cells only reference it.
-    if (cell.mc.rs != null || cell.mc.cs != null) return true;
-    return false;
-  }
+  // Merge anchors and shadow refs must stay in celldata so peers/reload
+  // keep merge hit-testing. config.merge alone is not enough for canvas.
+  if (cell.mc != null) return true;
   if (cell.hl != null) return true;
+  // Comment/note-only cells (no value) must still persist.
+  if (cell.ps != null) return true;
   if (typeof cell.m === "string" && cell.m.length > 0) return true;
 
   const inline = cell.ct?.s;

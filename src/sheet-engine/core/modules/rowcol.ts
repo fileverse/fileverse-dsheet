@@ -15,6 +15,7 @@ import {
   shiftCellFormatRangesOnInsert,
 } from '../utils/range-format';
 import {
+  emitCelldataDeletesBeyondGrid,
   emitCelldataRangeDiffToYdoc,
   getDeleteRowColSnapshotBounds,
   getInsertRowColSnapshotBounds,
@@ -32,14 +33,13 @@ const refreshLocalMergeData = (merge_new: Record<string, any>, file: Sheet) => {
 
     for (let i = r; i < r + rs; i += 1) {
       for (let j = c; j < c + cs; j += 1) {
-        if (file?.data?.[i]?.[j]) {
-          file.data[i][j] = { ...file.data[i][j], mc: { r, c } };
+        if (!file?.data?.[i]) continue;
+        if (i === r && j === c) {
+          file.data[i][j] = { ...(file.data[i][j] || {}), mc: { r, c, rs, cs } };
+        } else {
+          file.data[i][j] = { ...(file.data[i][j] || {}), mc: { r, c } };
         }
       }
-    }
-
-    if (file?.data?.[r]?.[c]) {
-      file.data[r][c] = { ...file.data[r][c], mc: { r, c, rs, cs } };
     }
   });
 };
@@ -2663,6 +2663,14 @@ export function deleteRowCol(
       ydocBeforePersisted,
     );
   }
+  // Range diffs never visit coords past the new grid — delete those ghosts.
+  emitCelldataDeletesBeyondGrid(
+    ctx,
+    id,
+    ydocBeforePersisted,
+    d.length,
+    d[0]?.length ?? 0,
+  );
 
   if (file.id === ctx.currentSheetId) {
     ctx.config = cfg;

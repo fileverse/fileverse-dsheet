@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
 import { dataToCelldata, getSheet } from './common';
+import { applyMergeConfigToData } from '../utils/merge-hydrate';
 import { applyCellFormatRangesToData, getCellFormatRangeGridBounds } from '../utils/range-format';
 import { Context } from '../context';
 import { CellMatrix, CellWithRowAndCol, Sheet } from '../types';
@@ -109,6 +110,7 @@ export function initSheetData(
       expandedData[d.r][d.c] = d.v;
     });
     applyCellFormatRangesToData(expandedData, newData.config?.cellFormatRanges);
+    applyMergeConfigToData(expandedData, newData.config?.merge);
     if (draftCtx.luckysheetfile[index] == null) {
       newData.data = expandedData;
       delete newData.celldata;

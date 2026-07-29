@@ -20,8 +20,16 @@ export function buildConfigSubKeyChanges({
   const changes: SheetChangePath[] = [];
   const old = oldConfig || {};
   const next = newConfig || {};
-  const oldKeys = new Set(Object.keys(old));
-  const newKeys = new Set(Object.keys(next));
+  // Owned exclusively by updateCellYdoc (format migrate / punch / compaction).
+  // Including it here dual-writes and can resurrect stale ranges or delete
+  // freshly written ones when local sheet.config lags the ydoc.
+  const SKIP_KEYS = new Set(['cellFormatRanges']);
+  const oldKeys = new Set(
+    Object.keys(old).filter((k) => !SKIP_KEYS.has(k)),
+  );
+  const newKeys = new Set(
+    Object.keys(next).filter((k) => !SKIP_KEYS.has(k)),
+  );
 
   for (const key of newKeys) {
     const newVal = next[key];

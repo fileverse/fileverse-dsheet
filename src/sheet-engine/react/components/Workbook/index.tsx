@@ -34,6 +34,7 @@ import {
   jfrefreshgrid,
 } from '@sheet-engine/core';
 import { applyCellFormatRangesToData, getCellFormatRangeGridBounds } from '@sheet-engine/core/utils/range-format';
+import { applyMergeConfigToData } from '@sheet-engine/core/utils/merge-hydrate';
 import { activePalette, setActiveGridPalette, type ThemeKey } from '@sheet-engine/core/theme';
 import {
   normalizeDateBaseLocale,
@@ -63,6 +64,7 @@ import {
   invalidateFormulaWorkerSnapshot,
 } from '@sheet-engine/core/modules/formula-worker-bridge';
 import { syncAndDemoteInactiveFlowdata } from '@sheet-engine/core/api/sheet-flowdata-lifecycle';
+import { ensureSheetFlowdata } from '@sheet-engine/core/api/sheet';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
   useMemo,
@@ -127,6 +129,27 @@ const concatProducer = (...producers: ((ctx: Context) => void)[]) => {
     });
   };
 };
+
+/**
+ * Undo/redo patches target dense `data` paths. After demote-on-switch a sheet
+ * may only have sparse celldata — hydrate first so applyPatches doesn't crash
+ * or write into a missing matrix.
+ */
+function ensureFlowdataForDataPatches(ctx: Context, patches: Patch[]) {
+  const seen = new Set<number>();
+  for (let i = 0; i < patches.length; i += 1) {
+    const path = patches[i].path as (string | number)[];
+    if (path?.[0] !== 'luckysheetfile') continue;
+    const sheetIndex = path[1];
+    if (!_.isNumber(sheetIndex) || path[2] !== 'data') continue;
+    if (seen.has(sheetIndex)) continue;
+    seen.add(sheetIndex);
+    const sheet = ctx.luckysheetfile?.[sheetIndex];
+    if (sheet && !sheet.data?.length) {
+      ensureSheetFlowdata(ctx, { index: sheetIndex });
+    }
+  }
+}
 
 const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
   (
@@ -259,6 +282,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             expandedData,
             newData.config?.cellFormatRanges,
           );
+          applyMergeConfigToData(expandedData, newData.config?.merge);
           draftCtx.luckysheetfile = produce(draftCtx.luckysheetfile, (d) => {
             d[index!].data = expandedData;
             delete d[index!].celldata;
@@ -616,6 +640,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               } as Patch);
             });
           }
+          ensureFlowdataForDataPatches(ctx_, history.inversePatches);
           const newContext = applyPatches(ctx_, history.inversePatches);
           globalCache.current.redoList.push(history);
           const inversedOptions = inverseRowColOptions(history.options);
@@ -674,6 +699,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       const history = globalCache.current.redoList.pop();
       if (history) {
         setContext((ctx_) => {
+          ensureFlowdataForDataPatches(ctx_, history.patches);
           const newContext = applyPatches(ctx_, history.patches);
           const isBorderUndo = history.patches.some(
             (onePatch) =>

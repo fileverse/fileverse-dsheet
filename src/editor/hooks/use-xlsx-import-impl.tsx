@@ -1316,19 +1316,23 @@ export async function runXlsxFileUpload(
                     for (let dr = 0; dr < rs; dr++) {
                       for (let dc = 0; dc < cs; dc++) {
                         const key = `${r + dr}_${c + dc}`;
-                        if (dr !== 0 || dc !== 0) continue;
+                        const isAnchor = dr === 0 && dc === 0;
                         let cell = celldataMap.get(key);
                         if (!cell) {
                           cell = {
                             r: r + dr,
                             c: c + dc,
-                            v: { mc: { r, c, rs, cs } },
+                            v: isAnchor
+                              ? { mc: { r, c, rs, cs } }
+                              : { mc: { r, c } },
                           };
                           sheet.celldata.push(cell as never);
                           celldataMap.set(key, cell);
                         } else {
                           if (!cell.v) cell.v = {};
-                          cell.v.mc = { r, c, rs, cs };
+                          cell.v.mc = isAnchor
+                            ? { r, c, rs, cs }
+                            : { r, c };
                         }
                       }
                     }

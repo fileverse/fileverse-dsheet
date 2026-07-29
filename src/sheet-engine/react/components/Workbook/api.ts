@@ -634,6 +634,7 @@ export function generateAPIs(
               file.row,
               file.column,
               cfg.cellFormatRanges,
+              cfg.merge,
             );
             if (rebuilt) {
               file.data = rebuilt;
@@ -741,8 +742,15 @@ export function generateAPIs(
       rowCount?: number,
       colCount?: number,
       cellFormatRanges?: CellFormatRange[],
+      merge?: Record<string, any> | null,
     ) => {
-      return api.celldataToData(celldata, rowCount, colCount, cellFormatRanges);
+      return api.celldataToData(
+        celldata,
+        rowCount,
+        colCount,
+        cellFormatRanges,
+        merge,
+      );
     },
     insertFunction: (
       selectedFuncIndex: number,

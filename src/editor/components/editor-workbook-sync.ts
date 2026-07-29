@@ -520,6 +520,7 @@ export const updateAllCell = (
         (sheet as any).row,
         (sheet as any).column,
         (sheet as any).config?.cellFormatRanges,
+        (sheet as any).config?.merge,
       ) ?? undefined;
   }
   if (!Array.isArray(dataMatrix)) return;

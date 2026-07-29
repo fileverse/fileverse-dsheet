@@ -22,6 +22,29 @@ export type SheetChangePath = {
   type?: "update" | "delete";
 };
 
+/**
+ * Ensure sheet.config is a Y.Map. Pre-PR / legacy docs often store config as a
+ * plain object; replacing it with an empty Y.Map would drop merge, borders,
+ * rowlen, etc. Copy existing keys when upgrading.
+ */
+function ensureConfigYMap(sheet: Y.Map<any>): Y.Map<any> {
+  const existing = sheet.get("config");
+  if (existing instanceof Y.Map) return existing;
+
+  const configMap = new Y.Map();
+  if (
+    existing &&
+    typeof existing === "object" &&
+    !safeIsArray(existing)
+  ) {
+    Object.entries(existing as Record<string, unknown>).forEach(([k, v]) => {
+      configMap.set(k, v);
+    });
+  }
+  sheet.set("config", configMap);
+  return configMap;
+}
+
 function cloneForYjs<T>(value: T): T {
   try {
     return structuredClone(value);
@@ -179,11 +202,7 @@ export const updateYdocSheetData = (
     const getWorkingFormatRanges = (sheet: Y.Map<any>, sheetId: string) => {
       const cached = pendingFormatRanges.get(sheetId);
       if (cached) return cached;
-      let configMap = sheet.get("config");
-      if (!(configMap instanceof Y.Map)) {
-        configMap = new Y.Map();
-        sheet.set("config", configMap);
-      }
+      const configMap = ensureConfigYMap(sheet);
       const existing = configMap.get("cellFormatRanges");
       const working = Array.isArray(existing) ? existing : [];
       pendingFormatRanges.set(sheetId, working);
@@ -462,24 +481,7 @@ export const updateYdocSheetData = (
       // config sub-keys (borderInfo, merge, rowlen, …) stored as Y.Map on sheet
       if (path.length === 2 && path[0] === "config") {
         const configKey = path[1];
-        let configMap = sheet.get("config");
-        if (!(configMap instanceof Y.Map)) {
-          configMap = new Y.Map();
-          const existing = sheet.get("config");
-          if (
-            existing &&
-            typeof existing === "object" &&
-            !(existing instanceof Y.Map) &&
-            !safeIsArray(existing)
-          ) {
-            Object.entries(existing as Record<string, unknown>).forEach(
-              ([k, v]) => {
-                configMap.set(k, v);
-              },
-            );
-          }
-          sheet.set("config", configMap);
-        }
+        const configMap = ensureConfigYMap(sheet);
 
         if (type === "delete") {
           configMap.delete(configKey);
@@ -513,8 +515,13 @@ export const updateYdocSheetData = (
         let next = target.get(p);
 
         if (!(next instanceof Y.Map)) {
-          next = new Y.Map();
-          target.set(p, next);
+          // Upgrading sheet.config must preserve plain-object keys (merge, etc.).
+          if (p === "config" && target === sheet) {
+            next = ensureConfigYMap(sheet);
+          } else {
+            next = new Y.Map();
+            target.set(p, next);
+          }
         }
         target = next;
       }
@@ -527,11 +534,7 @@ export const updateYdocSheetData = (
     touchedFormatRangeSheets.forEach((sheetId) => {
       const sheet = sheetById.get(sheetId);
       if (!sheet) return;
-      let configMap = sheet.get("config");
-      if (!(configMap instanceof Y.Map)) {
-        configMap = new Y.Map();
-        sheet.set("config", configMap);
-      }
+      const configMap = ensureConfigYMap(sheet);
       setMapValueSafe(
         configMap,
         "cellFormatRanges",

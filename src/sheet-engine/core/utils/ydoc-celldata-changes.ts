@@ -199,6 +199,43 @@ export function emitCelldataRangeDiffToYdoc(
   }
 }
 
+/**
+ * After delete row/col, emit deletes for persisted keys that now sit past the
+ * shrunken grid. Range diffs only visit coordinates still inside `data`, so
+ * tail keys would otherwise resurrect on peers/reload.
+ */
+export function emitCelldataDeletesBeyondGrid(
+  ctx: Context,
+  sheetId: string,
+  beforePersisted: Map<string, Cell | string | number | boolean> | undefined,
+  rowCount: number,
+  colCount: number,
+): void {
+  if (!ctx?.hooks?.updateCellYdoc || !beforePersisted?.size) return;
+  if (rowCount < 0 || colCount < 0) return;
+
+  const changes: CelldataYdocChange[] = [];
+  for (const key of beforePersisted.keys()) {
+    const sep = key.lastIndexOf('_');
+    if (sep <= 0) continue;
+    const r = Number(key.slice(0, sep));
+    const c = Number(key.slice(sep + 1));
+    if (!Number.isFinite(r) || !Number.isFinite(c)) continue;
+    if (r >= rowCount || c >= colCount) {
+      changes.push({
+        sheetId,
+        path: ['celldata'],
+        key,
+        value: null,
+        type: 'delete',
+      });
+    }
+  }
+  if (changes.length > 0) {
+    ctx.hooks.updateCellYdoc(changes);
+  }
+}
+
 export type MergeBounds = {
   minR: number;
   minC: number;
