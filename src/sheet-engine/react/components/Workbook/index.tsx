@@ -134,7 +134,8 @@ const concatProducer = (...producers: ((ctx: Context) => void)[]) => {
 /**
  * Undo/redo patches target dense `data` paths. After demote-on-switch a sheet
  * may only have sparse celldata — hydrate first so applyPatches doesn't crash
- * or write into a missing matrix.
+ * or write into a missing matrix. Mutates ctx: must be called on an immer
+ * draft, never on frozen state.
  */
 function ensureFlowdataForDataPatches(ctx: Context, patches: Patch[]) {
   const seen = new Set<number>();
@@ -648,8 +649,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               } as Patch);
             });
           }
-          ensureFlowdataForDataPatches(ctx_, history.inversePatches);
-          const newContext = applyPatches(ctx_, history.inversePatches);
+          ctx_ = produce(ctx_, (draft: Context) => {
+            ensureFlowdataForDataPatches(draft, history.inversePatches);
+          });
+          let newContext = applyPatches(ctx_, history.inversePatches);
           globalCache.current.redoList.push(history);
           const inversedOptions = inverseRowColOptions(history.options);
           if (inversedOptions?.insertRowColOp) {
@@ -671,12 +674,17 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             delete inversedOptions!.addSheet!.value!.data;
           }
           emitOp(newContext, history.inversePatches, inversedOptions, true);
-          setActiveDraftContext(newContext);
-          try {
-            emitYjsFromPatches(ctx_, newContext, history.inversePatches);
-          } finally {
-            setActiveDraftContext(null);
-          }
+          // Emit with a mutable draft as the active context: state is frozen
+          // by immer, and cellFormatRanges mirror commits write into the
+          // active draft during emission.
+          newContext = produce(newContext, (draft: Context) => {
+            setActiveDraftContext(draft);
+            try {
+              emitYjsFromPatches(ctx_, draft, history.inversePatches);
+            } finally {
+              setActiveDraftContext(null);
+            }
+          });
           // Sync ctx.config from current sheet after applying inverse patches.
           // This ensures components watching context.config (e.g. Sheet.tsx which
           // recalculates visibledatacolumn) react correctly to config changes.
@@ -712,8 +720,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       const history = globalCache.current.redoList.pop();
       if (history) {
         setContext((ctx_) => {
-          ensureFlowdataForDataPatches(ctx_, history.patches);
-          const newContext = applyPatches(ctx_, history.patches);
+          ctx_ = produce(ctx_, (draft: Context) => {
+            ensureFlowdataForDataPatches(draft, history.patches);
+          });
+          let newContext = applyPatches(ctx_, history.patches);
           const isBorderUndo = history.patches.some(
             (onePatch) =>
               Array.isArray(onePatch.value?.borderInfo) &&
@@ -722,12 +732,17 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
           globalCache.current.undoList.push(history);
           emitOp(newContext, history.patches, history.options);
-          setActiveDraftContext(newContext);
-          try {
-            emitYjsFromPatches(ctx_, newContext, history.patches);
-          } finally {
-            setActiveDraftContext(null);
-          }
+          // Emit with a mutable draft as the active context: state is frozen
+          // by immer, and cellFormatRanges mirror commits write into the
+          // active draft during emission.
+          newContext = produce(newContext, (draft: Context) => {
+            setActiveDraftContext(draft);
+            try {
+              emitYjsFromPatches(ctx_, draft, history.patches);
+            } finally {
+              setActiveDraftContext(null);
+            }
+          });
           // Sync ctx.config from current sheet after applying patches.
           const sheetIdxAfterRedo = getSheetIndex(
             newContext,

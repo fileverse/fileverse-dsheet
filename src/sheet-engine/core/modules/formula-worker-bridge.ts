@@ -1,3 +1,4 @@
+import produce from 'immer';
 import type { Context } from '../context';
 import { ensureSheetFlowdata } from '../api/sheet';
 import { getSheetsNeededForWorkerSnapshot } from '../api/sheet-flowdata-lifecycle';
@@ -135,15 +136,19 @@ export function initFormulaWorkerSnapshot(
   if (activeSnapshotKey === snapshotKey) return true;
 
   // Hydrate only tabs the worker may read (active refs + sheets with formulas).
-  getSheetsNeededForWorkerSnapshot(ctx).forEach((sheetId) => {
-    ensureSheetFlowdata(ctx, { id: sheetId });
+  // ctx is frozen immer state — hydrate a detached copy for the payload only.
+  const neededSheetIds = getSheetsNeededForWorkerSnapshot(ctx);
+  const snapshotCtx = produce(ctx, (draft: Context) => {
+    neededSheetIds.forEach((sheetId) => {
+      ensureSheetFlowdata(draft, { id: sheetId });
+    });
   });
 
   try {
     w.postMessage({
       type: 'init-snapshot',
       snapshotKey,
-      sheets: ctx.luckysheetfile.map((sheet) => ({
+      sheets: snapshotCtx.luckysheetfile.map((sheet) => ({
         id: sheet.id!,
         name: sheet.name ?? '',
         data: sheet.data,
