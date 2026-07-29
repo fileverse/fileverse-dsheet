@@ -5,13 +5,13 @@ import { WorkbookInstance } from '@sheet-engine/react';
 import { toUint8Array } from 'js-base64';
 import isEqual from 'lodash/isEqual';
 import * as Y from 'yjs';
-import { CELL_COMMENT_DEFAULT_VALUE } from '../constants/shared-constants';
 import { useLiveQuery } from './live-query/use-live-query';
 import type { ApiKeyStorage } from '../utils/api-key-storage';
 import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
 import type { DataBlockEvent } from '../types';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 import { migrateSheetArrayIfNeeded } from '../utils/migrate-new-yjs';
+import { applyCommentMarkers } from '../utils/apply-comment-markers';
 import {
   beginRemoteApply,
   endRemoteApplyAfterPaint,
@@ -67,6 +67,15 @@ export const useEditorData = (
   useEffect(() => {
     portalContentAppliedRef.current = false;
   }, [dsheetId]);
+
+  const commentDataRef = useRef<object | undefined>(commentData);
+  const allowCommentsRef = useRef<boolean | undefined>(allowComments);
+  useEffect(() => {
+    commentDataRef.current = commentData;
+  }, [commentData]);
+  useEffect(() => {
+    allowCommentsRef.current = allowComments;
+  }, [allowComments]);
 
   const { handleLiveQuery, initialiseLiveQueryData } = useLiveQuery(
     sheetEditorRef,
@@ -133,6 +142,11 @@ export const useEditorData = (
         sheetArray as Y.Array<Y.Map>,
       );
 
+      applyCommentMarkers(
+        newSheetData,
+        commentDataRef.current,
+        allowCommentsRef.current,
+      );
       currentDataRef.current = newSheetData;
       initialiseLiveQueryData(newSheetData);
 
@@ -171,94 +185,16 @@ export const useEditorData = (
         currentDocData as Y.Array<Y.Map>,
       );
       if (currentData.length > 0 && syncStatus === 'synced') {
+        applyCommentMarkers(currentDataRef.current, commentData, allowComments);
+
         const setContext = sheetEditorRef?.current?.getWorkbookSetContext();
         if (sheetEditorRef.current !== null && setContext) {
-          setContext?.((ctx: any) => {
-            const files = ctx.luckysheetfile;
-            files.forEach((file: any, fileIndex: number) => {
-              const sheetKey =
-                (file?.id ?? fileIndex)?.toString?.() ?? String(fileIndex);
-              // Comment keys are built as `${sheet.order}_${row}_${col}` in the
-              // host app. `file.order` is the correct primary identifier.
-              // `file.id` (UUID) and `fileIndex` (array position) are kept as
-              // fallbacks for legacy keys.
-              const sheetOrder =
-                typeof file?.order === 'number' ? file.order : fileIndex;
-
-              const getComment = (rowIndex: number, colIndex: number) =>
-                // Primary: UUID-based key (new, immutable)
-                (commentData as any)?.[`${sheetKey}_${rowIndex}_${colIndex}`] ??
-                // Legacy: order-based key (old, breaks on reorder)
-                (commentData as any)?.[
-                `${sheetOrder}_${rowIndex}_${colIndex}`
-                ] ??
-                // Very-old: array-index fallback
-                (commentData as any)?.[`${fileIndex}_${rowIndex}_${colIndex}`];
-
-              // Active sheet: dense data grid
-              file.data?.forEach((row: any, rowIndex: number) => {
-                row?.forEach((cell: any, colIndex: number) => {
-                  if (cell) {
-                    const comment = getComment(rowIndex, colIndex);
-                    if (comment) {
-                      cell.ps = allowComments
-                        ? CELL_COMMENT_DEFAULT_VALUE
-                        : undefined;
-                    } else {
-                      cell.ps = undefined;
-                    }
-                  }
-                });
-              });
-
-              // Inactive sheets: sparse celldata. initSheetData() converts
-              // celldata → data on activation, so ps set here carries through.
-              if (!file.data && file.celldata) {
-                (file.celldata as any[]).forEach((cellEntry: any) => {
-                  if (!cellEntry?.v) return;
-                  const comment = getComment(cellEntry.r, cellEntry.c);
-                  cellEntry.v.ps =
-                    comment && allowComments
-                      ? CELL_COMMENT_DEFAULT_VALUE
-                      : undefined;
-                });
-              }
-            });
+          setContext((ctx: any) => {
+            applyCommentMarkers(ctx.luckysheetfile, commentData, allowComments);
           });
-        }
-        //handle if data is synced but editor is not rendered/loaded. Usally happens on when allowComments is false on viewerside
-        if (sheetEditorRef.current === null && syncStatus === 'synced') {
-          const updatedSheets = currentData.map((sheet, index) => {
-            const sheetKey = (sheet as any)?.id?.toString?.() ?? String(index);
-            const sheetOrder =
-              typeof (sheet as any)?.order === 'number'
-                ? (sheet as any).order
-                : index;
-            const updatedCelldata = (sheet.celldata || []).map((cell: any) => {
-              const comment =
-                // Primary: UUID-based key (new, immutable)
-                (commentData as any)?.[`${sheetKey}_${cell.r}_${cell.c}`] ??
-                // Legacy: order-based key
-                (commentData as any)?.[`${sheetOrder}_${cell.r}_${cell.c}`] ??
-                (commentData as any)?.[`${index}_${cell.r}_${cell.c}`];
-              if (!cell?.v) return cell;
-              return {
-                ...cell,
-                v: {
-                  ...cell.v,
-                  ps: comment
-                    ? !allowComments
-                      ? undefined
-                      : CELL_COMMENT_DEFAULT_VALUE
-                    : undefined,
-                },
-              };
-            });
-
-            return { ...sheet, celldata: updatedCelldata };
-          });
-
-          currentDataRef.current = updatedSheets;
+        } else if (syncStatus === 'synced') {
+          applyCommentMarkers(currentData, commentData, allowComments);
+          currentDataRef.current = currentData;
           if (setForceSheetRender) {
             setForceSheetRender((prev) => prev + 1);
           }
@@ -303,6 +239,11 @@ export const useEditorData = (
 
       // @ts-ignore
       const plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map>);
+      applyCommentMarkers(
+        plain,
+        commentDataRef.current,
+        allowCommentsRef.current,
+      );
       currentDataRef.current = plain;
       initialiseLiveQueryData(plain);
 
@@ -611,11 +552,7 @@ export const useEditorData = (
             hasStructural = true;
             continue;
           }
-          upsertConfigBatch(
-            sheetId,
-            configMap,
-            event as Y.YMapEvent<any>,
-          );
+          upsertConfigBatch(sheetId, configMap, event as Y.YMapEvent<any>);
         } else if (
           path.length === 2 &&
           (path[1] === 'hyperlink' || path[1] === 'conditionRules') &&
@@ -879,6 +816,11 @@ export const useEditorData = (
               ?.luckysheetCellUpdate?.length ?? 0) > 0;
           try {
             const plain = ySheetArrayToPlain(sheetArray as any);
+            applyCommentMarkers(
+              plain,
+              commentDataRef.current,
+              allowCommentsRef.current,
+            );
             currentDataRef.current = plain;
             syncDataBlockCalcFromPlain(plain);
           } catch (e) {
@@ -1041,7 +983,12 @@ export const useEditorData = (
       };
 
       const applyRemoteMapFields = () => {
-        for (const { sheetId, field, map, changedKeys } of mapFieldUpdates.values()) {
+        for (const {
+          sheetId,
+          field,
+          map,
+          changedKeys,
+        } of mapFieldUpdates.values()) {
           try {
             const updates: Record<string, any> = {};
             const deleteKeys: string[] = [];
@@ -1068,7 +1015,11 @@ export const useEditorData = (
       };
 
       const applyRemoteConfig = () => {
-        for (const { sheetId, configMap, changedKeys } of configUpdates.values()) {
+        for (const {
+          sheetId,
+          configMap,
+          changedKeys,
+        } of configUpdates.values()) {
           try {
             const partial: Record<string, any> = {};
             const deleteKeys: string[] = [];
@@ -1110,6 +1061,11 @@ export const useEditorData = (
       const syncPlainSnapshot = () => {
         try {
           const plain = ySheetArrayToPlain(sheetArray as any);
+          applyCommentMarkers(
+            plain,
+            commentDataRef.current,
+            allowCommentsRef.current,
+          );
           currentDataRef.current = plain;
         } catch (e) {
           console.error(
@@ -1134,9 +1090,9 @@ export const useEditorData = (
           // throws inside the Yjs observer and SyncManager drops the update.
           if (!Array.isArray(sheet.celldata)) {
             sheet.celldata = sheet.celldata
-              ? (Object.values(sheet.celldata as Record<string, unknown>) as NonNullable<
-                  Sheet['celldata']
-                >)
+              ? (Object.values(
+                  sheet.celldata as Record<string, unknown>,
+                ) as NonNullable<Sheet['celldata']>)
               : [];
           }
           const celldata = sheet.celldata as NonNullable<Sheet['celldata']>;
@@ -1155,7 +1111,9 @@ export const useEditorData = (
             const entry = {
               r,
               c,
-              v: (cellObj?.v ?? null) as NonNullable<Sheet['celldata']>[number]['v'],
+              v: (cellObj?.v ?? null) as NonNullable<
+                Sheet['celldata']
+              >[number]['v'],
             };
             if (idx >= 0) celldata[idx] = entry;
             else celldata.push(entry);
@@ -1310,6 +1268,11 @@ export const useEditorData = (
 
         beginRemoteApply(remoteApplyGuardRefs);
 
+        applyCommentMarkers(
+          plain,
+          commentDataRef.current,
+          allowCommentsRef.current,
+        );
         currentDataRef.current = plain;
         syncDataBlockCalcFromPlain(plain);
         initialiseLiveQueryData(plain);

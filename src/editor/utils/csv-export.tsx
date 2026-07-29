@@ -1,7 +1,18 @@
 import * as Y from 'yjs';
 import { WorkbookInstance } from '@sheet-engine/react';
 import { MutableRefObject } from 'react';
+import { toast } from '@fileverse/ui';
 import { Cell } from '../../sheet-engine/core/types';
+
+const showExportError = (description: string) => {
+  toast({
+    title: 'Export failed',
+    description,
+    variant: 'error',
+    showCloseButton: true,
+    duration: 10 * 1000,
+  });
+};
 
 const getCellValue = (v: Cell | null | undefined): string => {
   if (!v) return '';
@@ -27,7 +38,7 @@ export const handleExportToCSV = async (
       !activeSheet.celldata ||
       activeSheet.celldata.length === 0
     ) {
-      console.error('No data to export');
+      showExportError('This sheet has no data to export.');
       return;
     }
 
@@ -57,7 +68,7 @@ export const handleExportToCSV = async (
       rows.pop();
     }
     if (rows.length === 0) {
-      console.error('No data to export');
+      showExportError('This sheet has no data to export.');
       return;
     }
 
@@ -110,5 +121,10 @@ export const handleExportToCSV = async (
     document.body.removeChild(link);
   } catch (error) {
     console.error('CSV export failed:', error);
+    showExportError(
+      error instanceof Error && error.message
+        ? error.message
+        : 'Something went wrong while exporting to .csv. Please try again.',
+    );
   }
 };

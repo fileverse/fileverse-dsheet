@@ -109,6 +109,8 @@ export const handleExportToXLSX = async (
     const sheetRichTextMaps: Map<string, CellRichTextValue>[] =
       sheetWithData.map(() => new Map());
 
+    const usedSheetNames = new Set<string>();
+
     sheetWithData.forEach((sheet, index) => {
       const rows = buildSheetDataMatrixForExport(sheet);
 
@@ -398,6 +400,17 @@ export const handleExportToXLSX = async (
       const subSheetName =
         sheet.name.length > 30 ? sheet.name.slice(0, 30) : sheet.name;
 
+      if (usedSheetNames.has(subSheetName)) {
+        const collided =
+          subSheetName !== sheet.name
+            ? `"${sheet.name}" is too long and collides with another sheet after being shortened to "${subSheetName}"`
+            : `Two sheets share the name "${sheet.name}"`;
+        throw new Error(
+          `${collided}. Sheet names must be unique. Rename one and try again.`,
+        );
+      }
+      usedSheetNames.add(subSheetName);
+
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
 
@@ -455,12 +468,12 @@ export const handleExportToXLSX = async (
           (typeof cell.text === 'string' && cell.text.length > 0
             ? cell.text
             : cell.value?.text ||
-              (Array.isArray(cell.value?.richText)
-                ? cell.value.richText
-                    .map((x: { text?: string }) => x.text || '')
-                    .join('')
-                : '') ||
-              '');
+            (Array.isArray(cell.value?.richText)
+              ? cell.value.richText
+                .map((x: { text?: string }) => x.text || '')
+                .join('')
+              : '') ||
+            '');
         cell.value = {
           text: currentText || firstLink.linkAddress,
           hyperlink: firstLink.linkAddress,
@@ -595,5 +608,15 @@ export const handleExportToXLSX = async (
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Export failed:', error);
+    toast({
+      title: 'Export failed',
+      description:
+        error instanceof Error && error.message
+          ? error.message
+          : 'Something went wrong while exporting to .xlsx. Please try again.',
+      variant: 'error',
+      showCloseButton: true,
+      duration: 10 * 1000,
+    });
   }
 };

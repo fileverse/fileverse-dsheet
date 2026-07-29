@@ -50,6 +50,17 @@ function generateImportSheetId(): string {
   return `sheet-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function makeUniqueSheetName(name: string, usedNames: Set<string>): string {
+  if (!usedNames.has(name)) return name;
+  let counter = 1;
+  let candidate = `${name} (${counter})`;
+  while (usedNames.has(candidate)) {
+    counter += 1;
+    candidate = `${name} (${counter})`;
+  }
+  return candidate;
+}
+
 function richTextRunsToPlainText(ctS: unknown): string | null {
   if (!Array.isArray(ctS) || ctS.length === 0) return null;
   const text = ctS.map((seg) => String((seg as any)?.v ?? '')).join('');
@@ -1350,6 +1361,21 @@ export async function runXlsxFileUpload(
               let combinedSheets;
 
               if (importType === 'merge-current-dsheet') {
+                const usedNames = new Set<string>(
+                  localSheetsArray
+                    .map((s) =>
+                      s instanceof Y.Map ? s.get('name') : (s as Sheet).name,
+                    )
+                    .filter(Boolean) as string[],
+                );
+                sheets.forEach((sheet) => {
+                  const original = sheet.name ?? '';
+                  const uniqueName = makeUniqueSheetName(original, usedNames);
+                  if (uniqueName !== original) {
+                    sheet.name = uniqueName;
+                  }
+                  usedNames.add(uniqueName);
+                });
                 combinedSheets = [...localSheetsArray, ...sheets];
               } else {
                 combinedSheets = [...sheets];
