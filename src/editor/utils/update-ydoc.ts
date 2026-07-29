@@ -573,7 +573,9 @@ export const updateYdocSheetData = (
     for (let i = 0; i < allSheets.length; i += 1) {
       const sheet = allSheets[i];
       if (!(sheet instanceof Y.Map)) continue;
-      sheet.set("status", sheet.get("order") === 0 ? 1 : 0);
+      setMapValueSafe(sheet, "status", sheet.get("order") === 0 ? 1 : 0, {
+        skipIfEqual: true,
+      });
     }
   });
 
