@@ -128,7 +128,11 @@ export function useCelldataCompaction({
             }
           }
 
-          markCelldataCompactionCompleted(dsheetId);
+          // Only flag done if we finished. Cancel mid-chunks would leave ghosts
+          // permanently uncleanable in this browser if we marked anyway.
+          if (!isCancelled()) {
+            markCelldataCompactionCompleted(dsheetId);
+          }
         } catch (err) {
           console.warn('[DSheet] Celldata compaction failed:', err);
         } finally {
