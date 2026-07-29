@@ -12,7 +12,7 @@
 }
 
 .fortune-name-box-container {
-  width: 99px;
+  width: 120px;
   border-right: 1px solid hsl(var(--color-border-default));
   font-size: 14px;
   display: flex;
@@ -21,11 +21,10 @@
 
 .fortune-name-box {
   width: 100%;
-  text-align: center;
+  text-align: left;
   margin: 0;
   outline: none;
-  cursor: text;
-  /* -webkit-user-modify: read-write-plaintext-only; */
+  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   -webkit-transform: translateZ(0);

@@ -49,6 +49,7 @@ import {
 } from './formula-range-cache';
 import { collectTransitiveFormulaDependents } from './formula-transitive-deps';
 import type { SnapshotEvalOutput } from './formula-snapshot-eval';
+import { resolveDefinedNameForFormula } from './namedRanges';
 
 let functionHTMLIndex = 0;
 let formulaAsyncEvalJobId = 0;
@@ -588,6 +589,99 @@ export class FormulaCache {
         }
       },
     );
+
+    // Named ranges: `=Custom` / `=SUM(Custom)` parse as VARIABLE → callVariable.
+    this.parser.on('callVariable', (name: string, done: (value: any) => void) => {
+      const context = that.parser.context as Context;
+      const options = that.parser.options || {};
+      const dn = resolveDefinedNameForFormula(
+        context?.definedNames,
+        name,
+        options.sheetId,
+      );
+      if (!dn) return;
+
+      const id = dn.sheetId;
+      const startRow = dn.range.row[0];
+      const endRow = dn.range.row[1];
+      const startCol = dn.range.column[0];
+      const endCol = dn.range.column[1];
+      const flowdata = getFlowdata(context, id);
+
+      if (that.activeDepCollection) {
+        const originRow = typeof options === 'object' ? options.row : null;
+        const originCol = typeof options === 'object' ? options.column : null;
+        const originInRange =
+          originRow != null &&
+          originCol != null &&
+          originRow >= startRow &&
+          originRow <= endRow &&
+          originCol >= startCol &&
+          originCol <= endCol;
+
+        const rowCount = endRow - startRow + 1;
+        const colCount = endCol - startCol + 1;
+        const MAX_RANGE_DEPS = 10_000;
+        const approxSize = rowCount * colCount;
+        if (approxSize <= MAX_RANGE_DEPS) {
+          for (let row = startRow; row <= endRow; row += 1) {
+            for (let col = startCol; col <= endCol; col += 1) {
+              recordDep(toCellKey(id, row, col));
+            }
+          }
+        } else {
+          that.activeDepCollection.hasWideRangeDep = true;
+          if (originInRange) {
+            recordDep(toCellKey(id, originRow, originCol));
+          }
+        }
+      }
+
+      const isSingle = startRow === endRow && startCol === endCol;
+      if (isSingle) {
+        const cacheKey = `${startRow}_${startCol}_${id}`;
+        const cell =
+          context?.formulaCache.execFunctionGlobalData?.[cacheKey] ||
+          flowdata?.[startRow]?.[startCol];
+        done(that.tryGetCellAsNumber(cell));
+        return;
+      }
+
+      const originRow = typeof options === 'object' ? options.row : null;
+      const originCol = typeof options === 'object' ? options.column : null;
+      const skippedOrigin =
+        originRow != null &&
+        originCol != null &&
+        originRow >= startRow &&
+        originRow <= endRow &&
+        originCol >= startCol &&
+        originCol <= endCol;
+
+      const built = that.materializeFullRangeFragment(
+        context,
+        id,
+        flowdata,
+        startRow,
+        endRow,
+        startCol,
+        endCol,
+      );
+      const fragment = sliceRangeFragmentForOrigin(
+        built.fragment,
+        startRow,
+        startCol,
+        skippedOrigin ? originRow : null,
+        skippedOrigin ? originCol : null,
+      );
+      if (
+        built.cryptoDenomination &&
+        built.cryptoDenomination !== 'Error'
+      ) {
+        that.parser.cryptoDenomination = built.cryptoDenomination;
+        that.parser.cryptoDecimals = built.cryptoDecimal;
+      }
+      done(fragment);
+    });
   }
 
   materializeFullRangeFragment(
@@ -2262,6 +2356,44 @@ export function runFormulaEvalChunk(
   return complete;
 }
 
+/**
+ * Re-evaluate formula cells that reference the given defined names
+ * (e.g. after a named range was edited, shifted, or deleted).
+ */
+export function refreshFormulasUsingDefinedNames(
+  ctx: Context,
+  names: string[],
+) {
+  if (!names.length) return;
+  const patterns = names
+    .map((n) => n.trim())
+    .filter(Boolean)
+    .map(
+      (n) =>
+        new RegExp(
+          `(^|[^A-Za-z0-9_.])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^A-Za-z0-9_.])`,
+          'i',
+        ),
+    );
+  if (!patterns.length) return;
+
+  const calcChains = getAllFunctionGroup(ctx);
+  const touched: { r: number; c: number; i: string }[] = [];
+  for (let i = 0; i < calcChains.length; i += 1) {
+    const cell = calcChains[i];
+    const f = getcellFormula(ctx, cell.r, cell.c, cell.id);
+    if (!f) continue;
+    if (!patterns.some((re) => re.test(f))) continue;
+    touched.push({ r: cell.r, c: cell.c, i: cell.id! });
+  }
+  if (!touched.length) return;
+
+  ctx.formulaCache.execFunctionExist = touched;
+  // @ts-expect-error: full named-range refresh passes null for origin
+  execFunctionGroup(ctx, null, null, null, null, getFlowdata(ctx));
+  ctx.formulaCache.execFunctionExist = undefined;
+}
+
 export function execFunctionGroup(
   ctx: Context,
   origin_r: number,
@@ -2335,6 +2467,39 @@ export function execFunctionGroup(
     ctx.formulaCache.formulasWithWideRangeDeps.forEach((formulaKey) => {
       dependents.add(formulaKey);
     });
+    // Cold dep graph / named-range-only formulas: if the edited cell sits inside
+    // a defined name, include calc-chain formulas that mention that name.
+    const coveringNames = (ctx.definedNames || []).filter(
+      (dn) =>
+        dn.sheetId === id &&
+        origin_r >= dn.range.row[0] &&
+        origin_r <= dn.range.row[1] &&
+        origin_c >= dn.range.column[0] &&
+        origin_c <= dn.range.column[1],
+    );
+    if (coveringNames.length > 0) {
+      const nameKeys = coveringNames.map((dn) => dn.name.toLowerCase());
+      for (let i = 0; i < calcChains.length; i += 1) {
+        const cell = calcChains[i];
+        const formulaKey = `${cell.id}:${cell.r}:${cell.c}`;
+        if (dependents.has(formulaKey)) continue;
+        const f = getcellFormula(ctx, cell.r, cell.c, cell.id);
+        if (!f) continue;
+        const upper = f.toUpperCase();
+        for (let n = 0; n < nameKeys.length; n += 1) {
+          const name = nameKeys[n];
+          // Case-insensitive whole-token match (avoid matching prefixes).
+          const re = new RegExp(
+            `(^|[^A-Z0-9_.])${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^A-Z0-9_.])`,
+            'i',
+          );
+          if (re.test(upper)) {
+            dependents.add(formulaKey);
+            break;
+          }
+        }
+      }
+    }
     if (dependents.size > 0) {
       calcChainsToProcess = calcChains.filter((cell) =>
         dependents.has(`${cell.id}:${cell.r}:${cell.c}`),
@@ -2555,9 +2720,26 @@ export function execFunctionGroup(
         }
 
         if (
-          (t.substring(0, 1) === '"' && t.substring(t.length - 1, 1) === '"') ||
-          !iscelldata(t)
+          t.substring(0, 1) === '"' &&
+          t.substring(t.length - 1, 1) === '"'
         ) {
+          continue;
+        }
+
+        if (!iscelldata(t)) {
+          // Named ranges are not A1 tokens; resolve so dependents still recalculate.
+          const dn = resolveDefinedNameForFormula(
+            ctx.definedNames,
+            _.trim(t),
+            formulaCell.id,
+          );
+          if (dn) {
+            formulaArray.push({
+              row: [dn.range.row[0], dn.range.row[1]],
+              column: [dn.range.column[0], dn.range.column[1]],
+              sheetId: dn.sheetId,
+            });
+          }
           continue;
         }
 
@@ -2624,6 +2806,37 @@ export function execFunctionGroup(
       updateValueArray.push(formulaObject);
     }
   });
+
+  // Named ranges (and other non-A1 refs) never appear in formulaArray, so the
+  // text-scan above misses them. Seed the run list from the reverse dep graph
+  // recorded during execfunction / callVariable.
+  if (
+    !isForce &&
+    !_.isNil(origin_r) &&
+    !_.isNil(origin_c) &&
+    !_.isNil(id) &&
+    ctx.formulaCache.revDepsByCell.size > 0
+  ) {
+    const depDependents = collectTransitiveFormulaDependents(
+      originKey,
+      ctx.formulaCache.revDepsByCell,
+    );
+    ctx.formulaCache.formulasWithWideRangeDeps.forEach((formulaKey) => {
+      depDependents.add(formulaKey);
+    });
+    if (depDependents.size > 0) {
+      const alreadyQueued = new Set(
+        updateValueArray.map((fo: { key: string }) => fo.key),
+      );
+      Object.keys(formulaObjects).forEach((key) => {
+        if (alreadyQueued.has(key)) return;
+        const fo = formulaObjects[key];
+        if (depDependents.has(`${fo.id}:${fo.r}:${fo.c}`)) {
+          updateValueArray.push(fo);
+        }
+      });
+    }
+  }
 
   // console.log(formulaObjects)
   // console.timeEnd("2");

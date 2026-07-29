@@ -24,6 +24,8 @@ export type Hooks = {
   filterChange?: () => void;
   cellDataChange?: () => void;
   hyperlinkChange?: () => void;
+  /** Workbook-level named ranges (definedNames) changed — sync to Yjs. */
+  definedNamesChange?: () => void;
   updateCellYdoc?: (changes: SheetChangePath[]) => void;
   updateAllCell?: (sheetId: string, caller?: string) => void;
   beforeUpdateCell?: (r: number, c: number, value: any) => boolean;

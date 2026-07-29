@@ -595,6 +595,15 @@ export const handleExportToXLSX = async (
       );
     });
 
+    const { applyDefinedNamesToExcelWorkbook } = await import(
+      './xlsx-defined-names'
+    );
+    applyDefinedNamesToExcelWorkbook(
+      excelWorkbook,
+      workbookRef.current.getWorkbookContext?.()?.definedNames,
+      sheetWithData,
+    );
+
     const rawBuffer = await excelWorkbook.xlsx.writeBuffer();
     const finalBuffer = await patchXlsxCf(rawBuffer, sheetCfPatches);
     const blob = new Blob([finalBuffer], {

@@ -411,6 +411,7 @@ export {
   getcellrange,
   execfunction,
   execFunctionGroup,
+  refreshFormulasUsingDefinedNames,
   runFormulaEvalChunk,
   applyWorkerFormulaChunkResults,
   insertUpdateFunctionGroup,
@@ -419,6 +420,24 @@ export {
 
 // ConditionFormat (additional internal exports)
 export { checkCF, getComputeMap } from './ConditionFormat';
+
+// named ranges (workbook-level defined names)
+export {
+  isValidDefinedNameIdentifier,
+  getDefinedNameDisplayRange,
+  findDefinedNameForSelection,
+  findDefinedNameByName,
+  resolveDefinedNameForFormula,
+  addDefinedName,
+  updateDefinedName,
+  deleteDefinedName,
+  selectDefinedName,
+  openNamedRangesSidebar,
+  scheduleDefinedNamesSync,
+  shiftDefinedNamesOnInsert,
+  shiftDefinedNamesOnDelete,
+  removeDefinedNamesForSheet,
+} from './namedRanges';
 
 // cell (additional internal exports)
 export { getdatabyselection, getQKBorder } from './cell';

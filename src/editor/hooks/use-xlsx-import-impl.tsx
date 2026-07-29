@@ -692,6 +692,10 @@ export async function runXlsxFileUpload(
           return;
         }
         const arrayBuffer = e.target.result;
+        if (!(arrayBuffer instanceof ArrayBuffer)) {
+          reject(new Error('Expected ArrayBuffer from FileReader'));
+          return;
+        }
         const [{ Workbook }, luckyexcelMod, imageUtils] = await Promise.all([
           import('exceljs'),
           // @ts-expect-error — luckyexcel ships without TypeScript types
@@ -704,8 +708,18 @@ export async function runXlsxFileUpload(
           imageUtils;
         const workbook = new Workbook();
         try {
-          //@ts-expect-error, later
           await workbook.xlsx.load(arrayBuffer);
+
+          const {
+            parseDefinedNamesFromXlsxBuffer,
+            excelEntriesToDefinedNames,
+          } = await import('../utils/xlsx-defined-names');
+          const {
+            syncDefinedNamesToYdoc,
+            readDefinedNamesFromYdoc,
+          } = await import('../utils/defined-names-ydoc');
+          const excelDefinedNameEntries =
+            await parseDefinedNamesFromXlsxBuffer(arrayBuffer);
 
           const workbookDefaultFontSize: number | undefined = (workbook as any)
             .model?.styles?.fonts?.[0]?.size;
@@ -1399,6 +1413,39 @@ export async function runXlsxFileUpload(
                   sheetArray.push([factory()]);
                 });
               });
+
+              // Named ranges are workbook-level (sibling Y.Map), not sheet maps.
+              if (importType !== 'merge-current-dsheet') {
+                const importedNames = excelEntriesToDefinedNames(
+                  excelDefinedNameEntries,
+                  combinedSheets,
+                );
+                syncDefinedNamesToYdoc({
+                  ydoc,
+                  dsheetId,
+                  definedNames: importedNames,
+                });
+              } else if (excelDefinedNameEntries.length > 0) {
+                const existing = readDefinedNamesFromYdoc(ydoc, dsheetId);
+                const importedNames = excelEntriesToDefinedNames(
+                  excelDefinedNameEntries,
+                  sheets,
+                );
+                const existingKeys = new Set(
+                  existing.map((d) => d.name.toLowerCase()),
+                );
+                const merged = [
+                  ...existing,
+                  ...importedNames.filter(
+                    (d) => !existingKeys.has(d.name.toLowerCase()),
+                  ),
+                ];
+                syncDefinedNamesToYdoc({
+                  ydoc,
+                  dsheetId,
+                  definedNames: merged,
+                });
+              }
 
               // Update UI immediately so sync handler sees correct count before it can run
               if (ydocRef?.current) {

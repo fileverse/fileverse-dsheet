@@ -3,7 +3,11 @@ import { Context, getFlowdata } from '../context';
 import { Cell, Sheet } from '../types';
 import { getSheetIndex } from '../utils';
 import { getcellFormula } from './cell';
-import { execFunctionGroup, functionStrChange } from './formula';
+import { execFunctionGroup, functionStrChange, refreshFormulasUsingDefinedNames } from './formula';
+import {
+  shiftDefinedNamesOnDelete,
+  shiftDefinedNamesOnInsert,
+} from './namedRanges';
 import {
   ensureManualHiddenInitialized,
   getFilterHiddenRowsUnionFromFilterMap,
@@ -1586,6 +1590,18 @@ export function insertRowCol(
     }
   }
 
+  const namedRangeNames = shiftDefinedNamesOnInsert(
+    ctx,
+    id,
+    type,
+    index,
+    count,
+    direction,
+  );
+  if (namedRangeNames.length > 0) {
+    refreshFormulasUsingDefinedNames(ctx, namedRangeNames);
+  }
+
   // Yjs: row/col insertion shifts many cells; emit the disturbed range.
   const mergeBounds = getMergeBounds(cfg.merge);
   if (type === 'row') {
@@ -2634,6 +2650,11 @@ export function deleteRowCol(
   );
   if (!_.isEqual(prevFormatRangesDelete, cfg.cellFormatRanges)) {
     emitCellFormatRangesToYdoc(ctx, id, cfg.cellFormatRanges);
+  }
+
+  const namedRangeNames = shiftDefinedNamesOnDelete(ctx, id, type, start, end);
+  if (namedRangeNames.length > 0) {
+    refreshFormulasUsingDefinedNames(ctx, namedRangeNames);
   }
 
   // Yjs: row/col deletion shifts many cells; emit the disturbed range.

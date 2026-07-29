@@ -139,6 +139,24 @@ export type SheetConfig = {
   colReadOnly?: Record<number, number>;
 };
 
+/**
+ * Workbook-level named range (Google Sheets / Excel definedNames).
+ * Runtime list lives on Context; persisted in Yjs as `${dsheetId}:definedNames`.
+ */
+export type DefinedName = {
+  id: string;
+  name: string;
+  sheetId: string;
+  range: {
+    row: [number, number];
+    column: [number, number];
+  };
+  scope: 'workbook' | 'sheet';
+  /** When scope === 'sheet', which sheet owns the name. */
+  localSheetId?: string;
+  comment?: string;
+};
+
 export type Image = {
   id: string;
   width: number;

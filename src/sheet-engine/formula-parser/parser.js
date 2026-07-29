@@ -201,7 +201,12 @@ class Parser extends Emitter {
       }
       return row.index + 1;
     } else if (row?.index === -1) {
-      throw Error(ERROR_NAME);
+      // Letter-only tokens (`Custom`, `TRUE`, …) match RELATIVE_CELL because the
+      // cell regex allows optional row digits. Resolve as variables (builtins +
+      // named ranges) instead of throwing #NAME?.
+      const varName =
+        sheetName != null ? label.slice(label.lastIndexOf("!") + 1) : label;
+      return this._callVariable(varName);
     }
     let value = void 0;
 
