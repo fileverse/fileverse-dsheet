@@ -34,6 +34,7 @@ import {
   cutActiveImage,
   pasteImageItem,
   getImageClipboard,
+  getImageCutSourceId,
   update, // formatting helper
   loadLocale,
   defaultLuckysheetSelectRanges,
@@ -1154,7 +1155,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           }
           if (
             e.code === 'KeyV' &&
-            getImageClipboard() &&
+            (getImageClipboard() || getImageCutSourceId()) &&
             isAllowEdit(draftSnapshot) &&
             !draftSnapshot.isFlvReadOnly
           ) {
