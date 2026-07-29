@@ -21,6 +21,7 @@ import {
 import { isInlineStringCell } from './inline-string';
 import { delFunctionGroup } from './formula';
 import clipboard from './clipboard';
+import { clearImageClipboard } from './image-clipboard';
 import { getBorderInfoCompute } from './border';
 import { getComputeMap } from './ConditionFormat';
 import {
@@ -2390,6 +2391,8 @@ export function copy(ctx: Context) {
 
   ctx.lastInternalCopyHtmlMetadataStripped = false;
   ctx.luckysheet_selection_range = [];
+  // Cell copy supersedes any prior floating-image clipboard payload
+  clearImageClipboard();
   // copy范围
   const copyRange = [];
   let RowlChange = false;
