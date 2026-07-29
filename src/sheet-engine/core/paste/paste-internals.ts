@@ -31,15 +31,30 @@ function pushPasteCelldataChange(
   r: number,
   c: number,
   cell: Cell | null,
+  /** True if this position held a persistable cell before the paste overwrite. */
+  hadPersistedBefore = false,
 ) {
-  if (!shouldPersistCelldataCell(cell)) return;
-  changes.push({
-    sheetId: ctx.currentSheetId,
-    path: ['celldata'],
-    value: { r, c, v: cell },
-    key: `${r}_${c}`,
-    type: 'update',
-  });
+  if (shouldPersistCelldataCell(cell)) {
+    changes.push({
+      sheetId: ctx.currentSheetId,
+      path: ['celldata'],
+      value: { r, c, v: cell },
+      key: `${r}_${c}`,
+      type: 'update',
+    });
+    return;
+  }
+  // Empty / format-only paste: local grid is cleared, but Yjs still needs a
+  // delete or peers/reload keep the pre-paste value under the new formatting.
+  if (hadPersistedBefore) {
+    changes.push({
+      sheetId: ctx.currentSheetId,
+      path: ['celldata'],
+      key: `${r}_${c}`,
+      value: null,
+      type: 'delete',
+    });
+  }
 }
 
 /** Paste-rect only: migrate format-only empties → cellFormatRanges + ydoc change. */
@@ -500,6 +515,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
         }
 
+        const hadPersistedBefore = shouldPersistCelldataCell(x[c]);
         x[c] = value;
 
         if (value != null && x?.[c]?.mc) {
@@ -553,7 +569,14 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
         //   RowlChange = true;
         // }
 
-        pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
+        pushPasteCelldataChange(
+          changes,
+          ctx,
+          h,
+          c,
+          d[h][c],
+          hadPersistedBefore,
+        );
       }
       d[h] = x;
 
@@ -711,6 +734,7 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
       const x = d[r + curR];
       for (let c = 0; c < clen; c += 1) {
         const originCell = x[c + curC];
+        const hadPersistedBefore = shouldPersistCelldataCell(originCell);
         let value = dataChe[r][c];
         const originalValueStr = String(value);
         const normalizedValueStr = originalValueStr
@@ -876,7 +900,14 @@ export function pasteHandler(ctx: Context, data: any, borderInfo?: any) {
           }
           x[c + curC] = cell;
         }
-        pushPasteCelldataChange(changes, ctx, r + curR, c + curC, d[r + curR][c + curC]);
+        pushPasteCelldataChange(
+          changes,
+          ctx,
+          r + curR,
+          c + curC,
+          d[r + curR][c + curC],
+          hadPersistedBefore,
+        );
       }
       d[r + curR] = x;
     }
@@ -1181,8 +1212,16 @@ export function pasteHandlerOfCutPaste(
         value = copyData[h - minh][c - minc];
       }
 
+      const hadPersistedBefore = shouldPersistCelldataCell(x[c]);
       x[c] = _.cloneDeep(value);
-      pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
+      pushPasteCelldataChange(
+        changes,
+        ctx,
+        h,
+        c,
+        d[h][c],
+        hadPersistedBefore,
+      );
 
       if (value != null && copyHasMC && x[c]?.mc) {
         if (x[c]!.mc!.rs != null) {
@@ -1887,6 +1926,7 @@ export function pasteHandlerOfCopyPaste(
             // }
           }
 
+          const hadPersistedBefore = shouldPersistCelldataCell(x[c]);
           x[c] = value;
 
           if (value != null && copyHasMC && x?.[c]?.mc) {
@@ -1912,7 +1952,14 @@ export function pasteHandlerOfCopyPaste(
           }
           // If afterUpdateCell ran for this cell, it is expected to handle Yjs sync.
           if (!(ctx?.hooks?.afterUpdateCell && afterHookCalled)) {
-            pushPasteCelldataChange(changes, ctx, h, c, d[h][c]);
+            pushPasteCelldataChange(
+              changes,
+              ctx,
+              h,
+              c,
+              d[h][c],
+              hadPersistedBefore,
+            );
           }
         }
         d[h] = x;
