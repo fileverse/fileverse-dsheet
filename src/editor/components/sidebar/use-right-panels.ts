@@ -6,7 +6,8 @@ export type BuiltInPanelType =
   | 'comments'
   | 'functions'
   | 'data-verification'
-  | 'conditional-format';
+  | 'conditional-format'
+  | 'named-ranges';
 
 // string allows consumer custom panels (e.g. 'smart-contract-list-view')
 export type PanelId = BuiltInPanelType | string;

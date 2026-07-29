@@ -17,6 +17,7 @@ import {
   endRemoteApplyAfterPaint,
   runUnderRemoteApply,
 } from '../utils/remote-apply-guard';
+import { resolveSheetArrayShareKey } from '../utils/defined-names-ydoc';
 
 /**
  * Hook for managing sheet data
@@ -118,7 +119,10 @@ export const useEditorData = (
       const tempDoc = new Y.Doc();
       Y.applyUpdate(tempDoc, incoming);
 
-      const internalDsheetId = [...tempDoc.share.keys()][0];
+      const internalDsheetId =
+        resolveSheetArrayShareKey(tempDoc, dsheetId) ??
+        resolveSheetArrayShareKey(ydoc) ??
+        dsheetId;
       // Use main ydoc's sheet array so migration persists; migrating tempDoc's
       // array left the main doc unmigrated and caused "t.forEach is not a function"
       // when the library read plain-object sheet items.
@@ -157,7 +161,7 @@ export const useEditorData = (
     } catch (error) {
       console.error('[DSheet] Error processing portal content:', error);
     }
-  }, [portalContent, collabEnabled]);
+  }, [portalContent, collabEnabled, dsheetId, ydocRef, setForceSheetRender, initialiseLiveQueryData, setDataBlockCalcFunction]);
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {

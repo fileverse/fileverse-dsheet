@@ -19,6 +19,7 @@ import {
   ConditionRulesProps,
   GlobalCache,
   CellError,
+  DefinedName,
 } from './types';
 import { getSheetIndex } from './utils';
 
@@ -132,6 +133,9 @@ export type Context = {
   currentSheetId: string;
   calculateSheetId: string;
   config: SheetConfig;
+
+  /** Workbook-level named ranges (synced via Yjs `${dsheetId}:definedNames`). */
+  definedNames: DefinedName[];
 
   visibledatarow: number[];
   visibledatacolumn: number[];
@@ -326,6 +330,7 @@ export function defaultContext(refs: RefValues): Context {
     currentSheetId: '',
     calculateSheetId: '',
     config: {},
+    definedNames: [],
     // 提醒弹窗
     warnDialog: undefined,
     currency: '¥',

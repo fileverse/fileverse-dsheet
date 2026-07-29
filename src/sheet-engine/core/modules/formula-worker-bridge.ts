@@ -111,6 +111,16 @@ export function buildSnapshotEvalInput(
       ...(ctx.formulaCache.execFunctionGlobalData ?? {}),
     },
     formulas,
+    definedNames: (ctx.definedNames || []).map((dn) => ({
+      name: dn.name,
+      sheetId: dn.sheetId,
+      range: {
+        row: [dn.range.row[0], dn.range.row[1]],
+        column: [dn.range.column[0], dn.range.column[1]],
+      },
+      scope: dn.scope,
+      localSheetId: dn.localSheetId,
+    })),
   };
 }
 
@@ -123,6 +133,16 @@ export function buildWorkerEvalInput(
       ...(ctx.formulaCache.execFunctionGlobalData ?? {}),
     },
     formulas,
+    definedNames: (ctx.definedNames || []).map((dn) => ({
+      name: dn.name,
+      sheetId: dn.sheetId,
+      range: {
+        row: [dn.range.row[0], dn.range.row[1]],
+        column: [dn.range.column[0], dn.range.column[1]],
+      },
+      scope: dn.scope,
+      localSheetId: dn.localSheetId,
+    })),
   };
 }
 

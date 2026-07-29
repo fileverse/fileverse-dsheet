@@ -10,7 +10,6 @@ import {
   CellFormatRange,
   migrateFormatOnlyCellsFromData,
 } from '../utils/range-format';
-
 /**
  * Persist active ctx.config onto ONE sheet file only.
  * If Immer wrote keys (e.g. cellFormatRanges) on file.config but not ctx.config,
@@ -235,6 +234,30 @@ export function deleteSheet(ctx: Context, id: string) {
     );
     const orderSheets = _.sortBy(shownSheets, (sheet) => sheet.order);
     ctx.currentSheetId = orderSheets?.[0]?.id as string;
+  }
+
+  const list = ctx.definedNames || [];
+  if (list.length) {
+    const removed: string[] = [];
+    ctx.definedNames = list.filter((dn) => {
+      if (dn.sheetId === id || dn.localSheetId === id) {
+        removed.push(dn.name);
+        return false;
+      }
+      return true;
+    });
+    if (removed.length) {
+      const sync = ctx.hooks?.definedNamesChange;
+      if (sync) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => sync());
+        });
+      }
+      // Lazy import avoids circular deps (formula ↔ namedRanges ↔ sheet).
+      void import('./formula').then(({ refreshFormulasUsingDefinedNames }) => {
+        refreshFormulasUsingDefinedNames(ctx, removed);
+      });
+    }
   }
 
   if (ctx.hooks.afterDeleteSheet) {

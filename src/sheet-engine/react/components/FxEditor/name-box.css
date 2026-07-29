@@ -1,0 +1,128 @@
+.fortune-name-box--interactive {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.fortune-name-box--interactive:hover {
+  background-color: hsl(var(--color-bg-secondary, var(--color-bg-default)));
+}
+
+.fortune-name-box__text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fortune-name-box__chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.fortune-name-box__chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.fortune-named-ranges-popover {
+  width: 280px;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.fortune-named-ranges-popover__body {
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+}
+
+.fortune-named-ranges-popover__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  max-height: 220px;
+}
+
+.fortune-named-ranges-popover__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.fortune-named-ranges-popover__item:hover {
+  background-color: hsl(var(--color-bg-secondary, 0 0% 96%));
+}
+
+.fortune-named-ranges-popover__item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fortune-named-ranges-popover__name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fortune-named-ranges-popover__range {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: hsl(var(--color-text-secondary));
+}
+
+.fortune-named-ranges-popover__empty {
+  padding: 12px;
+  font-size: 13px;
+}
+
+.fortune-named-ranges-popover__manage {
+  display: block;
+  width: 100%;
+  border: none;
+  border-top: 1px solid hsl(var(--color-border-default));
+  background: transparent;
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.fortune-named-ranges-popover__manage:hover {
+  background-color: hsl(var(--color-bg-secondary, 0 0% 96%));
+}
+
+.fortune-named-ranges-popover__manage-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.fortune-named-ranges-popover__manage-hint {
+  font-size: 12px;
+  line-height: 1.35;
+}

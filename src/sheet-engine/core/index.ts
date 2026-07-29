@@ -331,9 +331,25 @@ export {
   execfunction,
   insertUpdateFunctionGroup,
   remapFormulaReferencesByMap,
+  refreshFormulasUsingDefinedNames,
   // ConditionFormat (internal)
   checkCF,
   getComputeMap,
+  // named ranges
+  isValidDefinedNameIdentifier,
+  getDefinedNameDisplayRange,
+  findDefinedNameForSelection,
+  findDefinedNameByName,
+  resolveDefinedNameForFormula,
+  addDefinedName,
+  updateDefinedName,
+  deleteDefinedName,
+  selectDefinedName,
+  openNamedRangesSidebar,
+  scheduleDefinedNamesSync,
+  shiftDefinedNamesOnInsert,
+  shiftDefinedNamesOnDelete,
+  removeDefinedNamesForSheet,
   // toolbar (internal)
   cancelPaintModel,
   // rowcol (internal)
@@ -378,6 +394,7 @@ export type {
   LinkCardProps,
   LiveQueryData,
   Freezen,
+  DefinedName,
 } from './types';
 
 export type {
