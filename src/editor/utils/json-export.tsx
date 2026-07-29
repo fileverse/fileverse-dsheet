@@ -1,6 +1,7 @@
 import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import { Sheet } from '@sheet-engine/react';
+import { toast } from '@fileverse/ui';
 
 export const handleExportToJSON = (
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
@@ -31,5 +32,15 @@ export const handleExportToJSON = (
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Error exporting to JSON:', error);
+    toast({
+      title: 'Export failed',
+      description:
+        error instanceof Error && error.message
+          ? error.message
+          : 'Something went wrong while exporting to .json. Please try again.',
+      variant: 'error',
+      showCloseButton: true,
+      duration: 10 * 1000,
+    });
   }
 };
