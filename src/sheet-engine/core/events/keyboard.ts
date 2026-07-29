@@ -1,6 +1,7 @@
 import _ from 'lodash';
-import { hideCRCount, removeActiveImage } from '..';
+import { hideCRCount, removeActiveImage, cutActiveImage } from '..';
 import { Context, getFlowdata } from '../context';
+import { getImageClipboard, pasteImageItem } from '../modules/image';
 import { updateCell, cancelNormalSelected } from '../modules/cell';
 import {
   handleFormulaInput,
@@ -669,6 +670,12 @@ export function handleWithCtrlOrMetaKey(
     deleteSelectedCellFormat(ctx);
     // $("#luckysheet-icon-bold").click();
   } else if (e.code === 'KeyC') {
+    if (ctx.activeImg != null) {
+      handleCopy(ctx);
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     if (ctx.luckysheetCellUpdate.length > 0) {
       // In-cell edit mode: write plain text only, no HTML
       e.preventDefault();
@@ -683,6 +690,14 @@ export function handleWithCtrlOrMetaKey(
     e.stopPropagation();
     return;
   } else if (e.code === 'KeyV') {
+    // Prefer in-app floating-image clipboard (Ctrl/Cmd+C on an image). System
+    // clipboard HTML is unreliable after image copy during the keydown gesture.
+    if (getImageClipboard() && pasteImageItem(ctx)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
     // Ctrl + V  粘贴
     // if (isEditMode()) {
     //   // 此模式下禁用粘贴
@@ -708,6 +723,14 @@ export function handleWithCtrlOrMetaKey(
     return;
   } else if (e.code === 'KeyX') {
     // Ctrl + X  剪切
+    // Floating image selected — cut it instead of the cell range
+    if (ctx.activeImg != null) {
+      cutActiveImage(ctx);
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+
     // 复制时存在格式刷状态，取消格式刷
     if (ctx.luckysheetPaintModelOn) {
       cancelPaintModel(ctx);
@@ -1177,7 +1200,9 @@ export async function handleGlobalKeyDown(
     // $(event.target).hasClass("sp-input") ||
     ctx.luckysheetCellUpdate.length > 0 &&
     restCod &&
-    !passFindReplaceThroughEdit
+    !passFindReplaceThroughEdit &&
+    // Prefer floating-image shortcuts over in-cell edit when an image is selected
+    ctx.activeImg == null
   ) {
     // const anchor = $(window.getSelection().anchorNode);
 

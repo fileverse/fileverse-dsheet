@@ -6,6 +6,7 @@ import {
   deleteRowCol,
   insertRowCol,
   removeActiveImage,
+  cutActiveImage,
   deleteSelectedCellText,
   sortSelection,
   createFilter,
@@ -609,19 +610,13 @@ const ContextMenu: React.FC = () => {
                   draftCtx.contextMenu = {};
                   return;
                 }
-                handleCopy(draftCtx);
-
                 if (draftCtx.activeImg != null) {
-                  removeActiveImage(draftCtx);
+                  // Keep image visible until paste (Excel-style cut)
+                  cutActiveImage(draftCtx);
                 } else {
-                  const msg = deleteSelectedCellText(draftCtx);
-                  if (msg === 'partMC') {
-                    showDialog(generalDialog.partiallyError, 'ok');
-                  } else if (msg === 'allowEdit') {
-                    showDialog(generalDialog.readOnlyError, 'ok');
-                  } else if (msg === 'dataNullError') {
-                    showDialog(generalDialog.dataNullError, 'ok');
-                  }
+                  // Same as Ctrl/Cmd+X: copy + mark cut; clear source on paste
+                  handleCopy(draftCtx);
+                  draftCtx.luckysheet_paste_iscut = true;
                 }
                 jfrefreshgrid(draftCtx, null, undefined);
 
