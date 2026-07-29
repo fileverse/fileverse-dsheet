@@ -1,20 +1,57 @@
 import _ from 'lodash';
-import { onImageMoveStart, onImageResizeStart } from '@sheet-engine/core';
-import React, { useContext, useMemo } from 'react';
+import {
+  onImageMoveStart,
+  onImageResizeStart,
+  removeActiveImage,
+  cancelNormalSelected,
+} from '@sheet-engine/core';
+import React, { useContext, useEffect, useMemo, useRef } from 'react';
 import WorkbookContext from '../../context';
 
 const ImgBoxs: React.FC = () => {
   const { context, setContext, refs } = useContext(WorkbookContext);
+  const activeImgRef = useRef<HTMLDivElement>(null);
   const activeImg = useMemo(() => {
     return _.find(context.insertedImgs, { id: context.activeImg });
   }, [context.activeImg, context.insertedImgs]);
+
+  // Keep keyboard focus on the active image so Delete / Ctrl+C/X/V work
+  // immediately after click (without needing a prior move/resize).
+  useEffect(() => {
+    if (!context.activeImg || !activeImgRef.current) return;
+    activeImgRef.current.focus({ preventScroll: true });
+  }, [context.activeImg]);
+
+  const selectImage = (id: string) => {
+    setContext((ctx) => {
+      // Exit cell edit so Delete / shortcuts are not swallowed by edit-mode handling
+      if (ctx.luckysheetCellUpdate.length > 0) {
+        cancelNormalSelected(ctx);
+      }
+      ctx.activeImg = id;
+    });
+    // Focus sheet overlay path so both keydown and paste listeners fire
+    requestAnimationFrame(() => {
+      activeImgRef.current?.focus({ preventScroll: true });
+      if (!activeImgRef.current) {
+        (
+          document.querySelector(
+            '.fortune-sheet-overlay',
+          ) as HTMLElement | null
+        )?.focus({ preventScroll: true });
+        refs.workbookContainer.current?.focus({ preventScroll: true });
+      }
+    });
+  };
 
   return (
     <div id="luckysheet-image-showBoxs">
       {activeImg && (
         <div
           id="luckysheet-modal-dialog-activeImage"
+          ref={activeImgRef}
           className="luckysheet-modal-dialog"
+          tabIndex={-1}
           style={{
             padding: 0,
             position: 'absolute',
@@ -23,6 +60,7 @@ const ImgBoxs: React.FC = () => {
             height: activeImg.height * context.zoomRatio,
             left: activeImg.left * context.zoomRatio,
             top: activeImg.top * context.zoomRatio,
+            outline: 'none',
           }}
         >
           <div
@@ -39,8 +77,6 @@ const ImgBoxs: React.FC = () => {
                 activeImg.height * context.zoomRatio
               }px`,
               backgroundRepeat: 'no-repeat',
-              // context.activeImg.width * context.zoomRatio +
-              // context.activeImg.height * context.zoomRatio,
             }}
             onMouseDown={(e) => {
               const { nativeEvent } = e;
@@ -87,6 +123,21 @@ const ImgBoxs: React.FC = () => {
               tabIndex={0}
               aria-label="删除"
               title="删除"
+              onClick={(e) => {
+                e.stopPropagation();
+                setContext((ctx) => {
+                  removeActiveImage(ctx);
+                });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContext((ctx) => {
+                    removeActiveImage(ctx);
+                  });
+                }
+              }}
             >
               <i className="fa fa-trash" aria-hidden="true" />
             </span>
@@ -113,12 +164,9 @@ const ImgBoxs: React.FC = () => {
               }}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
-                setContext((ctx) => {
-                  ctx.activeImg = id;
-                });
+                selectImage(id);
                 e.stopPropagation();
               }}
-              tabIndex={0}
             >
               <div
                 className="luckysheet-modal-dialog-content"
