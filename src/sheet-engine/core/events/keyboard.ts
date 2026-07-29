@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import { hideCRCount, removeActiveImage, cutActiveImage } from '..';
 import { Context, getFlowdata } from '../context';
-import { getImageClipboard, pasteImageItem } from '../modules/image';
+import { getImageClipboard, getImageCutSourceId, pasteImageItem } from '../modules/image';
 import { updateCell, cancelNormalSelected } from '../modules/cell';
 import {
   handleFormulaInput,
@@ -692,7 +692,7 @@ export function handleWithCtrlOrMetaKey(
   } else if (e.code === 'KeyV') {
     // Prefer in-app floating-image clipboard (Ctrl/Cmd+C on an image). System
     // clipboard HTML is unreliable after image copy during the keydown gesture.
-    if (getImageClipboard() && pasteImageItem(ctx)) {
+    if ((getImageClipboard() || getImageCutSourceId()) && pasteImageItem(ctx)) {
       e.preventDefault();
       e.stopPropagation();
       return;

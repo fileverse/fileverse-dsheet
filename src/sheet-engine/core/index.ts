@@ -222,6 +222,7 @@ export {
   pasteImageItem,
   loadImageFromFile,
   getImageClipboard,
+  getImageCutSourceId,
   cancelActiveImgItem,
   onImageMoveStart,
   onImageResizeStart,
