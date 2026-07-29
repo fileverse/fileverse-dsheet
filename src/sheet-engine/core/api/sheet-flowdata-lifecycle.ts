@@ -384,9 +384,16 @@ export function getSheetsNeededForWorkerSnapshot(ctx: Context): Set<string> {
     }
   });
 
-  ctx.formulaCache.depsByCell.forEach((_, originKey) => {
+  // Origins (formula sheets) and dep targets (sheets those formulas read).
+  // Targets matter: a demoted data-only Sheet3 referenced as =Sheet3!B2 must
+  // still be hydrated or the worker treats it as empty and SUMs become 0.
+  ctx.formulaCache.depsByCell.forEach((deps, originKey) => {
     const origin = parseCellKey(originKey);
     if (origin?.sheetId) required.add(origin.sheetId);
+    deps.forEach((depKey) => {
+      const dep = parseCellKey(depKey);
+      if (dep?.sheetId) required.add(dep.sheetId);
+    });
   });
 
   return required;
