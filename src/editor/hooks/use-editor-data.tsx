@@ -1189,9 +1189,6 @@ export const useEditorData = (
           if (mapFieldUpdates.size > 0) {
             applyRemoteMapFields();
           }
-          if (configUpdates.size > 0) {
-            applyRemoteConfig();
-          }
           if (conditionFormatUpdates.size > 0) {
             applyRemoteConditionFormat();
           }
@@ -1210,17 +1207,22 @@ export const useEditorData = (
               configUpdates.size > 0 ||
               conditionFormatUpdates.size > 0)
           ) {
-            // Metadata-only remote apply — dense flowdata already patched; skip
-            // full ySheetArrayToPlain (local onChange still rebuilds for persist).
-            // Exception: cellFormatRanges rematerialize densedata visually, but
-            // currentDataRef must still pick up the new config for later remounts.
+            // Metadata-only: config rematerialize is fine with no cell deletes.
+            if (configUpdates.size > 0) {
+              applyRemoteConfig();
+            }
+            // currentDataRef must pick up new cellFormatRanges for later remounts.
             if (cellFormatRangesTouched) {
               syncPlainSnapshot();
             }
             return;
           }
 
-          // Surgical path: imperative per-cell updates, zero Workbook remount
+          // Surgical path: apply cells BEFORE config.
+          // A remote "clear styled cell" sends celldata delete + range migrate in
+          // one txn. Config-first rematerializes style into dense data, then the
+          // null cell wipe leaves an unstyled empty until remount. Cells-first
+          // then rematerialize restores format-only empties correctly.
           for (const { sheetId, celldataMap, changedKeys } of cellBatches) {
             changedKeys.forEach(({ action }, key) => {
               const sep = key.lastIndexOf('_');
@@ -1253,8 +1255,18 @@ export const useEditorData = (
             });
           }
 
+          if (configUpdates.size > 0) {
+            applyRemoteConfig();
+          }
+
           if (totalCells > 0) {
-            patchPlainCelldata();
+            // Mixed cell+ranges txns: patchPlainCelldata alone leaves stale
+            // cellFormatRanges on currentDataRef (resurrected on remount).
+            if (cellFormatRangesTouched) {
+              syncPlainSnapshot();
+            } else {
+              patchPlainCelldata();
+            }
           }
         });
       } catch (error) {
