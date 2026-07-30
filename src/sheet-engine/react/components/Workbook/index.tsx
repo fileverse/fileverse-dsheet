@@ -33,6 +33,8 @@ import {
   updateContextWithSheetData,
   jfrefreshgrid,
 } from '@sheet-engine/core';
+import { applyCellFormatRangesToData, getCellFormatRangeGridBounds } from '@sheet-engine/core/utils/range-format';
+import { applyMergeConfigToData } from '@sheet-engine/core/utils/merge-hydrate';
 import { activePalette, setActiveGridPalette, type ThemeKey } from '@sheet-engine/core/theme';
 import {
   normalizeDateBaseLocale,
@@ -59,7 +61,11 @@ import {
   buildWorkerEvalInput,
   evalFormulasInBackground,
   initFormulaWorkerSnapshot,
+  invalidateFormulaWorkerSnapshot,
 } from '@sheet-engine/core/modules/formula-worker-bridge';
+import { syncAndDemoteInactiveFlowdata } from '@sheet-engine/core/api/sheet-flowdata-lifecycle';
+import { ensureSheetFlowdata } from '@sheet-engine/core/api/sheet';
+import { setActiveDraftContext } from '@sheet-engine/core/utils/active-draft-context';
 import { clearRangeValuePassCache } from '@sheet-engine/core/modules/formula-range-cache';
 import React, {
   useMemo,
@@ -125,6 +131,28 @@ const concatProducer = (...producers: ((ctx: Context) => void)[]) => {
   };
 };
 
+/**
+ * Undo/redo patches target dense `data` paths. After demote-on-switch a sheet
+ * may only have sparse celldata — hydrate first so applyPatches doesn't crash
+ * or write into a missing matrix. Mutates ctx: must be called on an immer
+ * draft, never on frozen state.
+ */
+function ensureFlowdataForDataPatches(ctx: Context, patches: Patch[]) {
+  const seen = new Set<number>();
+  for (let i = 0; i < patches.length; i += 1) {
+    const path = patches[i].path as (string | number)[];
+    if (path?.[0] !== 'luckysheetfile') continue;
+    const sheetIndex = path[1];
+    if (!_.isNumber(sheetIndex) || path[2] !== 'data') continue;
+    if (seen.has(sheetIndex)) continue;
+    seen.add(sheetIndex);
+    const sheet = ctx.luckysheetfile?.[sheetIndex];
+    if (sheet && !sheet.data?.length) {
+      ensureSheetFlowdata(ctx, { index: sheetIndex });
+    }
+  }
+}
+
 const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
   (
     {
@@ -165,6 +193,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const [context, setContext] = useState(defaultContext(refs));
     const contextRef = useRef(context);
     contextRef.current = context;
+    const prevSheetIdRef = useRef<string | null>(null);
     // const { formula } = locale(context);
 
     const [moreToolbarItems, setMoreToolbarItems] =
@@ -222,6 +251,13 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           lastRowNum = Math.max(lastRowNum, draftCtx.defaultrowNum);
           lastColNum = Math.max(lastColNum, draftCtx.defaultcolumnNum);
         }
+        const rangeBounds = getCellFormatRangeGridBounds(
+          newData.config?.cellFormatRanges,
+        );
+        if (rangeBounds) {
+          lastRowNum = Math.max(lastRowNum, rangeBounds.maxRow + 1);
+          lastColNum = Math.max(lastColNum, rangeBounds.maxCol + 1);
+        }
         if (lastRowNum && lastColNum) {
           const expandedData: SheetType['data'] = _.times(lastRowNum, () =>
             _.times(lastColNum, () => null),
@@ -244,6 +280,11 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               }
             }
           });
+          applyCellFormatRangesToData(
+            expandedData,
+            newData.config?.cellFormatRanges,
+          );
+          applyMergeConfigToData(expandedData, newData.config?.merge);
           draftCtx.luckysheetfile = produce(draftCtx.luckysheetfile, (d) => {
             d[index!].data = expandedData;
             delete d[index!].celldata;
@@ -272,7 +313,7 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
 
     const emitYjsFromPatches = useCallback(
       (ctxBefore: Context, ctxAfter: Context, patches: Patch[]) => {
-        const { updateCellYdoc, updateAllCell } = ctxBefore.hooks ?? {};
+        const { updateCellYdoc } = ctxBefore.hooks ?? {};
         if (!updateCellYdoc) return;
 
         const mapFields = new Set([
@@ -285,12 +326,14 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
           'conditionRules',
         ]);
 
-        // De-dupe: last patch wins for the same (sheetId + path[0] + key).
+        // De-dupe: last patch wins for the same (sheetId + path + key).
         const changeMap = new Map<string, any>();
 
         const upsert = (change: any) => {
-          const k = `${change.sheetId}:${change.path?.[0] ?? ''}:${change.key ?? ''
-            }`;
+          const pathKey = Array.isArray(change.path)
+            ? change.path.join('.')
+            : String(change.path ?? '');
+          const k = `${change.sheetId}:${pathKey}:${change.key ?? ''}`;
           changeMap.set(k, change);
         };
 
@@ -335,8 +378,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               const r = path[3] as number;
               const beforeRow = (sheetBefore as any)?.data?.[r] ?? [];
               const afterRow = (sheetAfter as any)?.data?.[r] ?? [];
+              if (beforeRow === afterRow) return;
               const max = Math.max(beforeRow.length ?? 0, afterRow.length ?? 0);
               for (let c = 0; c < max; c += 1) {
+                if (beforeRow[c] === afterRow[c]) continue;
                 if (!_.isEqual(beforeRow[c] ?? null, afterRow[c] ?? null)) {
                   upsertCell(sheetId, r, c);
                 }
@@ -344,26 +389,30 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               return;
             }
 
-            // Whole-matrix replacement ["data"] (rare). If huge, fall back to updateAllCell when available.
+            // Whole-matrix replacement ["data"] (rare). Diff row-by-row instead of full-sheet rewrite.
             if (path.length === 3) {
               const dataAfter = (sheetAfter as any)?.data as
                 | any[][]
                 | undefined;
+              const dataBefore = (sheetBefore as any)?.data as
+                | any[][]
+                | undefined;
               const rows = dataAfter?.length ?? 0;
-              const cols = rows > 0 ? (dataAfter?.[0]?.length ?? 0) : 0;
-              const size = rows * cols;
-              if (size > 50000 && updateAllCell) {
-                updateAllCell(sheetId);
-                return;
+              if (rows > 50000) {
+                console.warn(
+                  `[Yjs] undo/redo whole-matrix diff on large sheet (${rows} rows)`,
+                );
               }
               for (let r = 0; r < rows; r += 1) {
-                const beforeRow = (sheetBefore as any)?.data?.[r] ?? [];
-                const afterRow = (sheetAfter as any)?.data?.[r] ?? [];
+                const beforeRow = dataBefore?.[r] ?? [];
+                const afterRow = dataAfter?.[r] ?? [];
+                if (beforeRow === afterRow) continue;
                 const max = Math.max(
                   beforeRow.length ?? 0,
                   afterRow.length ?? 0,
                 );
                 for (let c = 0; c < max; c += 1) {
+                  if (beforeRow[c] === afterRow[c]) continue;
                   if (!_.isEqual(beforeRow[c] ?? null, afterRow[c] ?? null)) {
                     upsertCell(sheetId, r, c);
                   }
@@ -385,6 +434,36 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 type:
                   p.op === 'remove' || p.value == null ? 'delete' : 'update',
               });
+            }
+            return;
+          }
+
+          // Undo/redo of empty-cell formats (toolbar + paste) live here.
+          // afterConfigChanges also syncs, but emit on patch so peers never miss CFR.
+          if (root === 'config') {
+            const configKey = path[3];
+            if (
+              path.length === 3 ||
+              configKey === 'cellFormatRanges' ||
+              configKey === 'borderInfo'
+            ) {
+              const cfgAfter = sheetAfter?.config;
+              if (path.length === 3 || configKey === 'cellFormatRanges') {
+                upsert({
+                  sheetId,
+                  path: ['config', 'cellFormatRanges'],
+                  value: cfgAfter?.cellFormatRanges ?? [],
+                  type: 'update',
+                });
+              }
+              if (path.length === 3 || configKey === 'borderInfo') {
+                upsert({
+                  sheetId,
+                  path: ['config', 'borderInfo'],
+                  value: cfgAfter?.borderInfo ?? [],
+                  type: 'update',
+                });
+              }
             }
           }
         });
@@ -463,16 +542,23 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
     const setContextWithProduce = useCallback(
       (recipe: (ctx: Context) => void, options: SetContextOptions = {}) => {
         setContext((ctx_) => {
+          const runWithDraft = (draft: Context) => {
+            setActiveDraftContext(draft);
+            try {
+              recipe(draft);
+              triggerGroupValuesRefresh(draft);
+            } finally {
+              setActiveDraftContext(null);
+            }
+          };
+
           if (options.noHistory) {
-            return produce(
-              ctx_,
-              concatProducer(recipe, triggerGroupValuesRefresh),
-            );
+            return produce(ctx_, runWithDraft);
           }
 
           const [result, patches, inversePatches] = produceWithPatches(
             ctx_,
-            concatProducer(recipe, triggerGroupValuesRefresh),
+            runWithDraft,
           );
           if (patches.length > 0) {
             if (options.logPatch) {
@@ -538,7 +624,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       if (history) {
         setContext((ctx_) => {
           const isBorderUndo = history.patches.some(
-            (onePatch) => onePatch.value?.borderInfo,
+            (onePatch) =>
+              Array.isArray(onePatch.value?.borderInfo) &&
+              onePatch.value.borderInfo.length > 0,
           );
 
           if (history.options?.deleteSheetOp) {
@@ -561,7 +649,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               } as Patch);
             });
           }
-          const newContext = applyPatches(ctx_, history.inversePatches);
+          ctx_ = produce(ctx_, (draft: Context) => {
+            ensureFlowdataForDataPatches(draft, history.inversePatches);
+          });
+          let newContext = applyPatches(ctx_, history.inversePatches);
           globalCache.current.redoList.push(history);
           const inversedOptions = inverseRowColOptions(history.options);
           if (inversedOptions?.insertRowColOp) {
@@ -583,7 +674,17 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
             delete inversedOptions!.addSheet!.value!.data;
           }
           emitOp(newContext, history.inversePatches, inversedOptions, true);
-          emitYjsFromPatches(ctx_, newContext, history.inversePatches);
+          // Emit with a mutable draft as the active context: state is frozen
+          // by immer, and cellFormatRanges mirror commits write into the
+          // active draft during emission.
+          newContext = produce(newContext, (draft: Context) => {
+            setActiveDraftContext(draft);
+            try {
+              emitYjsFromPatches(ctx_, draft, history.inversePatches);
+            } finally {
+              setActiveDraftContext(null);
+            }
+          });
           // Sync ctx.config from current sheet after applying inverse patches.
           // This ensures components watching context.config (e.g. Sheet.tsx which
           // recalculates visibledatacolumn) react correctly to config changes.
@@ -619,14 +720,29 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       const history = globalCache.current.redoList.pop();
       if (history) {
         setContext((ctx_) => {
-          const newContext = applyPatches(ctx_, history.patches);
+          ctx_ = produce(ctx_, (draft: Context) => {
+            ensureFlowdataForDataPatches(draft, history.patches);
+          });
+          let newContext = applyPatches(ctx_, history.patches);
           const isBorderUndo = history.patches.some(
-            (onePatch) => onePatch.value?.borderInfo,
+            (onePatch) =>
+              Array.isArray(onePatch.value?.borderInfo) &&
+              onePatch.value.borderInfo.length > 0,
           );
 
           globalCache.current.undoList.push(history);
           emitOp(newContext, history.patches, history.options);
-          emitYjsFromPatches(ctx_, newContext, history.patches);
+          // Emit with a mutable draft as the active context: state is frozen
+          // by immer, and cellFormatRanges mirror commits write into the
+          // active draft during emission.
+          newContext = produce(newContext, (draft: Context) => {
+            setActiveDraftContext(draft);
+            try {
+              emitYjsFromPatches(ctx_, draft, history.patches);
+            } finally {
+              setActiveDraftContext(null);
+            }
+          });
           // Sync ctx.config from current sheet after applying patches.
           const sheetIdxAfterRedo = getSheetIndex(
             newContext,
@@ -642,16 +758,22 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               : {}),
           };
           if (isBorderUndo) {
-            const nwborderlist = (nw?.config?.borderInfo ?? []).concat(
-              history.patches[0].value?.borderInfo[0],
-            );
-            nw = {
-              ...nw,
-              config: {
-                ...nw.config,
-                borderInfo: nwborderlist,
-              },
-            };
+            // patches[0] is often a cell/data patch — only read borderInfo from
+            // a patch that actually has it, and guard [0] (a?.b[0] still throws).
+            const borderEntry = history.patches.find(
+              (p) => p.value?.borderInfo != null,
+            )?.value?.borderInfo?.[0];
+            if (borderEntry != null) {
+              nw = {
+                ...nw,
+                config: {
+                  ...nw.config,
+                  borderInfo: (nw?.config?.borderInfo ?? []).concat(
+                    borderEntry,
+                  ),
+                },
+              };
+            }
           }
           return nw;
         });
@@ -924,11 +1046,8 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
                 ensureSheetIndex(draftData, mergedSettings.generateSheetId);
               });
               draftCtx.luckysheetfile = newData;
-              newData.forEach((newDatum) => {
-                const index = getSheetIndex(draftCtx, newDatum.id!) as number;
-                const sheet = draftCtx.luckysheetfile?.[index];
-                initSheetData(draftCtx, sheet, index);
-              });
+              // Inactive tabs stay sparse (celldata only). The active sheet is
+              // hydrated below once currentSheetId is resolved.
             }
             if (mergedSettings.devicePixelRatio > 0) {
               draftCtx.devicePixelRatio = mergedSettings.devicePixelRatio;
@@ -953,6 +1072,22 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               }
             }
             if (sheetIdx == null) return;
+
+            const activeSheetId = draftCtx.currentSheetId;
+            const previousSheetId = prevSheetIdRef.current;
+            if (!_.isEmpty(draftCtx.luckysheetfile) && activeSheetId) {
+              if (previousSheetId !== activeSheetId) {
+                syncAndDemoteInactiveFlowdata(
+                  draftCtx,
+                  activeSheetId,
+                  previousSheetId,
+                );
+                if (previousSheetId) {
+                  invalidateFormulaWorkerSnapshot();
+                }
+              }
+              prevSheetIdRef.current = activeSheetId;
+            }
 
             const sheet = draftCtx.luckysheetfile?.[sheetIdx];
             if (!sheet) return;

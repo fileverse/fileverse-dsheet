@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import type { Context } from '../context';
 import { getFlowdata } from '../context';
+import { ensureSheetFlowdata } from '../api/sheet';
 import { getCellValue } from '../modules/cell';
 import { getSheetIndex } from '../utils';
 
@@ -101,7 +102,8 @@ export function computeFortuneInternalPasteDecision(
       if (_.isNil(index)) {
         return { abortPaste: true, internalFortunePaste: false };
       }
-      d = ctx.luckysheetfile[index].data;
+      // Inactive tabs may be demoted to celldata-only; rehydrate before paste equality.
+      d = ensureSheetFlowdata(ctx, { id: copy_index });
     }
     if (!d) {
       return { abortPaste: true, internalFortunePaste: false };

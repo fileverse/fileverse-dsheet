@@ -80,6 +80,7 @@ function App() {
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `onChange` | `(data: SheetUpdateData, encodedUpdate?: string) => void` | - | Callback when sheet data changes |
+| `onContentUpdate` | `() => void` | - | Cheap throttled callback that does not encode or reconstruct the sheet |
 | `portalContent` | `string` | - | Encoded initial sheet data |
 | `isReadOnly` | `boolean` | `false` | Enable read-only mode |
 | `allowComments` | `boolean` | `false` | Enable comments (requires `isReadOnly=true`) |

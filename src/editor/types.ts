@@ -9,6 +9,7 @@ import { CommentsConfig } from './types/comments';
 import type { SmartContractConfig } from './types/smart-contract';
 import type { ApiKeyStorage } from './utils/api-key-storage';
 import type { ThemeKey } from '@sheet-engine/core/theme';
+import type { DSheetContentSnapshot } from '../persistence';
 
 export type { ThemeKey } from '@sheet-engine/core/theme';
 
@@ -82,6 +83,11 @@ export interface DsheetProps {
   renderNavbar?: (editorValues?: EditorValues) => JSX.Element;
   enableIndexeddbSync?: boolean;
   dsheetId: string;
+  /**
+   * Cheap change signal for hosts that persist sheet bodies through Yjs.
+   * Unlike `onChange`, this does not build a plain sheet or encode the Y.Doc.
+   */
+  onContentUpdate?: () => void;
   onChange?: (updateData: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   username?: string;
@@ -114,6 +120,8 @@ export interface DsheetProps {
   ) => void;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
+    getContentSnapshot: () => DSheetContentSnapshot;
+    mergeContent: (encodedState: string) => DSheetContentSnapshot;
   } | null>;
   /** Smart contract config: execution + UI in package; consumer owns persistence via callbacks. */
   smartContracts?: SmartContractConfig;

@@ -20,6 +20,13 @@ import {
   shouldHandleNonTableHtml,
 } from './paste-internals';
 
+function isExternalHtmlPaste(html: string): boolean {
+  return (
+    html.indexOf('fortune-copy-action-table') === -1 &&
+    html.indexOf('fortune-copy-action-span') === -1
+  );
+}
+
 export function handlePaste(ctx: Context, e: ClipboardEvent) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit || ctx.isFlvReadOnly) return;
@@ -96,7 +103,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
           ? txtdata
           : convertAnyHtmlToTable(txtdata);
         handlePastedTable(ctx, converted, pasteHandler);
-        if (hasNativeTable) {
+        if (hasNativeTable && !isExternalHtmlPaste(txtdata)) {
           resizePastedCellsToContent(ctx);
         }
       } else if (

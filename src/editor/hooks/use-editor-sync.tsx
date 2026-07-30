@@ -4,6 +4,11 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { useSyncManager } from '../../sync-local/useSyncManager';
 import type { CollaborationProps } from '../../sync-local/types';
 import { presenceColor } from '../../constants';
+import {
+  mergeDsheetContentIntoDocument,
+  snapshotDsheetDocument,
+  unavailableDsheetContentSnapshot,
+} from '../../persistence-utils';
 export const useEditorSync = (
   dsheetId: string,
   enableIndexeddbSync = true,
@@ -102,6 +107,24 @@ export const useEditorSync = (
     // destroy the ydoc. The separate collabEnabled effect handles late connects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dsheetId]);
+
+  const getContentSnapshot = useCallback(
+    () =>
+      ydocRef.current
+        ? snapshotDsheetDocument(dsheetId, ydocRef.current)
+        : unavailableDsheetContentSnapshot(
+            dsheetId,
+            'unavailable',
+            new Error('dSheet document is not ready'),
+          ),
+    [dsheetId],
+  );
+
+  const mergeContent = useCallback(
+    (encodedState: string) =>
+      mergeDsheetContentIntoDocument(dsheetId, encodedState, ydocRef.current),
+    [dsheetId],
+  );
 
   // Doc-lifecycle effect: owns ydocRef only. Deps = [dsheetId] deliberately —
   // recreating the doc on enableIndexeddbSync/isReadOnly changes is what let
@@ -236,6 +259,8 @@ export const useEditorSync = (
     syncStatus,
     isSyncedRef,
     refreshIndexedDB: initialiseEditorIndexedDB,
+    getContentSnapshot,
+    mergeContent,
     // collab
     collabState,
     isCollabReady,

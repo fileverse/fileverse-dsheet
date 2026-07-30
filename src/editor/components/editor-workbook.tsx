@@ -27,7 +27,9 @@ import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
 import { filterSelectYdocUpdate } from '../utils/filter-select-ydoc-update';
 import { filterYdocUpdate } from '../utils/filter-ydoc-update';
 import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
+import { configYdocUpdate } from '../utils/config-ydoc-update';
 import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
+import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
 import { handleCSVUpload } from '../utils/csv-import';
 import { handleExportToXLSX } from '../utils/xlsx-export';
 import { handleExportToCSV } from '../utils/csv-export';
@@ -258,6 +260,8 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     };
   }, [isReadOnly]);
 
+  const { handleOnChangePortalUpdate } = useEditor();
+
   // Initialize XLSX import functionality
   const { handleXLSXUpload } = useXLSXImport({
     sheetEditorRef,
@@ -266,6 +270,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     dsheetId,
     currentDataRef,
     updateDocumentTitle,
+    handleContentPortal: handleOnChangePortalUpdate,
   });
 
   usehandleHomepageRedirect({
@@ -292,8 +297,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
       ? ['filter', 'sort', 'comment']
       : ['filter', 'sort']
     : TOOL_BAR_ITEMS;
-
-  const { handleOnChangePortalUpdate } = useEditor();
 
   const syncContext = {
     sheetEditorRef,
@@ -498,6 +501,12 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
               dsheetId,
               changes,
               handleOnChangePortalUpdate,
+              (commits) => {
+                applyCellFormatRangesCommits(
+                  commits,
+                  sheetEditorRef.current?.getWorkbookSetContext?.() ?? null,
+                );
+              },
             );
           },
           afterImagesChange: guardRemoteEcho(() => {
@@ -514,10 +523,15 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           }),
           afterOrderChanges: handleAfterOrderChanges,
           afterConfigChanges: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'config');
+            configYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
           }),
           // @ts-ignore Fortune Hooks type misses this runtime hook.
-          updateAllCell: (subSheetId: string) => {
+          updateAllCell: (subSheetId: string, caller?: string) => {
             setTimeout(() => {
               updateAllCell(
                 {
@@ -527,6 +541,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
                   handleOnChangePortalUpdate,
                 },
                 subSheetId,
+                caller ?? 'hook',
               );
             }, 500);
           },

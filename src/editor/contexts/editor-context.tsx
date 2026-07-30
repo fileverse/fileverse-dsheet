@@ -16,6 +16,7 @@ import { fromUint8Array } from 'js-base64';
 
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 import { useEditorSync } from '../hooks/use-editor-sync';
+import { useCelldataCompaction } from '../hooks/use-celldata-compaction';
 import { useEditorData } from '../hooks/use-editor-data';
 import {
   updateRowIndices,
@@ -23,13 +24,13 @@ import {
 } from '../utils/update-index-after-drag';
 import { SheetUpdateData, DataBlockEvent } from '../types';
 import type { CommentsConfig } from '../types/comments';
-import {
-  ApiKeyStorage,
-  defaultApiKeyStorage,
-} from '../utils/api-key-storage';
+import { ApiKeyStorage, defaultApiKeyStorage } from '../utils/api-key-storage';
 import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
 import type { SmartContractConfig } from '../types/smart-contract';
-import { useSmartContract, type UseSmartContractReturn } from '../hooks/use-smart-contract';
+import {
+  useSmartContract,
+  type UseSmartContractReturn,
+} from '../hooks/use-smart-contract';
 import { SidebarProvider } from '../components/sidebar/sidebar-context';
 import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
@@ -38,6 +39,7 @@ import type {
   CollabUser,
 } from '../../sync-local/types';
 import type { Awareness } from 'y-protocols/awareness';
+import type { DSheetContentSnapshot } from '../../persistence';
 // Define the shape of the context
 export interface EditorContextType {
   setIsDataLoaded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -113,12 +115,15 @@ interface EditorProviderProps {
   portalContent?: string;
   enableIndexeddbSync?: boolean;
   isReadOnly?: boolean;
+  onContentUpdate?: () => void;
   onChange?: (data: SheetUpdateData, encodedUpdate?: string) => void;
   collaboration?: CollaborationProps;
   externalEditorRef?: React.MutableRefObject<WorkbookInstance | null>;
   commentsConfig?: CommentsConfig;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
+    getContentSnapshot: () => DSheetContentSnapshot;
+    mergeContent: (encodedState: string) => DSheetContentSnapshot;
     terminateSession?: () => void;
     updateCollaboratorName?: (name: string) => void;
     rehydrateAfterCollabSync?: (reason?: string) => boolean;
@@ -144,6 +149,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   portalContent = '',
   enableIndexeddbSync = true,
   isReadOnly = false,
+  onContentUpdate,
   onChange,
   externalEditorRef,
   collaboration,
@@ -269,18 +275,27 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     onCollabUpdateRef.current = onChange;
   }, [onChange]);
 
+  const handleContentUpdateNotification = useMemo(
+    () => throttle(() => onContentUpdate?.(), 1000),
+    [onContentUpdate],
+  );
+
   const rehydrateAfterCollabSyncRef = useRef<(reason: string) => boolean>(
     () => false,
   );
 
   // onCollabUpdate: called by SyncManager when a remote update arrives.
-  const onCollabUpdate = useCallback((fullState: string, _chunk: string) => {
-    if (!onCollabUpdateRef.current) return;
-    onCollabUpdateRef.current(
-      { data: currentDataForCollabRef.current },
-      fullState,
-    );
-  }, []);
+  const onCollabUpdate = useCallback(
+    (fullState: string) => {
+      if (!onCollabUpdateRef.current) return;
+      onCollabUpdateRef.current(
+        { data: currentDataForCollabRef.current },
+        fullState,
+      );
+      handleContentUpdateNotification();
+    },
+    [handleContentUpdateNotification],
+  );
 
   // Initialize YJS document, persistence, and optional Socket.IO collab transport
   const {
@@ -289,6 +304,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     syncStatus,
     isSyncedRef,
     refreshIndexedDB,
+    getContentSnapshot,
+    mergeContent,
     collabState,
     isCollabReady,
     isCollabSyncing,
@@ -378,43 +395,56 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     };
   }, [externalEditorRef]);
 
-  // Wrapper for onChange to handle type compatibility
-  const handleOnChangePortalUpdate = useMemo(() => {
-    if (!onChange) {
-      return () => { };
-    }
+  const handleOnChange = useMemo(
+    () =>
+      throttle(() => {
+        if (!onChange || !ydocRef.current) return;
 
-    return throttle(() => {
-      if (!ydocRef.current) return;
-      const encodedUpdate = fromUint8Array(
-        Y.encodeStateAsUpdate(ydocRef.current),
-      );
-      // Local cell edits update Yjs celldata but do not refresh currentDataRef.
-      // Build plain snapshot from Yjs so parent onChange gets live celldata, not
-      // the stale mount ref (which still has celldata: []).
-      let plain = currentDataRef.current;
-      try {
-        const sheetArray = ydocRef.current.getArray(dsheetId);
-        plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map<any>>);
-        currentDataRef.current = plain;
-      } catch {
-        // Fall back to ref if Yjs → plain conversion fails.
-      }
-      onChange({ data: plain }, encodedUpdate);
-    }, 1000);
-  }, [onChange, dsheetId]);
+        const encodedUpdate = fromUint8Array(
+          Y.encodeStateAsUpdate(ydocRef.current),
+        );
+        // Local cell edits update Yjs celldata but do not refresh currentDataRef.
+        // Build the legacy plain snapshot from Yjs only for hosts that still
+        // request onChange.
+        let plain = currentDataRef.current;
+        try {
+          const sheetArray = ydocRef.current.getArray(dsheetId);
+          plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map<any>>);
+          currentDataRef.current = plain;
+        } catch {
+          // Fall back to ref if Yjs → plain conversion fails.
+        }
+        onChange({ data: plain }, encodedUpdate);
+      }, 1000),
+    [onChange, dsheetId],
+  );
+
+  useEffect(
+    () => () => {
+      handleContentUpdateNotification.cancel();
+      handleOnChange.cancel();
+    },
+    [handleOnChange, handleContentUpdateNotification],
+  );
+
+  const handleOnChangePortalUpdate = useCallback(() => {
+    handleOnChange();
+    // Notify hosts cheaply for local changes while preserving the legacy
+    // snapshot callback for consumers that still request sheet data.
+    handleContentUpdateNotification();
+  }, [handleOnChange, handleContentUpdateNotification]);
 
   useEffect(() => {
     if (!onChange) return;
 
     const handleBeforeUnload = () => {
-      handleOnChangePortalUpdate();
+      handleOnChange();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [onChange, handleOnChangePortalUpdate]);
+  }, [onChange, handleOnChange]);
 
   // Initialize sheet data
   const {
@@ -450,6 +480,19 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     collaboration?.enabled === true,
   );
 
+  useCelldataCompaction({
+    dsheetId,
+    ydocRef,
+    sheetEditorRef,
+    currentDataRef,
+    handleOnChangePortalUpdate,
+    syncStatus,
+    isDataLoaded,
+    isReadOnly,
+    remoteUpdateRef,
+    collabSyncing: isCollabSyncing,
+  });
+
   // Keep the stable collab ref in sync with the live currentDataRef
   currentDataForCollabRef.current = currentDataRef.current;
 
@@ -461,10 +504,12 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     editorStateRef.current = {
       ...editorStateRef.current,
       refreshIndexedDB,
+      getContentSnapshot,
+      mergeContent,
       rehydrateAfterCollabSync: (reason = 'host') =>
         rehydrateAfterCollabSyncRef.current(reason),
     };
-  }, [editorStateRef, refreshIndexedDB]);
+  }, [editorStateRef, getContentSnapshot, mergeContent, refreshIndexedDB]);
 
   // Force re-render when data changes
   useEffect(() => {

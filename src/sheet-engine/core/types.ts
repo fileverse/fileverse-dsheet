@@ -1,5 +1,6 @@
 import { Patch as ImmerPatch } from 'immer';
 import { PatchOptions } from './utils';
+import type { CellFormatRange } from './utils/range-format';
 
 export type Op = {
   op:
@@ -131,6 +132,8 @@ export type SheetConfig = {
   customHeight?: Record<string, number>;
   customWidth?: Record<string, number>;
   borderInfo?: any[]; // 边框
+  /** Range-level cell formatting for empty cells (toolbar bulk format). */
+  cellFormatRanges?: CellFormatRange[];
   authority?: any;
   rowReadOnly?: Record<number, number>;
   colReadOnly?: Record<number, number>;

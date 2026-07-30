@@ -6,6 +6,7 @@ import dts from 'vite-plugin-dts';
 export default defineConfig({
   mode: process.env.NODE_ENV,
   resolve: {
+    dedupe: ['yjs'],
     alias: {
       '@sheet-engine/core': path.resolve(__dirname, 'src/sheet-engine/core'),
       '@sheet-engine/react': path.resolve(__dirname, 'src/sheet-engine/react'),
@@ -22,6 +23,7 @@ export default defineConfig({
         index: path.resolve(__dirname, './src/index.ts'),
         constants: path.resolve(__dirname, './src/constants.ts'),
         formula: path.resolve(__dirname, './src/formula.ts'),
+        persistence: path.resolve(__dirname, './src/persistence.ts'),
       },
       formats: ['es'],
       fileName: (format, entryName) =>
@@ -33,6 +35,7 @@ export default defineConfig({
         'react',
         'react-dom',
         'yjs',
+        /^yjs\//,
         'y-indexeddb',
         'y-protocols',
         'exceljs',

@@ -50,6 +50,17 @@ function generateImportSheetId(): string {
   return `sheet-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+function makeUniqueSheetName(name: string, usedNames: Set<string>): string {
+  if (!usedNames.has(name)) return name;
+  let counter = 1;
+  let candidate = `${name} (${counter})`;
+  while (usedNames.has(candidate)) {
+    counter += 1;
+    candidate = `${name} (${counter})`;
+  }
+  return candidate;
+}
+
 function richTextRunsToPlainText(ctS: unknown): string | null {
   if (!Array.isArray(ctS) || ctS.length === 0) return null;
   const text = ctS.map((seg) => String((seg as any)?.v ?? '')).join('');
@@ -628,6 +639,7 @@ export type XlsxImportRuntimeDeps = {
   updateDocumentTitle?: (title: string) => void;
   filterToastShown: boolean;
   setFilterToastShown: React.Dispatch<React.SetStateAction<boolean>>;
+  handleContentPortal?: () => void;
 };
 
 export type XlsxImportOptions = {
@@ -648,6 +660,7 @@ export async function runXlsxFileUpload(
     updateDocumentTitle,
     filterToastShown,
     setFilterToastShown,
+    handleContentPortal,
   }: XlsxImportRuntimeDeps,
   event: React.ChangeEvent<HTMLInputElement> | undefined,
   fileArg: File,
@@ -1020,6 +1033,19 @@ export async function runXlsxFileUpload(
                   sheet.config.columnlen = corrected;
                 }
 
+                const defaultColPx = Math.round(
+                  Number(sheet.defaultColWidth) || 73,
+                );
+                if (sheet.config?.columnlen) {
+                  const filteredCols: Record<string, number> = {};
+                  Object.entries(sheet.config.columnlen).forEach(([col, w]) => {
+                    if (Math.abs(Math.round(Number(w)) - defaultColPx) > 1) {
+                      filteredCols[col] = Number(w);
+                    }
+                  });
+                  sheet.config.columnlen = filteredCols;
+                }
+
                 // Drop rowlen entries at or near the default row height so Fortune
                 // uses its own default for rows the user never manually resized.
                 // Also done before image conversion so nativeRowToPx uses the
@@ -1301,15 +1327,24 @@ export async function runXlsxFileUpload(
                     for (let dr = 0; dr < rs; dr++) {
                       for (let dc = 0; dc < cs; dc++) {
                         const key = `${r + dr}_${c + dc}`;
+                        const isAnchor = dr === 0 && dc === 0;
                         let cell = celldataMap.get(key);
                         if (!cell) {
-                          cell = { r: r + dr, c: c + dc, v: {} };
+                          cell = {
+                            r: r + dr,
+                            c: c + dc,
+                            v: isAnchor
+                              ? { mc: { r, c, rs, cs } }
+                              : { mc: { r, c } },
+                          };
                           sheet.celldata.push(cell as never);
                           celldataMap.set(key, cell);
+                        } else {
+                          if (!cell.v) cell.v = {};
+                          cell.v.mc = isAnchor
+                            ? { r, c, rs, cs }
+                            : { r, c };
                         }
-                        if (!cell.v) cell.v = {};
-                        cell.v.mc =
-                          dr === 0 && dc === 0 ? { r, c, rs, cs } : { r, c };
                       }
                     }
                   }
@@ -1326,6 +1361,21 @@ export async function runXlsxFileUpload(
               let combinedSheets;
 
               if (importType === 'merge-current-dsheet') {
+                const usedNames = new Set<string>(
+                  localSheetsArray
+                    .map((s) =>
+                      s instanceof Y.Map ? s.get('name') : (s as Sheet).name,
+                    )
+                    .filter(Boolean) as string[],
+                );
+                sheets.forEach((sheet) => {
+                  const original = sheet.name ?? '';
+                  const uniqueName = makeUniqueSheetName(original, usedNames);
+                  if (uniqueName !== original) {
+                    sheet.name = uniqueName;
+                  }
+                  usedNames.add(uniqueName);
+                });
                 combinedSheets = [...localSheetsArray, ...sheets];
               } else {
                 combinedSheets = [...sheets];
@@ -1357,6 +1407,10 @@ export async function runXlsxFileUpload(
                 currentDataRef.current = plain;
                 setForceSheetRender((prev: number) => prev + 1);
               }
+              // Mirror CSV import: persist Yjs body to host Dexie (share/publish read IDB content).
+              setTimeout(() => {
+                handleContentPortal?.();
+              }, 200);
               if (!options?.headless) {
                 schedulePostImportFormulaRecalc(sheetEditorRef);
               }

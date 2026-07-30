@@ -2841,8 +2841,23 @@ export function updateDropCell(ctx: Context) {
     }
   }
 
-  if (cellChanges.length > 0 && ctx?.hooks?.updateCellYdoc) {
-    ctx.hooks.updateCellYdoc(cellChanges);
+  // Drag-fill mutates a cloned cfg (borders); assign it back.
+  file.config = cfg;
+  if (file.id === ctx.currentSheetId) {
+    ctx.config = cfg;
+  }
+
+  if (ctx?.hooks?.updateCellYdoc) {
+    // Format-only cells in cellChanges migrate in update-ydoc — don't re-scan here.
+    ctx.hooks.updateCellYdoc([
+      ...cellChanges,
+      {
+        sheetId: ctx.currentSheetId,
+        path: ['config', 'borderInfo'],
+        value: cfg.borderInfo ?? [],
+        type: 'update',
+      },
+    ]);
   }
 
   // 条件格式

@@ -14,6 +14,7 @@ import {
   applyRichTextToWorksheet,
   type CellRichTextValue,
 } from './xlsx-richtext-utils';
+import { buildSheetDataMatrixForExport } from '../../sheet-engine/core/utils/range-format';
 import {
   concatInlineStrRunsText,
   getFirstHyperlinkEntry,
@@ -108,8 +109,10 @@ export const handleExportToXLSX = async (
     const sheetRichTextMaps: Map<string, CellRichTextValue>[] =
       sheetWithData.map(() => new Map());
 
+    const usedSheetNames = new Set<string>();
+
     sheetWithData.forEach((sheet, index) => {
-      const rows = sheetWithData[index]?.data || [];
+      const rows = buildSheetDataMatrixForExport(sheet);
 
       const worksheet: any = XLSXUtil.aoa_to_sheet(rows);
 
@@ -301,7 +304,7 @@ export const handleExportToXLSX = async (
       // already styled above, read formatting properties directly from sheet.data.
       // Rich text (inlineStr) cells are handled separately below — skip them here
       // so we don't interfere with the rich-text pipeline.
-      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+      rows.forEach((row: any[], r: number) => {
         if (!Array.isArray(row)) return;
         row.forEach((v: any, c: number) => {
           if (!v || typeof v !== 'object') return;
@@ -373,7 +376,7 @@ export const handleExportToXLSX = async (
       // RICH TEXT from sheet.data (celldata is often empty for live sheets)
       // aoa_to_sheet leaves inlineStr cells empty since v.v is undefined;
       // set plain-text fallback here and collect runs for Pass 2.
-      ((sheet.data as any[]) ?? []).forEach((row: any[], r: number) => {
+      rows.forEach((row: any[], r: number) => {
         if (!Array.isArray(row)) return;
         row.forEach((v: any, c: number) => {
           if (!v || v.ct?.t !== 'inlineStr' || !Array.isArray(v.ct.s)) return;
@@ -396,6 +399,17 @@ export const handleExportToXLSX = async (
 
       const subSheetName =
         sheet.name.length > 30 ? sheet.name.slice(0, 30) : sheet.name;
+
+      if (usedSheetNames.has(subSheetName)) {
+        const collided =
+          subSheetName !== sheet.name
+            ? `"${sheet.name}" is too long and collides with another sheet after being shortened to "${subSheetName}"`
+            : `Two sheets share the name "${sheet.name}"`;
+        throw new Error(
+          `${collided}. Sheet names must be unique. Rename one and try again.`,
+        );
+      }
+      usedSheetNames.add(subSheetName);
 
       XLSXUtil.book_append_sheet(workbook, worksheet, subSheetName);
     });
@@ -454,12 +468,12 @@ export const handleExportToXLSX = async (
           (typeof cell.text === 'string' && cell.text.length > 0
             ? cell.text
             : cell.value?.text ||
-              (Array.isArray(cell.value?.richText)
-                ? cell.value.richText
-                    .map((x: { text?: string }) => x.text || '')
-                    .join('')
-                : '') ||
-              '');
+            (Array.isArray(cell.value?.richText)
+              ? cell.value.richText
+                .map((x: { text?: string }) => x.text || '')
+                .join('')
+              : '') ||
+            '');
         cell.value = {
           text: currentText || firstLink.linkAddress,
           hyperlink: firstLink.linkAddress,
@@ -594,5 +608,15 @@ export const handleExportToXLSX = async (
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Export failed:', error);
+    toast({
+      title: 'Export failed',
+      description:
+        error instanceof Error && error.message
+          ? error.message
+          : 'Something went wrong while exporting to .xlsx. Please try again.',
+      variant: 'error',
+      showCloseButton: true,
+      duration: 10 * 1000,
+    });
   }
 };

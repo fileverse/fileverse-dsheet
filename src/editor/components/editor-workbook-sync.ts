@@ -2,6 +2,8 @@ import { WorkbookInstance } from '@sheet-engine/react';
 import * as Y from 'yjs';
 import isEqual from 'lodash/isEqual';
 import { SheetChangePath, updateYdocSheetData } from '../utils/update-ydoc';
+import { shouldPersistCelldataCell } from '../../sheet-engine/core/utils/cell-persist-utils';
+import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
 
 type SyncContext = {
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>;
@@ -238,7 +240,7 @@ export const createSheetLengthChangeHandler = ({
         ySheet.set('row', sheet.row ?? 500);
         ySheet.set('column', sheet.column ?? 36);
         ySheet.set('status', 1);
-        ySheet.set('config', sheet.config ?? {});
+        ySheet.set('config', toYMapFromObject(sheet.config ?? {}));
         ySheet.set('celldata', toCellMap(sheet));
         ySheet.set('calcChain', toCalcChainMap(sheet));
         ySheet.set(
@@ -495,6 +497,7 @@ export const updateAllCell = (
     handleOnChangePortalUpdate,
   }: SyncContext,
   subSheetId: string,
+  caller = 'unknown',
 ) => {
   const workbookContext = sheetEditorRef.current?.getWorkbookContext?.() as any;
   const currentSheet = getCurrentSheetSafe(sheetEditorRef, 'updateAllCell');
@@ -517,6 +520,8 @@ export const updateAllCell = (
         (sheet as any).celldata,
         (sheet as any).row,
         (sheet as any).column,
+        (sheet as any).config?.cellFormatRanges,
+        (sheet as any).config?.merge,
       ) ?? undefined;
   }
   if (!Array.isArray(dataMatrix)) return;
@@ -526,10 +531,12 @@ export const updateAllCell = (
     const row = dataMatrix[r];
     if (!Array.isArray(row)) continue;
     for (let c = 0; c < row.length; c++) {
+      const cell = row[c];
+      if (!shouldPersistCelldataCell(cell)) continue;
       changes.push({
         sheetId: subSheetId,
         path: ['celldata'],
-        value: { r, c, v: row[c] },
+        value: { r, c, v: cell },
         key: `${r}_${c}`,
         type: 'update',
       });
@@ -542,5 +549,17 @@ export const updateAllCell = (
     dsheetId,
     changes,
     handleOnChangePortalUpdate,
+    (commits) => {
+      applyCellFormatRangesCommits(
+        commits,
+        sheetEditorRef.current?.getWorkbookSetContext?.() ?? null,
+      );
+    },
   );
+
+  if (changes.length > 0) {
+    console.warn(
+      `[Yjs] updateAllCell caller=${caller} sheet=${subSheetId} cells=${changes.length}`,
+    );
+  }
 };

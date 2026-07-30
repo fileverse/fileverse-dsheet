@@ -225,6 +225,13 @@ export function setRowHeight(
   _.forEach(rowInfo, (len, r) => {
     if (Number(r) >= 0) {
       if (Number(len) >= 0) {
+        const defaultH = sheet.defaultRowHeight ?? ctx.defaultrowlen;
+        if (Number(len) === defaultH) {
+          if (cfg.rowlen?.[Number(r)] != null) {
+            delete cfg.rowlen![Number(r)];
+          }
+          return;
+        }
         cfg.rowlen![Number(r)] = Number(len);
         if (custom && _.isUndefined(cfg.customHeight)) {
           cfg.customHeight = { [r]: 1 };
@@ -264,6 +271,13 @@ export function setColumnWidth(
   _.forEach(columnInfo, (len, c) => {
     if (Number(c) >= 0) {
       if (Number(len) >= 0) {
+        const defaultW = sheet.defaultColWidth ?? ctx.defaultcollen;
+        if (Number(len) === defaultW) {
+          if (cfg.columnlen?.[Number(c)] != null) {
+            delete cfg.columnlen![Number(c)];
+          }
+          return;
+        }
         cfg.columnlen![Number(c)] = Number(len);
         if (custom && _.isUndefined(cfg.customWidth)) {
           cfg.customWidth = { [c]: 1 };
