@@ -1,8 +1,23 @@
 import _ from 'lodash';
-import { GlobalCache } from '../types';
+import { GlobalCache, Image } from '../types';
 import { mergeBorder } from '.';
 import { Context, getFlowdata } from '../context';
 import { getSheetIndex } from '../utils';
+import {
+  clearImageClipboard,
+  clearImageCutFlag,
+  getImageClipboard,
+  getImageCutSourceId,
+  getImageCutSourceSheetId,
+  setImageClipboard,
+} from './image-clipboard';
+
+export {
+  clearImageClipboard,
+  getImageClipboard,
+  getImageCutSourceId,
+  getImageCutSourceSheetId,
+} from './image-clipboard';
 
 type ImageProps = {
   defaultWidth: number;
@@ -29,6 +44,60 @@ export const imageProps: ImageProps = {
   moveXY: null,
   cursorStartPosition: null,
 };
+
+const PASTE_OFFSET = 20;
+
+function ensureCopyContentEl(): HTMLElement {
+  let ele = document.getElementById('fortune-copy-content');
+  if (!ele) {
+    ele = document.createElement('div');
+    ele.setAttribute('contentEditable', 'true');
+    ele.id = 'fortune-copy-content';
+    ele.style.position = 'fixed';
+    ele.style.height = '0';
+    ele.style.width = '0';
+    ele.style.left = '-10000px';
+    document.querySelector('.fortune-container')?.append(ele);
+  }
+  return ele;
+}
+
+function buildImageCopyHtml(
+  img: Image,
+  cutSourceId?: string | null,
+  cutSourceSheetId?: string | null,
+): string {
+  const cutAttr = cutSourceId
+    ? ` data-cut-source-id="${cutSourceId}"`
+    : '';
+  const sheetAttr = cutSourceSheetId
+    ? ` data-cut-source-sheet-id="${cutSourceSheetId}"`
+    : '';
+  return `<div data-type="fortune-copy-action-image"${cutAttr}${sheetAttr} data-width="${img.width}" data-height="${img.height}" data-origin-width="${img.originWidth ?? img.width}" data-origin-height="${img.originHeight ?? img.height}"><img src="${img.src}" alt="" /></div>`;
+}
+
+/** Sync in-app copy buffer without relying on execCommand during Ctrl/Cmd+C. */
+function writeImageCopyBuffer(html: string) {
+  const ele = ensureCopyContentEl();
+  ele.innerHTML = html;
+  try {
+    sessionStorage.setItem('localClipboard', '');
+  } catch {
+    // ignore
+  }
+
+  // Best-effort system clipboard. Avoid execCommand('copy') here — during a
+  // Ctrl/Cmd+C keydown many browsers ignore or overwrite it with an empty selection.
+  if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+    const item = new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([''], { type: 'text/plain' }),
+    });
+    void navigator.clipboard.write([item]).catch(() => {
+      // In-app imageClipboard + fortune-copy-content are enough for sheet paste
+    });
+  }
+}
 
 export function generateRandomId(prefix: string) {
   if (prefix == null) {
@@ -74,36 +143,49 @@ export function removeActiveImage(ctx: Context) {
   saveImage(ctx);
 }
 
+function getSelectionAnchorPosition(ctx: Context): { left: number; top: number } {
+  const last =
+    ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1];
+  let rowIndex = last?.row_focus;
+  let colIndex = last?.column_focus;
+  if (!last) {
+    rowIndex = 0;
+    colIndex = 0;
+  } else {
+    if (rowIndex == null) {
+      [rowIndex] = last.row;
+    }
+    if (colIndex == null) {
+      [colIndex] = last.column;
+    }
+  }
+  const flowdata = getFlowdata(ctx);
+  let left = colIndex === 0 ? 0 : ctx.visibledatacolumn[colIndex - 1];
+  let top = rowIndex === 0 ? 0 : ctx.visibledatarow[rowIndex - 1];
+  if (flowdata) {
+    const margeset = mergeBorder(ctx, flowdata, rowIndex, colIndex);
+    if (margeset) {
+      [top] = margeset.row;
+      [left] = margeset.column;
+    }
+  }
+  return { left, top };
+}
+
+function addImageToSheet(ctx: Context, img: Image, select = true) {
+  ctx.insertedImgs = (ctx.insertedImgs || []).concat(img);
+  if (select) {
+    ctx.activeImg = img.id;
+  }
+  saveImage(ctx);
+}
+
 export function insertImage(ctx: Context, image: HTMLImageElement) {
   try {
-    const last =
-      ctx.luckysheet_select_save?.[ctx.luckysheet_select_save.length - 1];
-    let rowIndex = last?.row_focus;
-    let colIndex = last?.column_focus;
-    if (!last) {
-      rowIndex = 0;
-      colIndex = 0;
-    } else {
-      if (rowIndex == null) {
-        [rowIndex] = last.row;
-      }
-      if (colIndex == null) {
-        [colIndex] = last.column;
-      }
-    }
-    const flowdata = getFlowdata(ctx);
-    let left = colIndex === 0 ? 0 : ctx.visibledatacolumn[colIndex - 1];
-    let top = rowIndex === 0 ? 0 : ctx.visibledatarow[rowIndex - 1];
-    if (flowdata) {
-      const margeset = mergeBorder(ctx, flowdata, rowIndex, colIndex);
-      if (margeset) {
-        [top] = margeset.row;
-        [left] = margeset.column;
-      }
-    }
+    const { left, top } = getSelectionAnchorPosition(ctx);
     const { width } = image;
     const { height } = image;
-    const img = {
+    const img: Image = {
       id: generateRandomId('img'),
       src: image.src,
       left,
@@ -113,11 +195,184 @@ export function insertImage(ctx: Context, image: HTMLImageElement) {
       originWidth: width,
       originHeight: height,
     };
-    ctx.insertedImgs = (ctx.insertedImgs || []).concat(img);
-    saveImage(ctx);
+    addImageToSheet(ctx, img);
   } catch (err) {
     console.info(err);
   }
+}
+
+/** Copy/cut the currently selected floating image onto the clipboard. */
+export function copyActiveImage(ctx: Context): boolean {
+  if (ctx.activeImg == null) return false;
+  const img = _.find(ctx.insertedImgs, (v) => v.id === ctx.activeImg);
+  if (!img) return false;
+
+  setImageClipboard(img, false, null);
+  // Image copy must not leave a pending cell-cut in place
+  ctx.luckysheet_paste_iscut = false;
+  writeImageCopyBuffer(buildImageCopyHtml(img, null, null));
+  return true;
+}
+
+/**
+ * Cut: copy into the clipboard but keep the image on the sheet until paste
+ * (same deferred-remove behavior as cell Ctrl/Cmd+X).
+ */
+export function cutActiveImage(ctx: Context): boolean {
+  if (ctx.activeImg == null) return false;
+  const img = _.find(ctx.insertedImgs, (v) => v.id === ctx.activeImg);
+  if (!img) return false;
+
+  setImageClipboard(img, true, ctx.currentSheetId);
+  // Track cut only via imageCutSourceId — do NOT set luckysheet_paste_iscut,
+  // or a later paste may clear the previous cell copy range instead.
+  ctx.luckysheet_paste_iscut = false;
+  ctx.luckysheet_copy_save = undefined;
+  ctx.luckysheet_selection_range = [];
+  writeImageCopyBuffer(buildImageCopyHtml(img, img.id, ctx.currentSheetId));
+  return true;
+}
+
+function parseImageFromCopyHtml(html: string): {
+  image: Image;
+  cutSourceId: string | null;
+  cutSourceSheetId: string | null;
+} | null {
+  if (html.indexOf('fortune-copy-action-image') === -1) return null;
+  try {
+    const ele = document.createElement('div');
+    ele.innerHTML = html;
+    const wrapper = ele.querySelector(
+      '[data-type="fortune-copy-action-image"]',
+    ) as HTMLElement | null;
+    const imgEl = wrapper?.querySelector('img') ?? ele.querySelector('img');
+    const src = imgEl?.getAttribute('src');
+    if (!src) return null;
+
+    const width = Number(
+      wrapper?.getAttribute('data-width') || imgEl?.width || 144,
+    );
+    const height = Number(
+      wrapper?.getAttribute('data-height') || imgEl?.height || 84,
+    );
+    const originWidth = Number(
+      wrapper?.getAttribute('data-origin-width') || width,
+    );
+    const originHeight = Number(
+      wrapper?.getAttribute('data-origin-height') || height,
+    );
+    const cutSourceId =
+      wrapper?.getAttribute('data-cut-source-id')?.trim() || null;
+    const cutSourceSheetId =
+      wrapper?.getAttribute('data-cut-source-sheet-id')?.trim() || null;
+
+    return {
+      image: {
+        id: generateRandomId('img'),
+        src,
+        left: 0,
+        top: 0,
+        width: Number.isFinite(width) ? width : 144,
+        height: Number.isFinite(height) ? height : 84,
+        originWidth: Number.isFinite(originWidth) ? originWidth : width,
+        originHeight: Number.isFinite(originHeight) ? originHeight : height,
+      },
+      cutSourceId,
+      cutSourceSheetId,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Remove a cut image from its owning sheet (supports cross-sheet paste). */
+function removeCutImageFromSheet(
+  ctx: Context,
+  cutSourceId: string,
+  cutSourceSheetId: string | null,
+) {
+  const sheetId = cutSourceSheetId || ctx.currentSheetId;
+  const index = getSheetIndex(ctx, sheetId);
+  if (index == null) return;
+
+  const file = ctx.luckysheetfile[index];
+  const nextImages = _.filter(
+    file.images || [],
+    (image) => image.id !== cutSourceId,
+  );
+  file.images = nextImages;
+
+  // Keep the live overlay list in sync when the cut source is the active sheet
+  if (sheetId === ctx.currentSheetId) {
+    ctx.insertedImgs = nextImages;
+  }
+  if (ctx.activeImg === cutSourceId) {
+    ctx.activeImg = undefined;
+  }
+}
+
+/** Paste a previously copied floating image (or one encoded in paste HTML). */
+export function pasteImageItem(ctx: Context, html?: string): boolean {
+  const parsed = html ? parseImageFromCopyHtml(html) : null;
+  const cached = getImageClipboard();
+  const source = parsed?.image ?? cached;
+  if (!source) return false;
+
+  // Cut source id: module flag (primary) → HTML attribute
+  const cutSourceId =
+    getImageCutSourceId() || parsed?.cutSourceId || null;
+  const cutSourceSheetId =
+    getImageCutSourceSheetId() || parsed?.cutSourceSheetId || null;
+
+  const { left: anchorLeft, top: anchorTop } = getSelectionAnchorPosition(ctx);
+
+  const img: Image = {
+    ...source,
+    id: generateRandomId('img'),
+    // Cut → move to current selection; copy → duplicate with a small offset
+    left: cutSourceId
+      ? anchorLeft
+      : Math.max(0, source.left + PASTE_OFFSET),
+    top: cutSourceId
+      ? anchorTop
+      : Math.max(0, source.top + PASTE_OFFSET),
+  };
+
+  // Remove original after successful cut-paste (Excel-style), including
+  // when the source lives on another sub-sheet.
+  if (cutSourceId) {
+    removeCutImageFromSheet(ctx, cutSourceId, cutSourceSheetId);
+    clearImageCutFlag();
+  }
+
+  addImageToSheet(ctx, img);
+  // After paste, further pastes should duplicate (not cut again)
+  setImageClipboard(img, false, null);
+  return true;
+}
+
+/** Load an image File (e.g. from the system clipboard) as an HTMLImageElement. */
+export function loadImageFromFile(file: File): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) {
+      resolve(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const src = event.target?.result;
+      if (typeof src !== 'string') {
+        resolve(null);
+        return;
+      }
+      const image = new window.Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = src;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
 }
 
 function getImagePosition() {

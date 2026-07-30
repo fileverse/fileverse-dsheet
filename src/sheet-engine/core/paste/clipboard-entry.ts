@@ -6,7 +6,12 @@ import { handlePastedTable } from '../paste-table-helpers';
 import type { Context } from '../context';
 import { isAllowEdit } from '../utils';
 import { selectionCache } from '../modules/selection';
-import { sanitizeDuneUrl } from '../modules';
+import {
+  sanitizeDuneUrl,
+  pasteImageItem,
+  getImageClipboard,
+  getImageCutSourceId,
+} from '../modules';
 import clipboard from '../modules/clipboard';
 import { computeFortuneInternalPasteDecision } from './fortune-internal-paste';
 import {
@@ -25,6 +30,41 @@ function isExternalHtmlPaste(html: string): boolean {
     html.indexOf('fortune-copy-action-table') === -1 &&
     html.indexOf('fortune-copy-action-span') === -1
   );
+}
+
+function hasPendingCellCopy(ctx: Context): boolean {
+  return (
+    ctx.luckysheet_copy_save?.copyRange != null &&
+    ctx.luckysheet_copy_save.copyRange.length > 0
+  );
+}
+
+/** Excel-style cell cut/copy using in-memory `luckysheet_copy_save`. */
+function tryPasteFromInternalCellClipboard(
+  ctx: Context,
+  pasteValuesOnly = false,
+): boolean {
+  if (!hasPendingCellCopy(ctx)) return false;
+
+  if (ctx.luckysheet_paste_iscut) {
+    ctx.luckysheet_paste_iscut = false;
+    pasteHandlerOfCutPaste(ctx, ctx.luckysheet_copy_save);
+    ctx.luckysheet_selection_range = [];
+  } else {
+    pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save, pasteValuesOnly);
+  }
+  resizePastedCellsToContent(ctx);
+  return true;
+}
+
+function tryPasteImage(ctx: Context, html?: string): boolean {
+  if (getImageCutSourceId() || getImageClipboard()) {
+    return pasteImageItem(ctx, html);
+  }
+  if (html && html.indexOf('fortune-copy-action-image') > -1) {
+    return pasteImageItem(ctx, html);
+  }
+  return false;
 }
 
 export function handlePaste(ctx: Context, e: ClipboardEvent) {
@@ -64,6 +104,26 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
       txtdata = clipboardData.getData('text/plain');
     }
 
+    if (
+      ctx.hooks.beforePaste?.(ctx.luckysheet_select_save, txtdata) === false
+    ) {
+      return;
+    }
+
+    // 1) Floating-image cut/copy (in-memory flag — do not require system HTML)
+    if (tryPasteImage(ctx, txtdata)) {
+      e.preventDefault();
+      return;
+    }
+
+    // 2) Cell cut: always clear source from luckysheet_copy_save when iscut,
+    // even if system clipboard HTML was stripped / doesn't match the grid.
+    if (ctx.luckysheet_paste_iscut && hasPendingCellCopy(ctx)) {
+      e.preventDefault();
+      tryPasteFromInternalCellClipboard(ctx, pasteValuesOnly);
+      return;
+    }
+
     const fortunePaste = computeFortuneInternalPasteDecision(ctx, txtdata);
     if (fortunePaste.abortPaste) {
       return;
@@ -71,28 +131,12 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
     const { internalFortunePaste } = fortunePaste;
 
     if (
-      ctx.hooks.beforePaste?.(ctx.luckysheet_select_save, txtdata) === false
-    ) {
-      return;
-    }
-
-    if (
       (txtdata.indexOf('fortune-copy-action-table') > -1 ||
         txtdata.indexOf('fortune-copy-action-span') > -1) &&
-      ctx.luckysheet_copy_save?.copyRange != null &&
-      ctx.luckysheet_copy_save.copyRange.length > 0 &&
+      hasPendingCellCopy(ctx) &&
       internalFortunePaste
     ) {
-      if (ctx.luckysheet_paste_iscut) {
-        ctx.luckysheet_paste_iscut = false;
-        pasteHandlerOfCutPaste(ctx, ctx.luckysheet_copy_save);
-        ctx.luckysheet_selection_range = [];
-      } else {
-        pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save, pasteValuesOnly);
-      }
-      resizePastedCellsToContent(ctx);
-    } else if (txtdata.indexOf('fortune-copy-action-image') > -1) {
-      // imageCtrl.pasteImgItem();
+      tryPasteFromInternalCellClipboard(ctx, pasteValuesOnly);
     } else {
       const shouldHandleAsHtml =
         /<table[\s/>]/i.test(txtdata) || shouldHandleNonTableHtml(txtdata);
@@ -110,7 +154,7 @@ export function handlePaste(ctx: Context, e: ClipboardEvent) {
         clipboardData.files.length === 1 &&
         clipboardData.files[0].type.indexOf('image') > -1
       ) {
-        // imageCtrl.insertImg(clipboardData.files[0]);
+        // Image files are async — handled in Workbook onPaste before this path.
       } else {
         txtdata = clipboardData.getData('text/plain');
         const isExcelFormula = txtdata.startsWith('=');
@@ -171,6 +215,22 @@ export function handlePasteByClick(
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit || ctx.isFlvReadOnly) return;
 
+  // 1) In-app image cut/copy
+  const existing = document.querySelector('#fortune-copy-content');
+  const existingHtml = existing?.innerHTML || '';
+  if (tryPasteImage(ctx, existingHtml)) {
+    return;
+  }
+
+  // 2) In-app cell cut/copy (do not depend on navigator.clipboard.readText)
+  if (hasPendingCellCopy(ctx)) {
+    if (ctx.hooks.beforePaste?.(ctx.luckysheet_select_save, '') === false) {
+      return;
+    }
+    tryPasteFromInternalCellClipboard(ctx);
+    return;
+  }
+
   if (clipboardData) {
     const htmlWithPreservedNewlines = `<pre style="white-space: pre-wrap;">${clipboardData}</pre>`;
     clipboard.writeHtml(htmlWithPreservedNewlines);
@@ -193,18 +253,12 @@ export function handlePasteByClick(
   if (
     (data.indexOf('fortune-copy-action-table') > -1 ||
       data.indexOf('fortune-copy-action-span') > -1) &&
-    ctx.luckysheet_copy_save?.copyRange != null &&
-    ctx.luckysheet_copy_save.copyRange.length > 0 &&
+    hasPendingCellCopy(ctx) &&
     internalFortunePaste
   ) {
-    if (ctx.luckysheet_paste_iscut) {
-      ctx.luckysheet_paste_iscut = false;
-      pasteHandlerOfCutPaste(ctx, ctx.luckysheet_copy_save);
-    } else {
-      pasteHandlerOfCopyPaste(ctx, ctx.luckysheet_copy_save);
-    }
+    tryPasteFromInternalCellClipboard(ctx);
   } else if (data.indexOf('fortune-copy-action-image') > -1) {
-    // imageCtrl.pasteImgItem();
+    pasteImageItem(ctx, data);
   } else if (triggerType !== 'btn') {
     const isExcelFormula = clipboardData.startsWith('=');
 

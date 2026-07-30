@@ -213,6 +213,12 @@ export {
   onCommentBoxMoveStart,
   // image
   removeActiveImage,
+  copyActiveImage,
+  cutActiveImage,
+  pasteImageItem,
+  loadImageFromFile,
+  getImageClipboard,
+  getImageCutSourceId,
   cancelActiveImgItem,
   onImageMoveStart,
   onImageResizeStart,
