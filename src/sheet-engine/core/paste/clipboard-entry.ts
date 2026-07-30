@@ -25,7 +25,6 @@ import {
   shouldHandleNonTableHtml,
 } from './paste-internals';
 
-<<<<<<< HEAD
 function isExternalHtmlPaste(html: string): boolean {
   return (
     html.indexOf('fortune-copy-action-table') === -1 &&
@@ -33,7 +32,6 @@ function isExternalHtmlPaste(html: string): boolean {
   );
 }
 
-=======
 function hasPendingCellCopy(ctx: Context): boolean {
   return (
     ctx.luckysheet_copy_save?.copyRange != null &&
@@ -69,7 +67,6 @@ function tryPasteImage(ctx: Context, html?: string): boolean {
   return false;
 }
 
->>>>>>> 8481f55 (fix: clear cut image source across sheets on paste)
 export function handlePaste(ctx: Context, e: ClipboardEvent) {
   const allowEdit = isAllowEdit(ctx);
   if (!allowEdit || ctx.isFlvReadOnly) return;
