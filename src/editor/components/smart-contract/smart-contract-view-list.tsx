@@ -67,7 +67,7 @@ const CopyButton: React.FC<{ textToCopy: string }> = ({ textToCopy }) => {
   return (
     <Tooltip text={'Copy'}>
       <div
-        className="w-6 h-6 flex justify-center items-center gap-3 p-2 rounded cursor-pointer active:bg-gray-300 active:scale-95"
+        className="w-6 h-6 flex justify-center items-center gap-3 p-2 rounded cursor-pointer active:bg-[hsl(var(--color-bg-default-active))] active:scale-95"
         onClick={() => {
           navigator.clipboard.writeText(textToCopy);
           setCopied(true);
@@ -83,7 +83,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({
   code,
   copyText,
 }: CodeBlockProps) => (
-  <div className="flex justify-center items-center gap-2 self-stretch bg-[hsl(var(--color-bg-default))] p-2 rounded border border-solid border-[#e8ebec] mt-2">
+  <div className="flex justify-center items-center gap-2 self-stretch color-bg-default p-2 rounded border border-solid color-border-default mt-2">
     <code className="break-all">
       <span className="font-medium text-xs">{code}</span>
     </code>
@@ -98,7 +98,7 @@ const ParameterDescription: React.FC<ParameterDescriptionProps> = ({
 }) => (
   <div className="flex flex-col justify-center gap-1 self-stretch py-1 rounded">
     <p className="text-body-sm">
-      <code className="text-[hsl(var(--color-text-default)] font-mono text-sm font-bold leading-5">
+      <code className="color-text-default font-mono text-sm font-bold leading-5">
         {paramName}
         {optional && (
           <code className="!text-[hsl(var(--color-text-secondary))]">
@@ -122,22 +122,22 @@ const NonImportedContractDocs: React.FC = () => (
     className="w-full accordin"
   >
     <AccordionItem value="item-a" className="border-none">
-      <AccordionTrigger className="!pl-[0px] hover:!bg-[#f8f9fa] !text-left">
-        <span className="font-medium text-sm text-[#363b3f]">
+      <AccordionTrigger className="!pl-[0px] hover:!bg-[hsl(var(--color-bg-default-hover))] !text-left">
+        <span className="font-medium text-sm color-text-default">
           How to use smart contract function with not imported contracts?
         </span>
       </AccordionTrigger>
       <AccordionContent className="!pb-[0px]">
         <ol className="flex flex-col gap-2 self-stretch list-decimal pl-4">
-          <li className="font-normal text-sm text-[#363b3f]">
+          <li className="font-normal text-sm color-text-default">
             Type =SMARTCONTRACT in cell.
           </li>
           <li>
-            <span className="font-normal text-sm text-[#363b3f]">
+            <span className="font-normal text-sm color-text-default">
               Follow next syntax
             </span>
             <div className="flex flex-col gap-2 self-stretch">
-              <div className="flex justify-center items-center gap-2 self-stretch bg-[hsl(var(--color-bg-default))] p-2 rounded border border-solid border-[#e8ebec] h-[48px] mt-2">
+              <div className="flex justify-center items-center gap-2 self-stretch color-bg-default p-2 rounded border border-solid color-border-default h-[48px] mt-2">
                 <code className="break-all">
                   <span className="font-medium text-xs">
                     =SMARTCONTRACT(
@@ -150,7 +150,7 @@ const NonImportedContractDocs: React.FC = () => (
                 <CopyButton textToCopy='=SMARTCONTRACT("myContractName", "functionName", "arguments")' />
               </div>
               <div className="flex flex-col gap-1 self-stretch">
-                <span className="font-medium text-xs text-[#77818a]">
+                <span className="font-medium text-xs color-text-secondary">
                   Description
                 </span>
                 <div className="flex flex-col gap-1 self-stretch">
@@ -166,15 +166,15 @@ const NonImportedContractDocs: React.FC = () => (
               </div>
             </div>
           </li>
-          <li className="font-normal text-sm text-[#363b3f]">
+          <li className="font-normal text-sm color-text-default">
             Get a response with list of available functions and arguments for
             this contract address.
           </li>
-          <li className="font-normal text-sm text-[#363b3f]">
+          <li className="font-normal text-sm color-text-default">
             Follow instructions of how to modify your =SMARTCONTRACT function
             with function and argument from this list to query a data.
           </li>
-          <li className="font-normal text-sm text-[#363b3f]">
+          <li className="font-normal text-sm color-text-default">
             Please spend some time to learn examples below
             <CodeBlock
               code={
@@ -189,11 +189,11 @@ const NonImportedContractDocs: React.FC = () => (
               }
               copyText='=SMARTCONTRACT("0x75Df5AF045d91108662D8080fD1FEFAd6aA0bb59", "GNOSIS")'
             />
-            <p className="text-[hsl(var(--color-text-default, #363B3F))] font-normal text-[12px] leading-5 font-[`Helvetica_Neue`] my-2">
+            <p className="color-text-default font-normal text-[12px] leading-5 font-[`Helvetica_Neue`] my-2">
               Returning a list of all available functions for this particular
               address.
             </p>
-            <div className="flex justify-center items-center gap-2 self-stretch bg-[hsl(var(--color-bg-default))] p-2 rounded border border-solid border-[#e8ebec]">
+            <div className="flex justify-center items-center gap-2 self-stretch color-bg-default p-2 rounded border border-solid color-border-default">
               <code className="break-all">
                 <span className="font-medium text-xs">
                   =SMARTCONTRACT(
@@ -207,7 +207,7 @@ const NonImportedContractDocs: React.FC = () => (
               </code>
               <CopyButton textToCopy='=SMARTCONTRACT("0xdac17f958d2ee523a2206206994597c13d831ec7", "ETHEREUM", "balances", "0x31b1ce9a747BEDBfe8F2d314ed05De6d045Bdb11")' />
             </div>
-            <p className="text-[hsl(var(--color-text-default, #363B3F))] font-normal text-[12px] leading-5 font-[`Helvetica_Neue`] mt-2">
+            <p className="color-text-default font-normal text-[12px] leading-5 font-[`Helvetica_Neue`] mt-2">
               Returning a balance state for address that mentioned at the end of
               function.
             </p>
@@ -226,36 +226,36 @@ const ImportContractDocs: React.FC = () => (
     className="w-full accordin"
   >
     <AccordionItem value="item-a" className="border-none">
-      <AccordionTrigger className="!pl-[0px] hover:!bg-[#f8f9fa] !text-left">
-        <span className="font-medium text-sm text-[#363b3f]">
+      <AccordionTrigger className="!pl-[0px] hover:!bg-[hsl(var(--color-bg-default-hover))] !text-left">
+        <span className="font-medium text-sm color-text-default">
           How to import contract?
         </span>
       </AccordionTrigger>
       <AccordionContent className="!pb-[0px]">
         <div className="flex flex-col gap-2 self-stretch pl-4">
           <ol className="flex flex-col gap-2 self-stretch list-decimal">
-            <li className="font-normal text-sm text-[#363b3f]">
+            <li className="font-normal text-sm color-text-default">
               Click &quot;Import Contract&quot; above or select the action from
               the toolbar on the right.
             </li>
-            <li className="font-normal text-sm text-[#363b3f]">
+            <li className="font-normal text-sm color-text-default">
               Enter the contract address and choose the chain, then click
               &quot;Import Smart Contract.&quot;
             </li>
-            <li className="font-normal text-sm text-[#363b3f]">
+            <li className="font-normal text-sm color-text-default">
               Set a Contract Name. Youll use this later in function syntax as
               &apos;contractName&apos;.
             </li>
             <ul className="flex flex-col gap-1 self-stretch pl-[10px]">
               <li
-                className="font-normal text-sm text-[#363b3f]"
+                className="font-normal text-sm color-text-default"
                 style={{ listStyleType: 'disc' }}
               >
                 If the ABI cannot be fetched automatically, paste it or upload
                 an ABI .json file before setting the Contract Name.
               </li>
             </ul>
-            <li className="font-normal text-sm text-[#363b3f]">
+            <li className="font-normal text-sm color-text-default">
               Click &apos;Save smart contract&apos;
             </li>
           </ol>
@@ -273,20 +273,20 @@ const UseImportedContractDocs: React.FC = () => (
     className="w-full accordin"
   >
     <AccordionItem value="item-a" className="border-none">
-      <AccordionTrigger className="!pl-[0px] hover:!bg-[#f8f9fa] !text-left">
-        <span className="font-medium text-sm text-[#363b3f]">
+      <AccordionTrigger className="!pl-[0px] hover:!bg-[hsl(var(--color-bg-default-hover))] !text-left">
+        <span className="font-medium text-sm color-text-default">
           How to use imported contract?
         </span>
       </AccordionTrigger>
       <AccordionContent className="!pb-[0px]">
         <ol className="flex flex-col gap-2 self-stretch list-decimal pl-4">
           <li>
-            <span className="font-normal text-sm text-[#363b3f]">
+            <span className="font-normal text-sm color-text-default">
               After importing a contract, you can pull data using the
               =SMARTCONTRACT formula
             </span>
             <div className="flex flex-col gap-2 self-stretch">
-              <div className="flex justify-center items-center gap-2 self-stretch bg-[hsl(var(--color-bg-default))] p-2 rounded border border-solid border-[#e8ebec] h-[48px]">
+              <div className="flex justify-center items-center gap-2 self-stretch color-bg-default p-2 rounded border border-solid color-border-default h-[48px]">
                 <code>
                   <span className="font-medium text-xs">
                     =SMARTCONTRACT(
@@ -300,7 +300,7 @@ const UseImportedContractDocs: React.FC = () => (
                 <CopyButton textToCopy='=SMARTCONTRACT("myContractName", "functionName", "arguments")' />
               </div>
               <div className="flex flex-col gap-1 self-stretch">
-                <span className="font-medium text-xs text-[#77818a]">
+                <span className="font-medium text-xs color-text-secondary">
                   Description
                 </span>
                 <div className="flex flex-col gap-1 self-stretch">
@@ -321,11 +321,11 @@ const UseImportedContractDocs: React.FC = () => (
               </div>
             </div>
           </li>
-          <li className="font-normal text-sm text-[#363b3f]">
+          <li className="font-normal text-sm color-text-default">
             Enter formula and hit &apos;Enter&apos;. You should get in cell
             output.{' '}
           </li>
-          <li className="font-normal text-sm text-[#363b3f]">
+          <li className="font-normal text-sm color-text-default">
             Please spend some time to learn examples below
             <CodeBlock
               code={
@@ -374,7 +374,7 @@ const UseImportedContractDocs: React.FC = () => (
 );
 
 const DocSection: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="flex flex-col gap-3 self-stretch bg-[#f8f9fa] px-3 py-2 rounded-lg">
+  <div className="flex flex-col gap-3 self-stretch color-bg-secondary color-text-default px-3 py-2 rounded-lg">
     {children}
   </div>
 );
@@ -473,7 +473,7 @@ export const SmartContractListView: React.FC<SmartContractListViewProps> = ({
       (contract) =>
         contract.name.toLowerCase().includes(searchText.toLowerCase()) ||
         contract.address.toLowerCase().includes(searchText.toLowerCase()) ||
-        contract.network.toLowerCase().includes(searchText.toLowerCase())
+        contract.network.toLowerCase().includes(searchText.toLowerCase()),
     );
 
     setFilteredContractList(filtered);

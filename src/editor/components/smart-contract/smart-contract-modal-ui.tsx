@@ -116,11 +116,11 @@ export const SmartContractModalUI: React.FC<SmartContractModalUIProps> = ({
 
   return (
     <div
-      className="h-screen z-[9999] bg-gray-100 grid place-items-center relative"
+      className="h-screen z-[9999] color-bg-default color-text-default grid place-items-center relative"
       ref={modalDivRef}
     >
       <div
-        className={`fixed top-1/4 left-1/2 ${isMobile ? 'max-w-[350px]' : 'w-[500px]'} transform -translate-x-1/2 rounded-xl fetch-url-modal bg-white !p-0 border-0 shadow-[0_8px_32px_0_rgba(0,0,0,0.15)]`}
+        className={`fixed top-1/4 left-1/2 ${isMobile ? 'max-w-[350px]' : 'w-[500px]'} transform -translate-x-1/2 rounded-xl fetch-url-modal color-bg-default color-text-default !p-0 border-0 shadow-[0_8px_32px_0_rgba(0,0,0,0.15)]`}
         style={{ transformOrigin: 'top center' }}
       >
         <div className="w-full">
@@ -162,10 +162,10 @@ export const SmartContractModalUI: React.FC<SmartContractModalUIProps> = ({
                         {/* Divider */}
                         <div className="relative my-4">
                           <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300"></div>
+                            <div className="w-full border-t color-border-default"></div>
                           </div>
                           <div className="relative flex justify-center text-sm">
-                            <span className="px-4 bg-white text-gray-500">
+                            <span className="px-4 color-bg-default color-text-secondary">
                               or
                             </span>
                           </div>

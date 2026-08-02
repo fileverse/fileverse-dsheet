@@ -43,7 +43,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
         </Button>
       </div>
     ) : (
-      <div className="flex items-center h-[64px] justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+      <div className="flex items-center h-[64px] justify-between p-4 color-bg-secondary border color-border-default rounded-lg">
         <div className="flex items-center space-x-3">
           <LucideIcon
             name="FileKey2"
@@ -52,7 +52,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
           />
           <div>
             <h3 className="text-heading-xsm">{uploadedFile.name}</h3>
-            <p className="text-xs text-gray-500">{uploadedFile.size}</p>
+            <p className="text-xs color-text-secondary">{uploadedFile.size}</p>
           </div>
         </div>
         {uploadProgress === 100 ? (
@@ -63,7 +63,7 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
             </div>
             <button
               onClick={handleRemoveFile}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              className="p-1 color-icon-secondary hover:text-[hsl(var(--color-icon-danger))] transition-colors"
               disabled={isUploading}
             >
               <svg
@@ -83,20 +83,22 @@ export const FileUploadSection: React.FC<FileUploadSectionProps> = ({
           </div>
         ) : (
           <div className="flex items-center space-x-4">
-            <div className="w-24 h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div className="w-24 h-1 color-bg-tertiary rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
-                  uploadProgress === 100 ? 'bg-green-500' : 'bg-blue-500'
+                  uploadProgress === 100 ? 'color-bg-success' : 'color-bg-brand'
                 }`}
                 style={{ width: `${uploadProgress}%` }}
               ></div>
             </div>
             {isUploading && (
-              <span className="text-xs text-gray-500">{uploadProgress}%</span>
+              <span className="text-xs color-text-secondary">
+                {uploadProgress}%
+              </span>
             )}
             <button
               onClick={handleRemoveFile}
-              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+              className="p-1 color-icon-secondary hover:text-[hsl(var(--color-icon-danger))] transition-colors"
               disabled={isUploading}
             >
               <svg

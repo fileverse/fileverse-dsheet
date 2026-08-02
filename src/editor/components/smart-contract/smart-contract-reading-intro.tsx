@@ -56,7 +56,7 @@ export const SmartContractReadingIntro = ({
       contentClassName="rounded-lg"
       content={
         <div>
-          <div className="h-[296px] flex justify-center p-5 items-center bg-[#e8ebec] ">
+          <div className="h-[296px] flex justify-center p-5 items-center color-bg-secondary">
             <video
               autoPlay={true}
               muted={true}
