@@ -10,6 +10,11 @@ const targets = [
 ];
 const sourceExtensions = new Set(['.css', '.scss', '.ts', '.tsx']);
 
+// Formula metadata intentionally brands the hint surface. Only this exact
+// semantic-fallback expression is allowed; other BRAND_COLOR uses still fail.
+const allowedFormulaBrandSurfacePattern =
+  /backgroundColor:\s*`\$\{\s*fn\.BRAND_COLOR\s*\?\s*fn\.BRAND_COLOR\s*:\s*'hsl\(var\(--color-bg-secondary\)\)'\s*\}`/g;
+
 const fixedColorPatterns = [
   {
     name: 'fixed neutral Tailwind color',
@@ -30,9 +35,8 @@ const sourceFiles = targets.flatMap((target) => collectSourceFiles(target));
 const violations = [];
 
 for (const relativeFile of sourceFiles) {
-  const lines = readFileSync(path.join(repoRoot, relativeFile), 'utf8').split(
-    '\n',
-  );
+  const source = readFileSync(path.join(repoRoot, relativeFile), 'utf8');
+  const lines = source.split('\n');
 
   lines.forEach((line, index) => {
     for (const { name, pattern } of fixedColorPatterns) {
@@ -45,19 +49,26 @@ for (const relativeFile of sourceFiles) {
         });
       }
     }
+  });
 
-    if (
-      relativeFile.includes('/FormulaHint/') &&
-      /\bfn\??\.BRAND_COLOR\b/.test(line)
-    ) {
+  if (relativeFile.includes('/FormulaHint/')) {
+    const sourceWithAllowedBrandSurfacesMasked = source.replace(
+      allowedFormulaBrandSurfacePattern,
+      (match) => ' '.repeat(match.length),
+    );
+
+    for (const match of sourceWithAllowedBrandSurfacesMasked.matchAll(
+      /\bfn\??\.BRAND_COLOR\b/g,
+    )) {
+      const lineNumber = source.slice(0, match.index).split('\n').length;
       violations.push({
         relativeFile,
-        line: index + 1,
+        line: lineNumber,
         name: 'formula brand color used as a surface',
-        source: line.trim(),
+        source: lines[lineNumber - 1].trim(),
       });
     }
-  });
+  }
 }
 
 if (violations.length > 0) {
