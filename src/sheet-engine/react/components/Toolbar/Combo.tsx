@@ -117,7 +117,9 @@ const Combo: React.FC<Props> = ({
           <Button
             variant="ghost"
             onClick={() => setOpen(!open)}
-            className={cn('fortune-toolbar-combo-button !min-w-fit !px-0', {})}
+            className={cn(
+              'fortune-toolbar-combo-button !min-w-fit !px-0 !flex !items-center !justify-center',
+            )}
             style={{
               width: 30,
               height: 30,
@@ -129,6 +131,7 @@ const Combo: React.FC<Props> = ({
               height="16"
               viewBox="0 0 24 24"
               className="color-text-default"
+              style={{ display: 'block' }}
             >
               <path
                 fill="currentColor"

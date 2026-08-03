@@ -1610,8 +1610,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       backgroundColor: colorRules.textColor,
                       position: 'absolute',
                       bottom: 2,
-                      left: 3,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
                       zIndex: 100,
+                      pointerEvents: 'none',
                     }}
                   />
                   <Combo
@@ -1652,8 +1654,10 @@ const ConditionRules: React.FC<{ context?: any }> = ({ context }) => {
                       backgroundColor: colorRules.cellColor,
                       position: 'absolute',
                       bottom: 2,
-                      left: 3,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
                       zIndex: 100,
+                      pointerEvents: 'none',
                     }}
                   />
                   <Combo
