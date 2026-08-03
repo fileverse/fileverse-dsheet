@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "3.0.3",
+  "version": "4.0.1",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -38,11 +38,14 @@
   ],
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run theme:check",
     "build": "tsc && vite build",
+    "prebuild:dist": "npm run theme:check",
     "build:dist": "vite build",
     "dev:link": "npm run build:dist && cp -r dist/* ../dsheets.new/node_modules/@fileverse-dev/dsheet/dist/ && echo '✓ Copied to dsheets.new'",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "preview": "vite preview",
+    "theme:check": "node scripts/theme-hardcode-ratchet.mjs",
     "test:unit": "vitest run"
   },
   "lint-staged": {

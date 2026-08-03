@@ -248,7 +248,7 @@ const FormulaHint = (props: any) => {
               borderWidth: '1px',
               borderColor: fn?.BRAND_SECONDARY_COLOR
                 ? fn?.BRAND_SECONDARY_COLOR
-                : 'rgba(0, 0, 0, 0.2)',
+                : 'hsl(var(--color-border-deafault))',
               backgroundColor: `${fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'}`,
               width: '340px',
               padding: '0px',
@@ -287,7 +287,9 @@ const FormulaHint = (props: any) => {
               data-testid="formula-hint-heading"
               style={{
                 backgroundColor: `${
-                  fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'
+                  fn.BRAND_COLOR
+                    ? fn.BRAND_COLOR
+                    : 'hsl(var(--color-bg-secondary))'
                 }`,
                 padding: '10px',
                 borderRadius: '10px',
@@ -410,7 +412,9 @@ const FormulaHint = (props: any) => {
                 id="function-details"
                 style={{
                   backgroundColor: `${
-                    fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'
+                    fn.BRAND_COLOR
+                      ? fn.BRAND_COLOR
+                      : 'hsl(var(--color-bg-secondary))'
                   }`,
                   maxHeight: '284px',
                   overflowY: 'scroll',
@@ -449,9 +453,7 @@ const FormulaHint = (props: any) => {
                         className="fortune-formula-hint__heading-sm text-heading-xsm color-text-default"
                         data-testid="formula-hint-info-heading"
                       >
-                        {isKeyAdded
-                          ? 'API key provided'
-                          : 'API key (optional)'}
+                        {isKeyAdded ? 'API key provided' : 'API key (optional)'}
                       </h3>
                       <LucideIcon
                         name={showAPInput ? 'ChevronUp' : 'ChevronDown'}
@@ -555,7 +557,9 @@ const FormulaHint = (props: any) => {
                             >
                               {param.example}
                               <span
-                                style={{ color: 'hsl(var(--color-text-default))' }}
+                                style={{
+                                  color: 'hsl(var(--color-text-default))',
+                                }}
                               >
                                 {i !== fn.p.length - 1 && ', '}
                               </span>
@@ -636,7 +640,9 @@ const FormulaHint = (props: any) => {
               <div
                 style={{
                   backgroundColor: `${
-                    fn.BRAND_COLOR ? fn.BRAND_COLOR : 'hsl(var(--color-bg-secondary))'
+                    fn.BRAND_COLOR
+                      ? fn.BRAND_COLOR
+                      : 'hsl(var(--color-bg-secondary))'
                   }`,
                   padding: '8px',
                   borderBottomLeftRadius: '10px',
