@@ -989,6 +989,10 @@ grep -rnE "bg-white|bg-black|text-white|text-black|text-gray-[0-9]|bg-gray-[0-9]
   src/sheet-engine/react --include="*.tsx" --include="*.ts" --include="*.css"
 ```
 
+The reported formula-help and smart-contract surfaces also have an automated
+ratchet. `npm run theme:check` rejects fixed light-theme neutrals in those
+feature paths, and it runs automatically before both package build commands.
+
 **Phase 2a residual:** hardcoded chrome grays are gone across all of `src/sheet-engine/react/**`; Toolbar + ContextMenu fully done. Outstanding before Phase 2a is formally closed: a final holistic review + build gate, and human visual QA across all 5 themes.
 
 ### Phase 3 — canvas/grid + in-cell editor

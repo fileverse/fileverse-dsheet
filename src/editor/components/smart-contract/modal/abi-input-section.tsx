@@ -18,7 +18,7 @@ export const AbiInputSection: React.FC<AbiInputSectionProps> = ({
       value={abiCode}
       onChange={(e) => setAbiCode(e.target.value)}
       placeholder="ABI .json code"
-      className="w-full h-[100px] p-3 border  color-border-default color-text-secondary  rounded-lg text-body-text-sm resize-y focus:outline-none transition-colors"
+      className="w-full h-[100px] p-3 border color-border-default color-bg-default color-text-default placeholder:text-[hsl(var(--color-text-secondary))] rounded-lg text-body-text-sm resize-y focus:outline-none transition-colors"
     />
     {errorState?.message && (
       <p className="color-text-danger text-helper-text-sm mt-1">

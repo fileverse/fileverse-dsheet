@@ -21,7 +21,7 @@ export const SmartContractReadingErrorToast = ({
   }
 
   return (
-    <div className="fixed bottom-10 left-1/2 z-[9999] -translate-x-1/2 border color-border-danger bg-[#FFF1F2] rounded-lg py-2 px-3 flex items-center justify-between gap-1 lg:!gap-6 flex-col lg:!flex-row">
+    <div className="fixed bottom-10 left-1/2 z-[9999] -translate-x-1/2 border color-border-danger color-bg-danger-light rounded-lg py-2 px-3 flex items-center justify-between gap-1 lg:!gap-6 flex-col lg:!flex-row">
       <div className="flex items-center gap-2">
         <LucideIcon
           name="TriangleAlert"

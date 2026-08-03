@@ -8,7 +8,10 @@ import {
 } from '@fileverse/ui';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Abi } from 'viem';
-import type { ContractConfig, ParsedFunction } from '../../types/smart-contract';
+import type {
+  ContractConfig,
+  ParsedFunction,
+} from '../../types/smart-contract';
 import { parseAbiViewFunctions } from '../../utils/smart-contract/reading-utils';
 import {
   parseFunctionSignature,
@@ -18,7 +21,7 @@ import {
 // Extracted Components
 const CopyButton = ({ textToCopy }: { textToCopy: string }) => (
   <div
-    className="w-6 h-6 flex justify-center items-center gap-3 p-2 rounded cursor-pointer active:bg-gray-300 active:scale-95"
+    className="w-6 h-6 flex justify-center items-center gap-3 p-2 rounded cursor-pointer active:bg-[hsl(var(--color-bg-default-active))] active:scale-95"
     onClick={() => navigator.clipboard.writeText(textToCopy)}
   >
     <div className="w-4 h-4">
@@ -48,7 +51,7 @@ const CodeBlock = ({
   children: React.ReactNode;
   onCopy?: string;
 }) => (
-  <div className="flex justify-center items-center gap-2 self-stretch bg-[#f8f9fa] p-2 rounded border border-solid border-[#e8ebec]">
+  <div className="flex justify-center items-center gap-2 self-stretch color-bg-secondary p-2 rounded border border-solid color-border-default">
     <code>
       <span className="font-medium text-xs">{children}</span>
     </code>
@@ -58,7 +61,7 @@ const CodeBlock = ({
 
 const SyntaxSection = () => (
   <div className="flex flex-col gap-2 self-stretch">
-    <span className="font-medium text-xs text-[#77818a]">Syntax</span>
+    <span className="font-medium text-xs color-text-secondary">Syntax</span>
     <CodeBlock onCopy="=SMARTCONTRACT('contract_name', 'function', 'argument')">
       =SMARTCONTRACT(
       <span className="text-[hsl(var(--color-text-success))]">
@@ -82,7 +85,7 @@ const DescriptionItem = ({
 }) => (
   <div className="flex flex-col justify-center gap-1 self-stretch py-1 rounded">
     <p className="text-body-sm">
-      <code className="text-[hsl(var(--color-text-default)] font-mono text-sm font-bold leading-5">
+      <code className="color-text-default font-mono text-sm font-bold leading-5">
         {label}
         {isOptional && (
           <code className="!text-[hsl(var(--color-text-secondary))]">
@@ -111,7 +114,9 @@ const DescriptionItem = ({
 
 const DescriptionSection = () => (
   <div className="flex flex-col gap-2 self-stretch">
-    <span className="font-medium text-xs text-[#77818a]">Description</span>
+    <span className="font-medium text-xs color-text-secondary">
+      Description
+    </span>
     <div className="flex flex-col gap-1 self-stretch">
       <DescriptionItem
         label="contract_name"
@@ -163,12 +168,12 @@ const FunctionExamples = ({
 }) => {
   const functionDetail = useMemo(
     () => getFunctionWithArguments(functionContent),
-    [functionContent]
+    [functionContent],
   );
 
   const funParsed = useMemo(
     () => parseFunctionSignature(functionDetail?.functionName || ''),
-    [functionDetail]
+    [functionDetail],
   );
 
   const cellRefArg = useMemo(
@@ -177,7 +182,7 @@ const FunctionExamples = ({
         ?.split(',')
         .map((_, index) => `A${index + 1}`)
         .join(', '),
-    [funParsed]
+    [funParsed],
   );
 
   if (!funParsed) return null;
@@ -198,7 +203,7 @@ const FunctionExamples = ({
           />
         </div>
       </div>
-      <p className="text-[hsl(var(--color-text-default, #363B3F))] font-normal text-[12px] leading-5 font-[`Helvetica_Neue`] mb-2">
+      <p className="color-text-default font-normal text-[12px] leading-5 font-[`Helvetica_Neue`] mb-2">
         Note: In above example {cellRefArg} is cell reference containing an
         argument value.
       </p>
@@ -215,7 +220,7 @@ const FunctionList = ({
 }) => (
   <>
     <div className="flex flex-col justify-center gap-1 self-stretch py-2 rounded">
-      <span className="text-[hsl(var(--color-text-secondary,#77818A))] font-['Helvetica_Neue'] text-[12px] font-medium leading-[16px]">
+      <span className="color-text-secondary font-['Helvetica_Neue'] text-[12px] font-medium leading-[16px]">
         Functions
       </span>
     </div>
@@ -236,7 +241,7 @@ const FunctionList = ({
             </code>
           </div>
           {index !== functionContent.length - 1 && (
-            <hr className="w-full my-2" />
+            <hr className="w-full my-2 color-border-default" />
           )}
         </div>
       );
@@ -254,14 +259,13 @@ const FunctionsSection = ({
   <Accordion className="!w-full" type="multiple" defaultValue={['function']}>
     <AccordionItem value="function" className="border-none">
       <AccordionTrigger
-        style={{ backgroundColor: 'white', background: 'white !important' }}
-        className="!p-0"
+        className="!p-0 !bg-[hsl(var(--color-bg-default))] hover:!bg-[hsl(var(--color-bg-default-hover))]"
         size="md"
       >
         <p className="text-heading-xsm">Functions and their arguments</p>
       </AccordionTrigger>
       <AccordionContent className="!pb-0" id="function-list">
-        <p className="text-[hsl(var(--color-text-default, #363B3F))] font-normal text-sm leading-5 font-[`Helvetica_Neue`] mb-2">
+        <p className="color-text-default font-normal text-sm leading-5 font-[`Helvetica_Neue`] mb-2">
           How to use functions and arguments? Place the function name followed
           by its arguments. Explore examples below.
         </p>
@@ -304,15 +308,14 @@ const ContractHeader = ({
       <div
         role="button"
         onClick={() => onDelete(contractName)}
-        className="p-2 rounded-md hover:bg-[#FFF1F2] mr-[4px]"
+        className="p-2 rounded-md hover:bg-[hsl(var(--color-bg-danger-light))] mr-[4px]"
       >
         <LucideIcon
           name="Trash2"
           size="sm"
-          stroke="#FB3449"
           className={cn(
             'cursor-pointer color-icon-danger',
-            isDeleting && 'cursor-not-allowed'
+            isDeleting && 'cursor-not-allowed',
           )}
         />
       </div>
@@ -365,18 +368,14 @@ export const SmartContractListItem = ({
   }, [parseAbi]);
 
   return (
-    <div className="border px-3 py-[8px] w-full rounded-lg">
+    <div className="border color-border-default color-text-default px-3 py-[8px] w-full rounded-lg">
       <div className="flex w-full justify-between items-center" />
       <div className="w-full">
         <div className="w-full mt-2">
           <Accordion className="!w-full" collapsible type="single">
             <AccordionItem value="item-1" className="border-none">
               <AccordionTrigger
-                style={{
-                  backgroundColor: 'white',
-                  background: 'white !important',
-                }}
-                className="!p-0 mb-3"
+                className="!p-0 mb-3 !bg-[hsl(var(--color-bg-default))] hover:!bg-[hsl(var(--color-bg-default-hover))]"
                 size="md"
               >
                 <ContractHeader
@@ -391,7 +390,7 @@ export const SmartContractListItem = ({
                     <SyntaxSection />
                     <DescriptionSection />
                   </div>
-                  <hr className="w-full border-t border-dashed border-gray-200 mt-2 mb-4" />
+                  <hr className="w-full border-t border-dashed color-border-default mt-2 mb-4" />
                   <FunctionsSection
                     contractName={contract.name}
                     functionContent={functionContent}
