@@ -1,11 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import SSF from 'ssf';
+import { Workbook } from 'exceljs';
+// @ts-expect-error — luckyexcel ships without TypeScript types
+import LuckyExcel from 'luckyexcel';
 import type { Sheet } from '@sheet-engine/react';
 import {
   compactImportedSheetFormatting,
   internImportedDataVerification,
 } from './import-compaction';
-import type { RawSheetImage } from './xlsx-image-utils';
+import {
+  convertRawImagesToFortuneSheet,
+  extractImagesFromWorksheet,
+  type RawSheetImage,
+} from './xlsx-image-utils';
 import { normalizeImportedHyperlinkCellV } from './xlsx-hyperlink-inline';
 
 /**
@@ -602,15 +609,7 @@ export async function parseXlsxWorkbook(
   settings?: XlsxParseSettings,
 ): Promise<XlsxParsedWorkbook> {
   const arrayBuffer = await file.arrayBuffer();
-  const [{ Workbook }, luckyexcelMod, imageUtils] = await Promise.all([
-    import('exceljs'),
-    // @ts-expect-error — luckyexcel ships without TypeScript types
-    import('luckyexcel'),
-    import('./xlsx-image-utils'),
-  ]);
-  const transformExcelToLucky = luckyexcelMod.default.transformExcelToLucky;
-  const { extractImagesFromWorksheet, convertRawImagesToFortuneSheet } =
-    imageUtils;
+  const transformExcelToLucky = LuckyExcel.transformExcelToLucky;
 
   const warnings: XlsxImportWarning[] = [];
   const generatedSheetIds: string[] = [];
