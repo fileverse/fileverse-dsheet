@@ -16,6 +16,18 @@ export default defineConfig({
       ),
     },
   },
+  // The dsheet worker builds as a separate self-contained graph: iife output
+  // inlines its dynamic imports AND ignores the library externals below, so
+  // exceljs/luckyexcel are bundled into the worker blob (a blob worker cannot
+  // resolve bare imports).
+  worker: {
+    format: 'iife',
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
+  },
   build: {
     lib: {
       name: 'dsheet',
