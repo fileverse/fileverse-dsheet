@@ -72,8 +72,43 @@ function excelishBooleanText(v: boolean): 'TRUE' | 'FALSE' {
   return v ? 'TRUE' : 'FALSE';
 }
 
+function formulaCellHasDisplayValue(cell: {
+  v?: unknown;
+  m?: unknown;
+}): boolean {
+  return (
+    (cell.v != null && cell.v !== '') ||
+    (typeof cell.m === 'string' && cell.m.length > 0)
+  );
+}
+
+/** True when any formula cell is missing cached display value (common for Google Sheets exports). */
+function sheetsNeedPostImportFormulaRecalc(sheets: any[]): boolean {
+  for (const sheet of sheets || []) {
+    const cells = Array.isArray(sheet?.celldata) ? sheet.celldata : [];
+    for (const cell of cells) {
+      const v = cell?.v;
+      if (!v?.f) continue;
+      if (!formulaCellHasDisplayValue(v)) return true;
+    }
+    const data = sheet?.data;
+    if (!Array.isArray(data)) continue;
+    for (let r = 0; r < data.length; r += 1) {
+      const row = data[r];
+      if (!Array.isArray(row)) continue;
+      for (let c = 0; c < row.length; c += 1) {
+        const cell = row[c];
+        if (!cell?.f) continue;
+        if (!formulaCellHasDisplayValue(cell)) return true;
+      }
+    }
+  }
+  return false;
+}
+
 /**
- * XLSX stores cached formula results only; we normalize cells and then must run the in-app engine.
+ * Run when imported formula cells lack cached m/v (e.g. Google Sheets xlsx).
+ * When Excel already provided display values, skip force-recalc and keep them.
  */
 function schedulePostImportFormulaRecalc(
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
@@ -1141,8 +1176,8 @@ export async function runXlsxFileUpload(
                         }
                       }
                       // Mark formula cells so FortuneSheet recalculates them on dependency change.
-                      // Keep cached m/v so the workbook shows something during the remount phase;
-                      // schedulePostImportFormulaRecalc will overwrite them once the engine runs.
+                      // Preserve any cached m/v from the file; post-import force-recalc runs
+                      // only when display values are missing.
                       if (cell.v.f && cell.v.ct?.t !== 'd') {
                         cell.v.ct = { ...(cell.v.ct ?? {}), t: 'str' };
                         pushCalcChainOnce(cell.r, cell.c);
@@ -1290,7 +1325,7 @@ export async function runXlsxFileUpload(
                 }
 
                 // Normalize formula cells in the data grid (luckyexcel may populate sheet.data
-                // in addition to sheet.celldata). Keep cached m/v for display during remount.
+                // in addition to sheet.celldata). Preserve any cached m/v already present.
                 if (Array.isArray((sheet as any).data)) {
                   const data = (sheet as any).data as any[][];
                   for (let r = 0; r < data.length; r++) {
@@ -1357,6 +1392,8 @@ export async function runXlsxFileUpload(
                 sheetCount: sheets.length,
                 sheets,
               });
+              const needsFormulaRecalc =
+                sheetsNeedPostImportFormulaRecalc(sheets);
 
               let combinedSheets;
 
@@ -1411,7 +1448,9 @@ export async function runXlsxFileUpload(
               setTimeout(() => {
                 handleContentPortal?.();
               }, 200);
-              if (!options?.headless) {
+              // Keep Excel/luckyexcel cached m/v when present; only force-recalc
+              // when formula cells are missing display values (e.g. Google Sheets export).
+              if (!options?.headless && needsFormulaRecalc) {
                 schedulePostImportFormulaRecalc(sheetEditorRef);
               }
               // @ts-expect-error later

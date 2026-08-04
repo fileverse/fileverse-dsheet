@@ -227,12 +227,17 @@ export function copySheet(ctx: Context, sheetId: string) {
   const newSheet = ctx.luckysheetfile[newSheetIndex];
   const newSheetId = newSheet.id as string;
   if (newSheet.calcChain?.length) {
-    newSheet.calcChain = newSheet.calcChain.map(
-      (entry: { r: number; c: number; id?: string }) => ({
+    newSheet.calcChain = newSheet.calcChain
+      .filter(
+        (entry: { r?: number; c?: number; id?: string } | null | undefined) =>
+          entry != null &&
+          typeof entry.r === 'number' &&
+          typeof entry.c === 'number',
+      )
+      .map((entry: { r: number; c: number; id?: string }) => ({
         ...entry,
         id: newSheetId,
-      }),
-    );
+      }));
   }
   if (newSheet.dynamicArray?.length) {
     newSheet.dynamicArray = newSheet.dynamicArray.map(

@@ -200,6 +200,19 @@ export function migrateSheetFactoryForImport(
         return;
       }
 
+      // Same shape as migrateSheetArrayIfNeeded — keyed Y.Map, drop nullish slots.
+      if (key === 'calcChain' && Array.isArray(value)) {
+        const calcChainMap = new Y.Map();
+        const normalized = normalizeCelldataArray(value);
+
+        Object.entries(normalized).forEach(([cellKey, cellValue]) => {
+          calcChainMap.set(cellKey, cellValue);
+        });
+
+        sheetMap.set('calcChain', calcChainMap);
+        return;
+      }
+
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const yMap = new Y.Map();
         Object.entries(value).forEach(([k, v]) => yMap.set(k, v));

@@ -201,7 +201,8 @@ function scanSheetsReferencingActive(
     const celldataFormulas = buildCelldataFormulaMap(file);
     let referencesActive = false;
     file.calcChain?.forEach((entry) => {
-      if (referencesActive) return;
+      // Nullish slots can appear from corrupted collab/import data.
+      if (referencesActive || entry == null) return;
       const sheetId = entry.id ?? file.id!;
       const formula = readFormulaAt(
         ctx,
@@ -234,6 +235,7 @@ function calcChainCrossRefsCoveredByDeps(
   if (!chain?.length) return true;
 
   for (const entry of chain) {
+    if (entry == null) continue;
     const sheetId = entry.id ?? activeSheetId;
     const formula = readFormulaAt(
       ctx,
@@ -273,6 +275,7 @@ function scanSheetFormulasForCrossRefs(
   }
 
   file.calcChain?.forEach((entry: { r: number; c: number; id?: string }) => {
+    if (entry == null) return;
     const entrySheetId = entry.id ?? sheetId;
     const formula = readFormulaAt(
       ctx,
