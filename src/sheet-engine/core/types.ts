@@ -225,6 +225,8 @@ export type Sheet = {
   luckysheet_conditionformat_save?: any[];
   luckysheet_alternateformat_save?: any[];
   dataVerification?: any;
+  /** Interned dataVerification entries; per-cell map may hold numeric refs into this list. */
+  dataVerificationDefs?: any[];
   conditionRules?: ConditionRulesProps;
   hyperlink?: Record<string, HyperlinkEntry | HyperlinkEntry[]>;
   dynamicArray_compute?: any;

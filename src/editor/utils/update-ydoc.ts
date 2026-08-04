@@ -13,6 +13,7 @@ import {
   rangesEqual as cellFormatRangesEqual,
   type CellFormatRange,
 } from "../../sheet-engine/core/utils/range-format";
+import { expandSheetDataVerification } from "./import-compaction";
 
 export type SheetChangePath = {
   sheetId: string;
@@ -700,6 +701,7 @@ export function ySheetArrayToPlain(
     let calcChainArray;
     calcChainArray = obj.calcChain ? Object.values(obj.calcChain) : [];
     obj.calcChain = calcChainArray;
+    expandSheetDataVerification(obj);
     return obj as Sheet;
   });
 }

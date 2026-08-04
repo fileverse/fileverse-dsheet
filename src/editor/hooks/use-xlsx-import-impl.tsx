@@ -4,6 +4,10 @@ import SSF from 'ssf';
 import * as Y from 'yjs';
 import { Sheet, WorkbookInstance } from '@sheet-engine/react';
 import { migrateSheetFactoryForImport } from '../utils/migrate-new-yjs';
+import {
+  compactImportedSheetFormatting,
+  internImportedDataVerification,
+} from '../utils/import-compaction';
 import { ySheetArrayToPlain } from '../utils/update-ydoc';
 
 import type { RawSheetImage } from '../utils/xlsx-image-utils';
@@ -1349,6 +1353,9 @@ export async function runXlsxFileUpload(
                     }
                   }
                 }
+
+                internImportedDataVerification(sheet);
+                compactImportedSheetFormatting(sheet);
 
                 return sheet;
               });
