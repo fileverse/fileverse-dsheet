@@ -78,7 +78,8 @@ function formulaCellHasDisplayValue(cell: {
 }): boolean {
   return (
     (cell.v != null && cell.v !== '') ||
-    (typeof cell.m === 'string' && cell.m.length > 0)
+    (typeof cell.m === 'string' && cell.m.length > 0) ||
+    (typeof cell.m === 'number' && Number.isFinite(cell.m))
   );
 }
 
@@ -1386,11 +1387,6 @@ export async function runXlsxFileUpload(
                 }
 
                 return sheet;
-              });
-              console.log('[xlsx-import] parsed sheets data', {
-                fileName: file.name,
-                sheetCount: sheets.length,
-                sheets,
               });
               const needsFormulaRecalc =
                 sheetsNeedPostImportFormulaRecalc(sheets);
