@@ -29,8 +29,14 @@ import { filterSelectYdocUpdate } from "../utils/filter-select-ydoc-update";
 import { filterYdocUpdate } from "../utils/filter-ydoc-update";
 import { hyperlinkYdocUpdate } from "../utils/hyperlink-ydoc-update";
 import { configYdocUpdate } from "../utils/config-ydoc-update";
+import {
+  definedNamesYdocUpdate,
+  getDefinedNamesYMap,
+  readDefinedNamesFromYdoc,
+} from "../utils/defined-names-ydoc";
 import { updateYdocSheetData, SheetChangePath } from "../utils/update-ydoc";
 import { applyCellFormatRangesCommits } from "../../sheet-engine/core/utils/mirror-cell-format-ranges";
+import { invalidateFormulaWorkerSnapshot } from "../../sheet-engine/core/modules/formula-worker-bridge";
 import { handleCSVUpload } from "../utils/csv-import";
 import { handleExportToXLSX } from "../utils/xlsx-export";
 import { handleExportToCSV } from "../utils/csv-export";
@@ -210,6 +216,51 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     },
     [remoteUpdateRef],
   );
+
+  const applyDefinedNamesFromYdoc = useCallback(() => {
+    const ydoc = ydocRef.current;
+    const setContext = sheetEditorRef.current?.getWorkbookSetContext?.() as
+      | ((updater: (draft: any) => void) => void)
+      | undefined;
+    if (!ydoc || !setContext) return;
+
+    const names = readDefinedNamesFromYdoc(ydoc, dsheetId);
+    remoteUpdateRef.current = true;
+    try {
+      setContext((draft) => {
+        draft.definedNames = names;
+      });
+      invalidateFormulaWorkerSnapshot();
+    } finally {
+      requestAnimationFrame(() => {
+        remoteUpdateRef.current = false;
+      });
+    }
+  }, [dsheetId, remoteUpdateRef, sheetEditorRef, ydocRef]);
+
+  // Rehydrate named ranges after Workbook remount (Context resets to []).
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        applyDefinedNamesFromYdoc();
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [forceSheetRender, applyDefinedNamesFromYdoc]);
+
+  // Collaborative / IDB updates to the workbook-level definedNames map.
+  useEffect(() => {
+    const ydoc = ydocRef.current;
+    if (!ydoc || !dsheetId) return undefined;
+    const map = getDefinedNamesYMap(ydoc, dsheetId);
+    const onChange = () => {
+      applyDefinedNamesFromYdoc();
+    };
+    map.observe(onChange);
+    return () => {
+      map.unobserve(onChange);
+    };
+  }, [dsheetId, ydocRef, applyDefinedNamesFromYdoc, forceSheetRender]);
 
   const awarenessRef = useRef(awareness);
   useEffect(() => {
@@ -491,6 +542,14 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           }),
           hyperlinkChange: guardRemoteEcho(() => {
             hyperlinkYdocUpdate({
+              sheetEditorRef,
+              ydocRef,
+              dsheetId,
+              handleContentPortal: handleOnChangePortalUpdate,
+            });
+          }),
+          definedNamesChange: guardRemoteEcho(() => {
+            definedNamesYdocUpdate({
               sheetEditorRef,
               ydocRef,
               dsheetId,

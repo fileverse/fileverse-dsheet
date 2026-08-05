@@ -15,6 +15,7 @@ import {
   type CellRichTextValue,
 } from './xlsx-richtext-utils';
 import { buildSheetDataMatrixForExport } from '../../sheet-engine/core/utils/range-format';
+import { expandSheetDataVerification } from './import-compaction';
 import {
   concatInlineStrRunsText,
   getFirstHyperlinkEntry,
@@ -105,6 +106,9 @@ export const handleExportToXLSX = async (
     ydoc.getArray(dsheetId);
 
     const sheetWithData = workbookRef.current.getAllSheets();
+    // Headless exports (folder list) pass raw ydoc sheets that may hold
+    // interned dataVerification refs; live workbook sheets pass through.
+    sheetWithData.forEach((sheet) => expandSheetDataVerification(sheet));
     const workbook = XLSXUtil.book_new();
     const sheetRichTextMaps: Map<string, CellRichTextValue>[] =
       sheetWithData.map(() => new Map());
@@ -594,6 +598,15 @@ export const handleExportToXLSX = async (
         defaultRowPx,
       );
     });
+
+    const { applyDefinedNamesToExcelWorkbook } = await import(
+      './xlsx-defined-names'
+    );
+    applyDefinedNamesToExcelWorkbook(
+      excelWorkbook,
+      workbookRef.current.getWorkbookContext?.()?.definedNames,
+      sheetWithData,
+    );
 
     const rawBuffer = await excelWorkbook.xlsx.writeBuffer();
     const finalBuffer = await patchXlsxCf(rawBuffer, sheetCfPatches);

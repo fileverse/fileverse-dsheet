@@ -361,23 +361,24 @@ export function normalizeSelection(
   }
 
   for (let i = 0; i < selection.length; i += 1) {
-    const r1 = selection[i].row[0];
-    const r2 = selection[i].row[1];
-    const c1 = selection[i].column[0];
-    const c2 = selection[i].column[1];
+    const current = selection[i];
+    const r1 = current.row[0];
+    const r2 = current.row[1];
+    const c1 = current.column[0];
+    const c2 = current.column[1];
 
     let rf;
     let cf;
-    if (_.isNil(selection[i].row_focus)) {
+    if (_.isNil(current.row_focus)) {
       rf = r1;
     } else {
-      rf = selection[i].row_focus;
+      rf = current.row_focus;
     }
 
-    if (_.isNil(selection[i].column_focus)) {
+    if (_.isNil(current.column_focus)) {
       cf = c1;
     } else {
-      cf = selection[i].column_focus;
+      cf = current.column_focus;
     }
 
     if (_.isNil(rf) || _.isNil(cf)) {
@@ -402,25 +403,23 @@ export function normalizeSelection(
       [col_pre_f, col_f] = margeset.column;
     }
 
-    selection[i].row = [r1, r2];
-    selection[i].column = [c1, c2];
-
-    selection[i].row_focus = rf;
-    selection[i].column_focus = cf;
-
-    selection[i].left = col_pre_f;
-    // selection[i].width = col_f - col_pre_f - 1;
-    selection[i].width = col_f - col_pre_f <= 0 ? 0 : col_f - col_pre_f - 1;
-    selection[i].top = row_pre_f;
-    // selection[i].height = row_f - row_pre_f - 1;
-    selection[i].height = row_f - row_pre_f <= 0 ? 0 : row_f - row_pre_f - 1;
-
-    selection[i].left_move = col_pre;
-    // selection[i].width_move = col - col_pre - 1;
-    selection[i].width_move = col - col_pre <= 0 ? 0 : col - col_pre - 1;
-    selection[i].top_move = row_pre;
-    // selection[i].height_move = row - row_pre - 1;
-    selection[i].height_move = row - row_pre <= 0 ? 0 : row - row_pre - 1;
+    // Replace the entry instead of mutating fields — selection objects may be
+    // Immer-frozen (e.g. restored from sheetScrollRecord / prior produce).
+    selection[i] = {
+      ...current,
+      row: [r1, r2],
+      column: [c1, c2],
+      row_focus: rf,
+      column_focus: cf,
+      left: col_pre_f,
+      width: col_f - col_pre_f <= 0 ? 0 : col_f - col_pre_f - 1,
+      top: row_pre_f,
+      height: row_f - row_pre_f <= 0 ? 0 : row_f - row_pre_f - 1,
+      left_move: col_pre,
+      width_move: col - col_pre <= 0 ? 0 : col - col_pre - 1,
+      top_move: row_pre,
+      height_move: row - row_pre <= 0 ? 0 : row - row_pre - 1,
+    };
   }
   syncPrimaryCellActiveFromSelection(ctx, selection);
   return selection;

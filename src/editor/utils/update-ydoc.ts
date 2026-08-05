@@ -13,6 +13,7 @@ import {
   rangesEqual as cellFormatRangesEqual,
   type CellFormatRange,
 } from "../../sheet-engine/core/utils/range-format";
+import { expandSheetDataVerification } from "./import-compaction";
 
 export type SheetChangePath = {
   sheetId: string;
@@ -366,9 +367,20 @@ export const updateYdocSheetData = (
           sheet.set("calcChain", cellMap);
         }
 
-        type === "delete"
-          ? cellMap.delete(key)
-          : setMapValueSafe(cellMap, key, value?.v);
+        if (type === "delete") {
+          cellMap.delete(key);
+          return;
+        }
+
+        const entry = value?.v;
+        if (
+          entry == null ||
+          typeof entry.r !== "number" ||
+          typeof entry.c !== "number"
+        ) {
+          return;
+        }
+        setMapValueSafe(cellMap, key, entry);
         return;
       }
 
@@ -697,9 +709,17 @@ export function ySheetArrayToPlain(
     cellDataArray = obj.celldata ? Object.values(obj.celldata) : [];
     obj.celldata = cellDataArray;
 
-    let calcChainArray;
-    calcChainArray = obj.calcChain ? Object.values(obj.calcChain) : [];
+    // Drop nullish/malformed slots so formula/flowdata consumers never see them.
+    const calcChainArray = obj.calcChain
+      ? Object.values(obj.calcChain).filter(
+          (entry: any) =>
+            entry != null &&
+            typeof entry.r === 'number' &&
+            typeof entry.c === 'number',
+        )
+      : [];
     obj.calcChain = calcChainArray;
+    expandSheetDataVerification(obj);
     return obj as Sheet;
   });
 }

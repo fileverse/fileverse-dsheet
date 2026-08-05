@@ -2,7 +2,7 @@
   "name": "@fileverse-dev/dsheet",
   "private": false,
   "description": "DSheet",
-  "version": "4.0.3",
+  "version": "4.0.5",
   "main": "dist/index.es.js",
   "module": "dist/index.es.js",
   "exports": {
@@ -58,8 +58,8 @@
     ]
   },
   "dependencies": {
-    "@fileverse-dev/dsheets-templates": "^0.0.29",
-    "@fileverse-dev/formulajs": "^4.4.53",
+    "@fileverse-dev/dsheets-templates": "^0.0.31",
+    "@fileverse-dev/formulajs": "4.4.54",
     "@fileverse/crypto": "^0.0.22",
     "@fileverse/ens": "^0.0.4",
     "@fileverse/ui": "^5.1.9",
@@ -69,6 +69,7 @@
     "@tippyjs/react": "^4.2.6",
     "@ucans/ucans": "^0.12.0",
     "classnames": "^2.5.1",
+    "comlink": "^4.4.2",
     "dayjs": "^1.11.0",
     "exceljs": "^4.4.0",
     "immer": "^9.0.12",

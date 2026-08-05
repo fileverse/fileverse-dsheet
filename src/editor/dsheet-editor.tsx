@@ -24,6 +24,7 @@ import { EditorRightSidebar } from "./components/sidebar/editor-right-sidebar";
 import { PanelConfig } from "./types";
 import { DataVerification } from "./components/sidebars/data-verification";
 import { ConditionalFormat } from "./components/sidebars/conditional-format";
+import { NamedRanges } from "./components/sidebars/named-ranges";
 import { Templates } from "./components/sidebars/templates";
 import FunctionContent from "./components/sidebars/function-content";
 import { TemplatePreview, Template } from "./components/sidebars/template-ui";
@@ -203,6 +204,12 @@ const EditorContent = ({
       content: <ConditionalFormat />,
     },
     {
+      id: "named-ranges",
+      header: { title: "Named ranges" },
+      width: "380px",
+      content: <NamedRanges />,
+    },
+    {
       id: "functions",
       header: { title: "Function" },
       width: "380px",
@@ -280,6 +287,9 @@ const EditorContent = ({
     const yCellMap = new Y.Map();
 
     celldata.forEach((cell) => {
+      if (cell == null || typeof cell.r !== 'number' || typeof cell.c !== 'number') {
+        return;
+      }
       yCellMap.set(`${cell.r}_${cell.c}`, cell);
     });
 
@@ -375,6 +385,11 @@ const EditorContent = ({
         id="conditional-format-button"
         className="hidden"
         onClick={() => openPanel("conditional-format")}
+      />
+      <button
+        id="named-ranges-button"
+        className="hidden"
+        onClick={() => openPanel('named-ranges')}
       />
       <button
         id="smartcontract-button"

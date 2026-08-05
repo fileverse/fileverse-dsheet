@@ -1,36 +1,108 @@
 import * as Y from 'yjs';
 import type { CellMatrix, CellWithRowAndCol, Sheet } from '../../sheet-engine/core/types';
+import { compactBorderInfo } from '../../sheet-engine/core/paste/paste-border-utils';
 import { shouldPersistCelldataCell } from '../../sheet-engine/core/utils/cell-persist-utils';
 import type { SheetChangePath } from './update-ydoc';
 
-export const CELLDATA_COMPACT_STORAGE_KEY_PREFIX = 'dsheet-celldata-compact-v1:';
+/** Celldata + borderInfo compaction; bump when rules change. */
+export const SHEET_COMPACTION_REV = 2;
+export const SHEET_COMPACTION_CONFIG_KEY = 'sheetCompactionRev';
 
-export type CelldataCompactionResult = {
+export type SheetCompactionResult = {
   removedFromYdoc: number;
   clearedInMemory: number;
   changes: SheetChangePath[];
 };
 
-export function celldataCompactStorageKey(dsheetId: string): string {
-  return `${CELLDATA_COMPACT_STORAGE_KEY_PREFIX}${dsheetId}`;
+function readConfigValue(config: unknown, key: string): unknown {
+  if (config instanceof Y.Map) return config.get(key);
+  if (config && typeof config === 'object') {
+    return (config as Record<string, unknown>)[key];
+  }
+  return undefined;
 }
 
-export function hasCelldataCompactionCompleted(dsheetId: string): boolean {
-  if (typeof window === 'undefined' || !dsheetId) return true;
-  try {
-    return window.localStorage.getItem(celldataCompactStorageKey(dsheetId)) === '1';
-  } catch {
-    return true;
-  }
+function readConfigBorderInfo(config: unknown): any[] | null {
+  const value = readConfigValue(config, 'borderInfo');
+  return Array.isArray(value) ? value : null;
 }
 
-export function markCelldataCompactionCompleted(dsheetId: string): void {
-  if (typeof window === 'undefined' || !dsheetId) return;
-  try {
-    window.localStorage.setItem(celldataCompactStorageKey(dsheetId), '1');
-  } catch {
-    // ignore quota / privacy mode
+export function readSheetCompactionRev(config: unknown): number {
+  const value = readConfigValue(config, SHEET_COMPACTION_CONFIG_KEY);
+  return typeof value === 'number' ? value : 0;
+}
+
+export function getAnchorSheet(sheets: Sheet[] | null | undefined): Sheet | null {
+  if (!sheets?.length) return null;
+  let anchor = sheets[0];
+  for (let i = 1; i < sheets.length; i += 1) {
+    const sheet = sheets[i];
+    if ((sheet.order ?? 0) < (anchor.order ?? 0)) anchor = sheet;
   }
+  return anchor;
+}
+
+function getAnchorSheetEntry(
+  sheetArray: Y.Array<unknown>,
+): { sheetId: string; entry: Y.Map<unknown> } | null {
+  let best: { sheetId: string; entry: Y.Map<unknown>; order: number } | null =
+    null;
+
+  for (let i = 0; i < sheetArray.length; i += 1) {
+    const sheetEntry = sheetArray.get(i);
+    if (!(sheetEntry instanceof Y.Map)) continue;
+    const sheetId = sheetEntry.get('id');
+    if (typeof sheetId !== 'string') continue;
+    const order = sheetEntry.get('order');
+    const orderNum = typeof order === 'number' ? order : 0;
+    if (!best || orderNum < best.order) {
+      best = { sheetId, entry: sheetEntry, order: orderNum };
+    }
+  }
+
+  if (!best) return null;
+  return { sheetId: best.sheetId, entry: best.entry };
+}
+
+export function hasSheetCompactionCompleted(
+  ydoc: Y.Doc,
+  dsheetId: string,
+): boolean {
+  const anchor = getAnchorSheetEntry(ydoc.getArray(dsheetId));
+  if (!anchor) return true;
+  return (
+    readSheetCompactionRev(anchor.entry.get('config')) >= SHEET_COMPACTION_REV
+  );
+}
+
+export function buildCompactionRevChange(
+  ydoc: Y.Doc,
+  dsheetId: string,
+): SheetChangePath | null {
+  const anchor = getAnchorSheetEntry(ydoc.getArray(dsheetId));
+  if (!anchor) return null;
+  if (
+    readSheetCompactionRev(anchor.entry.get('config')) >= SHEET_COMPACTION_REV
+  ) {
+    return null;
+  }
+  return {
+    sheetId: anchor.sheetId,
+    path: ['config', SHEET_COMPACTION_CONFIG_KEY],
+    value: SHEET_COMPACTION_REV,
+    type: 'update',
+  };
+}
+
+export function markCompactionRevInMemory(
+  sheets: Sheet[] | null | undefined,
+): void {
+  const anchor = getAnchorSheet(sheets);
+  if (!anchor) return;
+  anchor.config = {
+    ...(anchor.config ?? {}),
+    [SHEET_COMPACTION_CONFIG_KEY]: SHEET_COMPACTION_REV,
+  };
 }
 
 function cellFromCelldataEntry(entry: unknown): unknown {
@@ -77,7 +149,6 @@ export function buildCelldataDeleteChanges(
     key,
     value: null,
     type: 'delete' as const,
-    // Re-check live entry at apply time — plan may be seconds old across idle chunks.
     skipIfPersistable: true,
   }));
 }
@@ -138,18 +209,22 @@ export function compactInMemorySheets(
       sheet.celldata = next;
       cleared += removed;
     }
+    if (sheet.config?.borderInfo) {
+      const next = compactBorderInfo(sheet.config.borderInfo);
+      if (next) {
+        cleared += sheet.config.borderInfo.length - next.length;
+        sheet.config.borderInfo = next;
+      }
+    }
   }
   return cleared;
 }
 
-/**
- * Scan Y.Doc for committed celldata ghosts. Does not mutate — caller applies
- * `changes` via `updateYdocSheetData`.
- */
-export function planYdocCelldataCompaction(
+/** Scan Y.Doc for committed ghosts. Does not mutate — caller applies `changes`. */
+export function planYdocCompaction(
   ydoc: Y.Doc,
   dsheetId: string,
-): CelldataCompactionResult {
+): SheetCompactionResult {
   const changes: SheetChangePath[] = [];
   let removedFromYdoc = 0;
 
@@ -163,10 +238,22 @@ export function planYdocCelldataCompaction(
     const staleKeys = collectStaleCelldataKeys(
       celldataMap instanceof Y.Map ? celldataMap : null,
     );
-    if (staleKeys.length === 0) return;
+    if (staleKeys.length > 0) {
+      removedFromYdoc += staleKeys.length;
+      changes.push(...buildCelldataDeleteChanges(sheetId, staleKeys));
+    }
 
-    removedFromYdoc += staleKeys.length;
-    changes.push(...buildCelldataDeleteChanges(sheetId, staleKeys));
+    const borderInfo = readConfigBorderInfo(sheetEntry.get('config'));
+    const nextBorderInfo = compactBorderInfo(borderInfo ?? undefined);
+    if (nextBorderInfo) {
+      removedFromYdoc += (borderInfo?.length ?? 0) - nextBorderInfo.length;
+      changes.push({
+        sheetId,
+        path: ['config', 'borderInfo'],
+        value: nextBorderInfo,
+        type: 'update',
+      });
+    }
   });
 
   return { removedFromYdoc, clearedInMemory: 0, changes };

@@ -4,6 +4,7 @@ import type { Context } from '@sheet-engine/core';
 import WorkbookContext from '../../context';
 import DataVerification from '../DataVerification';
 import ConditionRules from '../ConditionFormat/ConditionRules';
+import NamedRanges from '../NamedRanges';
 
 export type SidebarPortalTargets = Record<string, HTMLElement | undefined>;
 
@@ -21,6 +22,7 @@ const BUILTIN_SIDEBAR_PORTALS: Record<string, SidebarPortalRenderer> = {
   'conditional-format': ({ context }) => (
     <ConditionRules context={context} />
   ),
+  'named-ranges': () => <NamedRanges />,
 };
 
 interface SidebarPanelPortalsProps {
