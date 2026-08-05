@@ -15,8 +15,11 @@ import {
   setFormulaEditorOwner,
   getFormulaEditorOwner,
   suppressFormulaRangeSelectionForInitialEdit,
+  ensureFormulaRangeToSheet,
+  returnToFormulaOriginSheet,
   toggleFormulaAbsoluteReferenceAtCaret,
   getFormulaRangeIndexAtCaret,
+  isBareCellOrRangeOnlyFormula,
 } from '../modules/formula';
 import { isInlineStringCell } from '../modules/inline-string';
 import {
@@ -105,6 +108,15 @@ function shouldBlockFormulaRangeKeyboardNavigation(ctx: Context): boolean {
   if (
     ctx.formulaCache.rangeSelectionActive === true &&
     getFormulaRangeIndexAtCaret(editor as HTMLDivElement) !== null
+  ) {
+    return false;
+  }
+  // Bare `=A1` / `=Sheet2!A1` after a clean insert: keep driving that single
+  // managed ref even if focus left the span (common after switching sheets —
+  // first arrow inserts, then caret is no longer inside the span).
+  if (
+    ctx.formulaCache.rangeSelectionActive === true &&
+    isBareCellOrRangeOnlyFormula(t)
   ) {
     return false;
   }
@@ -998,6 +1010,14 @@ export function handleArrowKey(ctx: Context, e: KeyboardEvent) {
   bumpFormulaKeyboardRangeSync(ctx, navType);
 
   // Keep the formula caret anchored while arrow keys drive sheet selection.
+  // Also re-focus the editor after sheet-tab focus theft so bare `=Sheet!A1`
+  // continued navigation can see the caret on the managed span.
+  if (navType === 'rangeOfFormula') {
+    const editor = getActiveFormulaEditorForKeyboardGuard();
+    if (editor && document.activeElement !== editor) {
+      editor.focus({ preventScroll: true });
+    }
+  }
   e.preventDefault();
 }
 
@@ -1321,6 +1341,7 @@ export async function handleGlobalKeyDown(
   } else if (kstr === 'Escape' && ctx.luckysheetCellUpdate.length > 0) {
     cache.enteredEditByTyping = false;
     clearTypeOverPending(cache);
+    returnToFormulaOriginSheet(ctx);
     cancelNormalSelected(ctx);
     moveHighlightCell(ctx, 'down', 0, 'rangeOfSelect');
     e.preventDefault();
@@ -1473,8 +1494,24 @@ export async function handleGlobalKeyDown(
           // when the cell currently holds a formula. Use F2 / double-click to edit in place.
           cache.enteredEditByTyping = true;
 
+          // Fresh type-over must not inherit prior formula range-nav flags; otherwise
+          // seeding `=` can race with the InputBox selection-sync effect and become
+          // a self-ref (`=A1`) before the user navigates or clicks a range.
+          // Type-over replaces cell content, so also drop the "opened existing formula"
+          // lock from suppressFormulaRangeSelectionForInitialEdit above.
+          ctx.formulaCache.formulaKeyboardRefSync = false;
+          ctx.formulaCache.func_selectedrange = undefined;
+          ctx.formulaCache.rangestart = false;
+          ctx.formulaCache.rangedrag_column_start = false;
+          ctx.formulaCache.rangedrag_row_start = false;
+          ctx.formulaCache.rangeSelectionActive = null;
+          ctx.formulaCache.keyboardRangeSelectionLock = false;
+
           cellInput.focus();
           const initial = getTypeOverInitialContent(e);
+          if (initial === '=') {
+            ensureFormulaRangeToSheet(ctx);
+          }
           if (initial !== undefined) {
             const shouldSeedPercentSuffix =
               isPercentFormattedCell && /^([0-9]|[.+-])$/.test(initial);

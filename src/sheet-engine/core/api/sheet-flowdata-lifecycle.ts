@@ -146,11 +146,15 @@ function sheetsRequiredDenseFingerprint(
   });
   foreignChain.sort();
 
+  // In-progress cross-sheet formula pick keeps origin dense via rangetosheet.
+  const formulaOrigin = ctx.formulaCache.rangetosheet ?? '';
+
   return [
     activeCalcLen,
     [...referenced].sort().join(','),
     wideParts.join('|'),
     foreignChain.join('|'),
+    formulaOrigin,
   ].join('#');
 }
 
@@ -346,6 +350,11 @@ function computeSheetsRequiredDense(
       celldataFormulas,
     );
   }
+
+  // While a formula edit survives sheet switches, keep the origin sheet dense
+  // so commit/eval don't fight demote-on-switch. Cheap: one id, no scans.
+  const formulaOrigin = ctx.formulaCache.rangetosheet;
+  if (formulaOrigin) required.add(formulaOrigin);
 
   return required;
 }
