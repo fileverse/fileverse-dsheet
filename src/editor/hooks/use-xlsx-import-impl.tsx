@@ -72,40 +72,12 @@ function excelishBooleanText(v: boolean): 'TRUE' | 'FALSE' {
   return v ? 'TRUE' : 'FALSE';
 }
 
-function formulaCellHasDisplayValue(cell: {
-  v?: unknown;
-  m?: unknown;
-}): boolean {
-  return (
-    (cell.v != null && cell.v !== '') ||
-    (typeof cell.m === 'string' && cell.m.length > 0) ||
-    (typeof cell.m === 'number' && Number.isFinite(cell.m))
-  );
-}
-
-/** True when any formula cell is missing cached display value (common for Google Sheets exports). */
-function sheetsNeedPostImportFormulaRecalc(sheets: any[]): boolean {
-  for (const sheet of sheets || []) {
-    const cells = Array.isArray(sheet?.celldata) ? sheet.celldata : [];
-    for (const cell of cells) {
-      const v = cell?.v;
-      if (!v?.f) continue;
-      if (!formulaCellHasDisplayValue(v)) return true;
-    }
-    const data = sheet?.data;
-    if (!Array.isArray(data)) continue;
-    for (let r = 0; r < data.length; r += 1) {
-      const row = data[r];
-      if (!Array.isArray(row)) continue;
-      for (let c = 0; c < row.length; c += 1) {
-        const cell = row[c];
-        if (!cell?.f) continue;
-        if (!formulaCellHasDisplayValue(cell)) return true;
-      }
-    }
-  }
-  return false;
-}
+/**
+ * Post-import force-recalc is off for now (large XLSX / worker jank).
+ * Later: re-enable a real scan (or lazy/scoped recalc) for exports that
+ * ship formulas without cached m/v (e.g. Google Sheets).
+ */
+const sheetsNeedPostImportFormulaRecalc = false;
 
 /**
  * Run when imported formula cells lack cached m/v (e.g. Google Sheets xlsx).
@@ -1388,8 +1360,7 @@ export async function runXlsxFileUpload(
 
                 return sheet;
               });
-              const needsFormulaRecalc =
-                sheetsNeedPostImportFormulaRecalc(sheets);
+              const needsFormulaRecalc = sheetsNeedPostImportFormulaRecalc;
 
               let combinedSheets;
 
@@ -1444,8 +1415,8 @@ export async function runXlsxFileUpload(
               setTimeout(() => {
                 handleContentPortal?.();
               }, 200);
-              // Keep Excel/luckyexcel cached m/v when present; only force-recalc
-              // when formula cells are missing display values (e.g. Google Sheets export).
+              // Post-import force-recalc gated by sheetsNeedPostImportFormulaRecalc
+              // (currently false — revisit for Google Sheets / missing m/v later).
               if (!options?.headless && needsFormulaRecalc) {
                 schedulePostImportFormulaRecalc(sheetEditorRef);
               }
