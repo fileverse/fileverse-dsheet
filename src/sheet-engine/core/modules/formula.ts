@@ -420,7 +420,9 @@ export class FormulaCache {
             : getSheetIdByName(context, cellCoord.sheetName);
         if (id == null) throw Error(ERROR_REF);
         recordDep(toCellKey(id, cellCoord.row.index, cellCoord.column.index));
-        const flowdata = getFlowdata(context, id);
+        // Inactive tabs may be demoted to sparse celldata; hydrate on demand.
+        // Cheap no-op when already dense (`sheet.data?.length`).
+        const flowdata = ensureSheetFlowdata(context, { id });
         const cacheKey = `${cellCoord.row.index}_${cellCoord.column.index}_${id}`;
         const cell =
           context?.formulaCache.execFunctionGlobalData?.[cacheKey] ||
@@ -439,7 +441,8 @@ export class FormulaCache {
             ? options.sheetId
             : getSheetIdByName(context, startCellCoord.sheetName);
         if (id == null) throw Error(ERROR_REF);
-        const flowdata = getFlowdata(context, id);
+        // Same as callCellValue: demoted cross-sheet targets must rehydrate.
+        const flowdata = ensureSheetFlowdata(context, { id });
         let startRow = startCellCoord.row.index;
         let endRow = endCellCoord.row.index;
         let startCol = startCellCoord.column.index;
@@ -606,7 +609,8 @@ export class FormulaCache {
       const endRow = dn.range.row[1];
       const startCol = dn.range.column[0];
       const endCol = dn.range.column[1];
-      const flowdata = getFlowdata(context, id);
+      // Named ranges can point at demoted sheets — hydrate before materialize.
+      const flowdata = ensureSheetFlowdata(context, { id });
 
       if (that.activeDepCollection) {
         const originRow = typeof options === 'object' ? options.row : null;
@@ -4216,6 +4220,9 @@ export function returnToFormulaOriginSheet(ctx: Context): boolean {
   };
 
   changeSheet(ctx, origin);
+
+  // Ensure origin is dense before commit paths read/write flowdata.
+  ensureSheetFlowdata(ctx, { id: origin });
 
   const saved = ctx.sheetScrollRecord[origin];
   if (saved) {

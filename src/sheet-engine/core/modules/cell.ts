@@ -1295,6 +1295,9 @@ export function updateCell(
 
     // Cross-sheet formula pick: write back to the sheet where the edit started.
     returnToFormulaOriginSheet(ctx);
+    // Origin may have been demoted while picking on another tab — hydrate first
+    // so we don't early-return on a null flowdata and leave a stale 0.
+    ensureSheetFlowdata(ctx);
 
     const rawInputText = $input?.innerText;
     const normalizedFormulaInputText = (rawInputText || '')
