@@ -37,19 +37,26 @@ const NamedRanges: React.FC = () => {
   const [rangeTxt, setRangeTxt] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Create mode follows selection by default; edit mode locks until grid pick.
+  const [rangeFollowsSelection, setRangeFollowsSelection] = useState(true);
 
   const namedRanges = context.definedNames || [];
 
   useEffect(() => {
-    if (editingId) return;
+    if (!rangeFollowsSelection) return;
     setRangeTxt(selectionToRangeTxt(context));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [context.luckysheet_select_save, context.currentSheetId, editingId]);
+  }, [
+    context.luckysheet_select_save,
+    context.currentSheetId,
+    rangeFollowsSelection,
+  ]);
 
   const resetForm = useCallback(() => {
     setName('');
     setEditingId(null);
     setError(null);
+    setRangeFollowsSelection(true);
     setRangeTxt(selectionToRangeTxt(context));
   }, [context]);
 
@@ -118,6 +125,7 @@ const NamedRanges: React.FC = () => {
     setName('');
     setEditingId(null);
     setError(null);
+    setRangeFollowsSelection(true);
   }, [editingId, name, parseRangeInput, rangeTxt, setContext]);
 
   const onEdit = useCallback(
@@ -126,12 +134,20 @@ const NamedRanges: React.FC = () => {
       setName(dn.name);
       setRangeTxt(getDefinedNameDisplayRange(context, dn));
       setError(null);
+      // Keep the existing definition until the user re-picks via the grid icon.
+      setRangeFollowsSelection(false);
       setContext((draft) => {
         selectDefinedName(draft, dn.id);
       });
     },
     [context, setContext],
   );
+
+  const onPickFromSelection = useCallback(() => {
+    setRangeTxt(selectionToRangeTxt(context));
+    setRangeFollowsSelection(true);
+    setError(null);
+  }, [context]);
 
   const onDelete = useCallback(
     (id: string) => {
@@ -157,8 +173,22 @@ const NamedRanges: React.FC = () => {
     return map;
   }, [context.luckysheetfile]);
 
+  const stopSheetKeyCapture = useCallback(
+    (e: React.SyntheticEvent) => {
+      // Portaled into the sidebar but still React-parented under Workbook —
+      // without this, the first keystroke triggers type-to-edit and steals focus.
+      e.stopPropagation();
+    },
+    [],
+  );
+
   return (
-    <div className="fortune-named-ranges">
+    <div
+      className="fortune-named-ranges"
+      onKeyDown={stopSheetKeyCapture}
+      onKeyUp={stopSheetKeyCapture}
+      onMouseDown={stopSheetKeyCapture}
+    >
       <div className="fortune-named-ranges__form">
         <label className="fortune-named-ranges__label" htmlFor="named-range-name">
           Name
@@ -167,6 +197,11 @@ const NamedRanges: React.FC = () => {
           id="named-range-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            (e.target as HTMLInputElement).focus();
+          }}
+          onKeyDown={stopSheetKeyCapture}
           placeholder="NamedRange1"
           className="w-full"
         />
@@ -181,17 +216,27 @@ const NamedRanges: React.FC = () => {
           <TextField
             id="named-range-range"
             value={rangeTxt}
-            onChange={(e) => setRangeTxt(e.target.value)}
+            onChange={(e) => {
+              setRangeFollowsSelection(false);
+              setRangeTxt(e.target.value);
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              (e.target as HTMLInputElement).focus();
+            }}
+            onKeyDown={stopSheetKeyCapture}
             placeholder="Sheet1!A1:B2"
             className="w-full"
           />
           <IconButton
             type="button"
             variant="ghost"
-            className="fortune-named-ranges__pick-btn"
-            title="Use current selection"
+            className={`fortune-named-ranges__pick-btn${
+              rangeFollowsSelection ? ' is-active' : ''
+            }`}
+            title="Use current selection (live)"
             icon="Grid2x2"
-            onClick={() => setRangeTxt(selectionToRangeTxt(context))}
+            onClick={onPickFromSelection}
           />
         </div>
 

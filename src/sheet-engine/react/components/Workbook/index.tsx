@@ -162,6 +162,34 @@ function ensureFlowdataForDataPatches(ctx: Context, patches: Patch[]) {
   }
 }
 
+/** In-cell / formula-bar editors that must still receive workbook key handling. */
+function isSheetEditorElement(el: HTMLElement | null | undefined): boolean {
+  if (!el || typeof el.closest !== 'function') return false;
+  return !!(
+    el.id === 'luckysheet-rich-text-editor' ||
+    el.id === 'luckysheet-functionbox-cell' ||
+    el.closest('#luckysheet-rich-text-editor') ||
+    el.closest('#luckysheet-functionbox-cell') ||
+    el.classList?.contains('fortune-fx-input') ||
+    el.closest('.fortune-fx-input')
+  );
+}
+
+/**
+ * Sidebar portals (named ranges, data verification, …) render outside the
+ * workbook DOM but still bubble through React to Workbook's onKeyDown. Skip
+ * type-to-edit / focus-steal for real form fields in those panels.
+ */
+function isPortaledUiTextField(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  if (isSheetEditorElement(el)) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
+
 const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
   (
     {
@@ -1261,6 +1289,9 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
       (e: React.KeyboardEvent<HTMLDivElement>) => {
         const { nativeEvent } = e;
         if (isBrowserZoomShortcut(nativeEvent)) return;
+
+        // Portaled sidebar inputs bubble here via React, not DOM ancestry.
+        if (isPortaledUiTextField(e.target)) return;
 
         // Floating-image clipboard shortcuts first — must run before the
         // Alt+I then C insert-column chord, which also listens for KeyC.

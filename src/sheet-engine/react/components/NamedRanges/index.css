@@ -34,6 +34,11 @@
   flex-shrink: 0;
 }
 
+.fortune-named-ranges__pick-btn.is-active {
+  color: hsl(var(--color-text-default));
+  background-color: hsl(var(--color-bg-secondary, 0 0% 96%));
+}
+
 .fortune-named-ranges__error {
   margin-top: 4px;
   font-size: 12px;
