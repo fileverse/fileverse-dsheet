@@ -31,6 +31,14 @@ export type SnapshotEvalInput = {
   sheets: SnapshotSheet[];
   execFunctionGlobalData: Record<string, { v: unknown; f: unknown }>;
   formulas: SnapshotFormulaCell[];
+  /** Workbook-level named ranges for VARIABLE resolution. */
+  definedNames?: Array<{
+    name: string;
+    sheetId: string;
+    range: { row: [number, number]; column: [number, number] };
+    scope?: 'workbook' | 'sheet';
+    localSheetId?: string;
+  }>;
 };
 
 export type SnapshotEvalOutput = {
@@ -73,6 +81,26 @@ function getSheetIdByName(
   name: string,
 ): string | null {
   return sheetsByName.get(name) ?? null;
+}
+
+function resolveDefinedName(
+  definedNames: SnapshotEvalInput['definedNames'],
+  name: string,
+  formulaSheetId?: string,
+) {
+  const key = name.trim().toLowerCase();
+  if (!key) return null;
+  const matches = (definedNames || []).filter(
+    (dn) => dn.name.toLowerCase() === key,
+  );
+  if (matches.length === 0) return null;
+  if (formulaSheetId) {
+    const sheetLocal = matches.find(
+      (dn) => dn.scope === 'sheet' && dn.localSheetId === formulaSheetId,
+    );
+    if (sheetLocal) return sheetLocal;
+  }
+  return matches.find((dn) => dn.scope !== 'sheet') ?? matches[0] ?? null;
 }
 
 /** Worker-safe formula evaluation against plain sheet snapshots (no React/immer). */
@@ -188,6 +216,53 @@ export function evalFormulasInSnapshot(
       done(fragment, cryptoDenomination, cryptoDecimal);
     },
   );
+
+  parser.on('callVariable', (name: string, done: (value: unknown) => void) => {
+    const options = parser.options || {};
+    const dn = resolveDefinedName(
+      input.definedNames,
+      name,
+      options.sheetId,
+    );
+    if (!dn) return;
+
+    const sheetId = dn.sheetId;
+    const startRow = dn.range.row[0];
+    const endRow = dn.range.row[1];
+    const startCol = dn.range.column[0];
+    const endCol = dn.range.column[1];
+    const flowdata = dataBySheetId.get(sheetId);
+
+    const isSingle = startRow === endRow && startCol === endCol;
+    if (isSingle) {
+      recordDep(toCellKey(sheetId, startRow, startCol));
+      const cell =
+        globalData[`${startRow}_${startCol}_${sheetId}`] ||
+        flowdata?.[startRow]?.[startCol];
+      done(tryGetCellAsNumber(cell as Cell));
+      return;
+    }
+
+    const fragment: unknown[][] = [];
+    for (let row = startRow; row <= endRow; row += 1) {
+      const colFragment: unknown[] = [];
+      for (let col = startCol; col <= endCol; col += 1) {
+        if (
+          typeof options === 'object' &&
+          row === options.row &&
+          col === options.column
+        ) {
+          continue;
+        }
+        recordDep(toCellKey(sheetId, row, col));
+        const cell =
+          globalData[`${row}_${col}_${sheetId}`] || flowdata?.[row]?.[col];
+        colFragment.push(tryGetCellAsNumber(cell as Cell));
+      }
+      fragment.push(colFragment);
+    }
+    done(fragment);
+  });
 
   const results: SnapshotFormulaResult[] = [];
 

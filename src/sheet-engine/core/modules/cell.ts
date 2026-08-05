@@ -40,6 +40,8 @@ import {
   isTodayNowPureArithmeticDateResult,
   iscelldata,
   suppressFormulaRangeSelectionForInitialEdit,
+  ensureFormulaRangeToSheet,
+  returnToFormulaOriginSheet,
 } from './formula';
 import { isFormulaEvalPending } from './formula-async-eval';
 import {
@@ -1248,6 +1250,10 @@ export function cancelNormalSelected(ctx: Context) {
   ctx.formulaCache.rangedrag_row_start = false;
   ctx.formulaCache.rangeSelectionActive = null;
   ctx.formulaCache.keyboardRangeSelectionLock = false;
+  ctx.formulaCache.formulaKeyboardRefSync = false;
+  ctx.formulaCache.func_selectedrange = undefined;
+  ctx.formulaCache.rangetosheet = undefined;
+  ctx.formulaCache.refocusFormulaEditorAfterSheetSwitch = false;
   ctx.formulaCache.formulaEditorOwner = null;
 }
 
@@ -1286,6 +1292,12 @@ export function updateCell(
 ) {
   try {
     if (ctx.allowEdit === false || ctx.isFlvReadOnly) return;
+
+    // Cross-sheet formula pick: write back to the sheet where the edit started.
+    returnToFormulaOriginSheet(ctx);
+    // Origin may have been demoted while picking on another tab — hydrate first
+    // so we don't early-return on a null flowdata and leave a stale 0.
+    ensureSheetFlowdata(ctx);
 
     const rawInputText = $input?.innerText;
     const normalizedFormulaInputText = (rawInputText || '')
@@ -1345,10 +1357,6 @@ export function updateCell(
 
     const flowdata = getFlowdata(ctx);
     if (!flowdata) return;
-
-    // if (!_.isNil(rangetosheet) && rangetosheet !== ctx.currentSheetId) {
-    //   sheetmanage.changeSheetExec(rangetosheet);
-    // }
 
     // if (!checkProtectionLocked(r, c, ctx.currentSheetId)) {
     //   return;
@@ -2867,6 +2875,7 @@ export function luckysheetUpdateCell(
   const cell = flowdata?.[row_index]?.[col_index] as { f?: string } | null;
   if (cell?.f != null && String(cell.f).trim() !== '') {
     suppressFormulaRangeSelectionForInitialEdit(ctx);
+    ensureFormulaRangeToSheet(ctx);
   }
   ctx.luckysheetCellUpdate = [row_index, col_index];
 }

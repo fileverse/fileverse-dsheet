@@ -4,6 +4,7 @@ import {
   cancelActiveImgItem,
   getSheetIndex,
   defaultLuckysheetSelectRanges,
+  activateSheetForNavigation,
 } from '@sheet-engine/core';
 import _ from 'lodash';
 import { LucideIcon } from '@fileverse/ui';
@@ -28,7 +29,9 @@ const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         draftCtx.scrollLeft = r.scrollLeft ?? 0;
         draftCtx.scrollTop = r.scrollTop ?? 0;
         draftCtx.luckysheet_select_status = r.luckysheet_select_status ?? false;
-        draftCtx.luckysheet_select_save = r.luckysheet_select_save ?? undefined;
+        draftCtx.luckysheet_select_save = r.luckysheet_select_save
+          ? _.cloneDeep(r.luckysheet_select_save)
+          : undefined;
       } else {
         draftCtx.scrollLeft = 0;
         draftCtx.scrollTop = 0;
@@ -41,7 +44,9 @@ const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
             sheetIdx != null ? draftCtx.luckysheetfile[sheetIdx] : undefined;
           if (sh) {
             if (!_.isEmpty(sh.luckysheet_select_save)) {
-              draftCtx.luckysheet_select_save = sh.luckysheet_select_save;
+              draftCtx.luckysheet_select_save = _.cloneDeep(
+                sh.luckysheet_select_save,
+              );
             } else {
               draftCtx.luckysheet_select_save = defaultLuckysheetSelectRanges(
                 sh.data,
@@ -69,17 +74,11 @@ const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
       onClick={() => {
         if (isDropPlaceholder) return;
         setContext((draftCtx) => {
-          draftCtx.sheetScrollRecord[draftCtx.currentSheetId] = {
-            scrollLeft: draftCtx.scrollLeft,
-            scrollTop: draftCtx.scrollTop,
-            luckysheet_select_status: draftCtx.luckysheet_select_status,
-            luckysheet_select_save: draftCtx.luckysheet_select_save,
-            luckysheet_selection_range: draftCtx.luckysheet_selection_range,
-          };
-          draftCtx.currentSheetId = sheet.id!;
-          draftCtx.zoomRatio = sheet.zoomRatio || 1;
           cancelActiveImgItem(draftCtx, refs.globalCache);
-          cancelNormalSelected(draftCtx);
+          const outcome = activateSheetForNavigation(draftCtx, sheet.id!);
+          if (outcome === 'cancel-edit') {
+            cancelNormalSelected(draftCtx);
+          }
         });
       }}
       tabIndex={0}

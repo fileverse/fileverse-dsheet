@@ -14,6 +14,10 @@ import {
   type RawSheetImage,
 } from './xlsx-image-utils';
 import { normalizeImportedHyperlinkCellV } from './xlsx-hyperlink-inline';
+import {
+  parseDefinedNamesFromXlsxBuffer,
+  type ExcelDefinedNameEntry,
+} from './xlsx-defined-names';
 
 /**
  * Pure xlsx parse/decorate/compact pipeline. No DOM, no React, no Yjs, no UI —
@@ -602,6 +606,8 @@ export type XlsxParsedWorkbook = {
   warnings: XlsxImportWarning[];
   /** Sheet ids this pipeline generated — the caller may remap them with a custom generator. */
   generatedSheetIds: string[];
+  /** Named ranges from xl/workbook.xml — synced to Yjs on the main thread. */
+  definedNameEntries: ExcelDefinedNameEntry[];
 };
 
 export async function parseXlsxWorkbook(
@@ -624,6 +630,8 @@ export async function parseXlsxWorkbook(
 
   const workbook = new Workbook();
   await workbook.xlsx.load(arrayBuffer as any);
+  const definedNameEntries =
+    await parseDefinedNamesFromXlsxBuffer(arrayBuffer);
 
   const workbookDefaultFontSize: number | undefined = (workbook as any).model
     ?.styles?.fonts?.[0]?.size;
@@ -1009,8 +1017,8 @@ export async function parseXlsxWorkbook(
             }
           }
           // Mark formula cells so FortuneSheet recalculates them on dependency change.
-          // Keep cached m/v so the workbook shows something during the remount phase;
-          // schedulePostImportFormulaRecalc will overwrite them once the engine runs.
+          // Preserve any cached m/v from the file; post-import force-recalc runs
+          // only when display values are missing.
           if (cell.v.f && cell.v.ct?.t !== 'd') {
             cell.v.ct = { ...(cell.v.ct ?? {}), t: 'str' };
             pushCalcChainOnce(cell.r, cell.c);
@@ -1148,7 +1156,7 @@ export async function parseXlsxWorkbook(
     }
 
     // Normalize formula cells in the data grid (luckyexcel may populate sheet.data
-    // in addition to sheet.celldata). Keep cached m/v for display during remount.
+    // in addition to sheet.celldata). Preserve any cached m/v already present.
     if (Array.isArray((sheet as any).data)) {
       const data = (sheet as any).data as any[][];
       for (let r = 0; r < data.length; r++) {
@@ -1215,5 +1223,6 @@ export async function parseXlsxWorkbook(
     workbookName: exportJson?.info?.name ?? file.name ?? '',
     warnings,
     generatedSheetIds,
+    definedNameEntries,
   };
 }

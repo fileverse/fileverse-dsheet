@@ -16,8 +16,20 @@ import {
 } from '../../worker/dsheet-worker-client';
 import { removeFileExtension } from '../utils/export-filename';
 import { toast } from '@fileverse/ui';
+import { excelEntriesToDefinedNames } from '../utils/xlsx-defined-names';
+import {
+  readDefinedNamesFromYdoc,
+  syncDefinedNamesToYdoc,
+} from '../utils/defined-names-ydoc';
 
 const POST_IMPORT_RECALC_MAX_FRAMES = 200;
+
+/**
+ * Post-import force-recalc is off for now (large XLSX / worker jank).
+ * Later: re-enable a real scan (or lazy/scoped recalc) for exports that
+ * ship formulas without cached m/v (e.g. Google Sheets).
+ */
+const sheetsNeedPostImportFormulaRecalc = false;
 
 function makeUniqueSheetName(name: string, usedNames: Set<string>): string {
   if (!usedNames.has(name)) return name;
@@ -31,7 +43,8 @@ function makeUniqueSheetName(name: string, usedNames: Set<string>): string {
 }
 
 /**
- * XLSX stores cached formula results only; we normalize cells and then must run the in-app engine.
+ * Run when imported formula cells lack cached m/v (e.g. Google Sheets xlsx).
+ * When Excel already provided display values, skip force-recalc and keep them.
  */
 function schedulePostImportFormulaRecalc(
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
@@ -159,7 +172,7 @@ function remapGeneratedSheetIds(
     const oldId = sheet.id;
     sheet.id = newId;
     sheet.calcChain?.forEach((entry: { id?: string }) => {
-      if (entry.id === oldId) entry.id = newId;
+      if (entry?.id === oldId) entry.id = newId;
     });
   }
 }
@@ -235,11 +248,7 @@ export async function runXlsxFileUpload(
   remapGeneratedSheetIds(parsed, sheetEditorRef, options);
 
   const sheets = parsed.sheets;
-  console.log('[xlsx-import] parsed sheets data', {
-    fileName: file.name,
-    sheetCount: sheets.length,
-    sheets,
-  });
+  const needsFormulaRecalc = sheetsNeedPostImportFormulaRecalc;
 
   if (!ydocRef.current) {
     console.error('ydocRef.current is null');
@@ -288,6 +297,36 @@ export async function runXlsxFileUpload(
     });
   });
 
+  // Named ranges are workbook-level (sibling Y.Map), not sheet maps.
+  const excelDefinedNameEntries = parsed.definedNameEntries ?? [];
+  if (importType !== 'merge-current-dsheet') {
+    const importedNames = excelEntriesToDefinedNames(
+      excelDefinedNameEntries,
+      combinedSheets,
+    );
+    syncDefinedNamesToYdoc({
+      ydoc,
+      dsheetId,
+      definedNames: importedNames,
+    });
+  } else if (excelDefinedNameEntries.length > 0) {
+    const existing = readDefinedNamesFromYdoc(ydoc, dsheetId);
+    const importedNames = excelEntriesToDefinedNames(
+      excelDefinedNameEntries,
+      sheets,
+    );
+    const existingKeys = new Set(existing.map((d) => d.name.toLowerCase()));
+    const merged = [
+      ...existing,
+      ...importedNames.filter((d) => !existingKeys.has(d.name.toLowerCase())),
+    ];
+    syncDefinedNamesToYdoc({
+      ydoc,
+      dsheetId,
+      definedNames: merged,
+    });
+  }
+
   // Update UI immediately so sync handler sees correct count before it can run
   if (ydocRef?.current) {
     const arr = ydocRef.current.getArray(dsheetId);
@@ -299,7 +338,9 @@ export async function runXlsxFileUpload(
   setTimeout(() => {
     handleContentPortal?.();
   }, 200);
-  if (!options?.headless) {
+  // Post-import force-recalc gated by sheetsNeedPostImportFormulaRecalc
+  // (currently false — revisit for Google Sheets / missing m/v later).
+  if (!options?.headless && needsFormulaRecalc) {
     schedulePostImportFormulaRecalc(sheetEditorRef);
   }
   const fileName = removeFileExtension(parsed.workbookName);

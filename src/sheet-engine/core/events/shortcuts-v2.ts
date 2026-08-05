@@ -1,12 +1,12 @@
 import _ from 'lodash';
 import { Context, getFlowdata } from '../context';
-import { updateCell } from '../modules/cell';
+import { updateCell, cancelNormalSelected } from '../modules/cell';
 import { jfrefreshgrid } from '../modules/refresh';
 import { hideSelected } from '../modules/rowcol';
 import {
   rebuildRowHiddenUnion,
 } from '../modules/rowVisibility';
-import { changeSheet } from '../modules/sheet';
+import { activateSheetForNavigation } from '../modules/formula';
 import {
   fillSelectionWithActiveValue,
   jumpHighlightCell,
@@ -283,7 +283,11 @@ function handleSheetNavigationShortcut(ctx: Context, e: KeyboardEvent): boolean 
       : Math.max(currentIndex - 1, 0);
   const nextSheet = sheets[nextIndex];
   if (!nextSheet?.id || nextSheet.id === ctx.currentSheetId) return true;
-  changeSheet(ctx, nextSheet.id);
+
+  const outcome = activateSheetForNavigation(ctx, nextSheet.id);
+  if (outcome === 'cancel-edit') {
+    cancelNormalSelected(ctx);
+  }
   return true;
 }
 
