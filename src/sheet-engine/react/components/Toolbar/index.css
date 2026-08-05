@@ -12,29 +12,37 @@
 }
 
 .scrollbar-hidden {
-  overflow: auto; /* enables scrolling */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  overflow: auto;
+  /* enables scrolling */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hidden::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 .fortune-functionlist-submenu-scrollarea {
   position: relative;
-  overflow: hidden; /* we render our own scrollbar */
-  padding-right: 12px; /* reserve space for always-visible scrollbar */
+  overflow: hidden;
+  /* we render our own scrollbar */
+  padding-right: 12px;
+  /* reserve space for always-visible scrollbar */
 }
 
 .fortune-functionlist-submenu-viewport {
   max-height: inherit;
   overflow-y: scroll;
-  scrollbar-width: none; /* Firefox: hide native scrollbar */
+  scrollbar-width: none;
+  /* Firefox: hide native scrollbar */
 }
 
 .fortune-functionlist-submenu-viewport::-webkit-scrollbar {
-  width: 0px; /* WebKit: hide native scrollbar */
+  width: 0px;
+  /* WebKit: hide native scrollbar */
   height: 0px;
 }
 
@@ -115,6 +123,14 @@
 .fortune-toolbar-combo-arrow {
   display: flex;
   align-items: center;
+  justify-content: center;
+}
+
+.fortune-toolbar-combo--font-color button,
+.fortune-toolbar-combo--font-color button > span {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 
 .fortune-toolbar-combo-button.show-arrow {
@@ -149,7 +165,12 @@
 }
 
 .fortune-toolbar-select::-webkit-scrollbar {
-  display: none;
+  width: 6px;
+}
+
+.fortune-toolbar-select::-webkit-scrollbar-thumb {
+  background: hsl(var(--color-border-default));
+  border-radius: 3px;
 }
 
 .fortune-toolbar-select {
@@ -159,6 +180,11 @@
   border-radius: 8px;
   background: hsl(var(--color-bg-default));
   min-width: 240px;
+  /* Only scroll when the viewport is too short for the full list */
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: calc(100vh - 120px);
+  max-height: calc(100dvh - 120px);
 }
 
 .fortune-toolbar-color-picker {
@@ -172,11 +198,6 @@
   background: hsl(var(--color-bg-default));
   transition: all 0.2s ease;
   border-radius: 0px 0px 4px 4px;
-}
-
-.fortune-toolbar-select {
-  overflow: scroll;
-  max-height: 60vh;
 }
 
 .fortune-toolbar-sort-root {
@@ -199,6 +220,7 @@
   border-radius: 4px;
   gap: 8px;
 }
+
 .fortune-toolbar-combo-button:hover {
   background: hsl(var(--color-bg-default-hover));
 }
@@ -221,10 +243,6 @@
   background: hsl(var(--color-bg-default-hover));
   border-radius: 4px;
   transition: all 0.2s ease-in-out;
-}
-
-.fortune-toolbar-select::-webkit-scrollbar {
-  display: none;
 }
 
 .fortune-toolbar-color-picker-row {
@@ -482,7 +500,7 @@
   gap: 4px;
 }
 
-.custom-color-button > svg > path:first-child {
+.custom-color-button>svg>path:first-child {
   display: none !important;
 }
 

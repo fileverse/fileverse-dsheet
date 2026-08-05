@@ -784,8 +784,10 @@ const Toolbar: React.FC<{
                       : displayBackgroundColor,
                   position: 'absolute',
                   bottom: 2,
-                  left: 3,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
                   zIndex: 100,
+                  pointerEvents: 'none',
                 }}
               />
               <Combo
@@ -1662,21 +1664,6 @@ const Toolbar: React.FC<{
                       </div>
                     </Option>
                   ))}
-                  <MenuDivider key="merge-conditional-format-divider" />
-                  <Option
-                    key="conditional-formatting-from-merge-menu"
-                    onClick={() => {
-                      setOpen(false);
-                      conditionalFormatClick(context.luckysheet_select_save);
-                    }}
-                  >
-                    <div
-                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                    >
-                      <SVGIcon name="conditionFormat" width={16} height={16} />
-                      {toolbar.conditionFormat}
-                    </div>
-                  </Option>
                 </Select>
               )}
             </Combo>

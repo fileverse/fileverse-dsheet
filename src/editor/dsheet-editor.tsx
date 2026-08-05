@@ -284,6 +284,9 @@ const EditorContent = ({
     const yCellMap = new Y.Map();
 
     celldata.forEach((cell) => {
+      if (cell == null || typeof cell.r !== 'number' || typeof cell.c !== 'number') {
+        return;
+      }
       yCellMap.set(`${cell.r}_${cell.c}`, cell);
     });
 

@@ -73,7 +73,15 @@ function excelishBooleanText(v: boolean): 'TRUE' | 'FALSE' {
 }
 
 /**
- * XLSX stores cached formula results only; we normalize cells and then must run the in-app engine.
+ * Post-import force-recalc is off for now (large XLSX / worker jank).
+ * Later: re-enable a real scan (or lazy/scoped recalc) for exports that
+ * ship formulas without cached m/v (e.g. Google Sheets).
+ */
+const sheetsNeedPostImportFormulaRecalc = false;
+
+/**
+ * Run when imported formula cells lack cached m/v (e.g. Google Sheets xlsx).
+ * When Excel already provided display values, skip force-recalc and keep them.
  */
 function schedulePostImportFormulaRecalc(
   sheetEditorRef: React.RefObject<WorkbookInstance | null>,
@@ -1155,8 +1163,8 @@ export async function runXlsxFileUpload(
                         }
                       }
                       // Mark formula cells so FortuneSheet recalculates them on dependency change.
-                      // Keep cached m/v so the workbook shows something during the remount phase;
-                      // schedulePostImportFormulaRecalc will overwrite them once the engine runs.
+                      // Preserve any cached m/v from the file; post-import force-recalc runs
+                      // only when display values are missing.
                       if (cell.v.f && cell.v.ct?.t !== 'd') {
                         cell.v.ct = { ...(cell.v.ct ?? {}), t: 'str' };
                         pushCalcChainOnce(cell.r, cell.c);
@@ -1304,7 +1312,7 @@ export async function runXlsxFileUpload(
                 }
 
                 // Normalize formula cells in the data grid (luckyexcel may populate sheet.data
-                // in addition to sheet.celldata). Keep cached m/v for display during remount.
+                // in addition to sheet.celldata). Preserve any cached m/v already present.
                 if (Array.isArray((sheet as any).data)) {
                   const data = (sheet as any).data as any[][];
                   for (let r = 0; r < data.length; r++) {
@@ -1366,11 +1374,7 @@ export async function runXlsxFileUpload(
 
                 return sheet;
               });
-              console.log('[xlsx-import] parsed sheets data', {
-                fileName: file.name,
-                sheetCount: sheets.length,
-                sheets,
-              });
+              const needsFormulaRecalc = sheetsNeedPostImportFormulaRecalc;
 
               let combinedSheets;
 
@@ -1458,7 +1462,9 @@ export async function runXlsxFileUpload(
               setTimeout(() => {
                 handleContentPortal?.();
               }, 200);
-              if (!options?.headless) {
+              // Post-import force-recalc gated by sheetsNeedPostImportFormulaRecalc
+              // (currently false — revisit for Google Sheets / missing m/v later).
+              if (!options?.headless && needsFormulaRecalc) {
                 schedulePostImportFormulaRecalc(sheetEditorRef);
               }
               // @ts-expect-error later
