@@ -1,42 +1,43 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Workbook } from '@sheet-engine/react';
-import type { SidebarPortalRegistryHandle, SidebarPortalRenderer } from '@sheet-engine/react';
-import type { ThemeKey } from '@sheet-engine/core/theme';
-import { Cell } from '@sheet-engine/react';
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Workbook } from "@sheet-engine/react";
+import type {
+  SidebarPortalRegistryHandle,
+  SidebarPortalRenderer,
+} from "@sheet-engine/react";
+import type { ThemeKey } from "@sheet-engine/core/theme";
+import { Cell } from "@sheet-engine/react";
 import {
   TOOL_BAR_ITEMS,
   CELL_CONTEXT_MENU_ITEMS,
   HEADER_CONTEXT_MENU_ITEMS,
   DEFAULT_SHEET_DATA,
-} from '../constants/shared-constants';
+} from "../constants/shared-constants";
 import {
   getCustomToolbarItems,
   getReadOnlyCustomToolbarItems,
-} from '../utils/custom-toolbar-item';
-import { useEditor } from '../contexts/editor-context';
-import { useCollabAwareness } from '../hooks/use-collab-awareness';
-import {
-  afterUpdateCell,
-} from '../utils/after-update-cell';
-import { dataVerificationYdocUpdate } from '../utils/data-verification-ydoc-update';
-import { liveQueryListYdocUpdate } from '../utils/live-query-list-ydoc-update';
-import { calcChainYdocUpdate } from '../utils/calc-chain-ydoc-update';
-import { conditionFormatYdocUpdate } from '../utils/condition-format-ydoc-update';
-import { dataBlockListYdocUpdate } from '../utils/data-block-list-ydoc-update';
-import { filterSelectYdocUpdate } from '../utils/filter-select-ydoc-update';
-import { filterYdocUpdate } from '../utils/filter-ydoc-update';
-import { hyperlinkYdocUpdate } from '../utils/hyperlink-ydoc-update';
-import { configYdocUpdate } from '../utils/config-ydoc-update';
-import { updateYdocSheetData, SheetChangePath } from '../utils/update-ydoc';
-import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
-import { handleCSVUpload } from '../utils/csv-import';
-import { handleExportToXLSX } from '../utils/xlsx-export';
-import { handleExportToCSV } from '../utils/csv-export';
-import { handleExportToJSON } from '../utils/json-export';
-import { useXLSXImport } from '../hooks/use-xlsx-import';
-import { usehandleHomepageRedirect } from '../hooks/use-homepage-redirect';
-import { OnboardingHandlerType } from '../types';
+} from "../utils/custom-toolbar-item";
+import { useEditor } from "../contexts/editor-context";
+import { useCollabAwareness } from "../hooks/use-collab-awareness";
+import { afterUpdateCell } from "../utils/after-update-cell";
+import { dataVerificationYdocUpdate } from "../utils/data-verification-ydoc-update";
+import { liveQueryListYdocUpdate } from "../utils/live-query-list-ydoc-update";
+import { calcChainYdocUpdate } from "../utils/calc-chain-ydoc-update";
+import { conditionFormatYdocUpdate } from "../utils/condition-format-ydoc-update";
+import { dataBlockListYdocUpdate } from "../utils/data-block-list-ydoc-update";
+import { filterSelectYdocUpdate } from "../utils/filter-select-ydoc-update";
+import { filterYdocUpdate } from "../utils/filter-ydoc-update";
+import { hyperlinkYdocUpdate } from "../utils/hyperlink-ydoc-update";
+import { configYdocUpdate } from "../utils/config-ydoc-update";
+import { updateYdocSheetData, SheetChangePath } from "../utils/update-ydoc";
+import { applyCellFormatRangesCommits } from "../../sheet-engine/core/utils/mirror-cell-format-ranges";
+import { handleCSVUpload } from "../utils/csv-import";
+import { handleExportToXLSX } from "../utils/xlsx-export";
+import { handleExportToCSV } from "../utils/csv-export";
+import { handleExportToJSON } from "../utils/json-export";
+import { useXLSXImport } from "../hooks/use-xlsx-import";
+import { usehandleHomepageRedirect } from "../hooks/use-homepage-redirect";
+import { OnboardingHandlerType } from "../types";
 import {
   createAfterColRowChangesHandler,
   createAfterColorChangesHandler,
@@ -45,22 +46,22 @@ import {
   createSheetLengthChangeHandler,
   syncCurrentSheetField,
   updateAllCell,
-} from './editor-workbook-sync';
-import { CommentsConfig } from '../types/comments';
-import { CommentCellUI } from './comments/comment-cell-popup';
+} from "./editor-workbook-sync";
+import { CommentsConfig } from "../types/comments";
+import { CommentCellUI } from "./comments/comment-cell-popup";
 import {
   hideCellCommentMarker,
   closeCellCommentPopup,
-} from '../utils/cell-comment-marker';
-import { getCurrentSheetIdSafe } from '../utils/sheet-editor-safe';
+} from "../utils/cell-comment-marker";
+import { getCurrentSheetIdSafe } from "../utils/sheet-editor-safe";
 // import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
 
 function readBooleanFromLocalStorage(key: string): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(key) === 'true';
+    return window.localStorage.getItem(key) === "true";
   } catch {
     return false;
   }
@@ -103,7 +104,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   onboardingHandler,
   exportDropdownOpen = false,
   commentsConfig,
-  setExportDropdownOpen = () => { },
+  setExportDropdownOpen = () => {},
   dsheetId,
   onDuneChartEmbed,
   onSheetCountChange,
@@ -130,7 +131,9 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     awareness,
     onCollaboratorsChange,
     collabEnabled,
+    isLiveCollabSession,
     collabIsOwner,
+    setSheetEditorRef,
     remoteUpdateRef,
     apiKeyStorage,
     openApiKeyModal,
@@ -217,10 +220,10 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   useCollabAwareness(awareness, sheetEditorRef, onCollaboratorsChange);
 
   const onboardingLsKey =
-    onboardingCompleteLocalStorageKey ?? 'onboardingComplete';
+    onboardingCompleteLocalStorageKey ?? "onboardingComplete";
 
   const effectiveOnboardingComplete = useMemo(() => {
-    if (typeof onboardingComplete === 'boolean') {
+    if (typeof onboardingComplete === "boolean") {
       return onboardingComplete;
     }
     return readBooleanFromLocalStorage(onboardingLsKey);
@@ -288,14 +291,14 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
 
   const cellContextMenu = isReadOnly
     ? allowComments
-      ? ['comment', 'copy']
-      : ['copy']
+      ? ["comment", "copy"]
+      : ["copy"]
     : CELL_CONTEXT_MENU_ITEMS;
-  const headerContextMenu = isReadOnly ? ['filter'] : HEADER_CONTEXT_MENU_ITEMS;
+  const headerContextMenu = isReadOnly ? ["filter"] : HEADER_CONTEXT_MENU_ITEMS;
   const toolbarItems = isReadOnly
     ? allowComments
-      ? ['filter', 'sort', 'comment']
-      : ['filter', 'sort']
+      ? ["filter", "sort", "comment"]
+      : ["filter", "sort"]
     : TOOL_BAR_ITEMS;
 
   const syncContext = {
@@ -337,11 +340,11 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
       // @ts-ignore
       <Workbook
         isFlvReadOnly={isReadOnly}
-        isRTCActive={collabEnabled}
+        isRTCActive={isLiveCollabSession}
         isAuthorized={isAuthorized}
         theme={theme}
         key={workbookKey}
-        ref={sheetEditorRef}
+        ref={setSheetEditorRef}
         suppressInitialCellSelection={
           !effectiveOnboardingComplete && !!onboardingHandler
         }
@@ -354,7 +357,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
         getCommentCellUI={getCommentCellUI}
         showFormulaBar={true}
         showToolbar={true}
-        lang={'en'}
+        lang={"en"}
         rowHeaderWidth={60}
         columnHeaderHeight={24}
         defaultColWidth={104}
@@ -363,38 +366,38 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           isReadOnly
             ? allowSheetDownload
               ? getReadOnlyCustomToolbarItems({
+                  setExportDropdownOpen,
+                  handleExportToXLSX,
+                  handleExportToCSV,
+                  handleExportToJSON,
+                  sheetEditorRef,
+                  ydocRef,
+                  dsheetId,
+                  getDocumentTitle,
+                })
+              : []
+            : getCustomToolbarItems({
+                handleContentPortal: handleOnChangePortalUpdate,
+                setShowSmartContractModal: smartContract.enabled
+                  ? smartContract.setShowSmartContractModal
+                  : undefined,
+                getDocumentTitle,
+                updateDocumentTitle,
                 setExportDropdownOpen,
+                handleCSVUpload,
+                // @ts-ignore
+                handleXLSXUpload,
                 handleExportToXLSX,
                 handleExportToCSV,
                 handleExportToJSON,
                 sheetEditorRef,
                 ydocRef,
                 dsheetId,
-                getDocumentTitle,
+                currentDataRef,
+                setForceSheetRender,
+                toggleTemplateSidebar,
+                setShowFetchURLModal,
               })
-              : []
-            : getCustomToolbarItems({
-              handleContentPortal: handleOnChangePortalUpdate,
-              setShowSmartContractModal: smartContract.enabled
-                ? smartContract.setShowSmartContractModal
-                : undefined,
-              getDocumentTitle,
-              updateDocumentTitle,
-              setExportDropdownOpen,
-              handleCSVUpload,
-              // @ts-ignore
-              handleXLSXUpload,
-              handleExportToXLSX,
-              handleExportToCSV,
-              handleExportToJSON,
-              sheetEditorRef,
-              ydocRef,
-              dsheetId,
-              currentDataRef,
-              setForceSheetRender,
-              toggleTemplateSidebar,
-              setShowFetchURLModal,
-            })
         }
         hooks={{
           onLocalCellEdit: () => {
@@ -510,16 +513,16 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
             );
           },
           afterImagesChange: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'images');
+            syncCurrentSheetField(syncContext, "images");
           }),
           afterIframesChange: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'iframes');
+            syncCurrentSheetField(syncContext, "iframes");
           }),
           afterFrozenChange: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'frozen');
+            syncCurrentSheetField(syncContext, "frozen");
           }),
           afterNameChanges: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'name');
+            syncCurrentSheetField(syncContext, "name");
           }),
           afterOrderChanges: handleAfterOrderChanges,
           afterConfigChanges: guardRemoteEcho(() => {
@@ -541,7 +544,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
                   handleOnChangePortalUpdate,
                 },
                 subSheetId,
-                caller ?? 'hook',
+                caller ?? "hook",
               );
             }, 500);
           },
@@ -551,18 +554,18 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           afterHideChanges: handleAfterHideChanges,
           afterColRowChanges: handleAfterColRowChanges,
           afterShowGridLinesChange: guardRemoteEcho(() => {
-            syncCurrentSheetField(syncContext, 'showGridLines');
+            syncCurrentSheetField(syncContext, "showGridLines");
           }),
           afterSelectionChange: (
             sheetId: string,
-            selection: import('../../sheet-engine/core/types').Selection,
+            selection: import("../../sheet-engine/core/types").Selection,
           ) => {
             const aw = awarenessRef.current;
             if (!aw) return;
             const r = selection.row_focus ?? selection.row?.[0];
             const c = selection.column_focus ?? selection.column?.[0];
             if (r == null || c == null) return;
-            aw.setLocalStateField('cell', { r, c, sheetId });
+            aw.setLocalStateField("cell", { r, c, sheetId });
           },
         }}
         onDuneChartEmbed={onDuneChartEmbed}
@@ -582,6 +585,10 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     getCommentCellUI,
     syncStatus,
     isAuthorized,
+    collabEnabled,
+    isLiveCollabSession,
+    collabIsOwner,
+    setSheetEditorRef,
     dataBlockCalcFunction,
     theme,
   ]);

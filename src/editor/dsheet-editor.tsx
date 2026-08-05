@@ -1,41 +1,43 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import cn from 'classnames';
-import * as Y from 'yjs';
-import { DEFAULT_SHEET_DATA } from './constants/shared-constants';
-import { useFortuneDocumentStyle } from './hooks/use-document-style';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import cn from "classnames";
+import * as Y from "yjs";
+import { DEFAULT_SHEET_DATA } from "./constants/shared-constants";
+import { useFortuneDocumentStyle } from "./hooks/use-document-style";
 import {
+  type DSheetEditorHandle,
   DsheetProps,
   EditorValues,
   OnboardingHandlerType,
-} from './types';
-import SkeletonLoader from './components/skeleton-loader';
-import { EditorProvider, useEditor } from './contexts/editor-context';
-import { EditorWorkbook } from './components/editor-workbook';
-import { ApiKeyModal } from './components/api-key-modal/api-key-modal';
-import { useApplyTemplatesBtn } from './hooks/use-apply-templates';
-import { TransitionWrapper } from './components/transition-wrapper';
-import { PermissionChip } from './components/permission-chip';
-import '@sheet-engine/react/index.css';
-import './styles/index.css';
-import { useSidebar } from './components/sidebar/sidebar-context';
-import { useSidebarPortalRegistryHandle } from './components/sidebar/sidebar-portal-registry';
-import { EditorRightSidebar } from './components/sidebar/editor-right-sidebar';
-import { PanelConfig } from './types';
-import { DataVerification } from './components/sidebars/data-verification';
-import { ConditionalFormat } from './components/sidebars/conditional-format';
-import { Templates } from './components/sidebars/templates';
-import FunctionContent from './components/sidebars/function-content';
-import { TemplatePreview, Template } from './components/sidebars/template-ui';
-import { useMediaQuery } from 'usehooks-ts';
-import { CommentsContent } from './components/comments/comment-sidebar';
-import { setEnsResolutionUrl } from './components/comments/ens/ens-cache';
-import { CommentsConfig } from './types/comments';
-import { SmartContractModal } from './components/smart-contract/smart-contract-modal';
-import { SmartContractListView } from './components/smart-contract/smart-contract-view-list';
-import { SmartContractReadingIntro } from './components/smart-contract/smart-contract-reading-intro';
-import { SmartContractReadingErrorToast } from './components/smart-contract/error-toast';
-import { SMART_CONTRACT_PANEL_ID } from './utils/smart-contract/constants';
-import './components/smart-contract/index.css';
+} from "./types";
+import SkeletonLoader from "./components/skeleton-loader";
+import { EditorProvider, useEditor } from "./contexts/editor-context";
+import { EditorWorkbook } from "./components/editor-workbook";
+import { ApiKeyModal } from "./components/api-key-modal/api-key-modal";
+import { useApplyTemplatesBtn } from "./hooks/use-apply-templates";
+import { TransitionWrapper } from "./components/transition-wrapper";
+import { PermissionChip } from "./components/permission-chip";
+import "@sheet-engine/react/index.css";
+import "./styles/index.css";
+import { useSidebar } from "./components/sidebar/sidebar-context";
+import { useSidebarPortalRegistryHandle } from "./components/sidebar/sidebar-portal-registry";
+import { EditorRightSidebar } from "./components/sidebar/editor-right-sidebar";
+import { PanelConfig } from "./types";
+import { DataVerification } from "./components/sidebars/data-verification";
+import { ConditionalFormat } from "./components/sidebars/conditional-format";
+import { Templates } from "./components/sidebars/templates";
+import FunctionContent from "./components/sidebars/function-content";
+import { TemplatePreview, Template } from "./components/sidebars/template-ui";
+import { useMediaQuery } from "usehooks-ts";
+import { CommentsContent } from "./components/comments/comment-sidebar";
+import { setEnsResolutionUrl } from "./components/comments/ens/ens-cache";
+import { CommentsConfig } from "./types/comments";
+import { SmartContractModal } from "./components/smart-contract/smart-contract-modal";
+import { SmartContractListView } from "./components/smart-contract/smart-contract-view-list";
+import { SmartContractReadingIntro } from "./components/smart-contract/smart-contract-reading-intro";
+import { SmartContractReadingErrorToast } from "./components/smart-contract/error-toast";
+import { SMART_CONTRACT_PANEL_ID } from "./utils/smart-contract/constants";
+import "./components/smart-contract/index.css";
+import { shouldInitializeDefaultWorkbook } from "./hooks/collaboration-lifecycle";
 
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -68,17 +70,17 @@ const EditorContent = ({
   theme,
 }: Pick<
   DsheetProps,
-  | 'renderNavbar'
-  | 'isReadOnly'
-  | 'allowSheetDownload'
-  | 'toggleTemplateSidebar'
-  | 'selectedTemplate'
-  | 'dsheetId'
-  | 'setFetchingURLData'
-  | 'setShowFetchURLModal'
-  | 'setInputFetchURLDataBlock'
-  | 'isNewSheet'
-  | 'theme'
+  | "renderNavbar"
+  | "isReadOnly"
+  | "allowSheetDownload"
+  | "toggleTemplateSidebar"
+  | "selectedTemplate"
+  | "dsheetId"
+  | "setFetchingURLData"
+  | "setShowFetchURLModal"
+  | "setInputFetchURLDataBlock"
+  | "isNewSheet"
+  | "theme"
 > & {
   commentsConfig?: CommentsConfig;
   isTemplateOpen?: boolean;
@@ -95,6 +97,7 @@ const EditorContent = ({
     loading,
     syncStatus,
     collabEnabled,
+    collabState,
     sheetEditorRef,
     currentDataRef,
     ydocRef,
@@ -114,7 +117,7 @@ const EditorContent = ({
   // Stable reference so the memoized EditorWorkbook (and its toolbar) is not
   // rebuilt on every panel toggle.
   const openTemplatesPanel = useCallback(
-    () => togglePanel('templates'),
+    () => togglePanel("templates"),
     [togglePanel],
   );
 
@@ -124,15 +127,15 @@ const EditorContent = ({
   const [hoveredTemplate, setHoveredTemplate] = useState<Template | null>(null);
   const [shouldHandleSuggestionFromCell, setShouldHandleSuggestionFromCell] =
     useState(0);
-  const isMobile = useMediaQuery('(max-width: 840px)', { defaultValue: false });
+  const isMobile = useMediaQuery("(max-width: 840px)", { defaultValue: false });
 
   const builtInPanels: PanelConfig[] = [
     ...(smartContract.enabled
       ? [
           {
             id: SMART_CONTRACT_PANEL_ID,
-            header: { title: 'My smart contracts' },
-            width: '380px',
+            header: { title: "My smart contracts" },
+            width: "380px",
             content: (
               <SmartContractListView
                 userSmartContracts={smartContract.userSmartContracts}
@@ -150,36 +153,36 @@ const EditorContent = ({
       : []),
     ...(commentsConfig
       ? [
-        {
-          id: 'comments',
-          header: { title: 'Comments' },
-          width: '380px',
-          content: (
-            <CommentsContent
-              sheetEditorRef={sheetEditorRef}
-              userName={commentsConfig.userName}
-              commentsData={commentsConfig.commentsData}
-              onSendComment={commentsConfig.onSendComment}
-              onCommentAction={commentsConfig.onCommentAction}
-              ownerAddress={commentsConfig.ownerAddress}
-              currentUserAddress={commentsConfig.currentUserAddress}
-              isOwner={commentsConfig.isOwner}
-              disabled={commentsConfig.disabled}
-              isAuthenticated={commentsConfig.isAuthenticated}
-              unauthenticatedFallback={commentsConfig.unauthenticatedFallback}
-            />
-          ),
-        },
-      ]
+          {
+            id: "comments",
+            header: { title: "Comments" },
+            width: "380px",
+            content: (
+              <CommentsContent
+                sheetEditorRef={sheetEditorRef}
+                userName={commentsConfig.userName}
+                commentsData={commentsConfig.commentsData}
+                onSendComment={commentsConfig.onSendComment}
+                onCommentAction={commentsConfig.onCommentAction}
+                ownerAddress={commentsConfig.ownerAddress}
+                currentUserAddress={commentsConfig.currentUserAddress}
+                isOwner={commentsConfig.isOwner}
+                disabled={commentsConfig.disabled}
+                isAuthenticated={commentsConfig.isAuthenticated}
+                unauthenticatedFallback={commentsConfig.unauthenticatedFallback}
+              />
+            ),
+          },
+        ]
       : []),
     {
-      id: 'templates',
+      id: "templates",
       header: {
-        title: 'Templates',
+        title: "Templates",
         subtitle:
-          'Start with pre-built templates. Includes smart contract analysis, real time coins price and much more for blockchain analytics',
+          "Start with pre-built templates. Includes smart contract analysis, real time coins price and much more for blockchain analytics",
       },
-      width: '380px',
+      width: "380px",
       content: (
         <Templates
           setSelectedTemplate={(slug) => setInternalSelectedTemplate(slug)}
@@ -188,21 +191,21 @@ const EditorContent = ({
       ),
     },
     {
-      id: 'data-verification',
-      header: { title: 'Data Validation' },
-      width: '380px',
+      id: "data-verification",
+      header: { title: "Data Validation" },
+      width: "380px",
       content: <DataVerification />,
     },
     {
-      id: 'conditional-format',
-      header: { title: 'Conditional Formatting' },
-      width: '380px',
+      id: "conditional-format",
+      header: { title: "Conditional Formatting" },
+      width: "380px",
       content: <ConditionalFormat />,
     },
     {
-      id: 'functions',
-      header: { title: 'Function' },
-      width: '380px',
+      id: "functions",
+      header: { title: "Function" },
+      width: "380px",
       content: (
         <FunctionContent
           sheetEditorRef={sheetEditorRef}
@@ -219,7 +222,7 @@ const EditorContent = ({
     if (!panel) return null;
     return {
       id: panel.id,
-      width: panel.width ?? '380px',
+      width: panel.width ?? "380px",
       header: panel.header,
       content: panel.content,
     };
@@ -286,27 +289,27 @@ const EditorContent = ({
   const plainSheetToYMap = (sheet: any, index = 0) => {
     const ySheet = new Y.Map();
 
-    ySheet.set('id', sheet.id ?? crypto.randomUUID());
-    ySheet.set('name', sheet.name ?? `Sheet${index + 1}`);
-    ySheet.set('order', sheet.order ?? index);
-    ySheet.set('row', sheet.row ?? 500);
-    ySheet.set('column', sheet.column ?? 36);
-    ySheet.set('status', sheet.status ?? (index === 0 ? 1 : 0));
-    ySheet.set('config', sheet.config ?? {});
-    ySheet.set('celldata', cellArrayToYMap(sheet.celldata ?? []));
-    ySheet.set('calcChain', cellArrayToYMap(sheet.calcChain ?? []));
-    ySheet.set('dataBlockCalcFunction', sheet.dataBlockCalcFunction ?? {});
+    ySheet.set("id", sheet.id ?? crypto.randomUUID());
+    ySheet.set("name", sheet.name ?? `Sheet${index + 1}`);
+    ySheet.set("order", sheet.order ?? index);
+    ySheet.set("row", sheet.row ?? 500);
+    ySheet.set("column", sheet.column ?? 36);
+    ySheet.set("status", sheet.status ?? (index === 0 ? 1 : 0));
+    ySheet.set("config", sheet.config ?? {});
+    ySheet.set("celldata", cellArrayToYMap(sheet.celldata ?? []));
+    ySheet.set("calcChain", cellArrayToYMap(sheet.calcChain ?? []));
+    ySheet.set("dataBlockCalcFunction", sheet.dataBlockCalcFunction ?? {});
     const yDataBlockList = new Y.Map();
-    ySheet.set('dataBlockCalcFunction', yDataBlockList);
+    ySheet.set("dataBlockCalcFunction", yDataBlockList);
     const yLiveQueryList = new Y.Map();
-    ySheet.set('liveQueryList', yLiveQueryList);
+    ySheet.set("liveQueryList", yLiveQueryList);
     const dataVerification = new Y.Map();
-    ySheet.set('dataVerification', dataVerification);
+    ySheet.set("dataVerification", dataVerification);
     const conditionRules = new Y.Map();
-    ySheet.set('conditionRules', conditionRules);
+    ySheet.set("conditionRules", conditionRules);
     const luckysheet_conditionformat_save = new Y.Array();
     ySheet.set(
-      'luckysheet_conditionformat_save',
+      "luckysheet_conditionformat_save",
       luckysheet_conditionformat_save,
     );
     return ySheet;
@@ -315,9 +318,18 @@ const EditorContent = ({
   useEffect(() => {
     if (!isNewSheet || !ydocRef.current || !dsheetId) return;
 
-    // Collaboration + IndexedDB must hydrate before an empty ydoc means "brand new".
-    if (collabEnabled) return;
-    if (syncStatus !== 'synced') return;
+    // An empty collaborative Y.Doc only means "brand new" after the durable
+    // room has hydrated. This avoids racing a default sheet into an existing
+    // room while still allowing a genuinely empty room to become editable.
+    if (
+      !shouldInitializeDefaultWorkbook(
+        syncStatus,
+        collabEnabled === true,
+        collabState?.status,
+      )
+    ) {
+      return;
+    }
 
     ydocRef.current.transact(() => {
       const sheetArray = ydocRef.current?.getArray(dsheetId);
@@ -341,6 +353,7 @@ const EditorContent = ({
     isNewSheet,
     syncStatus,
     collabEnabled,
+    collabState?.status,
     dsheetId,
     ydocRef,
     currentDataRef,
@@ -348,20 +361,20 @@ const EditorContent = ({
 
   return (
     <div
-      style={{ height: 'calc(100vh)' }}
-      className={cn('dsheet-editor', isReadOnly && 'fortune-read-only')}
+      style={{ height: "calc(100vh)" }}
+      className={cn("dsheet-editor", isReadOnly && "fortune-read-only")}
       data-testid="dsheet-editor"
     >
       {/* Hidden DOM triggers — FortuneCore fires these by id via element.click() */}
       <button
         id="data-verification-button"
         className="hidden"
-        onClick={() => togglePanel('data-verification')}
+        onClick={() => togglePanel("data-verification")}
       />
       <button
         id="conditional-format-button"
         className="hidden"
-        onClick={() => openPanel('conditional-format')}
+        onClick={() => openPanel("conditional-format")}
       />
       <button
         id="smartcontract-button"
@@ -377,7 +390,7 @@ const EditorContent = ({
         id="function-button"
         className="hidden"
         onClick={() => {
-          openPanel('functions');
+          openPanel("functions");
           setShouldHandleSuggestionFromCell((p) => p + 1);
         }}
       />
@@ -386,10 +399,10 @@ const EditorContent = ({
         <nav
           id="Navbar"
           className={cn(
-            'dsheet-nav h-[44px] color-bg-default px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-10 transition-transform duration-300',
+            "dsheet-nav h-[44px] color-bg-default px-4 flex gap-2 items-center justify-between w-screen fixed left-0 top-0 border-b color-border-default z-10 transition-transform duration-300",
             {
-              'translate-y-0': true,
-              'translate-y-[-100%]': false,
+              "translate-y-0": true,
+              "translate-y-[-100%]": false,
             },
           )}
           data-testid="dsheet-navbar"
@@ -493,96 +506,108 @@ const EditorContent = ({
  * @param props - Component properties
  * @returns The SpreadsheetEditor component
  */
-const SpreadsheetEditor = ({
-  isReadOnly = false,
-  allowSheetDownload,
-  renderNavbar,
-  enableIndexeddbSync,
-  dsheetId = '',
-  portalContent,
-  onContentUpdate,
-  onChange,
-  username,
-  selectedTemplate,
-  toggleTemplateSidebar,
-  isTemplateOpen,
-  onboardingComplete,
-  onboardingCompleteLocalStorageKey,
-  onboardingHandler,
-  commentsConfig,
-  setFetchingURLData,
-  setShowFetchURLModal,
-  setInputFetchURLDataBlock,
-  sheetEditorRef: externalSheetEditorRef,
-  onDuneChartEmbed,
-  onSheetCountChange,
-  isAuthorized,
-  getDocumentTitle,
-  updateDocumentTitle,
-  editorStateRef,
-  setSelectedTemplate,
-  isNewSheet,
-  liveQueryRefreshRate,
-  enableLiveQuery,
-  collaboration,
-  customPanels,
-  apiKeyStorage,
-  onDataBlockEvent,
-  smartContracts,
-  theme,
-  onContentSyncStatusChange,
-}: DsheetProps): JSX.Element => {
-  const [exportDropdownOpen, setExportDropdownOpen] = useState<boolean>(false);
+const SpreadsheetEditor = React.forwardRef<DSheetEditorHandle, DsheetProps>(
+  (
+    {
+      isReadOnly = false,
+      allowSheetDownload,
+      renderNavbar,
+      enableIndexeddbSync,
+      dsheetId = "",
+      portalContent,
+      onContentUpdate,
+      onChange,
+      username,
+      selectedTemplate,
+      toggleTemplateSidebar,
+      isTemplateOpen,
+      onboardingComplete,
+      onboardingCompleteLocalStorageKey,
+      onboardingHandler,
+      commentsConfig,
+      setFetchingURLData,
+      setShowFetchURLModal,
+      setInputFetchURLDataBlock,
+      sheetEditorRef: externalSheetEditorRef,
+      onDuneChartEmbed,
+      onSheetCountChange,
+      isAuthorized,
+      getDocumentTitle,
+      updateDocumentTitle,
+      editorStateRef,
+      setSelectedTemplate,
+      isNewSheet,
+      liveQueryRefreshRate,
+      enableLiveQuery,
+      collaboration,
+      customPanels,
+      apiKeyStorage,
+      onDataBlockEvent,
+      smartContracts,
+      theme,
+      onContentSyncStatusChange,
+      onIndexedDbError,
+    }: DsheetProps,
+    forwardedEditorRef,
+  ): JSX.Element => {
+    const [exportDropdownOpen, setExportDropdownOpen] =
+      useState<boolean>(false);
 
-  return (
-    <EditorProvider
-      setSelectedTemplate={setSelectedTemplate}
-      getDocumentTitle={getDocumentTitle}
-      updateDocumentTitle={updateDocumentTitle}
-      dsheetId={dsheetId}
-      username={username}
-      portalContent={portalContent}
-      enableIndexeddbSync={enableIndexeddbSync}
-      isReadOnly={isReadOnly}
-      onContentUpdate={onContentUpdate}
-      onChange={onChange}
-      externalEditorRef={externalSheetEditorRef}
-      collaboration={collaboration}
-      commentsConfig={commentsConfig}
-      isAuthorized={isAuthorized}
-      editorStateRef={editorStateRef}
-      liveQueryRefreshRate={liveQueryRefreshRate}
-      enableLiveQuery={enableLiveQuery}
-      apiKeyStorage={apiKeyStorage}
-      onDataBlockEvent={onDataBlockEvent}
-      smartContracts={smartContracts}
-      onContentSyncStatusChange={onContentSyncStatusChange}
-    >
-      <EditorContent
-        commentsConfig={commentsConfig}
-        renderNavbar={renderNavbar}
-        setFetchingURLData={setFetchingURLData}
-        isNewSheet={isNewSheet}
-        setShowFetchURLModal={setShowFetchURLModal}
-        setInputFetchURLDataBlock={setInputFetchURLDataBlock}
-        isReadOnly={isReadOnly}
-        allowSheetDownload={allowSheetDownload}
-        toggleTemplateSidebar={toggleTemplateSidebar}
-        onboardingComplete={onboardingComplete}
-        onboardingCompleteLocalStorageKey={onboardingCompleteLocalStorageKey}
-        onboardingHandler={onboardingHandler as OnboardingHandler}
-        isTemplateOpen={isTemplateOpen}
-        exportDropdownOpen={exportDropdownOpen}
-        setExportDropdownOpen={setExportDropdownOpen}
+    return (
+      <EditorProvider
+        key={dsheetId}
+        setSelectedTemplate={setSelectedTemplate}
+        getDocumentTitle={getDocumentTitle}
+        updateDocumentTitle={updateDocumentTitle}
         dsheetId={dsheetId}
-        selectedTemplate={selectedTemplate}
-        onDuneChartEmbed={onDuneChartEmbed}
-        onSheetCountChange={onSheetCountChange}
-        customPanels={customPanels}
-        theme={theme}
-      />
-    </EditorProvider>
-  );
-};
+        username={username}
+        portalContent={portalContent}
+        enableIndexeddbSync={enableIndexeddbSync}
+        isReadOnly={isReadOnly}
+        onContentUpdate={onContentUpdate}
+        onChange={onChange}
+        externalEditorRef={forwardedEditorRef}
+        legacyEditorRef={externalSheetEditorRef}
+        collaboration={collaboration}
+        commentsConfig={commentsConfig}
+        isAuthorized={isAuthorized}
+        editorStateRef={editorStateRef}
+        liveQueryRefreshRate={liveQueryRefreshRate}
+        enableLiveQuery={enableLiveQuery}
+        apiKeyStorage={apiKeyStorage}
+        onDataBlockEvent={onDataBlockEvent}
+        smartContracts={smartContracts}
+        onContentSyncStatusChange={onContentSyncStatusChange}
+        onIndexedDbError={onIndexedDbError}
+      >
+        <EditorContent
+          commentsConfig={commentsConfig}
+          renderNavbar={renderNavbar}
+          setFetchingURLData={setFetchingURLData}
+          isNewSheet={isNewSheet}
+          setShowFetchURLModal={setShowFetchURLModal}
+          setInputFetchURLDataBlock={setInputFetchURLDataBlock}
+          isReadOnly={isReadOnly}
+          allowSheetDownload={allowSheetDownload}
+          toggleTemplateSidebar={toggleTemplateSidebar}
+          onboardingComplete={onboardingComplete}
+          onboardingCompleteLocalStorageKey={onboardingCompleteLocalStorageKey}
+          onboardingHandler={onboardingHandler as OnboardingHandler}
+          isTemplateOpen={isTemplateOpen}
+          exportDropdownOpen={exportDropdownOpen}
+          setExportDropdownOpen={setExportDropdownOpen}
+          dsheetId={dsheetId}
+          selectedTemplate={selectedTemplate}
+          onDuneChartEmbed={onDuneChartEmbed}
+          onSheetCountChange={onSheetCountChange}
+          customPanels={customPanels}
+          theme={theme}
+        />
+      </EditorProvider>
+    );
+  },
+);
+
+SpreadsheetEditor.displayName = "SpreadsheetEditor";
 
 export default SpreadsheetEditor;
