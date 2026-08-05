@@ -45,21 +45,23 @@ export function getAnchorSheet(sheets: Sheet[] | null | undefined): Sheet | null
 function getAnchorSheetEntry(
   sheetArray: Y.Array<unknown>,
 ): { sheetId: string; entry: Y.Map<unknown> } | null {
-  let anchor: { sheetId: string; entry: Y.Map<unknown>; order: number } | null =
+  let best: { sheetId: string; entry: Y.Map<unknown>; order: number } | null =
     null;
 
-  sheetArray.forEach((sheetEntry) => {
-    if (!(sheetEntry instanceof Y.Map)) return;
+  for (let i = 0; i < sheetArray.length; i += 1) {
+    const sheetEntry = sheetArray.get(i);
+    if (!(sheetEntry instanceof Y.Map)) continue;
     const sheetId = sheetEntry.get('id');
-    if (typeof sheetId !== 'string') return;
+    if (typeof sheetId !== 'string') continue;
     const order = sheetEntry.get('order');
     const orderNum = typeof order === 'number' ? order : 0;
-    if (!anchor || orderNum < anchor.order) {
-      anchor = { sheetId, entry: sheetEntry, order: orderNum };
+    if (!best || orderNum < best.order) {
+      best = { sheetId, entry: sheetEntry, order: orderNum };
     }
-  });
+  }
 
-  return anchor ? { sheetId: anchor.sheetId, entry: anchor.entry } : null;
+  if (!best) return null;
+  return { sheetId: best.sheetId, entry: best.entry };
 }
 
 export function hasSheetCompactionCompleted(
