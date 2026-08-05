@@ -134,6 +134,8 @@ export type SheetConfig = {
   borderInfo?: any[]; // 边框
   /** Range-level cell formatting for empty cells (toolbar bulk format). */
   cellFormatRanges?: CellFormatRange[];
+  /** Background compaction revision (celldata + borderInfo); synced via Yjs. */
+  sheetCompactionRev?: number;
   authority?: any;
   rowReadOnly?: Record<number, number>;
   colReadOnly?: Record<number, number>;
