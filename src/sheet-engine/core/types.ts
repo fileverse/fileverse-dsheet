@@ -134,6 +134,8 @@ export type SheetConfig = {
   borderInfo?: any[]; // 边框
   /** Range-level cell formatting for empty cells (toolbar bulk format). */
   cellFormatRanges?: CellFormatRange[];
+  /** Background compaction revision (celldata + borderInfo); synced via Yjs. */
+  sheetCompactionRev?: number;
   authority?: any;
   rowReadOnly?: Record<number, number>;
   colReadOnly?: Record<number, number>;
@@ -243,6 +245,8 @@ export type Sheet = {
   luckysheet_conditionformat_save?: any[];
   luckysheet_alternateformat_save?: any[];
   dataVerification?: any;
+  /** Interned dataVerification entries; per-cell map may hold numeric refs into this list. */
+  dataVerificationDefs?: any[];
   conditionRules?: ConditionRulesProps;
   hyperlink?: Record<string, HyperlinkEntry | HyperlinkEntry[]>;
   dynamicArray_compute?: any;

@@ -16,6 +16,11 @@ export default defineConfig({
       ),
     },
   },
+  // The dsheet worker builds as a separate self-contained graph (default iife
+  // format, library externals below do not apply), so exceljs/luckyexcel are
+  // bundled into the worker blob — a blob worker cannot resolve bare imports.
+  // The worker graph must stay single-chunk: no dynamic imports anywhere in
+  // the pipeline, or iife worker output breaks (Vercel demo build).
   build: {
     lib: {
       name: 'dsheet',

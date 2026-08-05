@@ -3,10 +3,11 @@ import type { MutableRefObject, RefObject } from 'react';
 import type * as Y from 'yjs';
 import type { WorkbookInstance, Sheet } from '@sheet-engine/react';
 import {
+  buildCompactionRevChange,
   compactInMemorySheets,
-  hasCelldataCompactionCompleted,
-  markCelldataCompactionCompleted,
-  planYdocCelldataCompaction,
+  hasSheetCompactionCompleted,
+  markCompactionRevInMemory,
+  planYdocCompaction,
 } from '../utils/compact-committed-celldata';
 import { updateYdocSheetData } from '../utils/update-ydoc';
 import { applyCellFormatRangesCommits } from '../../sheet-engine/core/utils/mirror-cell-format-ranges';
@@ -32,7 +33,7 @@ type UseCelldataCompactionArgs = {
 async function applyCompactionChangesInChunks(
   ydoc: Y.Doc,
   dsheetId: string,
-  changes: ReturnType<typeof planYdocCelldataCompaction>['changes'],
+  changes: ReturnType<typeof planYdocCompaction>['changes'],
   handleOnChangePortalUpdate: () => void,
   isCancelled: () => boolean,
   sheetEditorRef: RefObject<WorkbookInstance | null>,
@@ -66,9 +67,8 @@ async function applyCompactionChangesInChunks(
 }
 
 /**
- * One-shot background compaction: remove committed celldata entries that copy/paste
- * would never write (`shouldPersistCelldataCell` === false). Runs once per dsheetId
- * after the editor is synced and idle so it does not compete with load or edits.
+ * One-shot background compaction (celldata + borderInfo). Completion is stored
+ * on the anchor sheet's config in Yjs so it syncs across devices.
  */
 export function useCelldataCompaction({
   dsheetId,
@@ -87,7 +87,9 @@ export function useCelldataCompaction({
   useEffect(() => {
     if (!dsheetId || isReadOnly) return;
     if (syncStatus !== 'synced' || !isDataLoaded) return;
-    if (hasCelldataCompactionCompleted(dsheetId)) return;
+
+    const ydoc = ydocRef.current;
+    if (!ydoc || hasSheetCompactionCompleted(ydoc, dsheetId)) return;
     if (runningRef.current) return;
 
     let cancelled = false;
@@ -100,8 +102,8 @@ export function useCelldataCompaction({
       if (cancelled || runningRef.current) return;
       if (remoteUpdateRef.current || collabSyncing) return;
 
-      const ydoc = ydocRef.current;
-      if (!ydoc) return;
+      const liveYdoc = ydocRef.current;
+      if (!liveYdoc || hasSheetCompactionCompleted(liveYdoc, dsheetId)) return;
 
       runningRef.current = true;
 
@@ -109,41 +111,36 @@ export function useCelldataCompaction({
         try {
           if (isCancelled() || remoteUpdateRef.current) return;
 
-          const plan = planYdocCelldataCompaction(ydoc, dsheetId);
-          const clearedInMemory = compactInMemorySheets(currentDataRef.current);
+          const plan = planYdocCompaction(liveYdoc, dsheetId);
+          const revChange = buildCompactionRevChange(liveYdoc, dsheetId);
+          const changes = revChange
+            ? [...plan.changes, revChange]
+            : plan.changes;
 
-          if (plan.changes.length > 0) {
-            await applyCompactionChangesInChunks(
-              ydoc,
-              dsheetId,
-              plan.changes,
-              handleOnChangePortalUpdate,
-              isCancelled,
-              sheetEditorRef,
-            );
-          } else if (clearedInMemory > 0) {
-            handleOnChangePortalUpdate();
-          }
+          if (changes.length === 0) return;
 
-          if (
-            !isCancelled() &&
-            (plan.removedFromYdoc > 0 || clearedInMemory > 0)
-          ) {
-            const ctx = sheetEditorRef.current?.getWorkbookContext?.() as
-              | { luckysheetfile?: Sheet[] }
-              | undefined;
-            if (ctx?.luckysheetfile) {
-              compactInMemorySheets(ctx.luckysheetfile);
-            }
-          }
+          compactInMemorySheets(currentDataRef.current);
 
-          // Only flag done if we finished. Cancel mid-chunks would leave ghosts
-          // permanently uncleanable in this browser if we marked anyway.
-          if (!isCancelled()) {
-            markCelldataCompactionCompleted(dsheetId);
+          await applyCompactionChangesInChunks(
+            liveYdoc,
+            dsheetId,
+            changes,
+            handleOnChangePortalUpdate,
+            isCancelled,
+            sheetEditorRef,
+          );
+
+          if (isCancelled()) return;
+
+          markCompactionRevInMemory(currentDataRef.current);
+          const workbook = sheetEditorRef.current?.getWorkbookContext?.()
+            ?.luckysheetfile;
+          if (workbook) {
+            compactInMemorySheets(workbook);
+            markCompactionRevInMemory(workbook);
           }
         } catch (err) {
-          console.warn('[DSheet] Celldata compaction failed:', err);
+          console.warn('[DSheet] Compaction failed:', err);
         } finally {
           runningRef.current = false;
         }
