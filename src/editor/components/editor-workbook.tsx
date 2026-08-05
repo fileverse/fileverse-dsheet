@@ -129,7 +129,6 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     handleLiveQuery,
     setIsDataLoaded,
     awareness,
-    onCollaboratorsChange,
     collabEnabled,
     isLiveCollabSession,
     collabIsOwner,
@@ -217,7 +216,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     awarenessRef.current = awareness;
   }, [awareness]);
 
-  useCollabAwareness(awareness, sheetEditorRef, onCollaboratorsChange);
+  useCollabAwareness(awareness, sheetEditorRef);
 
   const onboardingLsKey =
     onboardingCompleteLocalStorageKey ?? "onboardingComplete";
