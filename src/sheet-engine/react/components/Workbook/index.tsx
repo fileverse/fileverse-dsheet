@@ -1114,7 +1114,10 @@ const Workbook = React.forwardRef<WorkbookInstance, Settings & AdditionalProps>(
               _.isEmpty(draftCtx.luckysheet_select_save) &&
               !_.isEmpty(sheet.luckysheet_select_save)
             ) {
-              draftCtx.luckysheet_select_save = sheet.luckysheet_select_save;
+              // Clone — sheet selection may be Immer-frozen from a prior produce.
+              draftCtx.luckysheet_select_save = _.cloneDeep(
+                sheet.luckysheet_select_save,
+              );
             }
             if (
               !mergedSettings.suppressInitialCellSelection &&
