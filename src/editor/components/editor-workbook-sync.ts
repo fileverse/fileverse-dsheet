@@ -120,7 +120,9 @@ const toCalcChainMap = (sheet: any) => {
 
   if (typeof calcChain === 'object') {
     Object.entries(calcChain).forEach(([k, v]) => {
-      map.set(k, v);
+      if (v && typeof (v as any).r === 'number' && typeof (v as any).c === 'number') {
+        map.set(k, v);
+      }
     });
   }
 

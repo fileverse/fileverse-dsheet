@@ -28,7 +28,9 @@ const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
         draftCtx.scrollLeft = r.scrollLeft ?? 0;
         draftCtx.scrollTop = r.scrollTop ?? 0;
         draftCtx.luckysheet_select_status = r.luckysheet_select_status ?? false;
-        draftCtx.luckysheet_select_save = r.luckysheet_select_save ?? undefined;
+        draftCtx.luckysheet_select_save = r.luckysheet_select_save
+          ? _.cloneDeep(r.luckysheet_select_save)
+          : undefined;
       } else {
         draftCtx.scrollLeft = 0;
         draftCtx.scrollTop = 0;
@@ -41,7 +43,9 @@ const SheetListItem: React.FC<Props> = ({ sheet, isDropPlaceholder }) => {
             sheetIdx != null ? draftCtx.luckysheetfile[sheetIdx] : undefined;
           if (sh) {
             if (!_.isEmpty(sh.luckysheet_select_save)) {
-              draftCtx.luckysheet_select_save = sh.luckysheet_select_save;
+              draftCtx.luckysheet_select_save = _.cloneDeep(
+                sh.luckysheet_select_save,
+              );
             } else {
               draftCtx.luckysheet_select_save = defaultLuckysheetSelectRanges(
                 sh.data,
