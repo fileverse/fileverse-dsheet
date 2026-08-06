@@ -6,49 +6,49 @@ import React, {
   useEffect,
   useMemo,
   useCallback,
-} from "react";
-import throttle from "lodash/throttle";
-import { LiveQueryData, Sheet } from "@sheet-engine/react";
-import { WorkbookInstance } from "@sheet-engine/react";
-import * as Y from "yjs";
-import { IndexeddbPersistence } from "y-indexeddb";
-import { fromUint8Array } from "js-base64";
+} from 'react';
+import throttle from 'lodash/throttle';
+import { LiveQueryData, Sheet } from '@sheet-engine/react';
+import { WorkbookInstance } from '@sheet-engine/react';
+import * as Y from 'yjs';
+import { IndexeddbPersistence } from 'y-indexeddb';
+import { fromUint8Array } from 'js-base64';
 
-import { ySheetArrayToPlain } from "../utils/update-ydoc";
-import { useEditorSync } from "../hooks/use-editor-sync";
+import { ySheetArrayToPlain } from '../utils/update-ydoc';
+import { useEditorSync } from '../hooks/use-editor-sync';
 import {
   getWorkbookHydrationReason,
   isLiveCollaborationSession,
-} from "../hooks/collaboration-lifecycle";
-import { useCelldataCompaction } from "../hooks/use-celldata-compaction";
-import { useEditorData } from "../hooks/use-editor-data";
+} from '../hooks/collaboration-lifecycle';
+import { useCelldataCompaction } from '../hooks/use-celldata-compaction';
+import { useEditorData } from '../hooks/use-editor-data';
 import {
   updateRowIndices,
   updateColumnIndices,
-} from "../utils/update-index-after-drag";
+} from '../utils/update-index-after-drag';
 import {
   SheetUpdateData,
   DataBlockEvent,
   type DSheetEditorHandle,
-} from "../types";
-import type { CommentsConfig } from "../types/comments";
-import { ApiKeyStorage, defaultApiKeyStorage } from "../utils/api-key-storage";
-import type { OpenApiKeyModalFn } from "../utils/data-block-error-handler";
-import type { SmartContractConfig } from "../types/smart-contract";
+} from '../types';
+import type { CommentsConfig } from '../types/comments';
+import { ApiKeyStorage, defaultApiKeyStorage } from '../utils/api-key-storage';
+import type { OpenApiKeyModalFn } from '../utils/data-block-error-handler';
+import type { SmartContractConfig } from '../types/smart-contract';
 import {
   useSmartContract,
   type UseSmartContractReturn,
-} from "../hooks/use-smart-contract";
-import { SidebarProvider } from "../components/sidebar/sidebar-context";
-import { SidebarPortalRegistryProvider } from "../components/sidebar/sidebar-portal-registry";
+} from '../hooks/use-smart-contract';
+import { SidebarProvider } from '../components/sidebar/sidebar-context';
+import { SidebarPortalRegistryProvider } from '../components/sidebar/sidebar-portal-registry';
 import type {
   CollaborationProps,
   CollabState,
   CollabUser,
-} from "../../sync-local/types";
-import type { Awareness } from "y-protocols/awareness";
-import type { DSheetContentSnapshot } from "../../persistence";
-import { attachDSheetEditorHandle } from "../utils/editor-handle";
+} from '../../sync-local/types';
+import type { Awareness } from 'y-protocols/awareness';
+import type { DSheetContentSnapshot } from '../../persistence';
+import { attachDSheetEditorHandle } from '../utils/editor-handle';
 // Define the shape of the context
 export interface EditorContextType {
   setIsDataLoaded: React.Dispatch<React.SetStateAction<boolean>>;
@@ -83,7 +83,7 @@ export interface EditorContextType {
   setForceSheetRender: React.Dispatch<React.SetStateAction<number>>;
 
   // Sync status
-  syncStatus: "initializing" | "syncing" | "synced" | "error";
+  syncStatus: 'initializing' | 'syncing' | 'synced' | 'error';
 
   // Socket.IO collaboration
   collabEnabled?: boolean;
@@ -150,7 +150,7 @@ interface EditorProviderProps {
   onDataBlockEvent?: (event: DataBlockEvent) => void;
   smartContracts?: SmartContractConfig;
   onContentSyncStatusChange?: (
-    status: "initializing" | "syncing" | "synced" | "error",
+    status: 'initializing' | 'syncing' | 'synced' | 'error',
   ) => void;
   onIndexedDbError?: (error: Error) => void;
 }
@@ -162,8 +162,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   updateDocumentTitle,
   children,
   dsheetId,
-  username = "Anonymous",
-  portalContent = "",
+  username = 'Anonymous',
+  portalContent = '',
   enableIndexeddbSync = true,
   isReadOnly = false,
   onContentUpdate,
@@ -239,7 +239,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         const sheetData = cloneDataBlockCalcFunction?.[sheetId];
 
         let result;
-        if (type === "row") {
+        if (type === 'row') {
           result = updateRowIndices(
             sheetData,
             selectedSourceIndex,
@@ -354,7 +354,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       if (!awareness) return;
       const local = awareness.getLocalState();
       const prevUser = (local?.user as Record<string, unknown>) || {};
-      awareness.setLocalStateField("user", {
+      awareness.setLocalStateField('user', {
         ...prevUser,
         name,
       });
@@ -394,7 +394,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
         },
         [externalEditorRef, legacyEditorRef],
       );
-    },
+        },
     [externalEditorRef, legacyEditorRef],
   );
 
@@ -443,9 +443,9 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
     const handleBeforeUnload = () => {
       handleOnChange();
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [onChange, handleOnChange]);
 
@@ -528,7 +528,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       refreshIndexedDB,
       getContentSnapshot,
       mergeContent,
-      rehydrateAfterCollabSync: (reason = "host") =>
+      rehydrateAfterCollabSync: (reason = 'host') =>
         rehydrateAfterCollabSyncRef.current(reason),
       terminateSession,
       updateCollaboratorName,
@@ -547,8 +547,8 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   // Loading state is based on data loading, sync status, and data availability in read-only mode
   const loading =
     !isDataLoaded ||
-    syncStatus === "initializing" ||
-    syncStatus === "syncing" ||
+    syncStatus === 'initializing' ||
+    syncStatus === 'syncing' ||
     // In read-only mode, continue showing the loading state if we have no data yet
     (isReadOnly &&
       (!currentDataRef.current || currentDataRef.current.length === 0));
@@ -661,7 +661,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 export const useEditor = (): EditorContextType => {
   const context = useContext(EditorContext);
   if (context === undefined) {
-    throw new Error("useEditor must be used within an EditorProvider");
+    throw new Error('useEditor must be used within an EditorProvider');
   }
   return context;
 };

@@ -1,15 +1,15 @@
-import { fromUint8Array, toUint8Array } from "js-base64";
-import * as Y from "yjs";
+import { fromUint8Array, toUint8Array } from 'js-base64';
+import * as Y from 'yjs';
 
 export const DEFAULT_DSHEET_PERSISTENCE_TIMEOUT_MS = 8_000;
 
 export type DSheetContentStatus =
-  | "available"
-  | "empty"
-  | "missing"
-  | "corrupt"
-  | "timed-out"
-  | "unavailable";
+  | 'available'
+  | 'empty'
+  | 'missing'
+  | 'corrupt'
+  | 'timed-out'
+  | 'unavailable';
 
 export type DSheetContentSnapshot = {
   dsheetId: string;
@@ -34,7 +34,7 @@ const toError = (error: unknown) =>
 export const mergeDsheetEncodedContent = (
   doc: Y.Doc,
   encodedState: string,
-  origin: unknown = "dsheet-package-ingress",
+  origin: unknown = 'dsheet-package-ingress',
 ): boolean => {
   const update = toUint8Array(encodedState);
   const validationDoc = new Y.Doc();
@@ -48,12 +48,12 @@ export const mergeDsheetEncodedContent = (
   const onUpdate = () => {
     changed = true;
   };
-  doc.on("update", onUpdate);
+  doc.on('update', onUpdate);
   try {
     Y.applyUpdate(doc, update, origin);
     return changed;
   } finally {
-    doc.off("update", onUpdate);
+    doc.off('update', onUpdate);
   }
 };
 
@@ -67,7 +67,7 @@ export const withDsheetPersistenceTimeout = async <T>(
       promise,
       new Promise<never>((_, reject) => {
         timeout = setTimeout(
-          () => reject(new Error("dSheet IndexedDB operation timed out")),
+          () => reject(new Error('dSheet IndexedDB operation timed out')),
           timeoutMs,
         );
       }),
@@ -79,7 +79,7 @@ export const withDsheetPersistenceTimeout = async <T>(
 
 export const unavailableDsheetContentSnapshot = (
   dsheetId: string,
-  status: Exclude<DSheetContentStatus, "available" | "empty">,
+  status: Exclude<DSheetContentStatus, 'available' | 'empty'>,
   error?: unknown,
 ): DSheetContentSnapshot => ({
   dsheetId,
@@ -96,7 +96,7 @@ export const snapshotDsheetDocument = (
   const state = Y.encodeStateAsUpdate(doc);
   return {
     dsheetId,
-    status: state.length <= 2 ? "empty" : "available",
+    status: state.length <= 2 ? 'empty' : 'available',
     encodedState: fromUint8Array(state),
     stateVector: fromUint8Array(Y.encodeStateVector(doc)),
   };
@@ -110,15 +110,15 @@ export const mergeDsheetContentIntoDocument = (
   if (!doc) {
     return unavailableDsheetContentSnapshot(
       dsheetId,
-      "unavailable",
-      new Error("dSheet document is not ready"),
+      'unavailable',
+      new Error('dSheet document is not ready'),
     );
   }
 
   try {
-    mergeDsheetEncodedContent(doc, encodedState, "dsheet-package-ingress");
+    mergeDsheetEncodedContent(doc, encodedState, 'dsheet-package-ingress');
     return snapshotDsheetDocument(dsheetId, doc);
   } catch (error) {
-    return unavailableDsheetContentSnapshot(dsheetId, "corrupt", error);
+    return unavailableDsheetContentSnapshot(dsheetId, 'corrupt', error);
   }
 };

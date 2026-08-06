@@ -120,13 +120,13 @@ export class SyncManager {
   private readonly MAX_QUEUE_SIZE = 5;
   private _awarenessUpdateHandler:
     | ((
-        changes: {
-          added: number[];
-          updated: number[];
-          removed: number[];
-        },
-        origin: any,
-      ) => void)
+      changes: {
+        added: number[];
+        updated: number[];
+        removed: number[];
+      },
+      origin: any,
+    ) => void)
     | null = null;
 
   // --- Config (from constructor) ---
@@ -282,7 +282,7 @@ export class SyncManager {
       onHandshakeData: this.callbacksRef?.onHandshakeData,
       roomInfo: config.roomInfo,
       onEpochAvailable: async (data: { epoch: number; payload: string }) => {
-        try {
+    try {
           const inner = JSON.parse(
             new TextDecoder().decode(
               cryptoUtils.decryptData(this.roomKeyBytes!, data.payload),
@@ -343,10 +343,10 @@ export class SyncManager {
           // than waiting on inbound traffic that will never arrive.
           console.warn(
             'SyncManager: cutover arrived without a prepared key — self-healing',
-          );
+        );
           this.pendingRotationKey = null;
           void this.onDecryptMiss();
-        }
+      }
       },
     });
 
@@ -422,21 +422,21 @@ export class SyncManager {
 
   async terminateSession(): Promise<void> {
     if (this._status === 'idle') return;
-    await this.awaitFlush();
+      await this.awaitFlush();
 
-    try {
-      if (this._awareness) {
-        removeAwarenessStates(
-          this._awareness,
-          [this.ydoc.clientID],
-          'session terminated',
-        );
-      }
-      if (this.isOwner) {
-        await this.socketClient?.terminateSession();
-      } else {
-        this.socketClient?.disconnect();
-      }
+      try {
+        if (this._awareness) {
+          removeAwarenessStates(
+            this._awareness,
+            [this.ydoc.clientID],
+            'session terminated',
+          );
+        }
+        if (this.isOwner) {
+          await this.socketClient?.terminateSession();
+        } else {
+          this.socketClient?.disconnect();
+        }
     } finally {
       this.resetInternalState();
       this.send({
@@ -704,7 +704,7 @@ export class SyncManager {
       const response = await this.socketClient?.sendUpdate({
         update: encrypted,
       });
-      if (!response?.status) {
+        if (!response?.status) {
         if (this.isRevocationResponse(response)) {
           // Soft revocation: re-queue the unacked updates ahead of anything queued since, then
           // reconnect to re-mint. No queue loss; a real demote re-surfaces as a terminal handshake 403.
@@ -772,9 +772,9 @@ export class SyncManager {
           this.handleWriteRevocation();
           return;
         }
-        console.error('SyncManager: server rejected update', response?.error);
-        return;
-      }
+          console.error('SyncManager: server rejected update', response?.error);
+          return;
+        }
       this.staleAckRetries = 0;
       this.maybeAuthorSnapshotAfterSend();
     } catch (err) {
@@ -826,7 +826,7 @@ export class SyncManager {
     // so every live-write revocation is soft: reconnect + re-mint. Terminality is decided at the
     // handshake, where a demoted refresher yields no token and the server 403 is final.
     return 'soft';
-  }
+        }
 
   private handleWriteRevocation(): void {
     if (this.classifyRevocation() === 'terminal') {
@@ -857,17 +857,17 @@ export class SyncManager {
   // fire-and-forget re-entrant-safe when triggered mid-hydrate.
   private maybeAuthorSnapshotAfterSend(): void {
     this.updatesSinceSnapshot += 1;
-    if (
+        if (
       shouldAuthorSnapshot({
         canAuthor: !this.joinOnly,
         updatesSinceLastSnapshot: this.updatesSinceSnapshot,
         threshold: this.SNAPSHOT_THRESHOLD,
       })
-    ) {
+        ) {
       this.authorSnapshot(null, this.syncId).catch((err) => {
         console.error('SyncManager: snapshot authoring failed', err);
-      });
-    }
+          });
+        }
     this.scheduleMirror();
   }
 
@@ -893,7 +893,7 @@ export class SyncManager {
     await this.socketClient?.sendMirrorSnapshot({
       data,
       fileKeyEpoch: this.fileKeyEpoch,
-    });
+      });
   }
 
   // The final merged delta for a hard tab-close beacon: any queued-but-unsent updates,
@@ -1093,11 +1093,11 @@ export class SyncManager {
             if (statusCode === 404) {
               const surfaceSessionNotFound = () => {
                 this.surfaceSessionTerminated('Session not found');
-                if (!settled) {
-                  settled = true;
-                  // Don't reject — the state machine handles this
-                  resolve();
-                }
+              if (!settled) {
+                settled = true;
+                // Don't reject — the state machine handles this
+                resolve();
+              }
               };
 
               // A laggard that was offline for a rotation reconnects and re-auths into its
@@ -1247,7 +1247,7 @@ export class SyncManager {
   // Dual-decrypt window: a rotation cutover can land between a peer's PREPARE miss and its
   // next inbound row — try the current key, then the pre-rotation key, before giving up.
   private tryDecrypt(encrypted: string): Uint8Array | null {
-    try {
+        try {
       return cryptoUtils.decryptData(this.roomKeyBytes!, encrypted);
     } catch {
       if (this.roomKeyBytesPrev) {
@@ -1256,9 +1256,9 @@ export class SyncManager {
         } catch {
           /* fall through */
         }
-      }
+        }
       return null;
-    }
+      }
   }
 
   private decodeInto(target: Uint8Array[], encrypted: string): void {
@@ -1301,8 +1301,8 @@ export class SyncManager {
         this.decodeInto(updates, row.data);
         if (row.updateType !== 'snapshot' && typeof row.seq === 'number') {
           pageSeqs.push(row.seq);
+          }
         }
-      }
       if (walk) {
         walk.pages += 1;
         walk.tailRows += pageSeqs.length;
@@ -1315,7 +1315,7 @@ export class SyncManager {
           walk.merged = walk.merged
             ? Y.mergeUpdates([walk.merged, pageMerged])
             : pageMerged;
-        }
+      }
       }
 
       const snapFloor =
@@ -1327,7 +1327,7 @@ export class SyncManager {
       if (d.hasMore && typeof d.nextSeq === 'number') {
         sinceSeq = d.nextSeq;
         continue;
-      }
+        }
       return appliedTail;
     }
   }
@@ -1344,7 +1344,7 @@ export class SyncManager {
     if (this.joinOnly || !this.isConnected) return;
     if (this.isAuthoringSnapshot) return;
     this.isAuthoringSnapshot = true;
-    try {
+          try {
       const syncStillCurrent = () =>
         this.isCurrentSyncAttempt(syncId) || this.isReady;
 
@@ -1352,9 +1352,9 @@ export class SyncManager {
       if (!syncStillCurrent() || this.floor <= 0) return;
 
       const data = cryptoUtils.encryptData(
-        this.roomKeyBytes!,
+              this.roomKeyBytes!,
         Y.encodeStateAsUpdate(this.ydoc),
-      );
+            );
       const res = await this.socketClient?.sendSnapshot({
         data,
         floorSeq: this.floor,
@@ -1362,11 +1362,11 @@ export class SyncManager {
       });
       if (res?.status) {
         this.updatesSinceSnapshot = 0;
-      }
+          }
     } finally {
       this.isAuthoringSnapshot = false;
-    }
-  }
+        }
+      }
 
   private async hydrate(syncId: number): Promise<void> {
     const syncStillCurrent = () => this.isCurrentSyncAttempt(syncId);
@@ -1409,7 +1409,7 @@ export class SyncManager {
       walk.tailRows < this.TAIL_COMPACT_ROWS
     ) {
       return;
-    }
+      }
     if (this.joinOnly) return;
     if (this.tailCompactTimer) clearTimeout(this.tailCompactTimer);
     this.tailCompactTimer = setTimeout(
@@ -1462,17 +1462,17 @@ export class SyncManager {
     if (!unbroadcastedUpdate) return;
 
     const updateToSend = cryptoUtils.encryptData(
-      this.roomKeyBytes!,
-      toUint8Array(unbroadcastedUpdate),
-    );
+        this.roomKeyBytes!,
+        toUint8Array(unbroadcastedUpdate),
+      );
     if (!syncStillCurrent()) return;
 
-    const response = await this.socketClient?.sendUpdate({
+      const response = await this.socketClient?.sendUpdate({
       update: updateToSend,
-    });
+      });
     if (!syncStillCurrent()) return;
 
-    if (!response?.status) {
+      if (!response?.status) {
       if (this.isRevocationResponse(response)) {
         this.handleWriteRevocation();
         return;
@@ -1482,15 +1482,15 @@ export class SyncManager {
           // A cutover is already in flight — this one-shot broadcast is a recoverable
           // full-state rebroadcast, not worth blocking hydrate() on; just drop it.
           return;
-        }
+      }
         const outcome = await this.onDecryptMiss();
         if (outcome === 'failed') {
           this.surfaceSessionTerminated('SESSION_TERMINATED');
-        }
+    }
         // 'rekeyed' or 'current-key-ok': drop this broadcast either way — recoverable, and
         // not worth a retry the way a queued edit batch is.
         return;
-      }
+  }
       const errorMsg = response?.error || 'Server rejected update';
       throw new Error(
         `Failed to broadcast local contents: ${errorMsg}${response?.statusCode ? ` (${response.statusCode})` : ''}`,
@@ -1550,7 +1550,7 @@ export class SyncManager {
           if (this.isRevocationResponse(response)) {
             this.handleWriteRevocation();
             return;
-          }
+        }
           if (this.isSessionTerminatedResponse(response)) {
             if (this.rotating) {
               // A cutover started under us mid-drain — leave the batch queued (nothing
@@ -1558,7 +1558,7 @@ export class SyncManager {
               // breaks the outer while loop on its next iteration; rekey()'s finally
               // re-drains once the cutover settles. Not a terminal condition.
               return;
-            }
+        }
             // Await the heal outcome — this call sits in processUpdateQueue's while loop,
             // which would otherwise re-merge and re-send this same rejected batch forever.
             const outcome = await this.onDecryptMiss();
@@ -1566,7 +1566,7 @@ export class SyncManager {
               // Batch is still queued (nothing sliced above); the next drain iteration
               // resends it under the new key.
               this.staleAckRetries = 0;
-              return;
+        return;
             }
             if (outcome === 'current-key-ok' && this.staleAckRetries < 1) {
               // Stale ack for a pre-rotation send: we're already on the current key, so a
@@ -1577,12 +1577,12 @@ export class SyncManager {
               updateToSend = cryptoUtils.encryptData(
                 this.roomKeyBytes!,
                 nextUpdate,
-              );
+        );
               continue;
-            }
+      }
             this.surfaceSessionTerminated('SESSION_TERMINATED');
             return;
-          }
+    }
           if (this.isSessionNotFoundResponse(response)) {
             if (this.rotating) return;
             // A queued edit hit a rotation-terminated session mid-drain — self-heal to the
@@ -1592,21 +1592,21 @@ export class SyncManager {
             if (outcome === 'rekeyed') {
               this.staleAckRetries = 0;
               return;
-            }
+  }
             if (outcome === 'failed') {
               // Anchor race — not terminal. The heal set healBackoffUntil, which breaks the
               // drain loop; the timer resumes the flush once the backoff elapses.
               setTimeout(
                 () => this.sendUpdateBatch(),
                 HEAL_RETRY_BACKOFF_MS + 100,
-              );
-              return;
-            }
+      );
+      return;
+    }
             // 'current-key-ok': the session is genuinely gone for the key we hold.
             // Reconnect; the handshake decides terminality.
             this.handleWriteRevocation();
             return;
-          }
+        }
           const errorMsg = response?.error || 'Server rejected update';
           throw new Error(
             `Failed to send update: ${errorMsg}${response?.statusCode ? ` (${response.statusCode})` : ''}`,
@@ -1701,10 +1701,10 @@ export class SyncManager {
         missed = true;
         continue;
       }
-      decryptedContents.push(decrypted);
-      if (item.id) {
-        queuedUpdateIds.push(item.id);
-      }
+        decryptedContents.push(decrypted);
+        if (item.id) {
+          queuedUpdateIds.push(item.id);
+        }
     }
     if (missed) void this.onDecryptMiss();
 

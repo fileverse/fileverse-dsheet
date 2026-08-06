@@ -213,15 +213,14 @@ export interface AckResponse<T = Record<string, any>> {
   errorCode?: ServerErrorCode;
 }
 
-export interface SendUpdateResponse
-  extends AckResponse<{
-    id: string;
-    documentId: string;
-    data: string;
-    updateType: string;
-    commitCid: string | null;
-    createdAt: number;
-  }> {}
+export interface SendUpdateResponse extends AckResponse<{
+  id: string;
+  documentId: string;
+  data: string;
+  updateType: string;
+  commitCid: string | null;
+  createdAt: number;
+}> {}
 
 export interface HydrationRow {
   id: string;
@@ -237,17 +236,18 @@ export interface HydrationRow {
   floorSeq?: number | null;
 }
 
-export interface HydrationResponse
-  extends AckResponse<{
-    history: HydrationRow[];
-    total: number;
-    snapshot: HydrationRow | null;
-    nextSeq: number | null;
-    hasMore: boolean;
-  }> {}
+export interface HydrationResponse extends AckResponse<{
+  history: HydrationRow[];
+  total: number;
+  snapshot: HydrationRow | null;
+  nextSeq: number | null;
+  hasMore: boolean;
+}> {}
 
-export interface SnapshotResponse
-  extends AckResponse<{ id: string; seq: number }> {}
+export interface SnapshotResponse extends AckResponse<{
+  id: string;
+  seq: number;
+}> {}
 
 export interface ISocketInitConfig {
   onHandshakeSuccess: () => void;

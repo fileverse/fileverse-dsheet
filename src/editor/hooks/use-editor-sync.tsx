@@ -1,25 +1,25 @@
-import { useRef, useEffect, useState, useCallback } from "react";
-import * as Y from "yjs";
-import { IndexeddbPersistence } from "y-indexeddb";
-import { useSyncManager } from "../../sync-local/useSyncManager";
-import type { CollaborationProps } from "../../sync-local/types";
-import { presenceColor } from "../../constants";
+import { useRef, useEffect, useState, useCallback } from 'react';
+import * as Y from 'yjs';
+import { IndexeddbPersistence } from 'y-indexeddb';
+import { useSyncManager } from '../../sync-local/useSyncManager';
+import type { CollaborationProps } from '../../sync-local/types';
+import { presenceColor } from '../../constants';
 import {
   mergeDsheetContentIntoDocument,
   snapshotDsheetDocument,
   unavailableDsheetContentSnapshot,
-} from "../../persistence-utils";
-import { migrateSheetArrayIfNeeded } from "../utils/migrate-new-yjs";
+} from '../../persistence-utils';
+import { migrateSheetArrayIfNeeded } from '../utils/migrate-new-yjs';
 import {
   createCollaborationConnectionController,
   mergePublishedContentIntoYdoc,
-} from "./collaboration-lifecycle";
+} from './collaboration-lifecycle';
 
 export const useEditorSync = (
   dsheetId: string,
   enableIndexeddbSync = true,
   isReadOnly = false,
-  portalContent = "",
+  portalContent = '',
   collaboration?: CollaborationProps,
   onCollabUpdate?: (fullState: string, updateChunk: string) => void,
   onIndexedDbError?: (error: Error) => void,
@@ -30,8 +30,8 @@ export const useEditorSync = (
   const ydocRef = useRef<Y.Doc | null>(ydoc);
   const persistenceRef = useRef<IndexeddbPersistence | null>(null);
   const [syncStatus, setSyncStatus] = useState<
-    "initializing" | "syncing" | "synced" | "error"
-  >("initializing");
+    'initializing' | 'syncing' | 'synced' | 'error'
+  >('initializing');
   const [isContentBootstrapReady, setIsContentBootstrapReady] = useState(false);
   const bootstrapGenerationRef = useRef(0);
 
@@ -76,19 +76,19 @@ export const useEditorSync = (
 
   const initialiseEditorIndexedDB = useCallback(async () => {
     const generation = ++bootstrapGenerationRef.current;
-    setSyncStatus("syncing");
+    setSyncStatus('syncing');
     setIsContentBootstrapReady(false);
 
     if (persistenceRef.current) {
       try {
-        await persistenceRef.current.destroy();
+      await persistenceRef.current.destroy();
       } catch (error) {
         const indexedDbError =
           error instanceof Error ? error : new Error(String(error));
         console.error(
-          "[DSheet] IndexedDB persistence cleanup failed:",
+          '[DSheet] IndexedDB persistence cleanup failed:',
           indexedDbError,
-        );
+    );
         onIndexedDbErrorRef.current?.(indexedDbError);
       }
       if (generation !== bootstrapGenerationRef.current) return;
@@ -105,22 +105,22 @@ export const useEditorSync = (
           const persistence = new IndexeddbPersistence(dsheetId, ydoc);
           // Capture before replay so SyncManager can identify this origin.
           persistenceRef.current = persistence;
-          persistence.on("error", (error: unknown) => {
+          persistence.on('error', (error: unknown) => {
             const indexedDbError =
               error instanceof Error ? error : new Error(String(error));
             console.error(
-              "[DSheet] IndexedDB persistence error:",
+              '[DSheet] IndexedDB persistence error:',
               indexedDbError,
             );
             onIndexedDbErrorRef.current?.(indexedDbError);
-          });
+    });
           await persistence.whenSynced;
           if (generation !== bootstrapGenerationRef.current) return;
         } catch (error) {
           const indexedDbError =
             error instanceof Error ? error : new Error(String(error));
           console.error(
-            "[DSheet] IndexedDB initialization failed:",
+            '[DSheet] IndexedDB initialization failed:',
             indexedDbError,
           );
           const failedPersistence = persistenceRef.current;
@@ -144,23 +144,17 @@ export const useEditorSync = (
       migrateSheetArrayIfNeeded(ydoc, ydoc.getArray(dsheetId));
 
       if (generation !== bootstrapGenerationRef.current) return;
-      setSyncStatus("synced");
+      setSyncStatus('synced');
       setIsContentBootstrapReady(true);
     } catch (error) {
       if (generation !== bootstrapGenerationRef.current) return;
-      console.error("[DSheet] Error bootstrapping editor content:", error);
-      setSyncStatus("error");
+      console.error('[DSheet] Error bootstrapping editor content:', error);
+      setSyncStatus('error');
       // Preserve the best state already merged into the Y.Doc for read-only
       // fallback, but do not connect a room from an incomplete bootstrap.
       setIsContentBootstrapReady(true);
     }
-  }, [
-    dsheetId,
-    enableIndexeddbSync,
-    isReadOnly,
-    portalContent,
-    ydoc,
-  ]);
+  }, [dsheetId, enableIndexeddbSync, isReadOnly, portalContent, ydoc]);
 
   const getContentSnapshot = useCallback(
     () =>
@@ -168,8 +162,8 @@ export const useEditorSync = (
         ? snapshotDsheetDocument(dsheetId, ydocRef.current)
         : unavailableDsheetContentSnapshot(
             dsheetId,
-            "unavailable",
-            new Error("dSheet document is not ready"),
+            'unavailable',
+            new Error('dSheet document is not ready'),
           ),
     [dsheetId],
   );
@@ -213,7 +207,7 @@ export const useEditorSync = (
   // the exact same warm period. Ordinary lifecycle cleanup never terminates a
   // durable room — explicit owner termination stays on DSheetEditorHandle.
   useEffect(() => {
-    if (!activeCollab || !isContentBootstrapReady || syncStatus !== "synced") {
+    if (!activeCollab || !isContentBootstrapReady || syncStatus !== 'synced') {
       return;
     }
 
@@ -227,10 +221,10 @@ export const useEditorSync = (
       connect,
       disconnect,
     });
-    ydoc?.on("update", controller.onYdocUpdate);
+    ydoc?.on('update', controller.onYdocUpdate);
 
     return () => {
-      ydoc?.off("update", controller.onYdocUpdate);
+      ydoc?.off('update', controller.onYdocUpdate);
       controller.dispose();
     };
   }, [
@@ -251,7 +245,7 @@ export const useEditorSync = (
     const session = (
       collaboration as Extract<CollaborationProps, { enabled: true }>
     ).session;
-    awareness.setLocalStateField("user", {
+    awareness.setLocalStateField('user', {
       name: session.username,
       color: presenceColor(session.isEns, session.color),
       isEns: session.isEns ?? false,
@@ -261,7 +255,7 @@ export const useEditorSync = (
   const isEnsSession =
     collabEnabled && collaboration?.enabled
       ? (collaboration as Extract<CollaborationProps, { enabled: true }>)
-          .session.isEns
+        .session.isEns
       : undefined;
 
   const prevCollabStatusRef = useRef<string | undefined>(undefined);
@@ -269,10 +263,10 @@ export const useEditorSync = (
     const prev = prevCollabStatusRef.current;
     prevCollabStatusRef.current = collabState?.status;
 
-    if (collabState?.status === "ready" && prev === "syncing" && awareness) {
+    if (collabState?.status === 'ready' && prev === 'syncing' && awareness) {
       const localState = awareness.getLocalState();
       if (localState?.user) {
-        awareness.setLocalStateField("user", localState.user);
+        awareness.setLocalStateField('user', localState.user);
       }
     }
   }, [collabState?.status, awareness]);
@@ -285,7 +279,7 @@ export const useEditorSync = (
     ).session;
     if (!session.isEns) return;
     const localState = awareness.getLocalState();
-    awareness.setLocalStateField("user", {
+    awareness.setLocalStateField('user', {
       ...(localState?.user ?? {}),
       color: presenceColor(session.isEns),
       isEns: true,

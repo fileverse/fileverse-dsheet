@@ -1,7 +1,7 @@
-import React from "react";
-import { LucideIcon } from "@fileverse/ui";
-import type { DSheetPermissionMode } from "../types";
-import { getPermissionChipConfig } from "./permission-chip-model";
+import React from 'react';
+import { LucideIcon } from '@fileverse/ui';
+import type { DSheetPermissionMode } from '../types';
+import { getPermissionChipConfig } from './permission-chip-model';
 
 interface PermissionChipProps {
   mode: DSheetPermissionMode;

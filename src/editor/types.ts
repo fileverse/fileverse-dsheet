@@ -1,27 +1,27 @@
-import { Sheet } from "@sheet-engine/react";
-import { RefObject } from "react";
-import { WorkbookInstance } from "@sheet-engine/react";
-import * as Y from "yjs";
-import { Cell } from "@sheet-engine/react";
-import { ERROR_MESSAGES_FLAG } from "./constants/shared-constants";
-import { CollaborationProps } from "../sync-local/types";
-import { CommentsConfig } from "./types/comments";
-import type { SmartContractConfig } from "./types/smart-contract";
-import type { ApiKeyStorage } from "./utils/api-key-storage";
-import type { ThemeKey } from "@sheet-engine/core/theme";
-import type { DSheetContentSnapshot } from "../persistence";
+import { Sheet } from '@sheet-engine/react';
+import { RefObject } from 'react';
+import { WorkbookInstance } from '@sheet-engine/react';
+import * as Y from 'yjs';
+import { Cell } from '@sheet-engine/react';
+import { ERROR_MESSAGES_FLAG } from './constants/shared-constants';
+import { CollaborationProps } from '../sync-local/types';
+import { CommentsConfig } from './types/comments';
+import type { SmartContractConfig } from './types/smart-contract';
+import type { ApiKeyStorage } from './utils/api-key-storage';
+import type { ThemeKey } from '@sheet-engine/core/theme';
+import type { DSheetContentSnapshot } from '../persistence';
 
-export type { ThemeKey } from "@sheet-engine/core/theme";
+export type { ThemeKey } from '@sheet-engine/core/theme';
 
-export type DSheetPermissionMode = "view" | "comment" | "edit";
+export type DSheetPermissionMode = 'view' | 'comment' | 'edit';
 
 export type {
   CommentThread,
   CommentReply,
   CommentActionParams,
   CommentsConfig,
-} from "./types/comments";
-export { CommentAction } from "./types/comments";
+} from './types/comments';
+export { CommentAction } from './types/comments';
 
 export interface SheetUpdateData {
   data: Sheet[];
@@ -58,7 +58,7 @@ export interface PanelConfig {
 export type {
   PanelId,
   BuiltInPanelType,
-} from "./components/sidebar/use-right-panels";
+} from './components/sidebar/use-right-panels';
 
 // Define the onboarding handler type
 export type OnboardingHandlerType = (params: {
@@ -68,11 +68,11 @@ export type OnboardingHandlerType = (params: {
 }) => { row: number; column: number };
 
 export type DataBlockEventType =
-  | "success"
-  | "error"
-  | "api-key-required"
-  | "api-key-saved"
-  | "retry";
+  | 'success'
+  | 'error'
+  | 'api-key-required'
+  | 'api-key-saved'
+  | 'retry';
 
 export interface DataBlockEvent {
   type: DataBlockEventType;
@@ -81,7 +81,7 @@ export interface DataBlockEvent {
   apiKeyName?: string;
 }
 
-export type { ApiKeyStorage } from "./utils/api-key-storage";
+export type { ApiKeyStorage } from './utils/api-key-storage';
 
 export interface DsheetProps {
   isNewSheet: boolean;
@@ -133,7 +133,7 @@ export interface DsheetProps {
    * collab start/resume on 'synced' — starting before local content is fully
    * synced is what let the RTC layer bind to a stale doc in the past. */
   onContentSyncStatusChange?: (
-    status: "initializing" | "syncing" | "synced" | "error",
+    status: 'initializing' | 'syncing' | 'synced' | 'error',
   ) => void;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;

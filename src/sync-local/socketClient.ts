@@ -634,7 +634,7 @@ export class SocketClient {
     if (response.statusCode !== 200) {
       const message =
         (response?.error || 'Unknown error') +
-        `, statusCode: ${response?.statusCode}`;
+          `, statusCode: ${response?.statusCode}`;
       const error = new Error(message);
       config.onHandShakeError(error, response.statusCode, response.errorCode);
       return;
