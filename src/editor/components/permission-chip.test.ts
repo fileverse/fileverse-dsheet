@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canShowEditElevation,
   getPermissionChipConfig,
   resolvePermissionChipMode,
 } from "./permission-chip-model";
@@ -12,6 +13,20 @@ describe("PermissionChip", () => {
       label: "Edit",
       modifier: "edit",
     });
+  });
+
+  it.each(["view", "comment"] as const)(
+    "offers edit elevation from %s when the host supplies a callback",
+    (mode) => {
+      expect(canShowEditElevation({ mode, onEnterEdit: () => {} })).toBe(true);
+    },
+  );
+
+  it("keeps the chip static without elevation or when already editing", () => {
+    expect(canShowEditElevation({ mode: "view" })).toBe(false);
+    expect(canShowEditElevation({ mode: "edit", onEnterEdit: () => {} })).toBe(
+      false,
+    );
   });
 
   it.each([

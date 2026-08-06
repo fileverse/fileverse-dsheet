@@ -111,6 +111,9 @@ export interface DsheetProps {
   /** Permission status displayed above the toolbar. When omitted, read-only
    * sheets retain the existing View/View-and-comment behavior. */
   permissionMode?: DSheetPermissionMode;
+  /** Called when a read-only consumer asks to elevate to edit mode. The host
+   * owns access proof, loading, errors, and the resulting mode transition. */
+  onEnterEdit?: () => void;
   allowSheetDownload?: boolean;
   isTemplateOpen?: boolean;
   selectedTemplate?: string;

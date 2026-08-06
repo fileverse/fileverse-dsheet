@@ -16,6 +16,14 @@ const CHIP_CONFIG = {
 export const getPermissionChipConfig = (mode: DSheetPermissionMode) =>
   CHIP_CONFIG[mode];
 
+export const canShowEditElevation = ({
+  mode,
+  onEnterEdit,
+}: {
+  mode: DSheetPermissionMode;
+  onEnterEdit?: () => void;
+}) => mode !== "edit" && Boolean(onEnterEdit);
+
 export const resolvePermissionChipMode = ({
   allowComments,
   isReadOnly,

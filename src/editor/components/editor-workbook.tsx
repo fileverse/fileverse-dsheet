@@ -95,6 +95,7 @@ interface EditorWorkbookProps {
   sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
   sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
   permissionMode?: DSheetPermissionMode | null;
+  onEnterEdit?: () => void;
   theme?: ThemeKey;
 }
 
@@ -121,6 +122,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   sidebarPortalRegistry = null,
   sidebarPortalRenderers = {},
   permissionMode = null,
+  onEnterEdit,
   theme,
 }) => {
   const {
@@ -417,7 +419,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
               className="dsheet-permission-chip-wrap fortune-toolbar-item"
               data-testid="dsheet-permission-chip-wrap"
             >
-              <PermissionChip mode={permissionMode} />
+              <PermissionChip mode={permissionMode} onEnterEdit={onEnterEdit} />
             </div>
           ) : null
         }
@@ -663,6 +665,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     setSheetEditorRef,
     dataBlockCalcFunction,
     permissionMode,
+    onEnterEdit,
     theme,
   ]);
 
