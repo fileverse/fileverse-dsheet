@@ -44,6 +44,8 @@ import { handleExportToJSON } from "../utils/json-export";
 import { useXLSXImport } from "../hooks/use-xlsx-import";
 import { usehandleHomepageRedirect } from "../hooks/use-homepage-redirect";
 import { OnboardingHandlerType } from "../types";
+import type { DSheetPermissionMode } from "../types";
+import { PermissionChip } from "./permission-chip";
 import {
   createAfterColRowChangesHandler,
   createAfterColorChangesHandler,
@@ -92,6 +94,7 @@ interface EditorWorkbookProps {
   sidebarActivePanel?: string | null;
   sidebarPortalRegistry?: SidebarPortalRegistryHandle | null;
   sidebarPortalRenderers?: Record<string, SidebarPortalRenderer>;
+  permissionMode?: DSheetPermissionMode | null;
   theme?: ThemeKey;
 }
 
@@ -117,6 +120,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
   sidebarActivePanel = null,
   sidebarPortalRegistry = null,
   sidebarPortalRenderers = {},
+  permissionMode = null,
   theme,
 }) => {
   const {
@@ -407,6 +411,16 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
         getCommentCellUI={getCommentCellUI}
         showFormulaBar={true}
         showToolbar={true}
+        toolbarTrailingContent={
+          permissionMode ? (
+            <div
+              className="dsheet-permission-chip-wrap fortune-toolbar-item"
+              data-testid="dsheet-permission-chip-wrap"
+            >
+              <PermissionChip mode={permissionMode} />
+            </div>
+          ) : null
+        }
         lang={"en"}
         rowHeaderWidth={60}
         columnHeaderHeight={24}
@@ -648,6 +662,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     collabIsOwner,
     setSheetEditorRef,
     dataBlockCalcFunction,
+    permissionMode,
     theme,
   ]);
 

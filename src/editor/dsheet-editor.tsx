@@ -15,7 +15,7 @@ import { EditorWorkbook } from "./components/editor-workbook";
 import { ApiKeyModal } from "./components/api-key-modal/api-key-modal";
 import { useApplyTemplatesBtn } from "./hooks/use-apply-templates";
 import { TransitionWrapper } from "./components/transition-wrapper";
-import { PermissionChip } from "./components/permission-chip";
+import { resolvePermissionChipMode } from "./components/permission-chip-model";
 import "@sheet-engine/react/index.css";
 import "./styles/index.css";
 import { useSidebar } from "./components/sidebar/sidebar-context";
@@ -51,6 +51,7 @@ const EditorContent = ({
   setShowFetchURLModal,
   renderNavbar,
   isReadOnly,
+  permissionMode,
   allowSheetDownload,
   toggleTemplateSidebar,
   onboardingComplete,
@@ -73,6 +74,7 @@ const EditorContent = ({
   DsheetProps,
   | "renderNavbar"
   | "isReadOnly"
+  | "permissionMode"
   | "allowSheetDownload"
   | "toggleTemplateSidebar"
   | "selectedTemplate"
@@ -94,6 +96,11 @@ const EditorContent = ({
   onSheetCountChange?: (sheetCount: number) => void;
   customPanels?: PanelConfig[];
 }) => {
+  const resolvedPermissionMode = resolvePermissionChipMode({
+    allowComments: !commentsConfig?.disabled,
+    isReadOnly: Boolean(isReadOnly),
+    permissionMode,
+  });
   const {
     loading,
     syncStatus,
@@ -435,16 +442,6 @@ const EditorContent = ({
         </TransitionWrapper>
 
         <TransitionWrapper show={!loading && shouldRenderSheet} duration={1000}>
-          {/* Permission chip - only visible with real content */}
-          {isReadOnly && (
-            <div
-              className="dsheet-permission-chip-wrap absolute top-2 right-4 z-20"
-              data-testid="dsheet-permission-chip-wrap"
-            >
-              <PermissionChip allowComments={!commentsConfig?.disabled} />
-            </div>
-          )}
-
           <EditorWorkbook
             setShowFetchURLModal={setShowFetchURLModal}
             setFetchingURLData={setFetchingURLData}
@@ -465,6 +462,7 @@ const EditorContent = ({
             onSheetCountChange={onSheetCountChange}
             sidebarActivePanel={activePanel}
             sidebarPortalRegistry={sidebarPortalRegistry}
+            permissionMode={resolvedPermissionMode}
             theme={theme}
           />
         </TransitionWrapper>
@@ -525,6 +523,7 @@ const SpreadsheetEditor = React.forwardRef<DSheetEditorHandle, DsheetProps>(
   (
     {
       isReadOnly = false,
+      permissionMode,
       allowSheetDownload,
       renderNavbar,
       enableIndexeddbSync,
@@ -603,6 +602,7 @@ const SpreadsheetEditor = React.forwardRef<DSheetEditorHandle, DsheetProps>(
           setShowFetchURLModal={setShowFetchURLModal}
           setInputFetchURLDataBlock={setInputFetchURLDataBlock}
           isReadOnly={isReadOnly}
+          permissionMode={permissionMode}
           allowSheetDownload={allowSheetDownload}
           toggleTemplateSidebar={toggleTemplateSidebar}
           onboardingComplete={onboardingComplete}

@@ -13,6 +13,8 @@ import type { DSheetContentSnapshot } from "../persistence";
 
 export type { ThemeKey } from "@sheet-engine/core/theme";
 
+export type DSheetPermissionMode = "view" | "comment" | "edit";
+
 export type {
   CommentThread,
   CommentReply,
@@ -106,6 +108,9 @@ export interface DsheetProps {
   username?: string;
   portalContent?: string;
   isReadOnly?: boolean;
+  /** Permission status displayed above the toolbar. When omitted, read-only
+   * sheets retain the existing View/View-and-comment behavior. */
+  permissionMode?: DSheetPermissionMode;
   allowSheetDownload?: boolean;
   isTemplateOpen?: boolean;
   selectedTemplate?: string;

@@ -15,6 +15,7 @@ export type {
   DataBlockEventType,
   ApiKeyStorage,
   DSheetEditorHandle,
+  DSheetPermissionMode,
 } from './editor/types';
 export type { PanelConfig, PanelId, BuiltInPanelType } from './editor/types';
 export type {

@@ -477,11 +477,13 @@ const Toolbar: React.FC<{
   moreItemsOpen: boolean;
   onMoreToolbarItemsClose?: () => void;
   moreToolbarItems?: React.ReactNode;
+  trailingContent?: React.ReactNode;
 }> = ({
   setMoreItems,
   moreItemsOpen,
   onMoreToolbarItemsClose,
   moreToolbarItems,
+  trailingContent,
 }) => {
     const { context, setContext, refs, settings, handleUndo, handleRedo } =
       useContext(WorkbookContext);
@@ -2245,6 +2247,8 @@ const Toolbar: React.FC<{
                     {n.children}
                   </CustomButton>
                 ))}
+              {/* Keep the permission status adjacent to the package tools. */}
+              {trailingContent}
               <Button
                 iconId="dune"
                 tooltip="Insert Dune Chart"
@@ -2273,6 +2277,7 @@ const Toolbar: React.FC<{
               </span>
             </>
           )}
+          {settings.customToolbarItems.length === 0 && trailingContent}
           {settings.customToolbarItems
             .filter(
               (n) =>
