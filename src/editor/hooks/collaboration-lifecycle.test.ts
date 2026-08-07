@@ -9,6 +9,7 @@ import {
   getWorkbookHydrationReason,
   isLiveCollaborationSession,
   mergePublishedContentIntoYdoc,
+  shouldRehydrateWorkbookOnReady,
   shouldInitializeDefaultWorkbook,
   shouldRenderBootstrappedWorkbook,
 } from "./collaboration-lifecycle";
@@ -244,5 +245,39 @@ describe("Fortune hydration transitions", () => {
     expect(getWorkbookHydrationReason("ready", "syncing", true)).toBe(
       "reconnect",
     );
+  });
+
+  it("keeps a fresh owner's workbook mounted when the first sync has no peer updates", () => {
+    expect(
+      shouldRehydrateWorkbookOnReady({
+        reason: "initial",
+        isOwner: true,
+        hasUnmergedPeerUpdates: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("rehydrates initial peer state and every reconnect", () => {
+    expect(
+      shouldRehydrateWorkbookOnReady({
+        reason: "initial",
+        isOwner: true,
+        hasUnmergedPeerUpdates: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRehydrateWorkbookOnReady({
+        reason: "initial",
+        isOwner: false,
+        hasUnmergedPeerUpdates: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldRehydrateWorkbookOnReady({
+        reason: "reconnect",
+        isOwner: true,
+        hasUnmergedPeerUpdates: false,
+      }),
+    ).toBe(true);
   });
 });

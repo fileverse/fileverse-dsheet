@@ -51,6 +51,16 @@ export const getWorkbookHydrationReason = (
   return hasHydratedReadyState ? "reconnect" : "initial";
 };
 
+export const shouldRehydrateWorkbookOnReady = ({
+  reason,
+  isOwner,
+  hasUnmergedPeerUpdates,
+}: {
+  reason: "initial" | "reconnect";
+  isOwner: boolean;
+  hasUnmergedPeerUpdates: boolean;
+}): boolean => reason === "reconnect" || !isOwner || hasUnmergedPeerUpdates;
+
 export interface CollaborationConnectionController {
   onYdocUpdate: (update: Uint8Array, origin: unknown) => void;
   dispose: () => void;

@@ -62,6 +62,7 @@ import {
   closeCellCommentPopup,
 } from '../utils/cell-comment-marker';
 import { getCurrentSheetIdSafe } from '../utils/sheet-editor-safe';
+import { detachWorkbookData } from '../utils/detach-workbook-data';
 // import { useEditorData } from '../hooks/use-editor-data';
 // Use the types defined in types.ts
 type OnboardingHandler = OnboardingHandlerType;
@@ -378,19 +379,22 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     [dsheetId, handleOnChangePortalUpdate],
   );
 
-  // Memoize stable Workbook props; sidebar portal props are merged after to avoid
-  // rebuilding customToolbarItems (which glitches the toolbar) on panel switches.
-  const workbookElement = useMemo(() => {
-    // Create a unique key to force re-render when needed
-    const workbookKey = `workbook-${dsheetId}-${forceSheetRender}`;
-
-    // Use actual data if available, otherwise fallback to default data only in edit mode
-    const data =
+  const workbookData = useMemo(() => {
+    const sourceData =
       currentDataRef.current && currentDataRef.current.length > 0
         ? currentDataRef.current
         : isReadOnly
           ? []
           : DEFAULT_SHEET_DATA;
+
+    return detachWorkbookData(sourceData);
+  }, [dsheetId, forceSheetRender, isReadOnly]);
+
+  // Memoize stable Workbook props; sidebar portal props are merged after to avoid
+  // rebuilding customToolbarItems (which glitches the toolbar) on panel switches.
+  const workbookElement = useMemo(() => {
+    // Create a unique key to force re-render when needed
+    const workbookKey = `workbook-${dsheetId}-${forceSheetRender}`;
 
     return (
       // @ts-ignore
@@ -405,7 +409,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
           !effectiveOnboardingComplete && !!onboardingHandler
         }
         // @ts-ignore
-        data={data}
+        data={workbookData}
         toolbarItems={toolbarItems}
         cellContextMenu={cellContextMenu}
         headerContextMenu={headerContextMenu}
@@ -648,6 +652,7 @@ const EditorWorkbookComponent: React.FC<EditorWorkbookProps> = ({
     );
   }, [
     forceSheetRender,
+    workbookData,
     isReadOnly,
     allowSheetDownload,
     toggleTemplateSidebar,

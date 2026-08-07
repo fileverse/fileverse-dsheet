@@ -19,6 +19,7 @@ import { useEditorSync } from '../hooks/use-editor-sync';
 import {
   getWorkbookHydrationReason,
   isLiveCollaborationSession,
+  shouldRehydrateWorkbookOnReady,
 } from '../hooks/collaboration-lifecycle';
 import { useCelldataCompaction } from '../hooks/use-celldata-compaction';
 import { useEditorData } from '../hooks/use-editor-data';
@@ -152,6 +153,7 @@ interface EditorProviderProps {
   onContentSyncStatusChange?: (
     status: 'initializing' | 'syncing' | 'synced' | 'error',
   ) => void;
+  onCollaborationInitializationComplete?: (result: 'ready' | 'error') => void;
   onIndexedDbError?: (error: Error) => void;
 }
 
@@ -180,6 +182,7 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
   onDataBlockEvent,
   smartContracts,
   onContentSyncStatusChange,
+  onCollaborationInitializationComplete,
   onIndexedDbError,
 }) => {
   // Comments are driven entirely by commentsConfig (the legacy
@@ -500,13 +503,18 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
 
   rehydrateAfterCollabSyncRef.current = rehydrateWorkbookFromYdoc;
 
-  // Every transition into ready — initial hydration and each reconnect —
-  // rebuilds Fortune exactly once from the fully merged Y.Doc. Live updates
-  // between those transitions continue through the surgical adapter.
+  // Rebuild Fortune when peer state may differ. A fresh owner with no remote
+  // updates already has the authoritative workbook, so keeping that mount avoids
+  // losing selection on the first local edit. Reconnects and delegated sessions
+  // still rebuild from the fully merged Y.Doc.
   const hasHydratedCollabReadyRef = useRef(false);
+  const initialSyncHadPeerUpdatesRef = useRef(false);
   const previousCollabStatusRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const status = collabState?.status;
+    if (status === 'syncing' && collabState.hasUnmergedPeerUpdates) {
+      initialSyncHadPeerUpdatesRef.current = true;
+    }
     const previous = previousCollabStatusRef.current;
     previousCollabStatusRef.current = status;
     const reason = getWorkbookHydrationReason(
@@ -515,10 +523,21 @@ export const EditorProvider: React.FC<EditorProviderProps> = ({
       hasHydratedCollabReadyRef.current,
     );
     if (!reason) return;
-    if (rehydrateAfterCollabSyncRef.current(reason)) {
+    const shouldRehydrate = shouldRehydrateWorkbookOnReady({
+      reason,
+      isOwner:
+        collaboration?.enabled === true && collaboration.connection.isOwner,
+      hasUnmergedPeerUpdates: initialSyncHadPeerUpdatesRef.current,
+    });
+    const initialized =
+      !shouldRehydrate || rehydrateAfterCollabSyncRef.current(reason);
+    if (initialized) {
       hasHydratedCollabReadyRef.current = true;
     }
-  }, [collabState?.status]);
+    if (reason === 'initial') {
+      onCollaborationInitializationComplete?.(initialized ? 'ready' : 'error');
+    }
+  }, [collabState, collaboration, onCollaborationInitializationComplete]);
 
   // Expose rehydrate on the host-owned editorStateRef for explicit recovery.
   useEffect(() => {

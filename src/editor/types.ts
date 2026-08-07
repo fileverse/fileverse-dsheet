@@ -138,6 +138,9 @@ export interface DsheetProps {
   onContentSyncStatusChange?: (
     status: 'initializing' | 'syncing' | 'synced' | 'error',
   ) => void;
+  /** Fires once the first collaboration sync has been reconciled with the
+   * workbook, or when that reconciliation fails. */
+  onCollaborationInitializationComplete?: (result: 'ready' | 'error') => void;
   editorStateRef?: React.MutableRefObject<{
     refreshIndexedDB: () => Promise<void>;
     getContentSnapshot: () => DSheetContentSnapshot;

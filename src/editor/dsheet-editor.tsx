@@ -568,6 +568,7 @@ const SpreadsheetEditor = React.forwardRef<DSheetEditorHandle, DsheetProps>(
   smartContracts,
   theme,
   onContentSyncStatusChange,
+  onCollaborationInitializationComplete,
       onIndexedDbError,
     }: DsheetProps,
     forwardedEditorRef,
@@ -600,6 +601,9 @@ const SpreadsheetEditor = React.forwardRef<DSheetEditorHandle, DsheetProps>(
       onDataBlockEvent={onDataBlockEvent}
       smartContracts={smartContracts}
       onContentSyncStatusChange={onContentSyncStatusChange}
+      onCollaborationInitializationComplete={
+        onCollaborationInitializationComplete
+      }
         onIndexedDbError={onIndexedDbError}
     >
       <EditorContent
