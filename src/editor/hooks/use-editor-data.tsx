@@ -2,7 +2,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Sheet } from '@sheet-engine/react';
 import { WorkbookInstance } from '@sheet-engine/react';
-import { toUint8Array } from 'js-base64';
 import isEqual from 'lodash/isEqual';
 import * as Y from 'yjs';
 import { useLiveQuery } from './live-query/use-live-query';
@@ -17,7 +16,7 @@ import {
   endRemoteApplyAfterPaint,
   runUnderRemoteApply,
 } from '../utils/remote-apply-guard';
-import { resolveSheetArrayShareKey } from '../utils/defined-names-ydoc';
+import { shouldRenderBootstrappedWorkbook } from './collaboration-lifecycle';
 
 /**
  * Hook for managing sheet data
@@ -29,10 +28,10 @@ export const useEditorData = (
   dsheetId: string,
   sheetEditorRef: React.MutableRefObject<WorkbookInstance | null>,
   setForceSheetRender?: React.Dispatch<React.SetStateAction<number>>,
-  portalContent?: string,
   isReadOnly = false,
   onChange?: (data: Sheet[]) => void,
   syncStatus?: 'initializing' | 'syncing' | 'synced' | 'error',
+  isContentBootstrapReady = false,
   commentData?: object,
   // @ts-ignore
   dataBlockCalcFunction?: { [key: string]: { [key: string]: any } },
@@ -45,7 +44,6 @@ export const useEditorData = (
   openApiKeyModal?: OpenApiKeyModalFn,
   onDataBlockEvent?: (event: DataBlockEvent) => void,
   allowComments?: boolean,
-  hasCollabContentInitialised?: boolean,
   collabEnabled = false,
 ) => {
   const [sheetData, setSheetData] = useState<Sheet[]>([]);
@@ -62,11 +60,11 @@ export const useEditorData = (
   const debounceTimerRef = useRef<number | null>(null);
   /** While true, skip surgical applies — workbook is stale vs incoming Yjs sheet ids. */
   const structuralRemountPendingRef = useRef<boolean>(false);
-  /** True once portalContent has been applied; reset when `dsheetId` changes. */
-  const portalContentAppliedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    portalContentAppliedRef.current = false;
+    dataInitialized.current = false;
+    currentDataRef.current = [];
+    setIsDataLoaded(false);
   }, [dsheetId]);
 
   const commentDataRef = useRef<object | undefined>(commentData);
@@ -101,81 +99,55 @@ export const useEditorData = (
     [setDataBlockCalcFunction],
   );
 
-  // Apply portal content once on first load. Skipped entirely when RTC collaboration
-  // is active — SyncManager.syncLatestCommit is the sole source of truth in that case,
-  // matching the behaviour of initialContent in fileverse-ddoc.
+  // Render the best locally available baseline after the single-Y.Doc bootstrap
+  // (published artifact → IndexedDB → migration). Collaboration may then merge
+  // durable history into that same document; the ready-transition controller
+  // below this hook performs exactly one full rebuild for the merged state.
   useEffect(() => {
-    if (collabEnabled) return;
-    if (!portalContent?.length || !ydocRef.current) return;
-    if (portalContentAppliedRef.current) return;
+    if (!isContentBootstrapReady || !ydocRef.current || !dsheetId) return;
+    if (dataInitialized.current) return;
 
     try {
-      const incoming = toUint8Array(portalContent);
-      const ydoc = ydocRef.current;
-
-      // Bring `ydoc` toward the target state without re-applying shared history twice.
-      // Parent may send a merged update blob; diffing vs current SV is correct for IDB-hydrated ydocs too.
-      const sv = Y.encodeStateVector(ydoc);
-      const targetDoc = new Y.Doc();
-      Y.applyUpdate(targetDoc, incoming);
-      const delta = Y.encodeStateAsUpdate(targetDoc, sv);
-      targetDoc.destroy();
-
-      if (delta.byteLength > 0) {
-        Y.applyUpdate(ydoc, delta);
-      }
-
-      const tempDoc = new Y.Doc();
-      Y.applyUpdate(tempDoc, incoming);
-
-      const internalDsheetId =
-        resolveSheetArrayShareKey(tempDoc, dsheetId) ??
-        resolveSheetArrayShareKey(ydoc) ??
-        dsheetId;
-      // Use main ydoc's sheet array so migration persists; migrating tempDoc's
-      // array left the main doc unmigrated and caused "t.forEach is not a function"
-      // when the library read plain-object sheet items.
-      const sheetArray = ydocRef.current.getArray(internalDsheetId);
-
-      // Migrate legacy sheet array to Y.Map-based structure if needed
+      const sheetArray = ydocRef.current.getArray(dsheetId);
       migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
 
-      // Convert Yjs sheet array to plain snapshot for Fortune spreadsheet
-      const newSheetData = ySheetArrayToPlain(
+      const plain = ySheetArrayToPlain(
         // @ts-ignore
         sheetArray as Y.Array<Y.Map>,
       );
 
+      // A collaboration-only new room may legitimately have no local baseline;
+      // wait for its first durable hydration rather than mounting default data.
+      if (!shouldRenderBootstrappedWorkbook(collabEnabled, plain.length)) {
+        return;
+      }
+
       applyCommentMarkers(
-        newSheetData,
+        plain,
         commentDataRef.current,
         allowCommentsRef.current,
       );
-      currentDataRef.current = newSheetData;
-      initialiseLiveQueryData(newSheetData);
-
-      portalContentAppliedRef.current = true;
+      currentDataRef.current = plain;
+      initialiseLiveQueryData(plain);
+      syncDataBlockCalcFromPlain(plain);
+      dataInitialized.current = true;
+      setIsDataLoaded(true);
 
       if (setForceSheetRender) {
         setForceSheetRender((prev) => prev + 1);
       }
-
-      const dataBlockList: { [key: string]: any } = {};
-      newSheetData.forEach((sheet: Sheet) => {
-        if (sheet?.id && sheet?.dataBlockCalcFunction) {
-          dataBlockList[sheet.id] = {
-            ...sheet.dataBlockCalcFunction,
-          };
-        }
-      });
-      //@ts-ignore
-      setDataBlockCalcFunction?.(dataBlockList);
-
-      tempDoc.destroy();
     } catch (error) {
-      console.error('[DSheet] Error processing portal content:', error);
+      console.error('[DSheet] Error rendering bootstrapped content:', error);
     }
-  }, [portalContent, collabEnabled, dsheetId, ydocRef, setForceSheetRender, initialiseLiveQueryData, setDataBlockCalcFunction]);
+  }, [
+    collabEnabled,
+    dsheetId,
+    initialiseLiveQueryData,
+    isContentBootstrapReady,
+    setForceSheetRender,
+    syncDataBlockCalcFromPlain,
+    ydocRef,
+  ]);
 
   // Apply comment data if provided (do this before any other initialization)
   useEffect(() => {
@@ -214,99 +186,9 @@ export const useEditorData = (
     isReadOnly,
     isDataLoaded,
     setIsDataLoaded,
-    portalContent,
     allowComments,
     syncStatus,
   ]);
-
-  // Initialize sheet data once Socket.IO collab sync reaches 'ready' for the first time.
-  // The ydoc already contains the merged server state at this point.
-  useEffect(() => {
-    if (!hasCollabContentInitialised || !ydocRef.current || !dsheetId) {
-      return;
-    }
-    if (dataInitialized.current) return;
-
-    try {
-      console.log('[RTC] use-editor-data: reading ydoc.getArray(dsheetId)', {
-        dsheetId,
-        allShareKeys: Array.from(ydocRef.current.share.keys()),
-      });
-      const sheetArray = ydocRef.current.getArray(dsheetId);
-      console.log('[RTC] use-editor-data: sheetArray length BEFORE migrate', {
-        length: sheetArray.length,
-      });
-      migrateSheetArrayIfNeeded(ydocRef.current, sheetArray);
-      console.log('[RTC] use-editor-data: sheetArray length AFTER migrate', {
-        length: sheetArray.length,
-      });
-
-      // @ts-ignore
-      const plain = ySheetArrayToPlain(sheetArray as Y.Array<Y.Map>);
-      applyCommentMarkers(
-        plain,
-        commentDataRef.current,
-        allowCommentsRef.current,
-      );
-      currentDataRef.current = plain;
-      initialiseLiveQueryData(plain);
-
-      const dataBlockList: { [key: string]: any } = {};
-      plain.forEach((sheet: Sheet) => {
-        if (sheet?.id && sheet?.dataBlockCalcFunction) {
-          dataBlockList[sheet.id] = { ...sheet.dataBlockCalcFunction };
-        }
-      });
-      // @ts-ignore
-      setDataBlockCalcFunction?.(dataBlockList);
-
-      dataInitialized.current = true;
-      setIsDataLoaded(true);
-      console.log(
-        '[RTC] use-editor-data: collab sheet data initialised, setIsDataLoaded(true)',
-        {
-          sheetCount: plain.length,
-        },
-      );
-
-      if (setForceSheetRender) {
-        setForceSheetRender((prev) => prev + 1);
-      }
-    } catch (error) {
-      console.error('[DSheet] Error initialising collab sheet data:', error);
-    }
-  }, [hasCollabContentInitialised]);
-
-  // Initialize sheet data AFTER sync is complete - BUT ONLY IF NOT IN READ-ONLY MODE or if we have no data yet
-  useEffect(() => {
-    if (!ydocRef.current || !dsheetId) {
-      return;
-    }
-
-    // Only proceed with initialization if we've synced
-    if (syncStatus === 'synced') {
-      const initializeWithDefaultData = () => {
-        // If we've already initialized (either here or via portal content), don't do it again
-        if (dataInitialized.current) {
-          return;
-        }
-
-        // RTC session: collabInit hydrates currentDataRef after sync — don't claim init here.
-        if (collabEnabled) {
-          return;
-        }
-
-        const sheetArray = ydocRef.current?.getArray(dsheetId);
-        const currentData = Array.from(sheetArray || []) as Sheet[];
-        initialiseLiveQueryData(currentData);
-
-        dataInitialized.current = true;
-        setIsDataLoaded(true);
-      };
-
-      initializeWithDefaultData();
-    }
-  }, [dsheetId, isReadOnly, syncStatus, collabEnabled]);
 
   // Attach listener for YJS data changes
   useEffect(() => {
@@ -382,7 +264,13 @@ export const useEditorData = (
     ) => {
       // Only react to remote Yjs updates. Local edits are already reflected in Workbook state,
       // and rebuilding a full plain snapshot on every local transaction is expensive.
-      if (transaction.local || isUpdatingRef.current) return;
+      if (
+        transaction.local ||
+        transaction.origin === 'self' ||
+        isUpdatingRef.current
+      ) {
+        return;
+      }
 
       // --- Classify events: cell-only vs structural ---
       type CellBatch = {
@@ -1256,7 +1144,7 @@ export const useEditorData = (
   ]);
 
   // Rebuild the full plain snapshot from the current Yjs doc and force a Workbook
-  // remount. Used after a collab (RTC) sync completes, where surgical applies are
+  // remount. Used after a collaboration sync completes, where surgical applies are
   // unsafe because the local workbook may be stale relative to the merged server
   // state. Returns true when a rebuild was performed.
   const rehydrateWorkbookFromYdoc = useCallback(
